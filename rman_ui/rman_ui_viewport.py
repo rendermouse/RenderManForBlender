@@ -347,6 +347,8 @@ class PRMAN_OT_Viewport_Enhance(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         rman_render = RmanRender.get_rman_render()
+        if not rman_render.rman_is_live_rendering:
+            return False
         return (rman_render.rman_scene.main_camera.projection_shader.name.CStr() == 'PxrCamera')
 
     @classmethod

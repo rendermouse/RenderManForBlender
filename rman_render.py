@@ -252,6 +252,8 @@ class RmanRender(object):
         self.rman_is_live_rendering = False
         self.rman_is_viewport_rendering = False
         self.rman_render_into = 'blender'
+        self.rman_license_failed = False
+        self.rman_license_failed_message = ''
         self.it_port = -1 
         self.rman_callbacks = dict()
         self.viewport_res_x = -1
@@ -358,20 +360,28 @@ class RmanRender(object):
 
     def _check_prman_license(self):
         if not envconfig().is_valid_license:
-            self.bl_engine.report({'ERROR'}, 'Cannot find a valid RenderMan license. Aborting.')
-            self.stop_render()
+            self.rman_license_failed = True
+            self.rman_license_failed_message = 'Cannot find a valid RenderMan license. Aborting.'
+        
+        elif not envconfig().has_rps_license:
+            self.rman_license_failed = True
+            self.rman_license_failed_message = 'Cannot find RPS-%s license feature. Aborting.' % (envconfig().feature_version)
+        else:
+            # check for any available PhotoRealistic-RenderMan licenses
+            status = envconfig().get_prman_license_status()
+            if not(status.found and status.is_available):
+                self.rman_license_failed = True
+                self.rman_license_failed_message = 'No PhotoRealistic-RenderMan licenses available. Aborting.'
+            elif status.is_expired():
+                self.rman_license_failed = True
+                self.rman_license_failed_message = 'PhotoRealistic-RenderMan licenses have expired (%s).' % str(status.exp_date)
+       
+        if self.rman_license_failed:
+            if not self.rman_interactive_running:
+                self.bl_engine.report({'ERROR'}, self.rman_license_failed_message)
+                self.stop_render()
             return False
 
-        # check for any available PhotoRealistic-RenderMan licenses
-        status = envconfig().get_prman_license_status()
-        if not(status.found and status.is_available):
-            self.bl_engine.report({'ERROR'}, 'No PhotoRealistic-RenderMan licenses available. Aborting.')
-            self.stop_render()
-            return False
-        if status.is_expired():
-            self.bl_engine.report({'ERROR'}, 'PhotoRealistic-RenderMan licenses have expired (%s).' % str(status.exp_date))
-            self.stop_render()
-            return False            
         return True     
 
     def is_regular_rendering(self):
@@ -387,13 +397,21 @@ class RmanRender(object):
         __RMAN_STATS_THREAD__ = threading.Thread(target=call_stats_update_payloads, args=(self, ))
         __RMAN_STATS_THREAD__.start()         
 
+    def reset(self):
+        self.rman_license_failed = False
+        self.rman_license_failed_message = ''
+
     def start_render(self, depsgraph, for_background=False):
     
+        self.reset()
         self.bl_scene = depsgraph.scene_eval
         rm = self.bl_scene.renderman
         self.it_port = start_cmd_server()    
         rfb_log().info("Parsing scene...")
         time_start = time.time()
+
+        if not self._check_prman_license():
+            return False        
 
         if for_background:
             self.rman_render_into = ''
@@ -437,10 +455,6 @@ class RmanRender(object):
 
         self._dump_rib_()
         rfb_log().info("Finished parsing scene. Total time: %s" % string_utils._format_time_(time.time() - time_start)) 
-
-        if not self._check_prman_license():
-            return False
-
         self.rman_is_live_rendering = True
         
         render_cmd = ''
@@ -614,12 +628,14 @@ class RmanRender(object):
         return True          
 
     def start_bake_render(self, depsgraph, for_background=False):
-    
+        self.reset()
         self.bl_scene = depsgraph.scene_eval
         rm = self.bl_scene.renderman
         self.it_port = start_cmd_server()    
         rfb_log().info("Parsing scene...")
         time_start = time.time()
+        if not self._check_prman_license():
+            return False             
 
         if for_background:
             is_external = True
@@ -635,7 +651,7 @@ class RmanRender(object):
             ec.RegisterCallback("Progress", bake_progress_cb, self)
             self.rman_callbacks["Progress"] = bake_progress_cb
             ec.RegisterCallback("Render", render_cb, self)
-            self.rman_callbacks["Render"] = render_cb        
+            self.rman_callbacks["Render"] = render_cb              
 
         self.rman_render_into = ''
         rman.Dspy.DisableDspyServer()
@@ -653,8 +669,6 @@ class RmanRender(object):
         self._dump_rib_()
         rfb_log().info("Finished parsing scene. Total time: %s" % string_utils._format_time_(time.time() - time_start)) 
         render_cmd = "prman -blocking"
-        if not self._check_prman_license():
-            return False
         render_cmd = self._append_render_cmd(render_cmd)        
         self.sg_scene.Render(render_cmd)
         self.stop_render()
@@ -735,7 +749,7 @@ class RmanRender(object):
     def start_interactive_render(self, context, depsgraph):
 
         global __DRAW_THREAD__
-
+        self.reset()
         self.rman_interactive_running = True
         self.rman_running = True
         __update_areas__()
@@ -766,6 +780,8 @@ class RmanRender(object):
             self.rman_render_into = 'it'
             rman.Dspy.EnableDspyServer()
 
+        if not self._check_prman_license():
+            return False
         time_start = time.time()      
 
         config = rman.Types.RtParamList()
@@ -783,9 +799,7 @@ class RmanRender(object):
         self.rman_is_exporting = False
 
         self._dump_rib_()      
-        rfb_log().info("Finished parsing scene. Total time: %s" % string_utils._format_time_(time.time() - time_start))     
-        if not self._check_prman_license():
-            return False        
+        rfb_log().info("Finished parsing scene. Total time: %s" % string_utils._format_time_(time.time() - time_start))      
         self.rman_is_live_rendering = True     
         render_cmd = "prman -live"   
         render_cmd = self._append_render_cmd(render_cmd)
@@ -802,6 +816,7 @@ class RmanRender(object):
             __DRAW_THREAD__.start()
 
     def start_swatch_render(self, depsgraph):
+        self.reset()
         self.bl_scene = depsgraph.scene_eval
 
         rfb_log().debug("Parsing scene...")

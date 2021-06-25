@@ -57,11 +57,13 @@ class RmanEnvConfig(object):
         self.rman_lq_path = ''
         self.rman_tractor_path = ''
         self.rman_license_app_path = ''
+        self.feature_version = ''
         self.is_ncr_license = False
         self.is_valid_license = False
         self.license_info = None
         self.has_xpu_license = False
         self.has_stylized_license = False
+        self.has_rps_license = False
 
     def config_environment(self):
 
@@ -219,11 +221,13 @@ class RmanEnvConfig(object):
         self.is_ncr_license = self.license_info.is_ncr_license
         self.is_valid_license = self.license_info.is_valid_license
         if self.is_valid_license:
-            feature_version = '%d.0' % self.build_info._version_major
-            status = self.license_info.is_feature_available(feature_name='RPS-Stylized', feature_version=feature_version)
+            self.feature_version = '%d.0' % self.build_info._version_major
+            status = self.license_info.is_feature_available(feature_name='RPS-Stylized', feature_version=self.feature_version)
             self.has_stylized_license = status.found
-            status = self.license_info.is_feature_available(feature_name='RPS-XPU', feature_version=feature_version)
+            status = self.license_info.is_feature_available(feature_name='RPS-XPU', feature_version=self.feature_version)
             self.has_xpu_license =  status.found    
+            status = self.license_info.is_feature_available(feature_name='RPS', feature_version=self.feature_version)
+            self.has_rps_license =  status.found    
 
     def _is_prman_license_available(self):
         # Return true if there is PhotoRealistic-RenderMan a feature

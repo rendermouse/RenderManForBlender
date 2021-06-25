@@ -198,13 +198,16 @@ class PRMAN_OT_StopInteractive(bpy.types.Operator):
     bl_options = {'INTERNAL'}    
 
     def invoke(self, context, event=None):
-        for window in bpy.context.window_manager.windows:
-            for area in window.screen.areas:
-                if area.type == 'VIEW_3D':
-                    for space in area.spaces:
-                        if space.type == 'VIEW_3D':
-                            if space.shading.type == 'RENDERED':    
-                                space.shading.type = 'SOLID'
+        if context.space_data.type == 'VIEW_3D':
+            context.space_data.shading.type = 'SOLID'
+        else:
+            for window in bpy.context.window_manager.windows:
+                for area in window.screen.areas:
+                    if area.type == 'VIEW_3D':
+                        for space in area.spaces:
+                            if space.type == 'VIEW_3D':
+                                if space.shading.type == 'RENDERED':    
+                                    space.shading.type = 'SOLID'
 
         rr = RmanRender.get_rman_render()
         rr.rman_running = False

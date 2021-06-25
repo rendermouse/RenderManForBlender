@@ -85,7 +85,7 @@ class PRManRender(bpy.types.RenderEngine):
         if not self.rman_render.rman_interactive_running and self.rman_render.sg_scene is None:
             self.rman_render.start_interactive_render(context, depsgraph)
 
-        if self.rman_render.rman_interactive_running:
+        if self.rman_render.rman_interactive_running and not self.rman_render.rman_license_failed:
             self.rman_render.update_scene(context, depsgraph)   
 
     def view_draw(self, context, depsgraph):
@@ -94,7 +94,7 @@ class PRManRender(bpy.types.RenderEngine):
         This is where we check for camera moves and draw pxiels from our
         Blender display driver.
         '''
-        if self.rman_render.rman_interactive_running:               
+        if self.rman_render.rman_interactive_running and not self.rman_render.rman_license_failed:               
             self.rman_render.update_view(context, depsgraph)
 
         self._draw_pixels(context, depsgraph)
@@ -164,6 +164,19 @@ class PRManRender(bpy.types.RenderEngine):
         scene = depsgraph.scene
         w = context.region.width
         h = context.region.height          
+
+        if self.rman_render.rman_license_failed:
+            pos_x = w / 2 - 100
+            pos_y = 20
+            blf.enable(0, blf.SHADOW)
+            blf.shadow_offset(0, 1, -1)
+            blf.shadow(0, 5, 0.0, 0.0, 0.0, 0.8)
+            blf.size(0, 32, 36)
+            blf.position(0, pos_x, pos_y, 0)
+            blf.color(0, 1.0, 0.0, 0.0, 1.0)
+            blf.draw(0, "%s" % (self.rman_render.rman_license_failed_message))
+            blf.disable(0, blf.SHADOW)   
+            return
 
         # Draw text area that RenderMan is running.        
         if get_pref('draw_ipr_text', False) and not self.rman_render.rman_is_viewport_rendering:
