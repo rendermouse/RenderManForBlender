@@ -10,6 +10,8 @@ from ...rfb_logger import rfb_log
 from ...rman_constants import RMAN_AREA_LIGHT_TYPES
 from .barn_light_filter_draw_helper import BarnLightFilterDrawHelper
 from mathutils import Vector, Matrix
+from bpy.app.handlers import persistent
+import atexit
 import mathutils
 import math
 import ice
@@ -1437,6 +1439,15 @@ def draw():
     for k in remove_textures:
         rfb_log().debug("Call glDeleteTextures for: %s" % k)
         del _PRMAN_TEX_CACHE_[k]
+
+@persistent 
+@atexit.register
+def clear_gl_tex_cache(bl_scene=None):
+    global _PRMAN_TEX_CACHE_
+    rfb_log().debug("Clearing _PRMAN_TEX_CACHE_.")
+    for k, v in _PRMAN_TEX_CACHE_.items():
+        bgl.glDeleteTextures(1, v)
+    _PRMAN_TEX_CACHE_.clear()    
 
 def register():
     global _DRAW_HANDLER_
