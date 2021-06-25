@@ -11,7 +11,7 @@ class _RManPanelHeader():
         return context.engine in cls.COMPAT_ENGINES
 
     def draw_header(self, context):
-        if get_pref('draw_panel_icon', True):
+        if get_pref('draw_panel_icon', True) and context.region.type not in ['HEADER']:
             rfb_icon = rfb_icons.get_icon("rman_blender")
             self.layout.label(text="", icon_value=rfb_icon.icon_id)
         else:

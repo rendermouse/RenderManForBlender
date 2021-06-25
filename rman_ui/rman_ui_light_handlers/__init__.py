@@ -1,16 +1,23 @@
 import bpy
 import gpu
+import bgl
+import os
 from gpu_extras.batch import batch_for_shader
-from ...rfb_utils import transform_utils
+from ...rfb_utils import texture_utils
+from ...rfb_utils import string_utils
+from ...rfb_utils import prefs_utils
+from ...rfb_logger import rfb_log
 from ...rman_constants import RMAN_AREA_LIGHT_TYPES
 from .barn_light_filter_draw_helper import BarnLightFilterDrawHelper
 from mathutils import Vector, Matrix
 import mathutils
 import math
+import ice
 
 _DRAW_HANDLER_ = None
 _BARN_LIGHT_DRAW_HELPER_ = None
 _PI0_5_ = 1.570796327
+_PRMAN_TEX_CACHE_ = dict()
 
 s_rmanLightLogo = dict()
 s_rmanLightLogo['box'] = [
@@ -413,6 +420,80 @@ s_cylinderLight['indices'] = [
     (8, 19)
 ]
 
+s_cylinderLight['indices_tris'] = [
+    (0, 1, 11),
+    (1, 11, 12),    
+    (1, 2, 12),
+    (2, 12, 13),
+    (2, 3, 13),
+    (3, 13, 14),
+    (3, 4, 14),
+    (4, 14, 15),
+    (4, 5, 15),
+    (5, 15, 16),
+    (5, 6, 16),
+    (6, 16, 17),
+    (6, 7, 17),
+    (7, 17, 18),
+    (7, 8, 18),
+    (8, 18, 19),
+    (8, 9, 19),
+    (9, 19, 20),
+    (9, 10, 20),
+    (10, 20, 21)
+]
+
+_VERTEX_SHADER_UV_ = '''
+    uniform mat4 modelMatrix;
+    uniform mat4 viewProjectionMatrix;
+
+    in vec3 position;
+    in vec2 uv;
+
+    out vec2 uvInterp;
+
+    void main()
+    {
+        uvInterp = uv;
+        gl_Position = viewProjectionMatrix * modelMatrix * vec4(position, 1.0);
+    }
+'''
+
+_VERTEX_SHADER_ = '''
+    uniform mat4 modelMatrix;
+    uniform mat4 viewProjectionMatrix;
+
+    in vec3 position;
+
+    void main()
+    {
+        gl_Position = viewProjectionMatrix * modelMatrix * vec4(position, 1.0f);
+    }
+'''
+
+_FRAGMENT_SHADER_TEX_ = '''
+    uniform sampler2D image;
+
+    in vec2 uvInterp;       
+    out vec4 FragColor;
+
+    void main()
+    {
+        FragColor = texture(image, uvInterp);
+    }
+'''
+
+_FRAGMENT_SHADER_COL_ = '''
+    uniform vec4 lightColor;
+
+    in vec2 uvInterp;       
+    out vec4 FragColor;
+
+    void main()
+    {
+        FragColor = lightColor;
+    }
+'''
 
 _SHADER_ = None
 if not bpy.app.background:
@@ -494,47 +575,216 @@ def _get_sun_direction(ob):
     
     return m @ sunDirection
 
-def make_sphere(m):
-    lats = 12
-    longs = 20
-    radius = 0.5
-    v = []
+def load_gl_texture(tex):
+    global _PRMAN_TEX_CACHE_
+    real_path = string_utils.expand_string(tex)
+
+    ice._registry.Mark() 
+    iceimg = ice.Load(real_path)
+    # quantize to 8 bits
+    iceimg = iceimg.TypeConvert(ice.constants.FRACTIONAL)
+
+    x1, x2, y1, y2 = iceimg.DataBox()
+    width = (x2 - x1) + 1
+    height = (y2 - y1) + 1 
+
+    # Resize image to be max 2k
+    maxRes = 2048
+    largestDim = height 
+    if width > height:
+        largestDim = width
+    scaledImg = None
+    if largestDim > maxRes:
+        scale = (maxRes/largestDim, maxRes/largestDim)
+        scaledImg = iceimg.Resize(scale)
     
-    i = 0
-    j = 0
-    for j in range(0, longs+1):
-        lng = 2 * math.pi * float (j / longs)
-        x = math.cos(lng)
-        y = math.sin(lng)
-            
-        for i in range(0, lats+1):
-            lat0 = math.pi * (-0.5 + float(i/ lats))
-            z0  = math.sin(lat0) * radius
-            zr0 = math.cos(lat0) * radius
+    # if the image was scaled, then get values for the scaled version
+    if scaledImg:
+        iceimg = scaledImg
+        x1, x2, y1, y2 = scaledImg.DataBox()
+        width = (x2 - x1) + 1
+        height = (y2 - y1) + 1 
+
+    buffer = iceimg.AsByteArray()
+    numChannels = iceimg.Ply()
+
+    pixels = bgl.Buffer(bgl.GL_BYTE, len(buffer), buffer)
+    texture = bgl.Buffer(bgl.GL_INT, 1)
+    _PRMAN_TEX_CACHE_[tex] = texture
+
+    iFormat = bgl.GL_RGBA
+    texFormat = bgl.GL_RGBA
+    if numChannels == 1:
+        iFormat = bgl.GL_RGB
+        texFormat = bgl.GL_LUMINANCE
+    elif numChannels == 2:
+        iFormat = bgl.GL_RGB
+        texFormat = bgl.GL_LUMINANCE_ALPHA
+    elif numChannels == 3:
+        iFormat = bgl.GL_RGB
+        texFormat = bgl.GL_RGB
+                
+    elif numChannels == 4:
+        iFormat = bgl.GL_RGBA
+        texFormat = bgl.GL_RGBA
         
-            v.append( m @ Vector((x*zr0, y*zr0, z0)))
+    bgl.glGenTextures(1, texture)    
+    bgl.glActiveTexture(bgl.GL_TEXTURE0)
+    bgl.glBindTexture(bgl.GL_TEXTURE_2D, texture[0])
+    bgl.glTexImage2D(bgl.GL_TEXTURE_2D, 0, iFormat, width, height, 0, texFormat, bgl.GL_UNSIGNED_BYTE, pixels)
+    bgl.glTexParameteri(bgl.GL_TEXTURE_2D, bgl.GL_TEXTURE_MIN_FILTER, bgl.GL_LINEAR)
+    bgl.glTexParameteri(bgl.GL_TEXTURE_2D, bgl.GL_TEXTURE_MAG_FILTER, bgl.GL_LINEAR)
+    bgl.glBindTexture(bgl.GL_TEXTURE_2D, 0)   
 
-        for i in range(0, lats+1):
-            lat0 = math.pi * (-0.5 + float(i / lats))
-            z0  = math.sin(lat0) * radius
-            zr0 =  math.cos(lat0) * radius
-         
-            v.append( m @ Vector((-x*zr0, -y*zr0, z0)))
+    ice._registry.RemoveToMark()
+    del iceimg   
 
-    for i in range(0, lats+1):
-        lat0 = math.pi * (-0.5 + float(i / lats))
-        z0  = math.sin(lat0) * radius
-        zr0 = math.cos(lat0) * radius
-        
-        for j in range(0, longs+1):
-            lng = 2 * math.pi * (float(j / longs))
-            x = math.cos(lng)
-            y = math.sin(lng)
-            
-            v.append( m @ Vector((x*zr0, y*zr0, z0)))
+    return texture  
 
-    return v
+def make_sphere():
+    cols = 32
+    rows = 32
+    radius = 1.0
 
+    last_vtx_idx_in_col = cols - 1
+    vtxs = []
+
+    phi_step = math.pi / float(rows - 1)
+    theta_step = 2.0 * math.pi / float(cols)
+    for i in range(rows):
+        phi = float(i) * phi_step
+        for j in range(cols):
+            theta = float(j) * theta_step
+            p = [radius * math.sin(phi) * math.cos(theta),
+                    radius * math.cos(phi),
+                    radius * math.sin(phi) * math.sin(theta)]
+            vtxs.append(p)
+            if j == last_vtx_idx_in_col:
+                vtxs.append(vtxs[-cols])
+
+    return vtxs    
+
+def make_sphere_idx_buffer():
+    """
+    Fill the provided index buffer to draw the shape.
+    This is a 4x4 sphere
+    0  1  2  3- 4     0  1  2  3  4
+                    |/ |/ |/ |/ |    [0, 5, 1, 6, 2, 7, 3, 8, 4, 9, 9,
+    5  6  7  8- 9     5  6  7  8  9     5, 5, 10, 6, 11, 7, 12, 8, 13, 9, 14, 14
+                    |/ |/ |/ |/ |     10, 10, 15, 11, 16, 12, 17, 13, 18, 14, 19, 19]
+    10 11 12 13-14    10 11 12 13 14
+                    |/ |/ |/ |/ |
+    15 16 17 18-19    15  16 17 18 19
+    """
+    cols = 32
+    rows = 32
+    num_vtx = rows * cols + rows
+
+    ncols = cols + 1
+
+    idxs = []
+    ofst = [0]
+    base_idx = 0                   # index of first vtx of the strip
+    last_idx = num_vtx - 1
+
+    for i in range(0, rows - 1):
+        for j in range(ncols):
+            if j == 0:
+                # repeat first index
+                idxs.append(base_idx + j)
+
+            idxs.append(base_idx + j)
+            idxs.append(min(base_idx + j + ncols, last_idx))
+
+            # loop to base_idx and repeat last index
+            if j == ncols - 1:
+                idxs.append(idxs[-1])
+
+        base_idx += ncols
+        ofst.append(len(idxs))
+
+    num_idxs = len(idxs)
+    return idxs
+
+def make_sphere_uvs():
+    uvs = []
+    cols = 32
+    rows = 32
+    uv_offsets = [0.25, 0.0]
+
+    ncols = cols + 1
+
+    cstep = 1.0 / cols
+    rstep = 1.0 / (rows - 1)
+    for i in range(rows):
+        for j in range(ncols):
+            uv = [j * cstep, i * rstep]
+            uv[0] += uv_offsets[0]
+            uv[1] += uv_offsets[1]
+            uvs.append(uv)
+
+    return uvs   
+
+def draw_solid(ob, pts, mtx, uvs=list(), indices=None, tex='', col=None):
+    global _PRMAN_TEX_CACHE_
+
+    scene = bpy.context.scene
+    rm = scene.renderman
+    if rm.is_rman_viewport_rendering:
+        return    
+
+    if not prefs_utils.get_pref('rman_viewport_draw_lights_textured'):
+        return
+
+    real_path = string_utils.expand_string(tex)
+    if os.path.exists(real_path):
+        shader = gpu.types.GPUShader(_VERTEX_SHADER_UV_, _FRAGMENT_SHADER_TEX_)
+        if indices:
+            batch = batch_for_shader(shader, 'TRIS', {"position": pts, "uv": uvs}, indices=indices)   
+        else:
+            batch = batch_for_shader(shader, 'TRI_FAN', {"position": pts, "uv": uvs})    
+
+        texture = _PRMAN_TEX_CACHE_.get(tex, None)
+        if not texture:
+            texture = load_gl_texture(tex)
+
+        bgl.glActiveTexture(bgl.GL_TEXTURE0)
+        bgl.glBindTexture(bgl.GL_TEXTURE_2D, texture[0])
+
+        shader.bind()
+        matrix = bpy.context.region_data.perspective_matrix 
+        shader.uniform_float("modelMatrix", mtx)    
+        shader.uniform_float("viewProjectionMatrix", matrix)
+        shader.uniform_float("image", texture[0])
+        bgl.glEnable(bgl.GL_DEPTH_TEST)
+        batch.draw(shader)           
+        bgl.glDisable(bgl.GL_DEPTH_TEST)      
+
+    elif col:
+        shader = gpu.types.GPUShader(_VERTEX_SHADER_, _FRAGMENT_SHADER_COL_)
+        if indices:
+            batch = batch_for_shader(shader, 'TRIS', {"position": pts}, indices=indices)  
+        else: 
+            batch = batch_for_shader(shader, 'TRI_FAN', {"position": pts})  
+
+        lightColor = (col[0], col[1], col[2], 1.0)
+        shader.bind()
+        matrix = bpy.context.region_data.perspective_matrix 
+        shader.uniform_float("modelMatrix", mtx)    
+        shader.uniform_float("viewProjectionMatrix", matrix)
+        shader.uniform_float("lightColor", lightColor)
+        bgl.glEnable(bgl.GL_DEPTH_TEST)
+        batch.draw(shader)           
+        bgl.glDisable(bgl.GL_DEPTH_TEST)      
+
+def draw_line_shape(ob, shader, pts, indices):  
+    do_draw = ((ob in bpy.context.selected_objects) or (prefs_utils.get_pref('rman_viewport_lights_draw_wireframe')))
+    if do_draw:
+        batch = batch_for_shader(shader, 'LINES', {"pos": pts}, indices=indices)    
+        bgl.glEnable(bgl.GL_DEPTH_TEST)
+        batch.draw(shader)
+        bgl.glDisable(bgl.GL_DEPTH_TEST)    
+   
 def draw_rect_light(ob):
     _SHADER_.bind()
 
@@ -543,38 +793,38 @@ def draw_rect_light(ob):
     ob_matrix = Matrix(ob.matrix_world)        
     m = ob_matrix @ Matrix.Rotation(math.radians(180.0), 4, 'Y')
 
-    box = []
-    for pt in s_rmanLightLogo['box']:
-        box.append( m @ Vector(pt))
-
+    box = [m @ Vector(pt) for pt in s_rmanLightLogo['box']]
     box_indices = _get_indices(s_rmanLightLogo['box'])
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": box}, indices=box_indices)    
-    batch.draw(_SHADER_)
+    draw_line_shape(ob, _SHADER_, box, box_indices)
 
-    arrow = []
-    for pt in s_rmanLightLogo['arrow']:
-        arrow.append( m @ Vector(pt))  
-
+    arrow = [m @ Vector(pt) for pt in s_rmanLightLogo['arrow']]
     arrow_indices = _get_indices(s_rmanLightLogo['arrow'])
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": arrow}, indices=arrow_indices)    
-    batch.draw(_SHADER_)
+    draw_line_shape(ob, _SHADER_, arrow, arrow_indices)
 
     m = ob_matrix
-    R_outside = []
-    for pt in s_rmanLightLogo['R_outside']:
-        R_outside.append( m @ Vector(pt))
-
+    R_outside = [m @ Vector(pt) for pt in s_rmanLightLogo['R_outside']]
     R_outside_indices = _get_indices(s_rmanLightLogo['R_outside'])
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": R_outside}, indices=R_outside_indices)    
-    batch.draw(_SHADER_)
+    draw_line_shape(ob, _SHADER_, R_outside, R_outside_indices)
   
-    R_inside = []
-    for pt in s_rmanLightLogo['R_inside']:
-        R_inside.append( m @ Vector(pt))
-
+    R_inside = [m @ Vector(pt) for pt in s_rmanLightLogo['R_inside']]
     R_inside_indices = _get_indices(s_rmanLightLogo['R_inside'])
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": R_inside}, indices=R_inside_indices)    
-    batch.draw(_SHADER_)    
+    draw_line_shape(ob, _SHADER_, R_inside, R_inside_indices)
+
+    m = ob_matrix @ Matrix.Rotation(math.radians(180.0), 4, 'Y')
+    rm = ob.data.renderman
+    light_shader = rm.get_light_node()
+    light_shader_name = rm.get_light_node_name()
+    tex = ''
+    col = None
+    if light_shader_name == 'PxrRectLight':
+        tex = light_shader.lightColorMap
+        col = light_shader.lightColor
+    elif light_shader_name in ['PxrGoboLightFilter', 'PxrCookieLightFilter']:
+        tex = light_shader.map
+        
+    pts = ((0.5, -0.5, 0.0), (-0.5, -0.5, 0.0), (-0.5, 0.5, 0.0), (0.5, 0.5, 0.0))
+    uvs = ((1, 1), (0, 1), (0, 0), (1, 0))    
+    draw_solid(ob, pts, m, uvs=uvs, tex=tex, col=col)
 
 def draw_sphere_light(ob):
     
@@ -585,48 +835,36 @@ def draw_sphere_light(ob):
     ob_matrix = Matrix(ob.matrix_world)        
     m = ob_matrix @ Matrix.Rotation(math.radians(180.0), 4, 'Y')
 
-    disk = []
-    for pt in s_diskLight:
-        disk.append( m @ Vector(pt) ) 
-
+    disk = [m @ Vector(pt) for pt in s_diskLight]
     disk_indices = _get_indices(s_diskLight)
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": disk}, indices=disk_indices)    
-    batch.draw(_SHADER_)
+    draw_line_shape(ob, _SHADER_, disk, disk_indices)
 
     m2 = m @ Matrix.Rotation(math.radians(90.0), 4, 'Y')
-    disk = []
-    for pt in s_diskLight:
-        disk.append( m2 @ Vector(pt)) 
-
+    disk = [m2 @ Vector(pt) for pt in s_diskLight]
     disk_indices = _get_indices(s_diskLight)
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": disk}, indices=disk_indices)    
-    batch.draw(_SHADER_)
+    draw_line_shape(ob, _SHADER_, disk, disk_indices)
 
     m3 = m @ Matrix.Rotation(math.radians(90.0), 4, 'X')
-    disk = []
-    for pt in s_diskLight:
-        disk.append( m3 @ Vector(pt))
-
+    disk = [m3 @ Vector(pt) for pt in s_diskLight]
     disk_indices = _get_indices(s_diskLight)
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": disk}, indices=disk_indices)    
-    batch.draw(_SHADER_)   
+    draw_line_shape(ob, _SHADER_, disk, disk_indices)
 
     m = ob_matrix
-    R_outside = []
-    for pt in s_rmanLightLogo['R_outside']:
-        R_outside.append( m @ Vector(pt))
-
+    R_outside = [m @ Vector(pt) for pt in s_rmanLightLogo['R_outside']]
     R_outside_indices = _get_indices(s_rmanLightLogo['R_outside'])
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": R_outside}, indices=R_outside_indices)    
-    batch.draw(_SHADER_)
-  
-    R_inside = []
-    for pt in s_rmanLightLogo['R_inside']:
-        R_inside.append( m @ Vector(pt))
+    draw_line_shape(ob, _SHADER_, R_outside, R_outside_indices)
 
+    R_inside = [m @ Vector(pt) for pt in s_rmanLightLogo['R_inside']]
     R_inside_indices = _get_indices(s_rmanLightLogo['R_inside'])
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": R_inside}, indices=R_inside_indices)    
-    batch.draw(_SHADER_)    
+    draw_line_shape(ob, _SHADER_, R_inside, R_inside_indices)
+
+    m = ob_matrix @ Matrix.Scale(0.5, 4) @ Matrix.Rotation(math.radians(90.0), 4, 'X')
+    idx_buffer = make_sphere_idx_buffer() 
+    rm = ob.data.renderman
+    light_shader = rm.get_light_node()
+    col = light_shader.lightColor
+    sphere_indices = [(idx_buffer[i], idx_buffer[i+1], idx_buffer[i+2]) for i in range(0, len(idx_buffer)-2) ]
+    draw_solid(ob, make_sphere(), m, col=col, indices=sphere_indices)    
 
 def draw_envday_light(ob): 
 
@@ -646,131 +884,70 @@ def draw_envday_light(ob):
     m = Matrix(ob_matrix)
     m = m @ Matrix.Rotation(math.radians(90.0), 4, 'X')
 
-    west_rr_shape = []
-    for pt in s_envday['west_rr_shape']:
-        west_rr_shape.append( m @ Vector(pt))
-
+    west_rr_shape = [m @ Vector(pt) for pt in s_envday['west_rr_shape']]
     west_rr_indices = _get_indices(s_envday['west_rr_shape'])
+    draw_line_shape(ob, _SHADER_, west_rr_shape, west_rr_indices)
 
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": west_rr_shape}, indices=west_rr_indices)    
-    batch.draw(_SHADER_)
-
-    east_rr_shape = []
-    for pt in s_envday['east_rr_shape']:
-        east_rr_shape.append( m @ Vector(pt)) 
-
+    east_rr_shape = [m @ Vector(pt) for pt in s_envday['east_rr_shape']]
     east_rr_indices = _get_indices(s_envday['east_rr_shape'])
+    draw_line_shape(ob, _SHADER_, east_rr_shape, east_rr_indices)
 
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": east_rr_shape}, indices=east_rr_indices)    
-    batch.draw(_SHADER_)   
-
-    south_rr_shape = []
-    for pt in s_envday['south_rr_shape']:
-        south_rr_shape.append( m @ Vector(pt))
-
+    south_rr_shape = [m @ Vector(pt) for pt in s_envday['south_rr_shape']]
     south_rr_indices = _get_indices(s_envday['south_rr_shape'])
+    draw_line_shape(ob, _SHADER_, south_rr_shape, south_rr_indices)
 
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": south_rr_shape}, indices=south_rr_indices)    
-    batch.draw(_SHADER_)  
-
-    north_rr_shape = []
-    for pt in s_envday['north_rr_shape']:
-        north_rr_shape.append( m @ Vector(pt) )
-
+    north_rr_shape = [m @ Vector(pt) for pt in s_envday['north_rr_shape']]
     north_rr_indices = _get_indices(s_envday['north_rr_shape'])
+    draw_line_shape(ob, _SHADER_, north_rr_shape, north_rr_indices)
 
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": north_rr_shape}, indices=north_rr_indices)    
-    batch.draw(_SHADER_)             
-
-    inner_circle_rr_shape = []
-    for pt in s_envday['inner_circle_rr_shape']:
-        inner_circle_rr_shape.append( m @ Vector(pt) )
-
+    inner_circle_rr_shape = [m @ Vector(pt) for pt in s_envday['inner_circle_rr_shape']]
     inner_circle_rr_shape_indices = _get_indices(s_envday['inner_circle_rr_shape'])
+    draw_line_shape(ob, _SHADER_, inner_circle_rr_shape, inner_circle_rr_shape_indices)
 
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": inner_circle_rr_shape}, indices=inner_circle_rr_shape_indices)    
-    batch.draw(_SHADER_)   
-
-    outer_circle_rr_shape = []
-    for pt in s_envday['outer_circle_rr_shape']:
-        outer_circle_rr_shape.append( m @ Vector(pt) )
-
+    outer_circle_rr_shape = [m @ Vector(pt) for pt in s_envday['outer_circle_rr_shape']]
     outer_circle_rr_shape_indices = _get_indices(s_envday['outer_circle_rr_shape'])
+    draw_line_shape(ob, _SHADER_, outer_circle_rr_shape, outer_circle_rr_shape_indices)
 
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": outer_circle_rr_shape}, indices=outer_circle_rr_shape_indices)    
-    batch.draw(_SHADER_)  
-
-    compass_shape = []
-    for pt in s_envday['compass_shape']:
-        compass_shape.append( m @ Vector(pt))
-
+    compass_shape = [m @ Vector(pt) for pt in s_envday['compass_shape']]
     compass_shape_indices = _get_indices(s_envday['compass_shape'])
+    draw_line_shape(ob, _SHADER_, compass_shape, compass_shape_indices)
 
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": compass_shape}, indices=compass_shape_indices)    
-    batch.draw(_SHADER_)    
-
-    east_arrow_shape = []
-    for pt in s_envday['east_arrow_shape']:
-        east_arrow_shape.append( m @ Vector(pt))
-
+    east_arrow_shape = [m @ Vector(pt) for pt in s_envday['east_arrow_shape']]
     east_arrow_shape_indices = _get_indices(s_envday['east_arrow_shape'])
+    draw_line_shape(ob, _SHADER_, east_arrow_shape, east_arrow_shape_indices)
 
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": east_arrow_shape}, indices=east_arrow_shape_indices)    
-    batch.draw(_SHADER_)      
-
-    west_arrow_shape = []
-    for pt in s_envday['west_arrow_shape']:
-        west_arrow_shape.append( m @ Vector(pt) )
-
+    west_arrow_shape = [m @ Vector(pt) for pt in s_envday['west_arrow_shape']]
     west_arrow_shape_indices = _get_indices(s_envday['west_arrow_shape'])
+    draw_line_shape(ob, _SHADER_, west_arrow_shape, west_arrow_shape_indices)
 
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": west_arrow_shape}, indices=west_arrow_shape_indices)    
-    batch.draw(_SHADER_)         
-
-    north_arrow_shape = []
-    for pt in s_envday['north_arrow_shape']:
-        north_arrow_shape.append( m @ Vector(pt))
-
+    north_arrow_shape = [m @ Vector(pt) for pt in s_envday['north_arrow_shape']]
     north_arrow_shape_indices = _get_indices(s_envday['north_arrow_shape'])
+    draw_line_shape(ob, _SHADER_, north_arrow_shape, north_arrow_shape_indices)
 
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": north_arrow_shape}, indices=north_arrow_shape_indices)    
-    batch.draw(_SHADER_)         
-
-    south_arrow_shape = []
-    for pt in s_envday['south_arrow_shape']:
-        south_arrow_shape.append( m @ Vector(pt))
-
+    south_arrow_shape = [m @ Vector(pt) for pt in s_envday['south_arrow_shape']]
     south_arrow_shape_indices = _get_indices(s_envday['south_arrow_shape'])
-
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": south_arrow_shape}, indices=south_arrow_shape_indices)    
-    batch.draw(_SHADER_)     
+    draw_line_shape(ob, _SHADER_, south_arrow_shape, south_arrow_shape_indices)
 
     sunDirection = _get_sun_direction(ob)
     sunDirection = Matrix(ob_matrix) @ Vector(sunDirection)
     origin = Matrix(ob_matrix) @ Vector([0,0,0])
     sunDirection_pts = [ origin, sunDirection]
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": sunDirection_pts}, indices=[(0,1)])    
-    batch.draw(_SHADER_) 
+    draw_line_shape(ob, _SHADER_, sunDirection_pts, indices=[(0,1)])
 
     # draw a sphere to represent the sun
     v = sunDirection - origin
     translate = Matrix.Translation(v)
-    sphere = make_sphere(ob_matrix @ Matrix.Scale(0.25, 4))
-    sphere_indices = []
-    for i in range(0, len(sphere)):
-        if i == len(sphere)-1:
-            sphere_indices.append((i, 0))
-        else:
-            sphere_indices.append((i, i+1))    
-
     sphere_shape = []
-    for pt in sphere:
-        sphere_shape.append( translate @ Vector(pt) )
- 
+    for p in make_sphere():
+        mat = ob_matrix @ Matrix.Scale(0.10, 4)
+        pt = mat @ Vector(p)
+        pt = translate @ pt
+        sphere_shape.append( pt )
 
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": sphere_shape}, indices=sphere_indices)    
-    batch.draw(_SHADER_)  
-
+    idx_buffer = make_sphere_idx_buffer()
+    sphere_indices = [(idx_buffer[i], idx_buffer[i+1]) for i in range(0, len(idx_buffer)-1) ]
+     
+    draw_line_shape(ob, _SHADER_, sphere_shape, sphere_indices)
 
 def draw_disk_light(ob): 
                  
@@ -781,42 +958,33 @@ def draw_disk_light(ob):
     ob_matrix = Matrix(ob.matrix_world)        
     m = ob_matrix @ Matrix.Rotation(math.radians(180.0), 4, 'Y')
 
-    disk = []
-    for pt in s_diskLight:
-        disk.append( m @ Vector(pt))
-
+    disk = [m @ Vector(pt) for pt in s_diskLight]
     disk_indices = _get_indices(s_diskLight)
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": disk}, indices=disk_indices)    
-    batch.draw(_SHADER_)
+    draw_line_shape(ob, _SHADER_, disk, disk_indices)
 
-    arrow = []
-    for pt in s_rmanLightLogo['arrow']:
-        arrow.append( m @ Vector(pt)) 
-
+    arrow = [m @ Vector(pt) for pt in s_rmanLightLogo['arrow']]
     arrow_indices = _get_indices(s_rmanLightLogo['arrow'])
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": arrow}, indices=arrow_indices)    
-    batch.draw(_SHADER_)
+    draw_line_shape(ob, _SHADER_, arrow, arrow_indices)
 
     m = ob_matrix
-    R_outside = []
-    for pt in s_rmanLightLogo['R_outside']:
-        R_outside.append( m @ Vector(pt)) 
-
+    R_outside = [m @ Vector(pt) for pt in s_rmanLightLogo['R_outside']]
     R_outside_indices = _get_indices(s_rmanLightLogo['R_outside'])
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": R_outside}, indices=R_outside_indices)    
-    batch.draw(_SHADER_)
+    draw_line_shape(ob, _SHADER_, R_outside, R_outside_indices)
   
-    R_inside = []
-    for pt in s_rmanLightLogo['R_inside']:
-        R_inside.append( m @ Vector(pt))
-
+    R_inside = [m @ Vector(pt) for pt in s_rmanLightLogo['R_inside']]
     R_inside_indices = _get_indices(s_rmanLightLogo['R_inside'])
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": R_inside}, indices=R_inside_indices)    
-    batch.draw(_SHADER_)  
+    draw_line_shape(ob, _SHADER_, R_inside, R_inside_indices)
+
+    ob_matrix = Matrix(ob.matrix_world)        
+    m = ob_matrix @ Matrix.Rotation(math.radians(180.0), 4, 'Y')    
+    
+    rm = ob.data.renderman
+    light_shader = rm.get_light_node()
+    col = light_shader.lightColor    
+    draw_solid(ob, s_diskLight, m, col=col)
 
 def draw_dist_light(ob):      
     
-
     _SHADER_.bind()
 
     set_selection_color(ob)
@@ -824,46 +992,26 @@ def draw_dist_light(ob):
     ob_matrix = Matrix(ob.matrix_world)        
     m = ob_matrix @ Matrix.Rotation(math.radians(180.0), 4, 'Y')  
 
-    arrow1 = []
-    for pt in s_distantLight['arrow1']:
-        arrow1.append( m @ Vector(pt) )
-
+    arrow1 = [m @ Vector(pt) for pt in s_distantLight['arrow1']]
     arrow1_indices = _get_indices(s_distantLight['arrow1'])
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": arrow1}, indices=arrow1_indices)    
-    batch.draw(_SHADER_)    
+    draw_line_shape(ob, _SHADER_, arrow1, arrow1_indices)
 
-    arrow2 = []
-    for pt in s_distantLight['arrow2']:
-        arrow2.append( m @ Vector(pt)) 
-
+    arrow2 = [m @ Vector(pt) for pt in s_distantLight['arrow2']]
     arrow2_indices = _get_indices(s_distantLight['arrow2'])
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": arrow2}, indices=arrow2_indices)    
-    batch.draw(_SHADER_) 
+    draw_line_shape(ob, _SHADER_, arrow2, arrow2_indices)
 
-    arrow3 = []
-    for pt in s_distantLight['arrow3']:
-        arrow3.append( m @ Vector(pt) )
-
+    arrow3 = [m @ Vector(pt) for pt in s_distantLight['arrow3']]
     arrow3_indices = _get_indices(s_distantLight['arrow3'])
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": arrow3}, indices=arrow3_indices)    
-    batch.draw(_SHADER_)         
+    draw_line_shape(ob, _SHADER_, arrow3, arrow3_indices)
 
     m = ob_matrix
-    R_outside = []
-    for pt in s_rmanLightLogo['R_outside']:
-        R_outside.append( m @ Vector(pt) )
-
+    R_outside = [m @ Vector(pt) for pt in s_rmanLightLogo['R_outside']]
     R_outside_indices = _get_indices(s_rmanLightLogo['R_outside'])
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": R_outside}, indices=R_outside_indices)    
-    batch.draw(_SHADER_)
+    draw_line_shape(ob, _SHADER_, R_outside, R_outside_indices)
   
-    R_inside = []
-    for pt in s_rmanLightLogo['R_inside']:
-        R_inside.append( m @ Vector(pt) ) 
-
+    R_inside = [m @ Vector(pt) for pt in s_rmanLightLogo['R_inside']]
     R_inside_indices = _get_indices(s_rmanLightLogo['R_inside'])
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": R_inside}, indices=R_inside_indices)    
-    batch.draw(_SHADER_)             
+    draw_line_shape(ob, _SHADER_, R_inside, R_inside_indices)
 
 def draw_portal_light(ob):
     _SHADER_.bind()
@@ -873,54 +1021,46 @@ def draw_portal_light(ob):
     ob_matrix = Matrix(ob.matrix_world)        
     m = ob_matrix
 
-    R_outside = []
-    for pt in s_rmanLightLogo['R_outside']:
-        R_outside.append( m @ Vector(pt) )
-
+    R_outside = [m @ Vector(pt) for pt in s_rmanLightLogo['R_outside']]
     R_outside_indices = _get_indices(s_rmanLightLogo['R_outside'])
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": R_outside}, indices=R_outside_indices)    
-    batch.draw(_SHADER_)
+    draw_line_shape(ob, _SHADER_, R_outside, R_outside_indices)
   
-    R_inside = []
-    for pt in s_rmanLightLogo['R_inside']:
-        R_inside.append( m @ Vector(pt))
-
+    R_inside = [m @ Vector(pt) for pt in s_rmanLightLogo['R_inside']]
     R_inside_indices = _get_indices(s_rmanLightLogo['R_inside'])
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": R_inside}, indices=R_inside_indices)    
-    batch.draw(_SHADER_)                 
+    draw_line_shape(ob, _SHADER_, R_inside, R_inside_indices)
 
     m = ob_matrix @ Matrix.Rotation(math.radians(90.0), 4, 'X')
     m = m @ Matrix.Scale(0.5, 4)
-    rays = []
-    for pt in s_portalRays:
-        rays.append( m @ Vector(pt) )
-
+    rays = [m @ Vector(pt) for pt in s_portalRays]
     rays_indices = _get_indices(s_portalRays)
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": rays}, indices=rays_indices)    
-    batch.draw(_SHADER_)         
+    draw_line_shape(ob, _SHADER_, rays, rays_indices)
 
 def draw_dome_light(ob):
-    
-    
     _SHADER_.bind()
 
     set_selection_color(ob)
 
     loc, rot, sca = Matrix(ob.matrix_world).decompose()
     axis,angle = rot.to_axis_angle()
+    scale = max(sca) # take the max axis   
     m = Matrix.Rotation(angle, 4, axis)
-    m = m @ Matrix.Scale(100, 4)
+    m = m @ Matrix.Scale(100 * scale, 4)
+    m = m @ Matrix.Rotation(math.radians(90.0), 4, 'X')
 
-    sphere = make_sphere(m)
-    sphere_indices = []
-    for i in range(0, len(sphere)):
-        if i == len(sphere)-1:
-            sphere_indices.append((i, 0))
-        else:
-            sphere_indices.append((i, i+1))     
+    sphere_pts = make_sphere()
+    sphere = [m @ Vector(p) for p in sphere_pts]
+    idx_buffer = make_sphere_idx_buffer() 
+    sphere_indices = [(idx_buffer[i], idx_buffer[i+1]) for i in range(0, len(idx_buffer)-1) ]
 
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": sphere}, indices=sphere_indices)    
-    batch.draw(_SHADER_)        
+    draw_line_shape(ob, _SHADER_, sphere, sphere_indices)
+
+    rm = ob.data.renderman
+    light_shader = rm.get_light_node()
+    tex = light_shader.lightColorMap
+    real_path = string_utils.expand_string(tex)
+    if os.path.exists(real_path):
+        sphere_indices = [(idx_buffer[i], idx_buffer[i+1], idx_buffer[i+2]) for i in range(0, len(idx_buffer)-2) ]
+        draw_solid(ob, sphere_pts, m, uvs=make_sphere_uvs(), tex=tex, indices=sphere_indices)
 
 def draw_cylinder_light(ob):
 
@@ -930,13 +1070,12 @@ def draw_cylinder_light(ob):
 
     m = Matrix(ob.matrix_world)
 
-    cylinder = []
-    for pt in s_cylinderLight['vtx']:
-        cylinder.append( m @ Vector(pt)) 
+    cylinder = [m @ Vector(pt) for pt in s_cylinderLight['vtx']]
+    draw_line_shape(ob, _SHADER_, cylinder, s_cylinderLight['indices'])
 
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": cylinder}, indices=s_cylinderLight['indices'])    
-    batch.draw(_SHADER_)  
-
+    rm = ob.data.renderman
+    col = rm.get_light_node().lightColor
+    draw_solid(ob, s_cylinderLight['vtx'], m, col=col, indices=s_cylinderLight['indices_tris'])        
 
 def draw_arc(a, b, numSteps, quadrant, xOffset, yOffset, pts):
     stepAngle = float(_PI0_5_ / numSteps)
@@ -973,22 +1112,16 @@ def draw_rounded_rectangles( left, right,
     draw_arc(a, b, 10, 3, right, -bottom, pts)
 
     translate = m #Matrix.Translation( Vector([0,0, zOffset1])) @ m
-    shape_pts = []
-    for pt in pts:
-        shape_pts.append( translate @ Vector(pt)) 
+    shape_pts = [translate @ Vector(pt) for pt in pts]
     shape_pts_indices = _get_indices(shape_pts)
 
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": shape_pts}, indices=shape_pts_indices)    
-    batch.draw(_SHADER_)  
+    draw_line_shape(ob, _SHADER_, shape_pts, shape_pts_indices)
 
-    shape_pts = []
     translate = m #Matrix.Translation( Vector([0,0, zOffset2])) @ m
-    for pt in pts:
-        shape_pts.append( translate @ Vector(pt) )
+    shape_pts = [translate @ Vector(pt) for pt in pts]
     shape_pts_indices = _get_indices(shape_pts)
 
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": shape_pts}, indices=shape_pts_indices)    
-    batch.draw(_SHADER_)   
+    draw_line_shape(ob, _SHADER_, shape_pts, shape_pts_indices)
 
 def draw_rod(leftEdge, rightEdge, topEdge,  bottomEdge,
             frontEdge,  backEdge,  scale, width,  radius, 
@@ -1134,61 +1267,31 @@ def draw_ramp_light_filter(ob):
         # begin
         begin_m = m @ Matrix.Scale(begin, 4)      
 
-        disk = []
-        for pt in s_diskLight:
-            disk.append( begin_m @ Vector(pt) ) 
-
+        disk = [begin_m @ Vector(pt) for pt in s_diskLight]
         disk_indices = _get_indices(s_diskLight)
-        batch = batch_for_shader(_SHADER_, 'LINES', {"pos": disk}, indices=disk_indices)    
-        batch.draw(_SHADER_)
+        draw_line_shape(ob, _SHADER_, disk, disk_indices)
 
         m2 = begin_m @ Matrix.Rotation(math.radians(90.0), 4, 'Y')
-        disk = []
-        for pt in s_diskLight:
-            disk.append( m2 @ Vector(pt)) 
-
-        disk_indices = _get_indices(s_diskLight)
-        batch = batch_for_shader(_SHADER_, 'LINES', {"pos": disk}, indices=disk_indices)    
-        batch.draw(_SHADER_)
+        disk = [m2 @ Vector(pt) for pt in s_diskLight]
+        draw_line_shape(ob, _SHADER_, disk, disk_indices)
 
         m3 = begin_m @ Matrix.Rotation(math.radians(90.0), 4, 'X')
-        disk = []
-        for pt in s_diskLight:
-            disk.append( m3 @ Vector(pt))
-
-        disk_indices = _get_indices(s_diskLight)
-        batch = batch_for_shader(_SHADER_, 'LINES', {"pos": disk}, indices=disk_indices)    
-        batch.draw(_SHADER_)   
+        disk = [m3 @ Vector(pt) for pt in s_diskLight]
+        draw_line_shape(ob, _SHADER_, disk, disk_indices)
 
         # end
         end_m = m @ Matrix.Scale(end, 4)      
 
-        disk = []
-        for pt in s_diskLight:
-            disk.append( end_m @ Vector(pt)) 
-
-        disk_indices = _get_indices(s_diskLight)
-        batch = batch_for_shader(_SHADER_, 'LINES', {"pos": disk}, indices=disk_indices)    
-        batch.draw(_SHADER_)
+        disk = [end_m @ Vector(pt) for pt in s_diskLight]
+        draw_line_shape(ob, _SHADER_, disk, disk_indices)
 
         m2 = end_m @ Matrix.Rotation(math.radians(90.0), 4, 'Y')
-        disk = []
-        for pt in s_diskLight:
-            disk.append( m2 @ Vector(pt))
-
-        disk_indices = _get_indices(s_diskLight)
-        batch = batch_for_shader(_SHADER_, 'LINES', {"pos": disk}, indices=disk_indices)    
-        batch.draw(_SHADER_)
+        disk = [m2 @ Vector(pt) for pt in s_diskLight]
+        draw_line_shape(ob, _SHADER_, disk, disk_indices)
 
         m3 = end_m @ Matrix.Rotation(math.radians(90.0), 4, 'X')
-        disk = []
-        for pt in s_diskLight:
-            disk.append( m3 @ Vector(pt))
-
-        disk_indices = _get_indices(s_diskLight)
-        batch = batch_for_shader(_SHADER_, 'LINES', {"pos": disk}, indices=disk_indices)    
-        batch.draw(_SHADER_)        
-
+        disk = [m3 @ Vector(pt) for pt in s_diskLight]
+        draw_line_shape(ob, _SHADER_, disk, disk_indices)
 
     # linear
     elif rampType == 1:        
@@ -1197,9 +1300,7 @@ def draw_ramp_light_filter(ob):
         m = m @ Matrix.Rotation(math.radians(180.0), 4, 'Y')
         m = m @ Matrix.Rotation(math.radians(90.0), 4, 'Z')
 
-        box = []
-        for pt in s_rmanLightLogo['box']:
-            box.append( m @ Vector(pt)) 
+        box = [m @ Vector(pt) for pt in s_rmanLightLogo['box']]
         n = mathutils.geometry.normal(box)
         n.normalize()
         box1 = []
@@ -1210,15 +1311,10 @@ def draw_ramp_light_filter(ob):
                 box1.append(pt)
 
         box_indices = _get_indices(s_rmanLightLogo['box'])
-        batch = batch_for_shader(_SHADER_, 'LINES', {"pos": box1}, indices=box_indices)    
-        batch.draw(_SHADER_)
+        draw_line_shape(ob, _SHADER_, box, box_indices)
 
-        box2 = []
-        for pt in box:
-            box2.append( pt + (end * n) )
-
-        batch = batch_for_shader(_SHADER_, 'LINES', {"pos": box2}, indices=box_indices)    
-        batch.draw(_SHADER_)        
+        box2 = [pt + (end * n) for pt in box]
+        draw_line_shape(ob, _SHADER_, box2, box_indices)
 
     # radial
     elif rampType == 3:
@@ -1229,28 +1325,16 @@ def draw_ramp_light_filter(ob):
         m = Matrix(ob.matrix_world)        
         m = m @ Matrix.Rotation(math.radians(180.0), 4, 'Y')
         m = m @ Matrix.Rotation(math.radians(90.0), 4, 'Z')
-
+        disk_indices = _get_indices(s_diskLight)
         if begin > 0.0:
             m1 = m @ Matrix.Scale(begin, 4)      
 
-            disk = []
-            for pt in s_diskLight:
-                disk.append( m1 @ Vector(pt) )
-
-            disk_indices = _get_indices(s_diskLight)
-            batch = batch_for_shader(_SHADER_, 'LINES', {"pos": disk}, indices=disk_indices)    
-            batch.draw(_SHADER_)
-
+            disk = [m1 @ Vector(pt) for pt in s_diskLight]
+            draw_line_shape(ob, _SHADER_, disk, disk_indices)
 
         m2 = m @ Matrix.Scale(end, 4)      
-
-        disk = []
-        for pt in s_diskLight:
-            disk.append( m2 @ Vector(pt)) 
-
-        disk_indices = _get_indices(s_diskLight)
-        batch = batch_for_shader(_SHADER_, 'LINES', {"pos": disk}, indices=disk_indices)    
-        batch.draw(_SHADER_)
+        disk = [m2 @ Vector(pt) for pt in s_diskLight]
+        draw_line_shape(ob, _SHADER_, disk, disk_indices)
 
     else:
         pass
@@ -1271,18 +1355,15 @@ def draw_barn_light_filter(ob):
     _BARN_LIGHT_DRAW_HELPER_.update_input_params(ob)
     vtx_buffer = _BARN_LIGHT_DRAW_HELPER_.vtx_buffer()
 
-    pts = []
-    for pt in vtx_buffer:
-        pts.append( m @ Vector(pt))
-
-    indices = _BARN_LIGHT_DRAW_HELPER_.idx_buffer(len(pt), 0, 0)
+    pts = [m @ Vector(pt) for pt in vtx_buffer ]
+    indices = _BARN_LIGHT_DRAW_HELPER_.idx_buffer(len(pts), 0, 0)
     # blender wants a list of lists
     indices = [indices[i:i+2] for i in range(0, len(indices), 2)]
 
-    batch = batch_for_shader(_SHADER_, 'LINES', {"pos": pts}, indices=indices)    
-    batch.draw(_SHADER_)     
+    draw_line_shape(ob, _SHADER_, pts, indices)
 
 def draw():
+    global _PRMAN_TEX_CACHE_
 
     if bpy.context.engine != 'PRMAN_RENDER':
         return
@@ -1345,6 +1426,17 @@ def draw():
             draw_barn_light_filter(ob)
         else: 
             draw_sphere_light(ob)
+
+    # Clear out any textures not used
+    remove_textures = list()
+    for k, v in _PRMAN_TEX_CACHE_.items():
+        txfile = texture_utils.get_txmanager().get_txfile_from_path(k)
+        if not txfile:
+            bgl.glDeleteTextures(1, v)
+            remove_textures.append(k)
+    for k in remove_textures:
+        rfb_log().debug("Call glDeleteTextures for: %s" % k)
+        del _PRMAN_TEX_CACHE_[k]
 
 def register():
     global _DRAW_HANDLER_

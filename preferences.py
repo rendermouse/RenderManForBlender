@@ -278,7 +278,19 @@ class RendermanPreferences(AddonPreferences):
         description="Maximum samples for preview renders",
         default=0.15,
         min=0.001, soft_max=0.5,
-    )          
+    )        
+
+    rman_viewport_draw_lights_textured: BoolProperty(
+        name="Draw Textured Lights",    
+        description="Draw textured versions for RenderMan lights. This is automatically turned off when in IPR.",
+        default=True
+    )         
+
+    rman_viewport_lights_draw_wireframe: BoolProperty(
+        name="Draw Light Wireframes",    
+        description="Draw the wireframe for RenderMan lights. Note, we still draw the wireframe when the light is selected, even if this is off.",
+        default=True
+    )             
 
     rman_viewport_draw_bucket: BoolProperty(
         name="Draw Bucket Marker",    
@@ -451,7 +463,8 @@ class RendermanPreferences(AddonPreferences):
         col.prop(self, 'rman_do_preview_renders')  
         col.prop(self, 'rman_render_nurbs_as_mesh')
         col.prop(self, 'rman_show_cycles_convert')     
-        col.prop(self, 'rman_emit_default_params')          
+        col.prop(self, 'rman_emit_default_params')    
+        col.prop(self, 'rman_editor')      
 
         # XPU Prefs
         if sys.platform != ("darwin") and envconfig_utils.envconfig().has_xpu_license:
@@ -493,6 +506,8 @@ class RendermanPreferences(AddonPreferences):
         row.label(text='UI', icon_value=rman_r_icon.icon_id)
         row = layout.row()
         col = row.column()
+        col.prop(self, 'rman_viewport_draw_lights_textured')
+        col.prop(self, 'rman_viewport_lights_draw_wireframe')
         col.prop(self, 'rman_viewport_crop_color')
         col.prop(self, 'rman_viewport_draw_bucket')
         if self.rman_viewport_draw_bucket:
@@ -502,7 +517,6 @@ class RendermanPreferences(AddonPreferences):
             col.prop(self, 'rman_viewport_progress_color')                
         col.prop(self, 'draw_ipr_text')
         col.prop(self, 'draw_panel_icon')
-        col.prop(self, 'rman_editor')
 
         # Logging
         row = layout.row()

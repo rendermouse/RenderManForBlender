@@ -2,7 +2,7 @@ from bpy.props import EnumProperty, StringProperty, IntProperty, FloatProperty
 from ..rman_render import RmanRender
 from .. import rman_bl_nodes
 from .. import rfb_icons
-from ..rfb_utils.prefs_utils import get_pref
+from ..rfb_utils.prefs_utils import get_pref, get_addon_prefs
 from ..rfb_utils import display_utils
 from bpy.types import Menu
 
@@ -10,6 +10,11 @@ import bpy
 import math
 import gpu
 from gpu_extras.batch import batch_for_shader
+from bpy.types import (
+    Header,
+    Menu,
+    Panel,
+)
 
 __HIDDEN_INTEGRATORS__ = ['PxrValidateBxdf', 'PxrDebugShadingContext']
 __DRAW_CROP_HANDLER__ = None
@@ -672,7 +677,7 @@ def draw_rman_viewport_props(self, context):
     scene = context.scene
 
     box = layout.box()
-    row = box.row()
+    row = box.row(align=True)
     if context.engine == "PRMAN_RENDER":
         view = context.space_data
         rman_render = RmanRender.get_rman_render()
@@ -723,7 +728,54 @@ def draw_rman_viewport_props(self, context):
                 rman_render.stop_render()              
             rman_rerender_controls = rfb_icons.get_icon("rman_ipr_on")
             row.operator('renderman.start_ipr', text="",
-                            icon_value=rman_rerender_controls.icon_id)               
+                            icon_value=rman_rerender_controls.icon_id)     
+        row.popover(panel="PRMAN_PT_Viewport_Options", text="")
+
+
+class PRMAN_PT_Viewport_Options(Panel):
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'HEADER'
+    bl_label = "RenderMan Viewport Options"
+    bl_ui_units_x = 12
+
+    @classmethod
+    def poll(cls, context):
+        return context.engine == "PRMAN_RENDER" 
+
+    def draw(self, context):
+        rman_render = RmanRender.get_rman_render()
+        is_rman_rendering = rman_render.rman_running
+        scene = context.scene
+        rm = scene.renderman
+
+        layout = self.layout
+        layout.use_property_split = True
+        layout.label(text="RenderMan Viewport Options")   
+        col = layout.column(align=True)
+        prefs = get_addon_prefs()
+        col.prop(prefs, 'rman_viewport_draw_lights_textured')
+        col.prop(prefs, 'rman_viewport_lights_draw_wireframe')
+        col.prop(prefs, 'rman_viewport_crop_color')
+        col.prop(prefs, 'rman_viewport_draw_bucket')
+        if prefs.rman_viewport_draw_bucket:
+            col.prop(prefs, 'rman_viewport_bucket_color')   
+        col.prop(prefs, 'rman_viewport_draw_progress')
+        if prefs.rman_viewport_draw_progress:
+            col.prop(prefs, 'rman_viewport_progress_color')                
+        col.prop(prefs, 'draw_ipr_text')     
+
+        if rm.current_platform != ("macOS") and rm.has_xpu_license:
+            col = layout.column(align=True)
+            col.label(text='XPU')
+            col = layout.row()
+            col.enabled = not is_rman_rendering
+            col.prop(prefs, 'rman_xpu_device', expand=True)
+            col = layout.column()
+            col.enabled = not is_rman_rendering
+            prefs.find_xpu_devices()
+            col = col.column()      
+            box = col.box()  
+            prefs.draw_xpu_devices(context, box)                                       
 
 classes = [
     PRMAN_MT_Viewport_Integrator_Menu,
@@ -737,7 +789,8 @@ classes = [
     PRMAN_OT_Viewport_Snapshot,
     PRMAN_OT_Viewport_CropWindow_Reset,
     PRMAN_OT_Viewport_Cropwindow,
-    PRMAN_OT_Viewport_Enhance
+    PRMAN_OT_Viewport_Enhance,
+    PRMAN_PT_Viewport_Options
 ]
 
 def register():
