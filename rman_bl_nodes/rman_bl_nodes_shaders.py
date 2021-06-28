@@ -22,14 +22,13 @@ NODE_LAYOUT_SPLIT = 0.5
 # Defines a poll function to enable instantiation.
 class RendermanShadingNode(bpy.types.ShaderNode):
     bl_label = 'Output'
+    prev_hidden: BoolProperty(default=False, description="Whether or not this node was previously hidden.")
 
     def update_mat(self, mat):
         if self.renderman_node_type == 'bxdf' and self.outputs['Bxdf'].is_linked:
             mat.specular_color = [1, 1, 1]
             mat.diffuse_color = [1, 1, 1, 1]
-            #FIXME mat.use_transparency = False
             mat.specular_intensity = 0
-            #mat.diffuse_intensity = 1
 
             bxdf_name = self.bl_label
             bxdf_props = __RFB_CONFIG_DICT__['bxdf_viewport_color_mapping'].get(bxdf_name, None)

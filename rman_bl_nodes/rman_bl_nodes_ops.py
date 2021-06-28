@@ -520,25 +520,34 @@ class NODE_OT_rman_node_set_solo(bpy.types.Operator):
     def hide_all(self, nt, node):
         for n in nt.nodes:
             hide = (n != node)
+            if hasattr(n, 'prev_hidden'):
+                setattr(n, 'prev_hidden', n.hide)
             n.hide = hide
             for input in n.inputs:
                 if not input.is_linked:
+                    if hasattr(input, 'prev_hidden'):
+                        setattr(input, 'prev_hidden', input.hide)
                     input.hide = hide
 
             for output in n.outputs:
                 if not output.is_linked:
+                    if hasattr(output, 'prev_hidden'):
+                        setattr(output, 'prev_hidden', output.hide)
                     output.hide = hide                        
 
     def unhide_all(self, nt):
         for n in nt.nodes:
-            n.hide = False  
+            hide = getattr(n, 'prev_hidden', False)
+            n.hide = hide
             for input in n.inputs:
                 if not input.is_linked:
-                    input.hide = False
+                    hide = getattr(input, 'prev_hidden', False)
+                    input.hide = hide
 
             for output in n.outputs:
                 if not output.is_linked:
-                    output.hide = False                        
+                    hide = getattr(output, 'prev_hidden', False)
+                    output.hide = hide
 
     def invoke(self, context, event):
         nt = context.nodetree
