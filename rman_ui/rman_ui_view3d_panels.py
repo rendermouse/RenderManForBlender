@@ -80,7 +80,7 @@ class PRMAN_PT_Renderman_UI_Panel(bpy.types.Panel, _RManPanelHeader):
                 row = box.row(align=True)
 
                 # Display Driver
-                row.prop(rm, "render_into")
+                row.prop(rm, "render_ipr_into")
 
             row = layout.row(align=True)
             rman_batch = rfb_icons.get_icon("rman_batch")

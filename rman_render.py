@@ -757,7 +757,7 @@ class RmanRender(object):
         rm = depsgraph.scene_eval.renderman
         self.it_port = start_cmd_server()    
         render_into_org = '' 
-        self.rman_render_into = rm.render_into
+        self.rman_render_into = rm.render_ipr_into
         
         self.rman_callbacks.clear()
         # register the blender display driver
@@ -775,8 +775,8 @@ class RmanRender(object):
         except:
             # force rendering to 'it'
             rfb_log().error('Could not register Blender display driver. Rendering to "it".')
-            render_into_org = rm.render_into
-            rm.render_into = 'it'
+            render_into_org = rm.render_ipr_into
+            rm.render_ipr_into = 'it'
             self.rman_render_into = 'it'
             rman.Dspy.EnableDspyServer()
 
@@ -808,7 +808,7 @@ class RmanRender(object):
         rfb_log().info("RenderMan Viewport Render Started.")  
 
         if render_into_org != '':
-            rm.render_into = render_into_org    
+            rm.render_ipr_into = render_into_org    
         
         # start a thread to periodically call engine.tag_redraw()
         if self.rman_is_viewport_rendering:

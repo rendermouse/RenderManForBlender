@@ -160,7 +160,7 @@ def _add_denoiser_channels(dspys_dict, dspy_params):
     f,ext = os.path.splitext(filePath)
     dspys_dict['displays']['beauty']['filePath'] = f + '_variance' + ext
 
-def _set_blender_dspy_dict(layer, dspys_dict, dspy_drv, rman_scene, expandTokens):   
+def _set_blender_dspy_dict(layer, dspys_dict, dspy_drv, rman_scene, expandTokens, do_optix_denoise=False):   
 
     rm = rman_scene.bl_scene.renderman
     display_driver = dspy_drv
@@ -173,7 +173,7 @@ def _set_blender_dspy_dict(layer, dspys_dict, dspy_drv, rman_scene, expandTokens
         if display_driver == 'openexr':
             param_list.SetInteger('asrgba', 1)
 
-    if display_driver == 'blender' and rm.blender_optix_denoiser:   
+    if display_driver == 'blender' and do_optix_denoise:   
         aov_denoise = True
         param_list = rman_scene.rman.Types.ParamList()     
         param_list.SetInteger("use_optix_denoiser", 1)        
@@ -336,7 +336,7 @@ def _add_chan_to_dpsychan_list(rm, rm_rl, dspys_dict, chan):
         dspys_dict['channels'][ch_name] = d      
     
 
-def _set_rman_dspy_dict(rm_rl, dspys_dict, dspy_drv, rman_scene, expandTokens):
+def _set_rman_dspy_dict(rm_rl, dspys_dict, dspy_drv, rman_scene, expandTokens, do_optix_denoise=False):
 
     rm = rman_scene.bl_scene.renderman
     display_driver = dspy_drv
@@ -377,7 +377,7 @@ def _set_rman_dspy_dict(rm_rl, dspys_dict, dspy_drv, rman_scene, expandTokens):
             if rman_scene.is_viewport_render:
                 if aov.name != 'beauty':
                     display_driver = 'null'   
-            if display_driver == 'blender' and rm.blender_optix_denoiser:
+            if display_driver == 'blender' and do_optix_denoise:
                 aov_denoise = True
                 param_list = rman_scene.rman.Types.ParamList()
                 param_list.SetInteger("use_optix_denoiser", 1)
@@ -607,15 +607,18 @@ def get_dspy_dict(rman_scene, expandTokens=True):
     layer = rman_scene.bl_view_layer
     dspys_dict = {'displays': OrderedDict(), 'channels': {}}
     display_driver = None
+    do_optix_denoise = False
 
     if rman_scene.is_interactive:
-        display_driver = rm.render_into
+        display_driver = rm.render_ipr_into
+        do_optix_denoise = rm.blender_ipr_optix_denoiser
 
     elif (not rman_scene.external_render): 
         # if preview render
         # we ignore the display driver setting in the AOV and render to whatever
         # render_into is set to
         display_driver = rm.render_into
+        do_optix_denoise = rm.blender_optix_denoiser
 
         # FIXME: remove these lines once we are able to get some kind of progress
         # when rendering to XPU
@@ -630,11 +633,11 @@ def get_dspy_dict(rman_scene, expandTokens=True):
 
     else:
         # We're using blender's layering system
-        _set_blender_dspy_dict(layer, dspys_dict, display_driver, rman_scene, expandTokens)       
+        _set_blender_dspy_dict(layer, dspys_dict, display_driver, rman_scene, expandTokens, do_optix_denoise=do_optix_denoise)       
 
     if rm.do_holdout_matte != "OFF":
 
-        _set_rman_holdouts_dspy_dict(dspys_dict, display_driver, rman_scene, expandTokens)  
+        _set_rman_holdouts_dspy_dict(dspys_dict, display_driver, rman_scene, expandTokens, do_optix_denoise=do_optix_denoise)  
 
     return dspys_dict
 

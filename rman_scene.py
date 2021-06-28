@@ -235,7 +235,7 @@ class RmanScene(object):
         self.is_viewport_render = False
         self.rman_bake = False
         
-        if self.bl_scene.renderman.render_into == 'blender':
+        if self.bl_scene.renderman.render_ipr_into == 'blender':
             self.is_viewport_render = True
 
         self.do_motion_blur = False
