@@ -362,7 +362,7 @@ class RmanMeshTranslator(RmanTranslator):
 
                 if mat_id == 0:
                     primvar.SetIntegerArray(self.rman_scene.rman.Tokens.Rix.k_shade_faceset, faces, len(faces))
-                    scenegraph_utils.set_material(sg_node, sg_material.sg_node)
+                    scenegraph_utils.set_material(rman_sg_mesh.sg_node, sg_material.sg_node)
                 else:                
                     sg_sub_mesh =  self.rman_scene.sg_scene.CreateMesh("")
                     sg_sub_mesh.Define( npolys, npoints, numnverts )                   
