@@ -44,9 +44,13 @@ class RendermanDeviceDesc(bpy.types.PropertyGroup):
     version_minor: IntProperty(default=0)
     use: BoolProperty(name="Use", default=False)
 
+def fix_path(self, key):
+    if key in self and self[key].startswith('//'): 
+        self[key] = os.path.abspath(bpy.path.abspath(self[key]))     
+
 class RendermanPreferences(AddonPreferences):
     bl_idname = __package__
-
+        
     def find_xpu_cpu_devices(self):
         # for now, there's only one CPU
         if len(self.rman_xpu_cpu_devices) < 1:
@@ -154,17 +158,13 @@ class RendermanPreferences(AddonPreferences):
         default='ENV',
         update=reload_rmantree)
 
-    def update_path_rmantree(self, context):
-        key = 'path_rmantree'
-        if key in self and self[key].startswith('//'): 
-            self[key] = os.path.abspath(bpy.path.abspath(self[key]))       
-
     path_rmantree: StringProperty(
         name="RMANTREE Path",
         description="Path to RenderMan Pro Server installation folder",
         subtype='DIR_PATH',
         default='',
-        update=update_path_rmantree)
+        update=lambda s,c: fix_path(s, 'path_rmantree')
+    )
 
     draw_ipr_text: BoolProperty(
         name="Draw IPR Text",
@@ -180,7 +180,9 @@ class RendermanPreferences(AddonPreferences):
         name="Fallback Texture Path",
         description="Fallback path for textures, when the current directory is not writable",
         subtype='FILE_PATH',
-        default=os.path.join('<OUT>', 'textures'))        
+        default=os.path.join('<OUT>', 'textures'),
+        update=lambda s,c: fix_path(s, 'path_rmantree')
+    )        
 
     path_fallback_textures_path_always: BoolProperty(
         name="Always Fallback",
@@ -263,7 +265,8 @@ class RendermanPreferences(AddonPreferences):
         name='Logging File',
         description='''A file to write logging to. This will always write at DEBUG level. Setting the RFB_LOG_FILE environment variable will override this preference. Requires a restart.''',
         default = '',
-        subtype='FILE_PATH'
+        subtype='FILE_PATH',
+        update=lambda s,c: fix_path(s, 'rman_logging_file')
     )
 
     rman_do_preview_renders: BoolProperty(
@@ -339,7 +342,8 @@ class RendermanPreferences(AddonPreferences):
         name="Editor",
         subtype='FILE_PATH',
         description="Text editor excutable you want to use to view RIB.",
-        default=""
+        default="",
+        update=lambda s,c: fix_path(s, 'rman_editor')
     )
 
     rman_show_cycles_convert: BoolProperty(
@@ -371,7 +375,8 @@ class RendermanPreferences(AddonPreferences):
         name="Config Directory",
         subtype='DIR_PATH',
         description="Path to JSON configuration files. Requires a restart.",
-        default=""
+        default="",
+        update=lambda s,c: fix_path(s, 'rman_config_dir')
     )    
 
     rman_viewport_refresh_rate: FloatProperty(
