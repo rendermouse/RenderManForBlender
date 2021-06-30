@@ -36,7 +36,7 @@ NODE_LAYOUT_SPLIT = 0.5
 RFB_ARRAYS_MAX_LEN = 50
 RFB_MAX_USER_TOKENS = 10
 RFB_VIEWPORT_MAX_BUCKETS = 10
-RFB_PREFS_NAME = "RenderManForBlender"
+RFB_PREFS_NAME = __name__.split('.')[0]
 RMAN_RENDERMAN_BLUE = (0.0, 0.498, 1.0, 1.0)
 
 RFB_FLOAT3 = ['color', 'point', 'vector', 'normal']
