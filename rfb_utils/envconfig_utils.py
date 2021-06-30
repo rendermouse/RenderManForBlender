@@ -133,11 +133,12 @@ class RmanEnvConfig(object):
         return paths        
 
     def _config_pythonpath(self):
-
+        python_vers = 'python%s' % rman_constants.BLENDER_PYTHON_VERSION
+        rfb_log().debug("Blender Python Version: %s" % rman_constants.BLENDER_PYTHON_VERSION)
         if platform.system() == 'Windows':
-            rman_packages = os.path.join(self.rmantree, 'lib', 'python3.7', 'Lib', 'site-packages')
+            rman_packages = os.path.join(self.rmantree, 'lib', python_vers, 'Lib', 'site-packages')
         else:
-            rman_packages = os.path.join(self.rmantree, 'lib', 'python3.7', 'site-packages')
+            rman_packages = os.path.join(self.rmantree, 'lib', python_vers, 'site-packages')
         sys.path.append(rman_packages)        
         sys.path.append(os.path.join(self.rmantree, 'bin'))
         pythonbindings = os.path.join(self.rmantree, 'bin', 'pythonbindings')
