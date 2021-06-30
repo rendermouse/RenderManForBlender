@@ -198,7 +198,7 @@ def convert_tex_image_node(nt, cycles_node, rman_node):
         img_path = texture_utils.get_blender_image_path(bl_image)
         if img_path != '':
             rman_node['filename'] = img_path
-            texture_utils.update_texture(rman_node, light=None, mat=__CURRENT_MATERIAL__, ob=None)
+            texture_utils.update_texture(rman_node, ob=__CURRENT_MATERIAL__)
 
     # can't link a vector to a manifold :(
     # if cycles_node.inputs['Vector'].is_linked:
