@@ -1,4 +1,5 @@
 from .prefs_utils import get_pref
+from . import filepath_utils
 from ..rfb_logger import rfb_log
 from .. import rfb_logger
 from .. import rman_constants
@@ -10,6 +11,8 @@ import subprocess
 import platform
 import sys
 import re
+
+__PRESTINE_ENVIRON__ = os.environ.copy()
 
 class BuildInfo(object):
     """Hold version and build infos"""
@@ -336,12 +339,14 @@ def _guess_rmantree():
             # Fallback to RMANTREE env var
             if not buildinfo:
                 rfb_log().debug('Fallback to using RMANTREE.')
-            rmantree = os.environ.get('RMANTREE', '') 
-            rfb_log().info('RMANTREE: %s' % rmantree)
-            buildinfo = _get_build_info(rmantree)
+            rmantree = __PRESTINE_ENVIRON__.get('RMANTREE', '') 
+            if rmantree != '':
+                rfb_log().info('RMANTREE: %s' % rmantree)
+                buildinfo = _get_build_info(rmantree)
 
         if rmantree == '' or not buildinfo:
             if rmantree_method == 'ENV':
+                choice = 'NEWEST'
                 rfb_log().debug('Getting RMANTREE from environment failed. Fallback to autodetecting newest.')
                     
             if choice == 'NEWEST':

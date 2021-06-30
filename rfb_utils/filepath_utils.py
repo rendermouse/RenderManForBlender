@@ -6,7 +6,6 @@ import webbrowser
 import re
 from ..rfb_logger import rfb_log
 from .prefs_utils import get_pref
-from .envconfig_utils import envconfig
 
 def view_file(file_path):
     

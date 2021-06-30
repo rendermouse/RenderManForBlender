@@ -130,12 +130,15 @@ class RendermanPreferences(AddonPreferences):
                                     ("GPU", "GPU", "")
                                 ]
                                 )
+    def reload_rmantree(self, context):
+        envconfig_utils.reload_envconfig()
 
     rmantree_choice: EnumProperty(
         name='RenderMan Version to use',
         description='Leaving as "Newest" will automatically update when you install a new RenderMan version',
         # default='NEWEST',
-        items=find_installed_rendermans
+        items=find_installed_rendermans,
+        update=reload_rmantree        
     )
 
     rmantree_method: EnumProperty(
@@ -148,13 +151,20 @@ class RendermanPreferences(AddonPreferences):
                 ('DETECT', 'Choose From Installed', 
                 '''This will scan for installed RenderMan locations to choose from.'''),
                 ('MANUAL', 'Set Manually', 'Manually set the RenderMan installation (for expert users)')],
-        default='ENV')
+        default='ENV',
+        update=reload_rmantree)
+
+    def update_path_rmantree(self, context):
+        key = 'path_rmantree'
+        if key in self and self[key].startswith('//'): 
+            self[key] = os.path.abspath(bpy.path.abspath(self[key]))       
 
     path_rmantree: StringProperty(
         name="RMANTREE Path",
         description="Path to RenderMan Pro Server installation folder",
         subtype='DIR_PATH',
-        default='')
+        default='',
+        update=update_path_rmantree)
 
     draw_ipr_text: BoolProperty(
         name="Draw IPR Text",
@@ -438,22 +448,23 @@ class RendermanPreferences(AddonPreferences):
         row.use_property_split = False
         col = row.column()
         col.prop(self, 'rmantree_method')
-        
-        if self.rmantree_method == 'DETECT':
-            col.prop(self, 'rmantree_choice')
-            if self.rmantree_choice == 'NEWEST':
-                if envconfig_utils.reload_envconfig():
-                    col.label(text="RMANTREE: %s " % envconfig_utils.reload_envconfig().rmantree)
-        elif self.rmantree_method == 'ENV':
-            if envconfig_utils.reload_envconfig():
-                col.label(text="RMANTREE: %s" % envconfig_utils.reload_envconfig().rmantree)
-        else:
+
+        if self.rmantree_method == 'MANUAL':
             col.prop(self, "path_rmantree")
-        if envconfig_utils.reload_envconfig() is None:
-            row = layout.row()
-            row.alert = True
-            row.label(text='Error in RMANTREE. Reload addon to reset.', icon='ERROR')
-            return
+            if envconfig_utils.envconfig() is None:
+                row = layout.row()
+                row.alert = True
+                row.label(text='Error in RMANTREE. Reload addon to reset.', icon='ERROR')
+                return
+        else:
+            if self.rmantree_method == 'DETECT':  
+                col.prop(self, 'rmantree_choice')
+            if envconfig_utils.envconfig() is None:
+                row = layout.row()
+                row.alert = True
+                row.label(text='Error in RMANTREE. Reload addon to reset.', icon='ERROR')
+                return                
+            col.label(text="RMANTREE: %s" % envconfig_utils.envconfig().rmantree)    
 
         # Behavior Prefs
         row = layout.row()
