@@ -184,7 +184,7 @@ class PRMAN_OT_RM_Add_Light(bpy.types.Operator):
 
     def execute(self, context):
         bpy.ops.object.light_add(type='AREA')
-        light_ob = context.selected_objects[0]
+        light_ob = context.object
 
         light_ob.data.renderman.renderman_light_role = 'RMAN_LIGHT'
         light_ob.data.renderman.renderman_lock_light_type = True
@@ -227,7 +227,7 @@ class PRMAN_OT_RM_Add_Light_Filter(bpy.types.Operator):
         selected_objects = context.selected_objects
 
         bpy.ops.object.light_add(type='AREA')
-        light_filter_ob = context.selected_objects[0]
+        light_filter_ob = context.object
         light_filter_ob.data.renderman.renderman_light_role = 'RMAN_LIGHTFILTER'
         light_filter_ob.data.renderman.renderman_lock_light_type = True
         light_filter_ob.data.use_nodes = True
