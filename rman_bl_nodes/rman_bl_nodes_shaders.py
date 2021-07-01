@@ -299,6 +299,8 @@ class RendermanShadingNode(bpy.types.ShaderNode):
         for output in self.outputs:
             if not output.is_linked:
                 continue
+            if len(output.links) < 1:
+                continue
             link = output.links[0]
             from_node_type = getattr(link.from_socket, 'renderman_type', None)
             to_node_type = getattr(link.to_socket, 'renderman_type', None)
@@ -464,7 +466,7 @@ class RendermanOutputNode(RendermanShadingNode):
     # updates
     def update(self):
         for link in self.new_links:
-            if link.from_node.renderman_node_type != link.to_socket.renderman_type:
+            if link.from_socket.renderman_type != link.to_socket.renderman_type:
                 # FIXME: this should removed eventually
                 if link.to_socket.bl_idname == 'RendermanShaderSocket':
                     continue
