@@ -212,7 +212,10 @@ class RmanSpool(object):
         if rm.denoise_cmd != '':
             denoise_options.append(rm.denoise_cmd)  
         if rm.denoise_gpu:
-            denoise_options.append('--override gpuIndex 0 --')     
+            denoise_options.append('--override')
+            denoise_options.append('gpuIndex')
+            denoise_options.append('0')
+            denoise_options.append('--')     
 
         # any cross frame?
         do_cross_frame = False
@@ -235,7 +238,8 @@ class RmanSpool(object):
             command = author.Command(local=False, service="PixarRender")                
 
             command.argv = ["denoise"]
-            command.argv.extend(denoise_options)     
+            for opt in denoise_options:
+                command.argv.append(opt)                
             command.argv.append('--crossframe')  
             command.argv.append('-v')
             command.argv.append('variance')     
@@ -285,7 +289,8 @@ class RmanSpool(object):
                     command = author.Command(local=False, service="PixarRender")                
 
                     command.argv = ["denoise"]
-                    command.argv.extend(denoise_options)
+                    for opt in denoise_options:
+                        command.argv.append(opt)
                     if dspy == 'beauty':
                         command.argv.append(variance_file)
                     else:
