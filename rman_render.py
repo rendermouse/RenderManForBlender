@@ -533,7 +533,6 @@ class RmanRender(object):
                         buffer = self._get_buffer(width, height, image_num=i, as_flat=False, render=render)
                         if buffer:
                             img.rect = buffer
-                            print("BUFFER: %d SIZE: %d" % (len(buffer), (size_x*size_y)))
             
                     self.bl_engine.update_result(result)        
           
