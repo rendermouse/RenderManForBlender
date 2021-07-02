@@ -533,6 +533,7 @@ class RmanRender(object):
                         buffer = self._get_buffer(width, height, image_num=i, as_flat=False, render=render)
                         if buffer:
                             img.rect = buffer
+                            print("BUFFER: %d SIZE: %d" % (len(buffer), (size_x*size_y)))
             
                     self.bl_engine.update_result(result)        
           
@@ -1100,8 +1101,10 @@ class RmanRender(object):
                 if render and render.use_border:
                     start_y = int(height * (render.border_max_y))-1 
                     end_y = int(height * (render.border_min_y))-1
-                    start_x = int(width * render.border_min_x)-1
-                    end_x =  int(width * render.border_max_x)-2
+                    if render.border_min_x > 0.0:
+                        start_x = int(width * render.border_min_x)-1
+                    if render.border_max_x < 1.0:
+                        end_x =  int(width * render.border_max_x)-2
 
                 # return the buffer as a list of lists
                 for y in range(start_y, end_y, -1):
