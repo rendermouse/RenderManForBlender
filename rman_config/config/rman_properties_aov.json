@@ -38,7 +38,7 @@
             "name": "camera",
             "label": "Camera",
             "type": "string",
-            "widget": "scenegraphLocation",
+            "widget": "bl_scenegraphLocation",
             "options": "nodeType:bpy.types.Camera",
             "default": ""
         },
