@@ -63,6 +63,27 @@ class RmanSceneSync(object):
                 translator.update_transform(camera, rman_sg_camera)  
 
     def _scene_updated(self):
+
+        # Check changes to local view
+        if self.rman_scene.bl_local_view and (self.rman_scene.context.space_data.local_view is None):
+            self.rman_scene.bl_local_view = False
+            for ob in self.rman_scene.bl_scene.objects:
+                if ob.type in ('ARMATURE', 'CURVE', 'CAMERA', 'LIGHT'):
+                    continue
+                self.clear_instances(ob)
+                self.update_instances.add(ob.original)
+            with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):         
+                self.rman_scene.check_solo_light()
+        elif not self.rman_scene.bl_local_view and (self.rman_scene.context.space_data.local_view is not None):
+            self.rman_scene.bl_local_view = True   
+            for ob in self.rman_scene.bl_scene.objects:
+                if ob.type in ('ARMATURE', 'CURVE', 'CAMERA', 'LIGHT'):
+                    continue
+                self.clear_instances(ob)               
+                self.update_instances.add(ob.original)
+            with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):                     
+                self.rman_scene.check_solo_light()  
+
         if self.rman_scene.bl_frame_current != self.rman_scene.bl_scene.frame_current:
             # frame changed, update any materials and objects that 
             # are marked as frame sensitive
@@ -181,7 +202,8 @@ class RmanSceneSync(object):
                                                         
                     if not self.rman_scene.scene_solo_light:
                         # only set if a solo light hasn't been set
-                        rman_sg_node.sg_node.SetHidden(ob.data.renderman.mute)
+                        if not self.rman_scene.check_light_local_view(ob, rman_sg_node):
+                            rman_sg_node.sg_node.SetHidden(ob.data.renderman.mute)
                 elif rman_type == 'CAMERA':
                     ob = ob.original
                     rman_camera_translator = self.rman_scene.rman_translators['CAMERA']
@@ -213,6 +235,8 @@ class RmanSceneSync(object):
             if vis == -1 and not ob.hide_get() and int(ob.renderman.mute) == 0:
                 return
             with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
+                if self.rman_scene.check_light_local_view(rman_sg_node):
+                    return True                
                 if not ob.hide_get():
                     rman_sg_node.sg_node.SetHidden(ob.renderman.mute)
                     return (vis != int(ob.renderman.mute))
@@ -937,6 +961,8 @@ class RmanSceneSync(object):
                 rm = light_ob.renderman
                 if not rm:
                     continue         
+                if self.rman_scene.check_light_local_view(light_ob, rman_sg_node):
+                    continue
                 rman_sg_node.sg_node.SetHidden(light_ob.hide_get())         
 
     def update_viewport_chan(self, context, chan_name):

@@ -207,6 +207,3 @@ class RmanTranslator(object):
                                                 frame=self.rman_scene.bl_frame_current,
                                                 asFilePath=True)                
                 attrs.SetString('user:bake_filename_attr', filePath)
-
-        rman_sg_node.sg_node.SetAttributes(attrs) 
-    

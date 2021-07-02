@@ -131,6 +131,7 @@ class RmanScene(object):
 
         self.viewport_render_res_mult = 1.0
         self.num_object_instances = 0
+        self.bl_local_view = False
 
         self.create_translators()     
 
@@ -202,6 +203,7 @@ class RmanScene(object):
         self.external_render = is_external
         self.is_interactive = False
         self.is_viewport_render = False
+        self.bl_local_view = False
         self.do_motion_blur = self.bl_scene.renderman.motion_blur
         self.export()
 
@@ -217,6 +219,7 @@ class RmanScene(object):
         self.is_viewport_render = False
         self.do_motion_blur = self.bl_scene.renderman.motion_blur
         self.rman_bake = True
+        self.bl_local_view = False
 
         if self.bl_scene.renderman.hider_type == 'BAKE_BRICKMAP_SELECTED':
             self.export_bake_brickmap_selected()
@@ -229,6 +232,7 @@ class RmanScene(object):
         self.bl_view_layer = context.view_layer
         self.bl_scene = depsgraph.scene_eval        
         self._find_renderman_layer()
+        self.bl_local_view = context.space_data.local_view
         self.depsgraph = depsgraph
         self.external_render = False
         self.is_interactive = True
@@ -245,6 +249,7 @@ class RmanScene(object):
     def export_for_rib_selection(self, context, sg_scene):
         self.reset()
         self.bl_scene = context.scene
+        self.bl_local_view = False
         self.bl_frame_current = self.bl_scene.frame_current
         self.sg_scene = sg_scene
         self.context = context
@@ -262,6 +267,7 @@ class RmanScene(object):
     def export_for_swatch_render(self, depsgraph, sg_scene):
         self.sg_scene = sg_scene
         self.context = bpy.context #None
+        self.bl_local_view = False
         self.bl_scene = depsgraph.scene_eval
         self.depsgraph = depsgraph
         self.external_render = False
@@ -510,7 +516,7 @@ class RmanScene(object):
                 array_len = meta['arraySize']
             param_type = meta['renderman_type']         
             property_utils.set_rix_param(attrs, param_type, ri_name, val, is_reference=False, is_array=is_array, array_len=array_len, node=rm)
-                           
+
         root_sg.SetAttributes(attrs)
         
     def get_root_sg_node(self):
@@ -624,7 +630,7 @@ class RmanScene(object):
                     self.moving_objects[ob.name_full] = ob
                 else:
                     rman_sg_node.is_transforming = False
-                    rman_sg_node.is_deforming = False
+                    rman_sg_node.is_deforming = False                
 
     def export_defaultlight(self):
         # Export a headlight light if needed
@@ -668,6 +674,7 @@ class RmanScene(object):
         parent_sg_node = None
         rman_sg_particles = None
         psys = None
+        parent = None
         if ob_inst.is_instance:
             parent = ob_inst.parent
             ob = ob_inst.instance_object
@@ -771,6 +778,19 @@ class RmanScene(object):
                 rman_sg_group.bl_psys_settings = psys.settings.original
             else:
                 self.attach_material(ob, rman_sg_group)                
+
+            # check local view
+            if self.is_interactive:
+                if parent:
+                    if not parent.visible_in_viewport_get(self.context.space_data):
+                        rman_sg_group.sg_node.SetHidden(1)
+                    else:
+                        rman_sg_group.sg_node.SetHidden(-1)    
+                else:
+                    if not ob.visible_in_viewport_get(self.context.space_data):
+                        rman_sg_group.sg_node.SetHidden(1)
+                    else:
+                        rman_sg_group.sg_node.SetHidden(-1)
             
             if rman_type == "META":
                 # meta/blobbies are already in world space. Their instances don't need to
@@ -955,6 +975,15 @@ class RmanScene(object):
 
         self.rman_render.bl_engine.frame_set(origframe, subframe=0)  
 
+    def check_light_local_view(self, ob, rman_sg_node):
+        if self.is_interactive and self.context.space_data:
+            if not ob.visible_in_viewport_get(self.context.space_data):  
+                rman_sg_node.sg_node.SetHidden(1)
+                return True
+
+        return False       
+
+
     def check_solo_light(self):           
         if self.bl_scene.renderman.solo_light:   
             for light_ob in scene_utils.get_all_lights(self.bl_scene, include_light_filters=False):
@@ -976,6 +1005,10 @@ class RmanScene(object):
                 rm = light_ob.renderman            
                 if not rm:
                     continue
+                
+                if self.check_light_local_view(light_ob, rman_sg_node):
+                    return
+
                 if not light_ob.hide_get():
                     rman_sg_node.sg_node.SetHidden(rm.mute)
                 else:
