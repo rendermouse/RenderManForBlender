@@ -509,9 +509,15 @@ class RmanRender(object):
                         continue     
                     self.bl_engine.add_pass(dspy_nm, 4, 'RGBA')
 
+                size_x = width
+                size_y = height
+                if render.use_border:
+                    size_x = int(width * (render.border_max_x - render.border_min_x))
+                    size_y = int(height * (render.border_max_y - render.border_min_y))
+
                 result = self.bl_engine.begin_result(0, 0,
-                                            width,
-                                            height,
+                                            size_x,
+                                            size_y,
                                             view=render_view)
 
                 for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
@@ -524,7 +530,7 @@ class RmanRender(object):
                 while not self.bl_engine.test_break() and self.rman_is_live_rendering:
                     time.sleep(0.01)
                     for i, img in bl_image_lyrs.items():
-                        buffer = self._get_buffer(width, height, image_num=i, as_flat=False)
+                        buffer = self._get_buffer(width, height, image_num=i, as_flat=False, render=render)
                         if buffer:
                             img.rect = buffer
             
@@ -1039,7 +1045,7 @@ class RmanRender(object):
                 shader.bind()
                 batch.draw(shader)
 
-    def _get_buffer(self, width, height, image_num=0, as_flat=True):
+    def _get_buffer(self, width, height, image_num=0, as_flat=True, render=None):
         dspy_plugin = self.get_blender_dspy_plugin()
         num_channels = dspy_plugin.GetNumberOfChannels(ctypes.c_size_t(image_num))
         if num_channels > 4 or num_channels < 0:
@@ -1086,11 +1092,24 @@ class RmanRender(object):
                             pixels.append(buffer[j])   
                             pixels.append(1.0)                               
             else:
+                start_x = 0
+                end_x = width
+                start_y = height-1
+                end_y = -1
+
+                if render and render.use_border:
+                    start_y = int(height * (render.border_max_y))-1 
+                    end_y = int(height * (render.border_min_y))-1
+                    if render.border_min_x > 0.0:
+                        start_x = int(width * render.border_min_x)-1
+                    if render.border_max_x < 1.0:
+                        end_x =  int(width * render.border_max_x)-2
+
                 # return the buffer as a list of lists
-                for y in range(height-1, -1, -1):
+                for y in range(start_y, end_y, -1):
                     i = (width * y * num_channels)
 
-                    for x in range(0, width):
+                    for x in range(start_x, end_x):
                         j = i + (num_channels * x)
                         pixel = []
                         pixel.append(buffer[j])    

@@ -863,9 +863,11 @@ def draw_sphere_light(ob):
     idx_buffer = make_sphere_idx_buffer() 
     rm = ob.data.renderman
     light_shader = rm.get_light_node()
-    col = light_shader.lightColor
-    sphere_indices = [(idx_buffer[i], idx_buffer[i+1], idx_buffer[i+2]) for i in range(0, len(idx_buffer)-2) ]
-    draw_solid(ob, make_sphere(), m, col=col, indices=sphere_indices)    
+    light_shader_name = rm.get_light_node_name()
+    if light_shader_name in ['PxrSphereLight']:
+        col = light_shader.lightColor
+        sphere_indices = [(idx_buffer[i], idx_buffer[i+1], idx_buffer[i+2]) for i in range(0, len(idx_buffer)-2) ]
+        draw_solid(ob, make_sphere(), m, col=col, indices=sphere_indices)    
 
 def draw_envday_light(ob): 
 

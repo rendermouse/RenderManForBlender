@@ -432,7 +432,7 @@ def generate_property(node, sp, update_function=None):
                                     description=param_help, 
                                     update=update_function)                                        
 
-        elif param_widget == 'scenegraphlocation':
+        elif param_widget == 'bl_scenegraphlocation':
             reference_type = eval(sp.options['nodeType'])
             prop = PointerProperty(name=param_label, 
                         description=param_help,

@@ -256,7 +256,10 @@ class RmanCameraTranslator(RmanTranslator):
                 if cam:
                     shift_x = cam.shift_x
                     shift_y = cam.shift_y
-                offset = tuple(rman_sg_camera.view_camera_offset)
+
+                # FIXME? It seems like we don't need the view_camera_offset for some reason
+                # Need to do some more testing, but taking it into account seems to shift the image
+                offset = (0.0, 0.0) #tuple(rman_sg_camera.view_camera_offset)
                 dx = 2.0 * (aspectratio * shift_x + offset[0] * xaspect * 2.0)
                 dy = 2.0 * (aspectratio * shift_y + offset[1] * yaspect * 2.0)               
 
@@ -325,8 +328,10 @@ class RmanCameraTranslator(RmanTranslator):
                 shift_y = 0.0
                 if cam:
                     shift_x = cam.shift_x
-                    shift_y = cam.shift_y                         
-                offset = tuple(rman_sg_camera.view_camera_offset)
+                    shift_y = cam.shift_y       
+
+                # FIXME? See comment above                      
+                offset = (0.0, 0.0) #tuple(rman_sg_camera.view_camera_offset)
                 dx = 2.0 * (aspectratio * shift_x + offset[0] * xaspect * 2.0)
                 dy = 2.0 * (aspectratio * shift_y + offset[1] * yaspect * 2.0)                            
 

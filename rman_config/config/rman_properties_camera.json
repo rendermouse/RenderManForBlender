@@ -90,7 +90,7 @@
             "label": "Focus Object",
             "type": "string",
             "editable": true,
-            "widget": "scenegraphLocation",
+            "widget": "bl_scenegraphLocation",
             "options": "nodeType:bpy.types.Object",
             "default": ""
         },
