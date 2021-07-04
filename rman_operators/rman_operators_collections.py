@@ -69,6 +69,62 @@ class COLLECTION_OT_add_remove(bpy.types.Operator):
 
         return {'FINISHED'}
 
+class COLLECTION_OT_add_remove_dspymeta(bpy.types.Operator):
+    bl_label = "Add or Remove Paths"
+    bl_idname = "renderman.add_remove_dspymeta"
+
+    action: EnumProperty(
+        name="Action",
+        description="Either add or remove properties",
+        items=[('ADD', 'Add', ''),
+               ('REMOVE', 'Remove', '')],
+        default='ADD')
+    collection: StringProperty(
+        name="Collection",
+        description="The collection to manipulate",
+        default="")
+    collection_index: StringProperty(
+        name="Index Property",
+        description="The property used as a collection index",
+        default="")
+    defaultname: StringProperty(
+        name="Default Name",
+        description="Default name to give this collection item",
+        default="")
+
+    def invoke(self, context, event):
+        scene = context.scene
+        rm = context.node
+
+        prop_coll = self.properties.collection
+        coll_idx = self.properties.collection_index
+
+        collection = getattr(rm, prop_coll)
+        index = getattr(rm, coll_idx)
+
+        if self.properties.action == 'ADD':
+            dflt_name = self.properties.defaultname          
+            collection.add()
+            index += 1
+            setattr(rm, coll_idx, index)
+            i = 0
+            if dflt_name != '':
+                for coll in collection:
+                    if coll.name == dflt_name:
+                        i += 1
+                        dflt_name = '%s_%d' % (self.properties.defaultname, i)
+
+                collection[-1].name = dflt_name
+
+        elif self.properties.action == 'REMOVE':
+            collection.remove(index)
+            setattr(rm, coll_idx, index - 1)
+
+        if context.object:
+            context.object.update_tag(refresh={'DATA'})
+
+        return {'FINISHED'}        
+
 class COLLECTION_OT_meshlight_lightfilter_add_remove(bpy.types.Operator):
     bl_label = "Add Light Filter to Mesh Light"
     bl_idname = "renderman.add_meshlight_lightfilter"
@@ -603,6 +659,7 @@ class PRMAN_OT_remove_light_link(bpy.types.Operator):
 
 classes = [
     COLLECTION_OT_add_remove,
+    COLLECTION_OT_add_remove_dspymeta,
     COLLECTION_OT_meshlight_lightfilter_add_remove,
     COLLECTION_OT_object_groups_add_remove,
     PRMAN_OT_convert_mixer_group_to_light_group,

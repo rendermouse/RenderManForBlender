@@ -300,6 +300,15 @@ def generate_property(node, sp, update_function=None):
                                     default=bool(param_default),
                                     description=param_help, update=update_function)
 
+            elif param_widget == 'displaymetadata':
+                from ..rman_bl_nodes.rman_bl_nodes_props import RendermanDspyMetaGroup
+                prop = CollectionProperty(name="Meta Data",
+                                    type=RendermanDspyMetaGroup,                                   
+                                    description=param_help)
+
+                dspy_meta_index = '%s_index' % param_name
+                node.__annotations__[dspy_meta_index] = IntProperty(name=dspy_meta_index, default=-1)                                    
+
             elif param_widget == 'mapper':
                 items = []
                 in_items = False

@@ -1,12 +1,45 @@
 import bpy
 from bpy.props import PointerProperty, StringProperty, BoolProperty, \
-    EnumProperty, IntProperty, FloatProperty, FloatVectorProperty, \
+    EnumProperty, IntProperty, IntVectorProperty, FloatProperty, FloatVectorProperty, \
     CollectionProperty, BoolVectorProperty
 from .. import rman_bl_nodes
 from .. import rfb_icons
 from ..rfb_utils.shadergraph_utils import is_renderman_nodetree
 from ..rfb_utils import shadergraph_utils
 from ..rman_constants import RMAN_AREA_LIGHT_TYPES
+
+class RENDERMAN_UL_Dspy_MetaData_List(bpy.types.UIList):
+
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+        layout.label(text=item.name)
+
+class RendermanDspyMetaGroup(bpy.types.PropertyGroup):
+    name: StringProperty(name="Name", default="")
+    type: EnumProperty(name="Type",
+        items=[
+              ('float', 'float', ''),
+               ('int', 'int', ''),
+               ('string', 'string', ''),
+               ('v2f', 'v2f', ''),
+               ('v2i', 'v2i', ''),
+               ('v3f', 'v3f', ''),
+               ('v3i', 'v3i', ''),
+               ('box2f', 'box2f', ''),
+               ('box2i', 'box2i', ''),
+               ('m33f', 'm33f', ''),
+               ('m44f', 'm44f', '')])
+
+    value_float: FloatProperty(name="Value", default=0.0)
+    value_int: IntProperty(name="Value", default=0)
+    value_string: StringProperty(name="Value", default="")
+    value_v2f: FloatVectorProperty(name="Value", size=2, default=(0.0, 0.0))
+    value_v3f: FloatVectorProperty(name="Value", size=3, default=(0.0, 0.0, 0.0))
+    value_v2i: IntVectorProperty(name="Value", size=2, default=(0, 0))
+    value_v3i: IntVectorProperty(name="Value", size=3, default=(0, 0, 0))
+    value_box2f: FloatVectorProperty(name="Value", size=4, default=(0.0, 0.0, 0.0, 0.0))
+    value_box2i: IntVectorProperty(name="Value", size=4, default=(0, 0, 0, 0))
+    value_m33f: FloatVectorProperty(name="Value", size=9, default=[0.0]*9)
+    value_m44f: FloatVectorProperty(name="Value", size=16, default=[0.0]*16)    
 
 class RendermanPluginSettings(bpy.types.PropertyGroup):
     pass
@@ -371,7 +404,10 @@ class RendermanSampleFilterSettings(bpy.types.PropertyGroup):
 
     filter_type: EnumProperty(items=samplefilter_items, name='Filter')
 
-classes = [RendermanLightFilter,
+classes = [
+           RENDERMAN_UL_Dspy_MetaData_List,
+           RendermanDspyMetaGroup,
+           RendermanLightFilter,
            RendermanPortalLightPointer,
            RendermanLightSettings,
            RendermanPluginSettings,

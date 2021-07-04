@@ -695,27 +695,18 @@ def make_dspy_info(scene):
 
     return dspy_notes
 
-def export_metadata(scene, params):
+def export_metadata(scene, params, camera_name=None):
     """
     Create metadata for the OpenEXR display driver
 
     Arguments:
         scene (bpy.types.Scene) - Blender scene object
         params (RtParamList) - param list to fill with meta data
+        camera_name - Name of camera we want meta data from
     """
 
     rm = scene.renderman
-    world = scene.world
-    if "Camera" not in bpy.data.cameras:
-        return
-    if "Camera" not in bpy.data.objects:
-        return
-    cam = bpy.data.cameras["Camera"]
-    obj = bpy.data.objects["Camera"]
-    if cam.dof.focus_object:
-        dof_distance = (obj.location - cam.dof.focus_object.location).length
-    else:
-        dof_distance = cam.dof.focus_distance
+    world = scene.world         
     output_dir = string_utils.expand_string(rm.path_rib_output, 
                                             frame=scene.frame_current, 
                                             asFilePath=True)  
@@ -724,11 +715,7 @@ def export_metadata(scene, params):
 
     params.SetString('exrheader_dcc', 'Blender %s\nRenderman for Blender %s' % (bpy.app.version, rman_constants.RFB_ADDON_VERSION_STRING))
 
-    params.SetFloat('exrheader_fstop', cam.dof.aperture_fstop )
-    params.SetFloat('exrheader_focaldistance', dof_distance )
-    params.SetFloat('exrheader_focal', cam.lens )
-    params.SetFloat('exrheader_haperture', cam.sensor_width )
-    params.SetFloat('exrheader_vaperture', cam.sensor_height )
+
 
     params.SetString('exrheader_renderscene', bpy.data.filepath)
     params.SetString('exrheader_user', getpass.getuser())
@@ -743,3 +730,22 @@ def export_metadata(scene, params):
     params.SetFloatArray('exrheader_samples', [rm.hider_minSamples, rm.hider_maxSamples], 2)
     params.SetFloat('exrheader_pixelvariance', rm.ri_pixelVariance)
     params.SetString('exrheader_comment', rm.custom_metadata)
+
+    if camera_name:
+        if camera_name not in bpy.data.objects:
+            return
+        obj = bpy.data.objects[camera_name]     
+        if obj.data.name not in bpy.data.cameras:
+            return               
+        cam = bpy.data.cameras[obj.data.name]
+
+        if cam.dof.focus_object:
+            dof_distance = (obj.location - cam.dof.focus_object.location).length
+        else:
+            dof_distance = cam.dof.focus_distance
+
+        params.SetFloat('exrheader_fstop', cam.dof.aperture_fstop )
+        params.SetFloat('exrheader_focaldistance', dof_distance )
+        params.SetFloat('exrheader_focal', cam.lens )
+        params.SetFloat('exrheader_haperture', cam.sensor_width )
+        params.SetFloat('exrheader_vaperture', cam.sensor_height )       

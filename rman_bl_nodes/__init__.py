@@ -517,13 +517,16 @@ def register_plugin_types(node_desc):
     ntype.bl_label = name
     ntype.typename = typename
     ntype.bl_idname = typename
-    ntype.plugin_name = name
     description = getattr(node_desc, 'help')
     if not description:
         description = name
     ntype.bl_description = description    
 
     try:
+        if "__annotations__" not in ntype.__dict__:
+            setattr(ntype, "__annotations__", {})
+        ntype.__annotations__['plugin_name'] = StringProperty(name='Plugin Name',
+                                        default=name, options={'HIDDEN'})
         register_plugin_to_parent(ntype, name, node_desc, node_desc.node_type, parent)
     except Exception as e:
         rfb_log().error("Error registering plugin ", name)
@@ -760,12 +763,12 @@ def register_node_categories():
                                             node_categories)   
 
 def register():
+    rman_bl_nodes_props.register()
     global __RMAN_NODES_ALREADY_REGISTERED__
     if not __RMAN_NODES_ALREADY_REGISTERED__:
         register_rman_nodes()
         __RMAN_NODES_ALREADY_REGISTERED__ = True    
     register_node_categories()
-    rman_bl_nodes_props.register()
     rman_bl_nodes_sockets.register()
     rman_bl_nodes_shaders.register()
     rman_bl_nodes_ops.register()

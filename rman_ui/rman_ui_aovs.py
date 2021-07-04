@@ -245,6 +245,7 @@ class RENDER_PT_layer_custom_aovs(CollectionPanel, Panel):
         if item.show_displaydriver_settings:
             draw_props(displaydriver_settings, displaydriver_settings.prop_names, col)   
 
+        col.label(text="")
         row = col.row()
         row.prop(item, 'camera')
 

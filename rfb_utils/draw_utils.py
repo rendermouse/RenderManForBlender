@@ -28,7 +28,39 @@ def draw_sticky_toggle(layout, node, prop_name, output_node=None):
         sticky_icon = 'HIDE_ON'
         if getattr(node, sticky_prop):
             sticky_icon = 'HIDE_OFF'                
-        layout.prop(node, sticky_prop, text='', icon=sticky_icon, icon_only=True, emboss=False)    
+        layout.prop(node, sticky_prop, text='', icon=sticky_icon, icon_only=True, emboss=False)  
+
+def draw_dsypmeta_item(layout, node, prop_name):
+    layout.label(text='Meta Data')
+    row = layout.row()    
+    prop_index_nm = '%s_index' % prop_name        
+    row.template_list("RENDERMAN_UL_Dspy_MetaData_List", "Meta Data",
+                        node, prop_name, node, prop_index_nm)
+    col = row.column(align=True)
+    row.context_pointer_set("node", node)
+    op = col.operator('renderman.add_remove_dspymeta', icon="ADD", text="")
+    op.collection = prop_name
+    op.collection_index = prop_index_nm
+    op.defaultname = 'key'
+    op.action = 'ADD'
+
+    col.context_pointer_set("node", node)
+    op = col.operator('renderman.add_remove_dspymeta', icon="REMOVE", text="")
+    op.collection = prop_name
+    op.collection_index = prop_index_nm
+    op.action = 'REMOVE'   
+
+    prop_index = getattr(node, prop_index_nm, None)
+    if prop_index_nm is None:
+        return
+
+    prop = getattr(node, prop_name)
+    if prop_index > -1 and prop_index < len(prop):
+        item = prop[prop_index]
+        layout.prop(item, 'name')
+        layout.prop(item, 'type')
+        layout.prop(item, 'value_%s' % item.type, slider=True)
+       
 
 def _draw_ui_from_rman_config(config_name, panel, context, layout, parent):
     row_dict = dict()
@@ -187,7 +219,10 @@ def draw_prop(node, prop_name, layout, level=0, nt=None, context=None, sticky=Fa
             ramp_node = node_group.nodes[ramp_name]
             layout.template_curve_mapping(
                     ramp_node, 'mapping')  
-            return                      
+            return     
+
+        elif widget == 'displaymetadata':
+            draw_dsypmeta_item(layout, node, prop_name)                             
 
         # double check the conditionalVisOps
         # this might be our first time drawing, i.e.: scene was just opened.
