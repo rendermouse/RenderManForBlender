@@ -1,5 +1,5 @@
 from bpy.props import PointerProperty, StringProperty, BoolProperty, \
-    EnumProperty, IntProperty, FloatProperty, \
+    EnumProperty, IntProperty, FloatProperty, FloatVectorProperty, \
     CollectionProperty
 
 from ... import rman_config
@@ -7,8 +7,36 @@ from ...rman_config import RmanBasePropertyGroup
 from ..rman_properties_misc import RendermanOpenVDBChannel, RendermanAnimSequenceSettings 
 from ..rman_properties_misc import RendermanLightPointer
 from ...rfb_utils import shadergraph_utils
+from ...rfb_logger import rfb_log
 
 import bpy
+
+class RENDERMAN_UL_UserAttributes_List(bpy.types.UIList):
+
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+        layout.label(text=item.name)
+
+class RendermanUserAttributesGroup(bpy.types.PropertyGroup):
+    name: StringProperty(name="Name", default="")
+    type: EnumProperty(name="Type",
+        items=[
+              ('float', 'float', ''),
+               ('int', 'int', ''),
+               ('string', 'string', ''),
+               ('color', 'color', ''),
+               ('vector', 'vector', ''),
+               ('normal', 'normal', ''),
+               ('point', 'point', ''),
+    ])
+
+    value_float: FloatProperty(name="Value", default=0.0)
+    value_int: IntProperty(name="Value", default=0)
+    value_string: StringProperty(name="Value", default="")
+    value_color: FloatVectorProperty(name="Value", size=3, subtype='COLOR', soft_min=0.0, soft_max=1.0, default=(1.0, 1.0, 1.0))
+    value_vector: FloatVectorProperty(name="Value", size=3, subtype='XYZ', default=(0.0, 0.0, 0.0))
+    value_normal: FloatVectorProperty(name="Value", size=3, subtype='XYZ', default=(0.0, 0.0, 0.0))
+    value_point: FloatVectorProperty(name="Value", size=3, subtype='XYZ', default=(0.0, 0.0, 0.0))
+    
 
 class RendermanObjectSettings(RmanBasePropertyGroup, bpy.types.PropertyGroup):
 
@@ -84,13 +112,26 @@ class RendermanObjectSettings(RmanBasePropertyGroup, bpy.types.PropertyGroup):
         description="Turn on only this light",
         default=False)        
 
-classes = [         
+    user_attributes: CollectionProperty(
+        type=RendermanUserAttributesGroup, name="User Attributes")
+
+    user_attributes_index: IntProperty(min=-1, default=-1)
+
+rman_config_classes = [
     RendermanObjectSettings
+]
+
+classes = [       
+    RENDERMAN_UL_UserAttributes_List,  
+    RendermanUserAttributesGroup,
 ]           
 
 def register():
 
     for cls in classes:
+        bpy.utils.register_class(cls)  
+
+    for cls in rman_config_classes:
         cls._add_properties(cls, 'rman_properties_object')
         bpy.utils.register_class(cls)  
 

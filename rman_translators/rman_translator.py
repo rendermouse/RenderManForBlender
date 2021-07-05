@@ -207,3 +207,12 @@ class RmanTranslator(object):
                                                 frame=self.rman_scene.bl_frame_current,
                                                 asFilePath=True)                
                 attrs.SetString('user:bake_filename_attr', filePath)
+
+        # user attributes
+        for ua in rm.user_attributes:
+            param_type = ua.type
+            val = getattr(ua, 'value_%s' % ua.type)
+            ri_name = 'user:%s' % ua.name
+            property_utils.set_rix_param(attrs, param_type, ri_name, val, is_reference=False, is_array=False)
+
+        rman_sg_node.sg_node.SetAttributes(attrs)  

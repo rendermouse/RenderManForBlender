@@ -838,8 +838,36 @@ class OBJECT_PT_renderman_object_custom_attributes(CollectionPanel, Panel):
         ob = context.object
         rm = ob.renderman
 
-        col = layout.column()
+        layout.label(text='User Attributes')
+        row = layout.row()  
+        prop_name = 'user_attributes'  
+        prop_index_nm = '%s_index' % prop_name        
+        row.template_list("RENDERMAN_UL_UserAttributes_List", "User Attributes",
+                            rm, prop_name, rm, prop_index_nm)
+        col = row.column(align=True)
+        op = col.operator('renderman.add_remove_user_attributes', icon="ADD", text="")
+        op.collection = prop_name
+        op.collection_index = prop_index_nm
+        op.defaultname = 'key'
+        op.action = 'ADD'
 
+        op = col.operator('renderman.add_remove_user_attributes', icon="REMOVE", text="")
+        op.collection = prop_name
+        op.collection_index = prop_index_nm
+        op.action = 'REMOVE'   
+
+        prop_index = getattr(rm, prop_index_nm, None)
+        if prop_index_nm is None:
+            return
+
+        prop = getattr(rm, prop_name)
+        if prop_index > -1 and prop_index < len(prop):
+            item = prop[prop_index]
+            layout.prop(item, 'name')
+            layout.prop(item, 'type')
+            layout.prop(item, 'value_%s' % item.type, slider=True)        
+
+        col = layout.column()
         _draw_ui_from_rman_config('rman_properties_object', 'OBJECT_PT_renderman_object_custom_attributes', context, layout, rm)             
 
 class OBJECT_PT_renderman_object_matteid(Panel, _RManPanelHeader):
