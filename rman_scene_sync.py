@@ -235,7 +235,7 @@ class RmanSceneSync(object):
             if vis == -1 and not ob.hide_get() and int(ob.renderman.mute) == 0:
                 return
             with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
-                if self.rman_scene.check_light_local_view(rman_sg_node):
+                if self.rman_scene.check_light_local_view(ob, rman_sg_node):
                     return True                
                 if not ob.hide_get():
                     rman_sg_node.sg_node.SetHidden(ob.renderman.mute)
