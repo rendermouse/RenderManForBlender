@@ -286,7 +286,7 @@ class RmanRender(object):
     def _start_prman_begin(self):
         argv = []
         argv.append("prman") 
-        argv.append("-progress")  
+        argv.append("-Progress")  
         argv.append("-dspyserver")
         argv.append("%s" % envconfig().rman_it_path)
 
@@ -306,14 +306,14 @@ class RmanRender(object):
     def _append_render_cmd(self, render_cmd):
         return render_cmd
 
-    def _dump_rib_(self):
+    def _dump_rib_(self, frame=1):
         if envconfig().getenv('RFB_DUMP_RIB'):
             rfb_log().debug("Writing to RIB...")
             rib_time_start = time.time()
             if sys.platform == ("win32"):
-                self.sg_scene.Render("rib C:/tmp/blender.rib -format ascii -indent")
+                self.sg_scene.Render("rib C:/tmp/blender.%04d.rib -format ascii -indent" % frame)
             else:
-                self.sg_scene.Render("rib /var/tmp/blender.rib -format ascii -indent")     
+                self.sg_scene.Render("rib /var/tmp/blender.%04d.rib -format ascii -indent" % frame)     
             rfb_log().debug("Finished writing RIB. Time: %s" % string_utils._format_time_(time.time() - rib_time_start))            
 
     def _load_placeholder_image(self):   
@@ -453,7 +453,7 @@ class RmanRender(object):
         self.rman_scene.export_for_final_render(depsgraph, self.sg_scene, bl_layer, is_external=is_external)
         self.rman_is_exporting = False
 
-        self._dump_rib_()
+        self._dump_rib_(self.bl_scene.frame_current)
         rfb_log().info("Finished parsing scene. Total time: %s" % string_utils._format_time_(time.time() - time_start)) 
         self.rman_is_live_rendering = True
         
