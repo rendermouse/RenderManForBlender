@@ -74,9 +74,12 @@ class RmanBlobbyTranslator(RmanTranslator):
 
             m = Matrix.Translation(loc)
 
-            sc = Matrix(((meta_el.radius, 0, 0, 0),
-                        (0, meta_el.radius, 0, 0),
-                        (0, 0, meta_el.radius, 0),
+            #scale factor adjustment from blender to RenderMan
+            sf = 1.08; 
+            
+            sc = Matrix(((sf*meta_el.radius, 0, 0, 0),
+                        (0, sf*meta_el.radius, 0, 0),
+                        (0, 0, sf*meta_el.radius, 0),
                         (0, 0, 0, 1)))
 
             ro = prot.to_matrix().to_4x4()
