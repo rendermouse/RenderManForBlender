@@ -166,7 +166,7 @@
         }, 
         {
             "panel": "DATA_PT_renderman_camera",            
-            "name": "rman_shutteropening_d2 ",
+            "name": "rman_shutteropening_d2",
             "label": "D2",
             "type": "float",
             "editable": true,
