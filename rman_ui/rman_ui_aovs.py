@@ -480,6 +480,12 @@ class PRMAN_OT_RenderMan_Add_Dspy_Template(bpy.types.Operator):
     bl_description = "Add a display from a display template"
     bl_options = {"REGISTER", "UNDO"}
 
+    @classmethod
+    def description(cls, context, properties): 
+        tmplt = rman_config.__RMAN_DISPLAY_TEMPLATES__[properties.dspy_template]
+        return tmplt.get('description', '')
+
+
     def dspy_template_items(self, context):
         items = []
         for nm, props in rman_config.__RMAN_DISPLAY_TEMPLATES__.items():

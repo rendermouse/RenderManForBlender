@@ -1310,7 +1310,12 @@
             "type": "int",
             "default": 0,
             "widget": "checkbox",
-            "help": "The denoiser will attempt to use the GPU (if available)"
+            "help": "The denoiser will attempt to use the GPU (if available)",
+            "conditionalVisOps": {
+                "conditionalVisOp": "notEqualTo",
+                "conditionalVisPath": "current_platform",
+                "conditionalVisValue": "macOS"
+            }
         }
     ]
 }
