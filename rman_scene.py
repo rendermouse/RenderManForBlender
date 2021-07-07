@@ -308,8 +308,8 @@ class RmanScene(object):
         self.scene_any_lights = self._scene_has_lights()
         
         rfb_log().debug("Calling export_data_blocks()")
-        self.export_data_blocks(bpy.data.objects)
-        #self.export_data_blocks([x for x in self.depsgraph.ids if isinstance(x, bpy.types.Object)])
+        #self.export_data_blocks(bpy.data.objects)
+        self.export_data_blocks([x for x in self.depsgraph.ids if isinstance(x, bpy.types.Object)])
 
         self.export_searchpaths() 
         self.export_global_options()     
@@ -580,7 +580,9 @@ class RmanScene(object):
             self.rman_objects[ob.original] = rman_sg_node       
 
             if self.is_interactive and not ob.show_instancer_for_viewport:
-                rman_sg_node.sg_node.SetHidden(1)            
+                rman_sg_node.sg_node.SetHidden(1)  
+            elif not ob.show_instancer_for_render:
+                rman_sg_node.sg_node.SetHidden(1)      
 
             if rman_type in ['MESH', 'POINTS']:
                 # Deal with any particles now. Particles are children to mesh nodes.
@@ -829,8 +831,8 @@ class RmanScene(object):
                 if not objFound:
                     continue
 
-            if not self.is_interactive and not ob_inst.show_self:
-                continue
+            #if not self.is_interactive and not ob_inst.show_self:
+            #    continue
 
             self._export_instance(ob_inst)  
             self.rman_render.stats_mgr.set_export_stats("Exporting instances", i/total)
