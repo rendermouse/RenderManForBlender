@@ -132,14 +132,14 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                     ramp_node = node_group.nodes[ramp_name]
                     layout.template_color_ramp(
                             ramp_node, 'color_ramp') 
-                    draw_utils.draw_sticky_toggle(layout, self, prop_name, output_node)                               
+                    #draw_utils.draw_sticky_toggle(layout, self, prop_name, output_node)                               
                 elif widget == 'floatramp':
                     node_group = bpy.data.node_groups[self.rman_fake_node_group]
                     ramp_name =  getattr(self, prop_name)
                     ramp_node = node_group.nodes[ramp_name]
                     layout.template_curve_mapping(
                             ramp_node, 'mapping')                   
-                    draw_utils.draw_sticky_toggle(layout, self, prop_name, output_node)
+                    #draw_utils.draw_sticky_toggle(layout, self, prop_name, output_node)
                                       
 
                 if prop_name not in self.inputs:
