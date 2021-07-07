@@ -422,7 +422,6 @@ def generate_property(node, sp, update_function=None):
                     return items
 
                 prop = EnumProperty(name=param_label,
-                                    default=0,
                                     description=param_help,
                                     items=colorspace_names_options,
                                     update=update_function)                
