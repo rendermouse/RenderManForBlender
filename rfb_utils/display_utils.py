@@ -138,7 +138,7 @@ def _add_denoiser_channels(dspys_dict, dspy_params):
     the beauty display will be used as the variance file
     """
 
-    denoise_tmplt = rman_config.__RMAN_DISPLAY_TEMPLATES__['Denoiser']
+    denoise_tmplt = rman_config.__RMAN_DISPLAY_TEMPLATES__['Variance']
     for chan in denoise_tmplt['channels']:
         dspy_channels = dspys_dict['displays']['beauty']['params']['displayChannels']
         if chan in dspy_channels:
