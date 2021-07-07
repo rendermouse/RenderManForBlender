@@ -30,6 +30,18 @@ def update_colorspace_name(self, context, param_name):
 
                 bpy.ops.rman_txmgr_list.refresh('EXEC_DEFAULT')  
 
+def colorspace_names_list():
+    from . import texture_utils
+
+    items = []
+    try:
+        mdict = texture_utils.get_txmanager().txmanager.color_manager.colorspace_names()
+        for nm in mdict:
+            items.append((nm, nm, ""))
+    except AttributeError:
+        pass                
+    return items
+
 def generate_colorspace_menu(node, param_name):
     '''Generate a colorspace enum property for the incoming parameter name
 
@@ -38,16 +50,9 @@ def generate_colorspace_menu(node, param_name):
         parm_name (str) - the string parameter name
     '''      
     def colorspace_names(self, context):
-        from . import texture_utils
-
         items = []
         items.append(('0', '', ''))
-        try:
-            mdict = texture_utils.get_txmanager().txmanager.color_manager.colorspace_names()
-            for nm in mdict:
-                items.append((nm, nm, ""))
-        except AttributeError:
-            pass                
+        items.extend(colorspace_names_list())
         return items
 
     ui_label = "%s_colorspace" % param_name
@@ -409,37 +414,51 @@ def generate_property(node, sp, update_function=None):
                                   description=param_help)            
 
         elif param_widget in ['mapper', 'popup']:
-            items = []
-            
-            if param_default == '' or param_default == "''":
-                param_default = __RMAN_EMPTY_STRING__
+            if 'ocio_colorspaces' in sp.options:
+                def colorspace_names_options(self, context):
+                    items = []
+                    items.append(('Disabled', 'Disabled', ''))
+                    items.extend(colorspace_names_list())
+                    return items
 
-            in_items = False
-            if isinstance(sp.options, list):
-                for v in sp.options:
-                    if v == '' or v == "''":
-                        v = __RMAN_EMPTY_STRING__
-                    items.append((str(v), str(v), ''))         
-                    if param_default == str(v):
-                        in_items = True
-            else:                
-                for k,v in sp.options.items():
-                    if v == '' or v == "''":
-                        v = __RMAN_EMPTY_STRING__
-                    items.append((str(v), str(k), ''))         
-                    if param_default == str(v):
-                        in_items = True
-
-            if in_items:
                 prop = EnumProperty(name=param_label,
-                                    default=param_default, description=param_help,
-                                    items=items,
-                                    update=update_function)
-            else:
-                prop = StringProperty(name=param_label,
-                                    default=str(param_default),
-                                    description=param_help, 
-                                    update=update_function)                                        
+                                    default=0,
+                                    description=param_help,
+                                    items=colorspace_names_options,
+                                    update=update_function)                
+            else:            
+                items = []
+                
+                if param_default == '' or param_default == "''":
+                    param_default = __RMAN_EMPTY_STRING__
+
+                in_items = False
+
+                if isinstance(sp.options, list):
+                    for v in sp.options:
+                        if v == '' or v == "''":
+                            v = __RMAN_EMPTY_STRING__
+                        items.append((str(v), str(v), ''))         
+                        if param_default == str(v):
+                            in_items = True
+                else:                
+                    for k,v in sp.options.items():
+                        if v == '' or v == "''":
+                            v = __RMAN_EMPTY_STRING__
+                        items.append((str(v), str(k), ''))         
+                        if param_default == str(v):
+                            in_items = True
+
+                if in_items:
+                    prop = EnumProperty(name=param_label,
+                                        default=param_default, description=param_help,
+                                        items=items,
+                                        update=update_function)
+                else:
+                    prop = StringProperty(name=param_label,
+                                        default=str(param_default),
+                                        description=param_help, 
+                                        update=update_function)                                        
 
         elif param_widget == 'bl_scenegraphlocation':
             reference_type = eval(sp.options['nodeType'])
