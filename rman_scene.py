@@ -579,6 +579,9 @@ class RmanScene(object):
             rman_sg_node.rman_type = rman_type
             self.rman_objects[ob.original] = rman_sg_node       
 
+            if self.is_interactive and not ob.show_instancer_for_viewport:
+                rman_sg_node.sg_node.SetHidden(1)            
+
             if rman_type in ['MESH', 'POINTS']:
                 # Deal with any particles now. Particles are children to mesh nodes.
                 subframes = []
@@ -588,8 +591,7 @@ class RmanScene(object):
 
                 if len(ob.particle_systems) > 0:
                     particles_group_db = ''
-                    rman_sg_node.rman_sg_particle_group_node = self.rman_translators['GROUP'].export(None, particles_group_db) 
-                    rman_sg_node.sg_node.AddChild(rman_sg_node.rman_sg_particle_group_node.sg_node)                   
+                    rman_sg_node.rman_sg_particle_group_node = self.rman_translators['GROUP'].export(None, particles_group_db)                 
 
                 psys_translator = self.rman_translators['PARTICLES']
                 for psys in ob.particle_systems:           
@@ -757,6 +759,9 @@ class RmanScene(object):
                 rman_sg_group.sg_node.AddChild(rman_sg_node.sg_node)
                 rman_sg_group.rman_sg_node_instance = rman_sg_node
 
+                if (len(ob.particle_systems) > 0) and ob_inst.show_particles:
+                    rman_sg_group.sg_node.AddChild(rman_sg_node.rman_sg_particle_group_node.sg_node)                      
+
                 if ob.parent and object_utils._detect_primitive_(ob.parent) == 'EMPTY':
                     # this object is a child of an empty. Add it to the empty.
                     rman_empty_node = self.rman_objects.get(ob.parent.original)
@@ -790,7 +795,7 @@ class RmanScene(object):
                     if not ob.visible_in_viewport_get(self.context.space_data):
                         rman_sg_group.sg_node.SetHidden(1)
                     else:
-                        rman_sg_group.sg_node.SetHidden(-1)
+                        rman_sg_group.sg_node.SetHidden(-1)                   
             
             if rman_type == "META":
                 # meta/blobbies are already in world space. Their instances don't need to
@@ -824,7 +829,7 @@ class RmanScene(object):
                 if not objFound:
                     continue
 
-            if not ob_inst.show_self:
+            if not self.is_interactive and not ob_inst.show_self:
                 continue
 
             self._export_instance(ob_inst)  
