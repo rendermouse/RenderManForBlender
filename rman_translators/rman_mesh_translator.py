@@ -158,7 +158,8 @@ def _get_primvars_(ob, rman_sg_mesh, geo, rixparams):
             rixparams.SetColorDetail("Cs", vcols, detail)
 
     # reference pose
-    _export_reference_pose(ob, rm, rixparams, vertex_detail)
+    if hasattr(rm, 'reference_pose'):
+        _export_reference_pose(ob, rm, rixparams, vertex_detail)
     
     # custom prim vars
 

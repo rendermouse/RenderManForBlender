@@ -346,6 +346,40 @@ def set_frame_sensitive(rman_sg_node, prop):
     else:
         rman_sg_node.is_frame_sensitive = False  
 
+def set_dspymeta_params(node, prop_name, params):
+    if node.plugin_name not in ['openexr', 'deepexr']:
+        # for now, we only accept openexr an deepexr
+        return
+
+    prefix = 'exrheader_'
+    prop = getattr(node, prop_name)
+    for meta in prop:
+        nm = '%s%s' % (prefix, meta.name)
+        meta_type = meta.type
+        val = getattr(meta, 'value_%s' % meta_type)
+        if meta_type == 'float':
+            params.SetFloat(nm, val)
+        elif meta_type == 'int':
+            params.SetInteger(nm, val)
+        elif meta_type == 'string':
+            params.SetString(nm, val)
+        elif meta_type == 'v2f':
+            params.SetFloatArray(nm, val, 2)
+        elif meta_type == 'v3f':
+            params.SetFloatArray(nm, val, 3)
+        elif meta_type == 'v2i':
+            params.SetIntegerArray(nm, val, 2)            
+        elif meta_type == 'v3i':
+            params.SetIntegerArray(nm, val, 3)
+        elif meta_type == 'box2f':
+            params.SetFloatArray(nm, val, 4)
+        elif meta_type == 'box2i':
+            params.SetIntegerArray(nm, val, 4)
+        elif meta_type == 'm33f':
+            params.SetFloatArray(nm, val, 9)
+        elif meta_type == 'm44f':
+            params.SetFloatArray(nm, val, 16)
+
 def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None):
     # If node is OSL node get properties from dynamic location.
     if node.bl_idname == "PxrOSLPatternNode":
@@ -396,6 +430,9 @@ def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None):
                 # unless it has a vstructmember
                 continue
 
+            elif param_widget == 'displaymetadata':
+                set_dspymeta_params(node, prop_name, params)
+                continue
             else:
                 prop = getattr(node, prop_name)
                 # if property group recurse

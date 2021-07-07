@@ -734,9 +734,9 @@
                 "a"
             ]
         },
-        "Denoiser": {
-            "displayName": "rman_denoiser",
-            "description": "Everything the denoiser needs.",
+        "Variance": {
+            "displayName": "rman_variance",
+            "description": "Create a variance file appropriate for the denoiser.",
             "channels": [
                 "mse",
                 "albedo",

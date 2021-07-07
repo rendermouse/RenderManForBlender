@@ -132,14 +132,14 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                     ramp_node = node_group.nodes[ramp_name]
                     layout.template_color_ramp(
                             ramp_node, 'color_ramp') 
-                    draw_utils.draw_sticky_toggle(layout, self, prop_name, output_node)                               
+                    #draw_utils.draw_sticky_toggle(layout, self, prop_name, output_node)                               
                 elif widget == 'floatramp':
                     node_group = bpy.data.node_groups[self.rman_fake_node_group]
                     ramp_name =  getattr(self, prop_name)
                     ramp_node = node_group.nodes[ramp_name]
                     layout.template_curve_mapping(
                             ramp_node, 'mapping')                   
-                    draw_utils.draw_sticky_toggle(layout, self, prop_name, output_node)
+                    #draw_utils.draw_sticky_toggle(layout, self, prop_name, output_node)
                                       
 
                 if prop_name not in self.inputs:
@@ -198,7 +198,55 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                         draw_utils.draw_sticky_toggle(col, self, prop_name, output_node)
 
     def copy(self, node):
-        pass
+        color_rman_ramps = node.__annotations__.get('__COLOR_RAMPS__', [])
+        float_rman_ramps = node.__annotations__.get('__FLOAT_RAMPS__', [])
+
+        if color_rman_ramps or float_rman_ramps:
+            self_color_rman_ramps = self.__annotations__.get('__COLOR_RAMPS__', [])
+            self_float_rman_ramps = self.__annotations__.get('__FLOAT_RAMPS__', [])   
+
+            node_group = bpy.data.node_groups.new(
+                '__RMAN_FAKE_NODEGROUP__', 'ShaderNodeTree') 
+            node_group.use_fake_user = True                 
+            self.rman_fake_node_group = node_group.name  
+
+            nt = bpy.data.node_groups[node.rman_fake_node_group]
+
+            for i, prop_name in enumerate(color_rman_ramps):
+                ramp_name = getattr(node, prop_name)
+                node_color_ramp_node = nt.nodes[ramp_name]
+                n = node_group.nodes.new('ShaderNodeValToRGB')
+
+                for j,e in enumerate(node_color_ramp_node.color_ramp.elements):
+                    if j == 0 or (j==len(node_color_ramp_node.color_ramp.elements)-1):
+                        new_elem = n.color_ramp.elements[j]
+                        new_elem.position = e.position
+                    else:
+                        new_elem = n.color_ramp.elements.new(e.position)
+                    new_elem.color = (e.color[0],e.color[1],e.color[2],e.color[3])
+
+                self_ramp_name = self_color_rman_ramps[i]
+                setattr(self, self_ramp_name, n.name)
+
+
+            for i, prop_name in enumerate(float_rman_ramps):
+                ramp_name = getattr(node, prop_name)
+                node_float_ramp_node = nt.nodes[ramp_name]                
+                n = node_group.nodes.new('ShaderNodeVectorCurve') 
+
+                curve = node_float_ramp_node.mapping.curves[0]
+                points = curve.points
+                new_points = n.mapping.curves[0].points
+                for j,point in enumerate(points):
+                    if j == 0 or (j==len(points)-1):
+                        new_points[j].location[0] = point.location[0]
+                        new_points[j].location[1]= point.location[1]
+                    else:
+                        new_points.new(point.location[0], point.location[1])
+
+                self_ramp_name = self_float_rman_ramps[i]
+                setattr(self, self_ramp_name, n.name)
+
     #    self.inputs.clear()
     #    self.outputs.clear()
 

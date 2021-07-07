@@ -249,7 +249,12 @@ class RmanSpool(object):
          
                 variance_file = string_utils.expand_string(dspys_dict['displays']['beauty']['filePath'], 
                                                     frame=frame_num,
-                                                    asFilePath=True)               
+                                                    asFilePath=True)  
+
+                f,ext = os.path.splitext(variance_file)  
+                if not f.endswith('_variance'):
+                    # check the variance filename for "_variance"
+                    variance_file = f + '_variance' + ext
 
                 for dspy,params in dspys_dict['displays'].items():
                     if not params['denoise']:
@@ -275,7 +280,12 @@ class RmanSpool(object):
          
                 variance_file = string_utils.expand_string(dspys_dict['displays']['beauty']['filePath'], 
                                                     frame=frame_num,
-                                                    asFilePath=True)               
+                                                    asFilePath=True)    
+
+                f,ext = os.path.splitext(variance_file)  
+                if not f.endswith('_variance'):
+                    # check the variance filename for "_variance"
+                    variance_file = f + '_variance' + ext                                                                               
 
                 for dspy,params in dspys_dict['displays'].items():
                     if not params['denoise']:

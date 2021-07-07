@@ -2,6 +2,7 @@ from ..rfb_utils import transform_utils
 from ..rfb_utils import property_utils
 from ..rfb_utils import string_utils
 from ..rfb_utils import object_utils
+import hashlib
 import os
 
 class RmanTranslator(object):
@@ -105,8 +106,8 @@ class RmanTranslator(object):
         # Add ID
         if name != "":            
             persistent_id = ob_inst.persistent_id[0]
-            if persistent_id == 0:
-                persistent_id = hash(ob.name_full) % 10**8                   
+            if persistent_id == 0:           
+                persistent_id = int(hashlib.sha1(ob.name_full.encode()).hexdigest(), 16) % 10**8
             self.rman_scene.obj_hash[persistent_id] = name
             attrs.SetInteger(self.rman_scene.rman.Tokens.Rix.k_identifier_id, persistent_id)
 
@@ -116,7 +117,7 @@ class RmanTranslator(object):
                     'PROCEDURAL_RUN_PROGRAM',
                     'DYNAMIC_LOAD_DSO'
                 ]:
-                procprimid = float(hash(rman_sg_node.db_name) % 10**8 )
+                procprimid = float(hashlib.sha1(rman_sg_node.db_name.encode()).hexdigest())
                 attrs.SetFloat('user:procprimid', procprimid)  
 
         rman_sg_node.sg_node.SetAttributes(attrs)      
@@ -207,3 +208,12 @@ class RmanTranslator(object):
                                                 frame=self.rman_scene.bl_frame_current,
                                                 asFilePath=True)                
                 attrs.SetString('user:bake_filename_attr', filePath)
+
+        # user attributes
+        for ua in rm.user_attributes:
+            param_type = ua.type
+            val = getattr(ua, 'value_%s' % ua.type)
+            ri_name = 'user:%s' % ua.name
+            property_utils.set_rix_param(attrs, param_type, ri_name, val, is_reference=False, is_array=False)
+
+        rman_sg_node.sg_node.SetAttributes(attrs)  

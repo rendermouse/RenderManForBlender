@@ -1442,7 +1442,7 @@ class RmanScene(object):
                         display.params.Inherit(dspydriver_params)
                     display.params.SetString("mode", chan)
 
-                    if display_driver == 'openexr':
+                    if display_driver in ['deepexr', 'openexr']:
                         if rm.use_metadata:
                             display_utils.export_metadata(self.bl_scene, display.params)
                         
@@ -1529,29 +1529,21 @@ class RmanScene(object):
                 display.params.SetString("dspyParams", 
                                         "%s -port %d -crop 1 0 1 0 -notes %s" % (dspy_callback, port, dspy_info))
 
-            if display_driver == 'openexr':
+            cam_sg_node = self.main_camera
+            camera = dspy_params['camera']
+            if camera and camera in self.rman_cameras:
+                cam_sg_node = self.rman_cameras.get(camera)
+
+            if display_driver in ['deepexr', 'openexr']:
                 if rm.use_metadata:
-                    display_utils.export_metadata(self.bl_scene, display.params)
+                    display_utils.export_metadata(self.bl_scene, display.params, camera_name=cam_sg_node.db_name)
                 if not dspy_params['denoise']:
                     display.params.SetInteger("asrgba", 1)
-                
-            camera = dspy_params['camera']
-            if camera is None:
-                cam_dspys = cams_to_dspys.get(self.main_camera, list())
-                cam_dspys.append(display)
-                cams_to_dspys[self.main_camera] = cam_dspys
-            else:
-                #db_name = object_utils.get_db_name(camera)
-                if camera not in self.rman_cameras:
-                    cam_dspys = cams_to_dspys.get(self.main_camera, list())
-                    cam_dspys.append(display)
-                    cams_to_dspys[self.main_camera] = cam_dspys
-                else:
-                    cam_sg_node = self.rman_cameras.get(camera)
-                    cam_dspys = cams_to_dspys.get(cam_sg_node, list())
-                    cam_dspys.append(display)
-                    cams_to_dspys[cam_sg_node] = cam_dspys
 
+            cam_dspys = cams_to_dspys.get(cam_sg_node, list())
+            cam_dspys.append(display)
+            cams_to_dspys[cam_sg_node] = cam_dspys                    
+                
         for cam_sg_node,cam_dspys in cams_to_dspys.items():
             #cam = self.rman_cameras.get(db_name, None)
             if not cam_sg_node:

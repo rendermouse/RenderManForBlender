@@ -245,6 +245,7 @@ class RENDER_PT_layer_custom_aovs(CollectionPanel, Panel):
         if item.show_displaydriver_settings:
             draw_props(displaydriver_settings, displaydriver_settings.prop_names, col)   
 
+        col.label(text="")
         row = col.row()
         row.prop(item, 'camera')
 
@@ -478,6 +479,12 @@ class PRMAN_OT_RenderMan_Add_Dspy_Template(bpy.types.Operator):
     bl_label = "Add Display Template"
     bl_description = "Add a display from a display template"
     bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def description(cls, context, properties): 
+        tmplt = rman_config.__RMAN_DISPLAY_TEMPLATES__[properties.dspy_template]
+        return tmplt.get('description', '')
+
 
     def dspy_template_items(self, context):
         items = []
