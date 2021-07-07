@@ -406,7 +406,7 @@ def generate_node_type(node_desc, is_oso=False):
                     if i == 0:
                         point = points[0]
                         point.location[0] = knots.default[i]
-                        point.location[0] = vals.default[i]
+                        point.location[1] = vals.default[i]
                     else:
                         points.new(knots.default[i], vals.default[i])
 
