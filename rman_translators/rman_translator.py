@@ -197,9 +197,9 @@ class RmanTranslator(object):
         if self.rman_scene.rman_bake and self.rman_scene.bl_scene.renderman.rman_bake_illum_filename == 'BAKEFILEATTR':
             filePath = ob.renderman.bake_filename_attr
             if filePath != '':
-                # check for {EXT} token, we'll add that later when we're doing displays
-                if filePath.endswith('.{EXT}'):
-                    filePath.replace('.{EXT}', '')
+                # check for <ext> token, we'll add that later when we're doing displays
+                if filePath.endswith('.<ext>'):
+                    filePath.replace('.<ext>', '')
                 else:
                     tokens = os.path.splitext(filePath)
                     if tokens[1] != '':

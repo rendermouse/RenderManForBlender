@@ -157,10 +157,12 @@ class RmanSpool(object):
                                                     frame=start, 
                                                     asFilePath=True)
 
-            dspys_dict = display_utils.get_dspy_dict(self.rman_scene, expandTokens=False)            
-            img_expanded = string_utils.expand_string(dspys_dict['displays']['beauty']['filePath'], 
-                                                frame=start,
-                                                asFilePath=True)                                                          
+            dspys_dict = display_utils.get_dspy_dict(self.rman_scene, expandTokens=False)    
+            img_expanded = ''
+            if not self.rman_scene.rman_bake:        
+                img_expanded = string_utils.expand_string(dspys_dict['displays']['beauty']['filePath'], 
+                                                    frame=start,
+                                                    asFilePath=True)                                                          
                                                     
             frametasktitle = ("%s Frame: %d " %
                             (tasktitle, int(start)))

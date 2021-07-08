@@ -1434,7 +1434,7 @@ class RmanScene(object):
                         tokens = os.path.splitext(dspy_file_name)
                         if tokens[1] == '':
                             token_dict = {'aov': dspy}
-                            dspy_file_name = string_utils.expand_string('%s.{EXT}' % dspy_file_name, 
+                            dspy_file_name = string_utils.expand_string('%s.<ext>' % dspy_file_name, 
                                                                         display=display_driver,
                                                                         token_dict=token_dict
                                                                         )
