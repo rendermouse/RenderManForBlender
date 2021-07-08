@@ -199,9 +199,11 @@ def bake_progress_cb(e, d, db):
         db.stats_mgr._progress = int(d)      
 
 def batch_progress_cb(e, d, db):
+    # just tell the stats mgr to draw
+    db.stats_mgr._progress = int(d)
+    db.stats_mgr.draw_render_stats()    
     print("R90000 %4d%%" % int(d), file = sys.stderr )
-    progress = float(d) / 100.0  
-    db.bl_engine.update_progress(progress)    
+    sys.stderr.flush()
 
 def render_cb(e, d, db):
     if d == 0:
