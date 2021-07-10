@@ -258,6 +258,8 @@ __ALLOWABLE_ATTR_OVERRIDES__ = [
     'help', 
     'min', 
     'max', 
+    'slidermin',
+    'slidermax',
     'options', 
     'page_open', 
     'connectable', 

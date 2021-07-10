@@ -62,7 +62,7 @@ class DATA_PT_renderman_projection(ShaderPanel, Panel):
             split.context_pointer_set("nodetree", nt)            
             if socket.is_linked:
                 node = socket.links[0].from_node
-                rman_icon = rman_icon = rfb_icons.get_samplefilter_icon(node.bl_label)
+                rman_icon = rfb_icons.get_projection_icon(node.bl_label)
                 split.menu('NODE_MT_renderman_connection_menu', text='%s (%s)' % (node.name, node.bl_label), icon_value=rman_icon.icon_id)
                 layout.prop(rm, "rman_use_cam_fov")
                 draw_node_properties_recursive(layout, context, nt, node)

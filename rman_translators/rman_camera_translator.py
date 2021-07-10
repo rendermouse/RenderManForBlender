@@ -381,6 +381,7 @@ class RmanCameraTranslator(RmanTranslator):
         updated = False
 
         if rman_sg_camera.view_perspective == 'CAMERA':
+            ob = ob.original
             cam = ob.data
             rman_sg_camera.bl_camera = ob
             cam_rm = cam.renderman
@@ -409,7 +410,8 @@ class RmanCameraTranslator(RmanTranslator):
                     rman_sg_node = RmanSgNode(self.rman_scene, rman_sg_camera.projection_shader, "")                           
                     property_utils.property_group_to_rixparams(node, rman_sg_node, rman_sg_camera.projection_shader, ob=cam) 
                     projparams = rman_sg_camera.projection_shader.params
-                    projparams.SetFloat(self.rman_scene.rman.Tokens.Rix.k_fov, fov) 
+                    if cam_rm.rman_use_cam_fov:
+                        projparams.SetFloat(self.rman_scene.rman.Tokens.Rix.k_fov, fov) 
   
                 else:                
                     rman_sg_camera.projection_shader = self.rman_scene.rman.SGManager.RixSGShader("Projection", "PxrCamera", "proj")
@@ -464,7 +466,7 @@ class RmanCameraTranslator(RmanTranslator):
             rman_sg_camera.projection_shader = self.rman_scene.rman.SGManager.RixSGShader("Projection", "PxrOrthographic", "proj")  
             updated = True        
 
-        if updated or force_update:    
+        if updated or force_update:   
             rman_sg_camera.sg_camera_node.SetProjection(rman_sg_camera.projection_shader)         
 
     def _set_fov(self, ob, cam, aspectratio, projparams):
