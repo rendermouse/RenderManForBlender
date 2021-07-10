@@ -89,6 +89,9 @@ class RmanScene(object):
         num_object_instances (int) - the current number of object instances. This is used during IPR to
                                     track the number of instances between edits. We try to use this to determine
                                     when an object is added or deleted.
+        num_objects_in_viewlayer (int) - the current number of objects in the current view layer. We're using this
+                                       to keep track if an object was removed from a collection
+        objects_in_viewlayer (list) - the list of objects (bpy.types.Object) in this view layer.
     '''
 
     def __init__(self, rman_render=None):
@@ -131,6 +134,8 @@ class RmanScene(object):
 
         self.viewport_render_res_mult = 1.0
         self.num_object_instances = 0
+        self.num_objects_in_viewlayer = 0
+        self.objects_in_viewlayer = list()
         self.bl_local_view = False
 
         self.create_translators()     
@@ -191,6 +196,8 @@ class RmanScene(object):
             self.viewport_render_res_mult = 1.0  
         self.is_xpu = False  
         self.num_object_instances = 0
+        self.num_objects_in_viewlayer = 0
+        self.objects_in_viewlayer.clear()
 
     def export_for_final_render(self, depsgraph, sg_scene, bl_view_layer, is_external=False):
         self.sg_scene = sg_scene
@@ -334,6 +341,8 @@ class RmanScene(object):
 
         self.rman_render.stats_mgr.set_export_stats("Finished Export", 1.0)
         self.num_object_instances = len(self.depsgraph.object_instances)
+        self.num_objects_in_viewlayer = len(self.depsgraph.view_layer.objects)
+        self.objects_in_viewlayer = [o for o in self.depsgraph.view_layer.objects]
         self.check_solo_light()
 
         if self.is_interactive:

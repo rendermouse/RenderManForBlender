@@ -84,6 +84,30 @@ class RmanSceneSync(object):
             with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):                     
                 self.rman_scene.check_solo_light()  
 
+        # Check view_layer
+        view_layer = self.rman_scene.depsgraph.view_layer
+        if len(view_layer.objects) != self.rman_scene.num_objects_in_viewlayer:
+            # objects can be removed from the viewlayer by hiding a collection. 
+            # Figure out the difference using sets and re-emit their instances.
+            self.rman_scene.num_objects_in_viewlayer = len(view_layer.objects)
+            view_layer = self.rman_scene.depsgraph.view_layer
+            set1 = set(self.rman_scene.objects_in_viewlayer)
+            set2 =  set((view_layer.objects))
+            set_diff1 = set1.difference(set2)
+            set_diff2 = set2.difference(set1)
+
+            objects = list(set_diff1.union(set_diff2))           
+            for o in list(objects):
+                try:
+                    self.update_instances.add(o.original)
+                    self.clear_instances(o)
+                    self.update_particles.add(o)  
+                    self.update_geometry_node_instances(o)     
+                except:
+                    continue
+
+        self.rman_scene.objects_in_viewlayer = [o for o in view_layer.objects]            
+
         if self.rman_scene.bl_frame_current != self.rman_scene.bl_scene.frame_current:
             # frame changed, update any materials and objects that 
             # are marked as frame sensitive
@@ -755,8 +779,7 @@ class RmanSceneSync(object):
                 self.update_geometry_node_instances(obj.id)
 
         # call txmake all in case of new textures
-        texture_utils.get_txmanager().txmake_all(blocking=False)                         
-                    
+        texture_utils.get_txmanager().txmake_all(blocking=False)       
         # add new objs:
         if self.new_objects:
             self.add_objects()
@@ -769,8 +792,8 @@ class RmanSceneSync(object):
 
         # delete any objects, if necessary    
         if self.do_delete:
-            self.delete_objects()
- 
+            self.delete_objects()                             
+                        
         rfb_log().debug("------End update scene----------")
 
     def add_objects(self):

@@ -1,3 +1,4 @@
+from ..rfb_logger import rfb_log
 from ..rfb_utils import transform_utils
 from ..rfb_utils import property_utils
 from ..rfb_utils import string_utils
@@ -71,7 +72,11 @@ class RmanTranslator(object):
             return
         rm = ob.renderman
         rm_scene = self.rman_scene.bl_scene.renderman
-        primvars = rman_sg_node.sg_node.GetPrimVars()
+        try:
+            primvars = rman_sg_node.sg_node.GetPrimVars()
+        except AttributeError:
+            rfb_log().debug("Cannot get RtPrimVar for this node")
+            return
 
         # set any properties marked primvar in the config file
         for prop_name, meta in rm.prop_meta.items():
