@@ -157,17 +157,18 @@ def draw_threading_func(db):
             # if there are no 3d viewports, stop IPR
             db.rman_is_live_rendering = False
             db.stop_render(stop_draw_thread=False)
-        try:
-            db.bl_engine.tag_redraw()
-            time.sleep(refresh_rate)
-        except ReferenceError as e:
-            # calling tag_redraw has failed. This might mean
-            # that there are no more view_3d areas that are shading. Try to
-            # stop IPR.
-            rfb_log().debug("Error calling tag_redraw (%s). Aborting..." % str(e))
-            db.rman_is_live_rendering = False
-            db.stop_render(stop_draw_thread=False)
-            return
+        if db.rman_is_viewport_rendering:
+            try:
+                db.bl_engine.tag_redraw()
+                time.sleep(refresh_rate)
+            except ReferenceError as e:
+                # calling tag_redraw has failed. This might mean
+                # that there are no more view_3d areas that are shading. Try to
+                # stop IPR.
+                rfb_log().debug("Error calling tag_redraw (%s). Aborting..." % str(e))
+                db.rman_is_live_rendering = False
+                db.stop_render(stop_draw_thread=False)
+                return
 
 def call_stats_update_payloads(db):
     panel_region = None
@@ -826,9 +827,8 @@ class RmanRender(object):
             rm.render_ipr_into = render_into_org    
         
         # start a thread to periodically call engine.tag_redraw()
-        if self.rman_is_viewport_rendering:
-            __DRAW_THREAD__ = threading.Thread(target=draw_threading_func, args=(self, ))
-            __DRAW_THREAD__.start()
+        __DRAW_THREAD__ = threading.Thread(target=draw_threading_func, args=(self, ))
+        __DRAW_THREAD__.start()
 
     def start_swatch_render(self, depsgraph):
         self.reset()
