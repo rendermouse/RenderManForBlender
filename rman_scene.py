@@ -333,13 +333,12 @@ class RmanScene(object):
             self.export_instances()
 
         self.rman_render.stats_mgr.set_export_stats("Finished Export", 1.0)
+        self.num_object_instances = len(self.depsgraph.object_instances)
+        self.check_solo_light()
 
         if self.is_interactive:
-            self.num_object_instances = len(self.depsgraph.object_instances)
-            self.check_solo_light()
             self.export_viewport_stats()
-        else:
-            self.num_object_instances = len(self.depsgraph.object_instances)
+        else:            
             self.export_stats()            
 
     def export_bake_render_scene(self):
@@ -1015,10 +1014,13 @@ class RmanScene(object):
                 if self.check_light_local_view(light_ob, rman_sg_node):
                     return
 
-                if not light_ob.hide_get():
-                    rman_sg_node.sg_node.SetHidden(rm.mute)
+                if self.is_interactive:
+                    if not light_ob.hide_get():
+                        rman_sg_node.sg_node.SetHidden(rm.mute)
+                    else:
+                        rman_sg_node.sg_node.SetHidden(1)
                 else:
-                    rman_sg_node.sg_node.SetHidden(1)                                   
+                    rman_sg_node.sg_node.SetHidden(rm.mute)
 
     def export_searchpaths(self):
         # TODO 
