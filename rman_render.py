@@ -155,8 +155,10 @@ def draw_threading_func(db):
     while db.rman_is_live_rendering:
         if not __any_areas_shading():
             # if there are no 3d viewports, stop IPR
+            rfb_log().debug("No 3d viewports set to RENDER. Stop IPR.")
             db.rman_is_live_rendering = False
             db.stop_render(stop_draw_thread=False)
+            break
         if db.rman_is_viewport_rendering:
             try:
                 db.bl_engine.tag_redraw()
@@ -269,6 +271,7 @@ class RmanRender(object):
         self.viewport_buckets = list()
         self._draw_viewport_buckets = False
         self.stats_mgr = RfBStatsManager(self)
+        self.stop_render_mtx = threading.Lock()
 
         self._start_prman_begin()
 
@@ -933,6 +936,8 @@ class RmanRender(object):
         global __DRAW_THREAD__
         global __RMAN_STATS_THREAD__
 
+        self.stop_render_mtx.acquire()        
+
         if not self.rman_interactive_running and not self.rman_running:
             return
 
@@ -974,6 +979,7 @@ class RmanRender(object):
         self.viewport_buckets.clear()
         self._draw_viewport_buckets = False                
         __update_areas__()
+        self.stop_render_mtx.release()
         rfb_log().debug("RenderMan has Stopped.")
 
     def get_blender_dspy_plugin(self):
