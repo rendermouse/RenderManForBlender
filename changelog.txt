@@ -9,7 +9,7 @@ New Features:
 Bug Fixes:
 * Fixed an issue where adding a RenderMan light failed. 
 * Fixed issue where connecting a PxrDisplace node to the RenderMan Output node in the shader editor failed
-* Adressed a problem where local view was not working for geometry
+* Addressed a problem where local view was not working for geometry
 * Fixed issue where the GPU override flag batch denoising failed
 * Fixed issue with preview rendering to the Blender render view failed when Render Region was on
 * Fixed odd shift in viewport when IPR is turned on.
