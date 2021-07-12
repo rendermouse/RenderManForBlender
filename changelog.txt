@@ -1,3 +1,36 @@
+v24.0.1 July 12, 2021
+New Features:
+* Certain specific lights will now be textured in the viewport (ex: PxrRectLight). This can be turned off in the preferences.
+* The wireframe drawing of lights can now be turned off in the preferences.
+* Added a new UI for adding user attributes
+* A new popover panel has been added to viewport to edit RenderMan viewport preferences
+* Some icons have been updated to higher resolution versions (change by King-Wally)
+
+Bug Fixes:
+* Fixed an issue where adding a RenderMan light failed. 
+* Fixed issue where connecting a PxrDisplace node to the RenderMan Output node in the shader editor failed
+* Adressed a problem where local view was not working for geometry
+* Fixed issue where the GPU override flag batch denoising failed
+* Fixed issue with preview rendering to the Blender render view failed when Render Region was on
+* Fixed odd shift in viewport when IPR is turned on.
+* Fixed issue that prevented curves from rendering.
+* Fixed issue where the variance file for denoising could not be found.
+* Fixed issue where ID's for instances were not consistent between blender batch renders.
+* Fixed progress printing for blender batch renders in LocalQueue
+* Fixed bug where duplicating shading nodes containing ramps failed.
+* Fixed issue where turning off Show Emitter on particles did not work
+* Fixed numerous issues for baking renders.
+* Fixed bug where muting lights did not work for preview and batch renders.
+* Fixed issue where hiding a collection failed.
+
+v24.0.0 June 29, 2021
+* Support for Blender 2.83 LTS and Blender 2.92.
+* Rendering inside of the Blender viewport.
+* RenderMan XPU and Stylized Looks support (a commercial license for these features is required).
+* A redesign of the Preset Browser.
+* New light linking, light mixer, and trace sets editors.
+* Texture Manager support
+
 v21.5.0 8/18/17
 * Heat grid now available for Blender smoke sims cached with OpenVDB
 * RIB formatting now works with IPR renders
