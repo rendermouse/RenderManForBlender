@@ -636,8 +636,7 @@ def get_dspy_dict(rman_scene, expandTokens=True):
         _set_blender_dspy_dict(layer, dspys_dict, display_driver, rman_scene, expandTokens, do_optix_denoise=do_optix_denoise)       
 
     if rm.do_holdout_matte != "OFF":
-
-        _set_rman_holdouts_dspy_dict(dspys_dict, display_driver, rman_scene, expandTokens, do_optix_denoise=do_optix_denoise)  
+        _set_rman_holdouts_dspy_dict(dspys_dict, display_driver, rman_scene, expandTokens)  
 
     return dspys_dict
 
