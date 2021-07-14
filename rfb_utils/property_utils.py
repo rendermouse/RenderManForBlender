@@ -149,7 +149,7 @@ def set_rix_param(params, param_type, param_name, val, is_reference=False, is_ar
             elif param_type == "string":
                 if val == __RMAN_EMPTY_STRING__:
                     val = ""
-                params.SetString(param_name, val)
+                params.SetString(param_name, val.strip())
             elif param_type == "point":
                 params.SetPoint(param_name, val)                            
             elif param_type == "vector":
