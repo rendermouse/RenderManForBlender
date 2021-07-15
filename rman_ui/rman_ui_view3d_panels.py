@@ -50,6 +50,8 @@ class PRMAN_PT_Renderman_UI_Panel(bpy.types.Panel, _RManPanelHeader):
                 rd = scene.render
 
                 box = layout.box()
+                box.use_property_split = True
+                box.use_property_decorate = False
                 row = box.row(align=True)
 
                 # Display Driver
@@ -70,13 +72,15 @@ class PRMAN_PT_Renderman_UI_Panel(bpy.types.Panel, _RManPanelHeader):
                             icon_value=rman_rerender_controls.icon_id)    
 
             row.prop(context.scene, "rm_ipr", text="",
-                    icon=draw_utils.get_open_close_icon(context.scene.rm_render))
+                    icon=draw_utils.get_open_close_icon(context.scene.rm_ipr))
 
             if context.scene.rm_ipr:
                 scene = context.scene
                 rd = scene.render
 
                 box = layout.box()
+                box.use_property_split = True
+                box.use_property_decorate = False
                 row = box.row(align=True)
 
                 # Display Driver
@@ -179,6 +183,14 @@ class PRMAN_PT_Renderman_UI_Panel(bpy.types.Panel, _RManPanelHeader):
         box.menu('VIEW3D_MT_RM_Add_Light_Menu', text='Add Light', icon_value=bpy.types.VIEW3D_MT_RM_Add_Light_Menu.get_icon_id())
         box.menu('VIEW3D_MT_RM_Add_LightFilter_Menu', text='Add Light Filter', icon_value=bpy.types.VIEW3D_MT_RM_Add_LightFilter_Menu.get_icon_id())               
 
+        # Editors
+        layout.separator()
+        layout.label(text="Editors:")
+        box = layout.box()
+        box.operator('scene.rman_open_light_mixer_editor', text='Light Mixer')
+        box.operator('scene.rman_open_light_linking', text='Light Linking')
+        box.operator('scene.rman_open_groups_editor', text='Trace Sets')
+
         layout.separator()
         layout.label(text="Apps:")
         box = layout.box()
@@ -222,7 +234,7 @@ class PRMAN_PT_Renderman_UI_Panel(bpy.types.Panel, _RManPanelHeader):
 
         # Diagnose
         layout.separator()
-        layout.label(text='Diagnose')
+        layout.label(text='Diagnose:')
         box = layout.box()
         box.enabled = not is_rman_interactive_running
         rman_rib = rfb_icons.get_icon('rman_rib_small')
@@ -234,6 +246,7 @@ class PRMAN_PT_Renderman_UI_Panel(bpy.types.Panel, _RManPanelHeader):
 
         layout.separator()
         # RenderMan Doc
+        layout.label(text="Help:")
         rman_help = rfb_icons.get_icon("rman_help")
         layout.operator("wm.url_open", text="RenderMan Docs",
                         icon_value=rman_help.icon_id).url = "https://rmanwiki.pixar.com/display/RFB24"
