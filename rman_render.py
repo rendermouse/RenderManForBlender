@@ -13,6 +13,7 @@ import socketserver
 import threading
 import subprocess
 import ctypes
+import numpy
 
 # for viewport buckets
 import gpu
@@ -1072,7 +1073,7 @@ class RmanRender(object):
         f.restype = ctypes.POINTER(ArrayType)
 
         try:
-            buffer = f(ctypes.c_size_t(image_num)).contents
+            buffer = numpy.array(f(ctypes.c_size_t(image_num)).contents)
             pixels = list()
 
             # we need to flip the image
