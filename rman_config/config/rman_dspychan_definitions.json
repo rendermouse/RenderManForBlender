@@ -611,7 +611,7 @@
          },
         "st": {
             "description": "Texture coords",
-            "channelType": "float[2]",
+            "channelType": "color",
             "channelSource": "__st",
             "group": "Data AOVs"
          },

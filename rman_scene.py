@@ -1509,6 +1509,8 @@ class RmanScene(object):
             chan_filterwidth = chan_params['filterwidth']['value']
             chan_statistics = chan_params['statistics']['value']
             chan_shadowthreshold = chan_params['shadowthreshold']['value']
+            if chan_type == 'float[2]':
+                chan_type = self.rman.Tokens.Rix.k_float2
             displaychannel = self.rman.SGManager.RixSGDisplayChannel(chan_type, chan_name)
             if chan_source and chan_source != '':
                 if "lpe" in chan_source:

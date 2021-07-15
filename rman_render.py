@@ -1127,24 +1127,20 @@ class RmanRender(object):
 
                     for x in range(start_x, end_x):
                         j = i + (num_channels * x)
-                        pixel = []
-                        pixel.append(buffer[j])    
                         if num_channels == 4:
-                            pixel.append(buffer[j+1])
-                            pixel.append(buffer[j+2])
-                            pixel.append(buffer[j+3])                            
-                        elif num_channels == 3:
-                            pixel.append(buffer[j+1])
-                            pixel.append(buffer[j+2])
-                            pixel.append(1.0)
+                            pixels.append(buffer[j:j+4])
+                            continue
+
+                        pixel = [1.0] * 4
+                        pixel[0] = buffer[j]                             
+                        if num_channels == 3:
+                            pixel[1] = buffer[j+1]
+                            pixel[2] = buffer[j+2]
                         elif num_channels == 2:
-                            pixel.append(buffer[j+1])
-                            pixel.append(1.0)                        
-                            pixel.append(1.0)                        
+                            pixel[1] = buffer[j+1]
                         elif num_channels == 1:
-                            pixel.append(buffer[j])
-                            pixel.append(buffer[j])      
-                            pixel.append(1.0)  
+                            pixel[1] = buffer[j]
+                            pixel[2] = buffer[j]
 
                         pixels.append(pixel)            
 
