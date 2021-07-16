@@ -90,7 +90,7 @@ class RmanHairTranslator(RmanTranslator):
     def add_object_instance(self, rman_sg_hair, rman_sg_group):
         rman_sg_hair.sg_node.AddChild(rman_sg_group.sg_node)                
         rman_sg_hair.instances[rman_sg_group.db_name] = rman_sg_group
-        rman_sg_group.rman_sg_group_parent = rman_sg_particles
+        rman_sg_group.rman_sg_group_parent = rman_sg_hair
 
     def _get_points(self, ob, psys):
         psys_modifier = None
@@ -198,6 +198,8 @@ class RmanHairTranslator(RmanTranslator):
 
         num_parents = len(psys.particles)
         num_children = len(psys.child_particles)
+        if self.rman_scene.is_interactive:
+            num_children = int(num_children * psys.settings.display_percentage / 100.0)
         total_hair_count = num_parents + num_children
         export_st = psys.settings.renderman.export_scalp_st and psys_modifier and len(
             ob.data.uv_layers) > 0
@@ -211,11 +213,11 @@ class RmanHairTranslator(RmanTranslator):
         nverts = 0
 
         ob_inv_mtx = ob.matrix_world.inverted_safe()
+        start_idx = 0
+        if psys.settings.child_type != 'NONE' and num_children > 0:
+            start_idx = num_parents
         
-        for pindex in range(total_hair_count):
-            if psys.settings.child_type != 'NONE' and pindex < num_parents:
-                continue
-
+        for pindex in range(start_idx, total_hair_count):
             strand_points = []
             # walk through each strand
             for step in range(0, steps + 1):           
@@ -255,6 +257,8 @@ class RmanHairTranslator(RmanTranslator):
                 # get the scalp S
                 if export_st:
                     if pindex >= num_parents:
+                        # This is a child particle
+
                         particle = psys.particles[
                             (pindex - num_parents) % num_parents]
                     else:
