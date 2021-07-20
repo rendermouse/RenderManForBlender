@@ -513,12 +513,15 @@ class PRMAN_OT_RenderMan_Add_Dspy_Template(bpy.types.Operator):
 
         for chan in tmplt['channels']:
             channel = None
-            for c in rm_rl.dspy_channels:
+            chan_idx = -1
+            for idx, c in enumerate(rm_rl.dspy_channels):
                 if c.name == chan:
                     channel = c
+                    chan_idx = idx
                     break
             if not channel:
                 channel = rm_rl.dspy_channels.add()
+                chan_idx = len(rm_rl.dspy_channels)-1
                 settings = rman_dspy_channels[chan]
                 channel.name = chan
                 channel.channel_name = chan
@@ -529,7 +532,9 @@ class PRMAN_OT_RenderMan_Add_Dspy_Template(bpy.types.Operator):
 
             chan_ptr = aov_setting.dspy_channels.add()                                   
             chan_ptr.name = chan
-            chan_ptr.dspy_chan_idx = len(rm_rl.dspy_channels)-1            
+            aov_setting.dspy_channels_index = len(aov_setting.dspy_channels)-1  
+            chan_ptr.dspy_chan_idx = chan_idx
+                      
      
         return {"FINISHED"}        
 
