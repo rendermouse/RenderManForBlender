@@ -187,9 +187,9 @@ class RmanHairTranslator(RmanTranslator):
         conwidth = (tip_width == base_width)
 
         if self.rman_scene.is_interactive:
-            steps = 2 ** psys.settings.display_step
+            steps = (2 ** psys.settings.display_step)+1
         else:
-            steps = 2 ** psys.settings.render_step        
+            steps = (2 ** psys.settings.render_step)+1
         
         if conwidth:
             hair_width = base_width
@@ -220,7 +220,7 @@ class RmanHairTranslator(RmanTranslator):
         for pindex in range(start_idx, total_hair_count):
             strand_points = []
             # walk through each strand
-            for step in range(0, steps + 1):           
+            for step in range(0, steps):           
                 pt = psys.co_hair(ob, particle_no=pindex, step=step)
 
                 if pt.length_squared == 0:
@@ -254,15 +254,10 @@ class RmanHairTranslator(RmanTranslator):
                 vertsArray.append(vertsInStrand)
                 nverts += vertsInStrand
 
-                # get the scalp S
+                # get the scalp ST
                 if export_st:
-                    if pindex >= num_parents:
-                        # This is a child particle
-
-                        particle = psys.particles[
-                            (pindex - num_parents) % num_parents]
-                    else:
-                        particle = psys.particles[pindex]
+                    particle = psys.particles[
+                        (pindex - num_parents) % num_parents]                        
                     st = psys.uv_on_emitter(psys_modifier, particle=particle, particle_no=pindex)
                     scalpST.append([st[0], st[1]])
 
@@ -277,8 +272,7 @@ class RmanHairTranslator(RmanTranslator):
                 vertsArray = []
                 if not conwidth:
                     hair_width = []
-                scalpS = []
-                scalpT = []
+                scalpST = []
 
         if nverts > 0:
             curve_sets.append((vertsArray, points,
