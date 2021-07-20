@@ -3,84 +3,16 @@ from ..rman_sg_nodes.rman_sg_emitter import RmanSgEmitter
 from ..rfb_utils import object_utils
 from ..rfb_utils import transform_utils
 from ..rfb_utils import scenegraph_utils
+from ..rfb_utils import particles_utils
 
 import bpy
 import math
-
-def valid_particle(pa, valid_frames):
-    return pa.die_time >= valid_frames[-1] and pa.birth_time <= valid_frames[0]
 
 class RmanEmitterTranslator(RmanTranslator):
 
     def __init__(self, rman_scene):
         super().__init__(rman_scene)
         self.bl_type = 'EMITTER' 
-
-    def get_particles(self, ob, psys, inv_mtx, valid_frames=None):
-        P = []
-        rot = []
-        width = []
-
-        valid_frames = (self.rman_scene.bl_scene.frame_current,
-                        self.rman_scene.bl_scene.frame_current) if valid_frames is None else valid_frames
-        
-        for pa in [p for p in psys.particles if valid_particle(p, valid_frames)]:
-            pt = inv_mtx @ pa.location
-            P.extend(pt)
-            rot.extend(pa.rotation)
-
-            if pa.alive_state != 'ALIVE':
-                width.append(0.0)
-            else:
-                width.append(pa.size)
-        return (P, rot, width)    
-
-    def get_primvars_particle(self, primvar, psys, subframes, sample):
-        rm = psys.settings.renderman
-        cfra = self.rman_scene.bl_scene.frame_current
-
-        for p in rm.prim_vars:
-            pvars = []
-
-            if p.data_source in ('VELOCITY', 'ANGULAR_VELOCITY'):
-                if p.data_source == 'VELOCITY':
-                    for pa in \
-                            [p for p in psys.particles if valid_particle(p, subframes)]:
-                        pvars.extend(pa.velocity)
-                elif p.data_source == 'ANGULAR_VELOCITY':
-                    for pa in \
-                            [p for p in psys.particles if valid_particle(p, subframes)]:
-                        pvars.extend(pa.angular_velocity)
-
-                primvar.SetFloatArrayDetail(p.name, pvars, 3, "uniform", sample)
-
-            elif p.data_source in \
-                    ('SIZE', 'AGE', 'BIRTH_TIME', 'DIE_TIME', 'LIFE_TIME', 'ID'):
-                if p.data_source == 'SIZE':
-                    for pa in \
-                            [p for p in psys.particles if valid_particle(p, subframes)]:
-                        pvars.append(pa.size)
-                elif p.data_source == 'AGE':
-                    for pa in \
-                            [p for p in psys.particles if valid_particle(p, subframes)]:
-                        pvars.append((cfra - pa.birth_time) / pa.lifetime)
-                elif p.data_source == 'BIRTH_TIME':
-                    for pa in \
-                            [p for p in psys.particles if valid_particle(p, subframes)]:
-                        pvars.append(pa.birth_time)
-                elif p.data_source == 'DIE_TIME':
-                    for pa in \
-                            [p for p in psys.particles if valid_particle(p, subframes)]:
-                        pvars.append(pa.die_time)
-                elif p.data_source == 'LIFE_TIME':
-                    for pa in \
-                            [p for p in psys.particles if valid_particle(p, subframes)]:
-                        pvars.append(pa.lifetime)
-                elif p.data_source == 'ID':
-                    pvars = [id for id, p in psys.particles.items(
-                    ) if valid_particle(p, subframes)]
-                
-                primvar.SetFloatDetail(p.name, pvars, "varying", sample)         
 
     def export(self, ob, psys, db_name):
 
@@ -95,7 +27,7 @@ class RmanEmitterTranslator(RmanTranslator):
 
         rm = psys.settings.renderman
         inv_mtx = ob.matrix_world.inverted_safe()
-        P, rot, width = self.get_particles(ob, psys, inv_mtx)
+        P, rot, width = self.get_particles(ob, psys, inv_mtx, get_width=False)
 
         if (len(P) < 3):
             return
@@ -122,7 +54,7 @@ class RmanEmitterTranslator(RmanTranslator):
 
         rm = psys.settings.renderman
         inv_mtx = ob.matrix_world.inverted_safe()
-        P, rot, width = self.get_particles(ob, psys, inv_mtx)
+        P, rot, width = particles_utils.get_particles(ob, psys, inv_mtx, self.rman_scene.bl_scene.frame_current)
 
         if (len(P) < 3):
             return
@@ -137,12 +69,12 @@ class RmanEmitterTranslator(RmanTranslator):
             super().set_primvar_times(rman_sg_emitter.motion_steps, primvar)
         
         
-        self.get_primvars_particle(primvar,  psys, [self.rman_scene.bl_scene.frame_current], 0)      
+        particles_utils.get_primvars_particle(primvar, self.rman_scene.bl_scene.frame_current, psys, [self.rman_scene.bl_scene.frame_current], 0)      
         
         primvar.SetPointDetail(self.rman_scene.rman.Tokens.Rix.k_P, P, "vertex")                   
         if rm.constant_width:
             width = rm.width
-            primvar.SetFloatDetail(self.rman_scene.rman.Tokens.Rix.k_constantwidth, width, "constant")
+            primvar.SetFloatDetail(self.rman_scene.rman.Tokens.Rix.k_width, width, "constant")
         else:
             primvar.SetFloatDetail(self.rman_scene.rman.Tokens.Rix.k_width, width, "vertex")                     
 

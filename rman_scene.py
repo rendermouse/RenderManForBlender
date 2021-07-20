@@ -768,8 +768,9 @@ class RmanScene(object):
                 rman_sg_group.sg_node.AddChild(rman_sg_node.sg_node)
                 rman_sg_group.rman_sg_node_instance = rman_sg_node
 
-                if (len(ob.particle_systems) > 0) and ob_inst.show_particles:
-                    rman_sg_group.sg_node.AddChild(rman_sg_node.rman_sg_particle_group_node.sg_node)                      
+                if rman_sg_node.rman_sg_particle_group_node:
+                    if (len(ob.particle_systems) > 0) and ob_inst.show_particles:
+                        rman_sg_group.sg_node.AddChild(rman_sg_node.rman_sg_particle_group_node.sg_node)                      
 
                 if ob.parent and object_utils._detect_primitive_(ob.parent) == 'EMPTY':
                     # this object is a child of an empty. Add it to the empty.
@@ -982,7 +983,7 @@ class RmanScene(object):
 
                 if rman_sg_node.is_deforming:
                     rman_type = rman_sg_node.rman_type
-                    if rman_type == 'MESH':
+                    if rman_type in ['MESH', 'FLUID']:
                         translator = self.rman_translators.get(rman_type, None)
                         if translator:
                             translator.export_deform_sample(rman_sg_node, ob, samp)                     
