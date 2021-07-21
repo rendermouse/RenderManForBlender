@@ -32,13 +32,13 @@ def get_primvars_particle(primvar, frame, psys, subframes, sample):
             if p.data_source == 'VELOCITY':
                 for pa in \
                         [p for p in psys.particles if valid_particle(p, subframes)]:
-                    pvars.extend(pa.velocity)
+                    pvars.append(pa.velocity)
             elif p.data_source == 'ANGULAR_VELOCITY':
                 for pa in \
                         [p for p in psys.particles if valid_particle(p, subframes)]:
-                    pvars.extend(pa.angular_velocity)
+                    pvars.append(pa.angular_velocity)
 
-            primvar.SetFloatArrayDetail(p.name, pvars, 3, "uniform", sample)
+            primvar.SetVectorDetail(p.name, pvars, "vertex", sample)
 
         elif p.data_source in \
                 ('SIZE', 'AGE', 'BIRTH_TIME', 'DIE_TIME', 'LIFE_TIME', 'ID'):
@@ -66,4 +66,4 @@ def get_primvars_particle(primvar, frame, psys, subframes, sample):
                 pvars = [id for id, p in psys.particles.items(
                 ) if valid_particle(p, subframes)]
             
-            primvar.SetFloatDetail(p.name, pvars, "varying", sample)  
+            primvar.SetFloatDetail(p.name, pvars, "vertex", sample)  
