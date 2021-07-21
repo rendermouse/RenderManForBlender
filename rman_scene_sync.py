@@ -276,8 +276,17 @@ class RmanSceneSync(object):
     def update_particle_settings(self, obj, particle_settings_node):
         rfb_log().debug("Check %s for particle settings." % obj.id.name)
         # A ParticleSettings node was updated. Try to look for it.
+        ob = obj.id
+        rman_type = object_utils._detect_primitive_(ob)
         for psys in obj.id.particle_systems:
             if psys.settings.original == particle_settings_node:
+                if psys.settings.type == 'FLIP' and rman_type == 'FLUID':
+                    fluid_translator = self.rman_scene.rman_translators['FLUID']
+                    rman_sg_node = self.rman_scene.rman_objects.get(ob.original, None)
+                    with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
+                        fluid_translator.update(ob, rman_sg_node)
+                    return
+
                 ob_psys = self.rman_scene.rman_particles.get(obj.id.original, dict())
                 rman_sg_particles = ob_psys.get(psys.settings.original, None)
                 if rman_sg_particles:

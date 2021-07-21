@@ -46,6 +46,9 @@ class RmanFluidTranslator(RmanTranslator):
 
         return rman_sg_fluid
 
+    def export_object_primvars(self, ob, rman_sg_node):
+        pass
+
     def export_deform_sample(self, rman_sg_fluid, ob, time_sample):
         fluid_modifier = find_fluid_modifier(ob)
         fluid_data = fluid_modifier.domain_settings
@@ -140,7 +143,7 @@ class RmanFluidTranslator(RmanTranslator):
         particles_utils.get_primvars_particle(primvar, self.rman_scene.bl_scene.frame_current, psys, [self.rman_scene.bl_scene.frame_current], 0)      
         
         primvar.SetPointDetail(self.rman_scene.rman.Tokens.Rix.k_P, P, "vertex")           
-        primvar.SetFloatDetail(self.rman_scene.rman.Tokens.Rix.k_width, fluid_data.particle_radius*0.005, "constant")
+        primvar.SetFloatDetail(self.rman_scene.rman.Tokens.Rix.k_width, width, "vertex")
 
         sg_node.SetPrimVars(primvar)
 
