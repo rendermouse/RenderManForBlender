@@ -92,7 +92,8 @@ class ItHandler(chatserver.ItBaseHandler):
         rfb_log().debug("Stop Render Requested.")
         if __RMAN_RENDER__.rman_interactive_running:
             __turn_off_viewport__()
-        __RMAN_RENDER__.stop_render()      
+        if not __RMAN_RENDER__.stopping:
+            __RMAN_RENDER__.stop_render()      
 
     def selectObjectById(self):
         global __RMAN_RENDER__
@@ -157,8 +158,9 @@ def draw_threading_func(db):
         if not __any_areas_shading():
             # if there are no 3d viewports, stop IPR
             rfb_log().debug("No 3d viewports set to RENDER. Stop IPR.")
-            db.rman_is_live_rendering = False
-            db.stop_render(stop_draw_thread=False)
+            if not db.stopping:
+                db.rman_is_live_rendering = False
+                db.stop_render(stop_draw_thread=False)
             break
         if db.rman_is_viewport_rendering:
             try:
@@ -169,8 +171,9 @@ def draw_threading_func(db):
                 # that there are no more view_3d areas that are shading. Try to
                 # stop IPR.
                 rfb_log().debug("Error calling tag_redraw (%s). Aborting..." % str(e))
-                db.rman_is_live_rendering = False
-                db.stop_render(stop_draw_thread=False)
+                if not db.stopping:
+                    db.rman_is_live_rendering = False
+                    db.stop_render(stop_draw_thread=False)
                 return
 
 def call_stats_update_payloads(db):
@@ -273,6 +276,7 @@ class RmanRender(object):
         self._draw_viewport_buckets = False
         self.stats_mgr = RfBStatsManager(self)
         self.stop_render_mtx = threading.Lock()
+        self.stopping = False
 
         self._start_prman_begin()
 
@@ -505,7 +509,8 @@ class RmanRender(object):
                 except:
                     pass
                 self.bl_engine.end_result(result)     
-                self.stop_render()   
+                if not self.stopping:
+                    self.stop_render()   
 
             else:
                 dspy_dict = display_utils.get_dspy_dict(self.rman_scene)
@@ -567,13 +572,14 @@ class RmanRender(object):
                             bl_image.update()
                             bl_image.save()
                             bpy.data.images.remove(bl_image)
-                            
-                self.stop_render()                              
+                if not self.stopping:            
+                    self.stop_render()                              
 
         else:
             while not self.bl_engine.test_break() and self.rman_is_live_rendering:
-                time.sleep(0.01)   
-            self.stop_render()                                
+                time.sleep(0.01)  
+            if not self.stopping:                 
+                self.stop_render()                                
 
         return True   
 
@@ -937,7 +943,8 @@ class RmanRender(object):
         global __DRAW_THREAD__
         global __RMAN_STATS_THREAD__
 
-        self.stop_render_mtx.acquire()        
+        self.stop_render_mtx.acquire()   
+        self.stopping = True     
 
         if not self.rman_interactive_running and not self.rman_running:
             return
@@ -980,6 +987,7 @@ class RmanRender(object):
         self.viewport_buckets.clear()
         self._draw_viewport_buckets = False                
         __update_areas__()
+        self.stopping = False
         self.stop_render_mtx.release()
         rfb_log().debug("RenderMan has Stopped.")
 
