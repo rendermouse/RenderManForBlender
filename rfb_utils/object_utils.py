@@ -109,7 +109,7 @@ def is_subdmesh(ob):
 def is_deforming_fluid(ob):
     if ob.modifiers:
         mod = ob.modifiers[len(ob.modifiers) - 1]
-        return mod.type == 'FLUID' and mod.smoke_type == 'DOMAIN'
+        return mod.type == 'FLUID' and mod.fluid_type == 'DOMAIN'
 
 def _is_deforming_(ob):
     deforming_modifiers = ['ARMATURE', 'MESH_SEQUENCE_CACHE', 'CAST', 'CLOTH', 'CURVE', 'DISPLACE',
