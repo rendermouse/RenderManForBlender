@@ -1,10 +1,11 @@
+from mathutils import Vector
 
 def valid_particle(pa, valid_frames):
     return pa.die_time >= valid_frames[-1] and pa.birth_time <= valid_frames[0]
 
-def get_particles(ob, psys, inv_mtx, frame, valid_frames=None, get_width=True):
+def get_particles(ob, psys, inv_mtx, frame, valid_frames=None, get_next_P=False, get_width=True):
     P = []
-    rot = []
+    next_P = []
     width = []
 
     valid_frames = (frame,
@@ -12,15 +13,19 @@ def get_particles(ob, psys, inv_mtx, frame, valid_frames=None, get_width=True):
     
     for pa in [p for p in psys.particles if valid_particle(p, valid_frames)]:
         pt = inv_mtx @ pa.location
-        P.extend(pt)
-        rot.extend(pa.rotation)
+        P.append(pt)
+        
+        if get_next_P:
+            # calculate the point for the next frame using velocity
+            vel = Vector(pa.velocity / pa.lifetime )
+            next_P.append( inv_mtx @ (Vector(pa.location) + vel))
 
         if get_width:
             if pa.alive_state != 'ALIVE':
                 width.append(0.0)
             else:
                 width.append(pa.size)
-    return (P, rot, width)    
+    return (P, next_P, width)    
 
 def get_primvars_particle(primvar, frame, psys, subframes, sample):
     rm = psys.settings.renderman

@@ -5,6 +5,7 @@ from ..rfb_utils import transform_utils
 from ..rfb_utils import string_utils
 from ..rfb_utils import scenegraph_utils
 from ..rfb_utils import particles_utils
+from ..rfb_utils import object_utils
 from ..rfb_logger import rfb_log
 import bpy
 import os
@@ -42,7 +43,7 @@ class RmanFluidTranslator(RmanTranslator):
         sg_node = self.rman_scene.sg_scene.CreateGroup(db_name)
         rman_sg_fluid = RmanSgFluid(self.rman_scene, sg_node, db_name)
         if self.rman_scene.do_motion_blur:
-            rman_sg_fluid.is_deforming = rman_sg_fluid._is_deforming_(ob)        
+            rman_sg_fluid.is_deforming = object_utils._is_deforming_(ob)        
 
         return rman_sg_fluid
 
@@ -50,31 +51,7 @@ class RmanFluidTranslator(RmanTranslator):
         pass
 
     def export_deform_sample(self, rman_sg_fluid, ob, time_sample):
-        fluid_modifier = find_fluid_modifier(ob)
-        fluid_data = fluid_modifier.domain_settings
-        if fluid_data.domain_type == 'GAS':
-            return
-        psys = None
-        for sys in ob.particle_systems:
-            if sys.settings.type == 'FLIP':
-                psys = sys
-                break
-        if not psys:
-            return            
-
-        sg_node = rman_sg_fluid.rman_sg_liquid_node
-
-        rm = psys.settings.renderman
-        inv_mtx = ob.matrix_world.inverted_safe()
-        P, rot, width = self.get_particles(ob, psys, inv_mtx, get_width=False)
-
-        if (len(P) < 3):
-            return
-
-        primvar = sg_node.GetPrimVars()
-        primvar.SetPointDetail(self.rman_scene.rman.Tokens.Rix.k_P, P, "vertex", time_sample)
-
-        sg_node.SetPrimVars(primvar)   
+        return
 
     def clear_children(self, rman_sg_fluid):
         if rman_sg_fluid.sg_node:
@@ -126,23 +103,29 @@ class RmanFluidTranslator(RmanTranslator):
 
         rm = psys.settings.renderman
         inv_mtx = ob.matrix_world.inverted_safe()
-        P, rot, width = particles_utils.get_particles(ob, psys, inv_mtx, self.rman_scene.bl_scene.frame_current)
+        cur_frame = self.rman_scene.bl_scene.frame_current
+        do_motion = self.rman_scene.do_motion_blur
+        P, next_P, width = particles_utils.get_particles(ob, psys, inv_mtx, cur_frame, get_next_P=do_motion)        
 
-        if (len(P) < 3):
+        if not P:
             return
 
-        nm_pts = int(len(P)/3)
+        nm_pts = len(P)
         sg_node.Define(nm_pts)          
 
         primvar = sg_node.GetPrimVars()
         primvar.Clear()
             
-        if rman_sg_fluid.is_deforming and rman_sg_fluid.motion_steps:
+        if rman_sg_fluid.motion_steps:
             super().set_primvar_times(rman_sg_fluid.motion_steps, primvar)
         
-        particles_utils.get_primvars_particle(primvar, self.rman_scene.bl_scene.frame_current, psys, [self.rman_scene.bl_scene.frame_current], 0)      
+        particles_utils.get_primvars_particle(primvar, cur_frame, psys, [cur_frame], 0)      
         
-        primvar.SetPointDetail(self.rman_scene.rman.Tokens.Rix.k_P, P, "vertex")           
+        if self.rman_scene.do_motion_blur:
+            primvar.SetPointDetail(self.rman_scene.rman.Tokens.Rix.k_P, P, "vertex", 0) 
+            primvar.SetPointDetail(self.rman_scene.rman.Tokens.Rix.k_P, next_P, "vertex", 1)  
+        else:
+            primvar.SetPointDetail(self.rman_scene.rman.Tokens.Rix.k_P, P, "vertex")               
         primvar.SetFloatDetail(self.rman_scene.rman.Tokens.Rix.k_width, width, "vertex")
 
         sg_node.SetPrimVars(primvar)

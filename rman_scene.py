@@ -973,7 +973,8 @@ class RmanScene(object):
             for ob_original,rman_sg_node in self.rman_objects.items():
                 ob = ob_original.evaluated_get(self.depsgraph)
                 psys_translator = self.rman_translators['PARTICLES']
-                for psys in ob.particle_systems:
+                particle_systems = getattr(ob, 'particle_systems', list())
+                for psys in particle_systems:
                     ob_psys = self.rman_particles.get(ob.original, dict())
                     rman_sg_particles = ob_psys.get(psys.settings.original, None)
                     if rman_sg_particles:

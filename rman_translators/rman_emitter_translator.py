@@ -22,20 +22,7 @@ class RmanEmitterTranslator(RmanTranslator):
         return rman_sg_emitter
 
     def export_deform_sample(self, rman_sg_emitter, ob, psys, time_sample):
-
-        sg_emitter_node = rman_sg_emitter.sg_node
-
-        rm = psys.settings.renderman
-        inv_mtx = ob.matrix_world.inverted_safe()
-        P, rot, width = self.get_particles(ob, psys, inv_mtx, get_width=False)
-
-        if (len(P) < 3):
-            return
-
-        primvar = sg_emitter_node.GetPrimVars()
-        primvar.SetPointDetail(self.rman_scene.rman.Tokens.Rix.k_P, P, "vertex", time_sample)
-
-        sg_emitter_node.SetPrimVars(primvar)     
+        return  
 
     def clear_children(self, ob, psys, rman_sg_emitter):
         if rman_sg_emitter.sg_node:        
@@ -54,13 +41,15 @@ class RmanEmitterTranslator(RmanTranslator):
 
         rm = psys.settings.renderman
         inv_mtx = ob.matrix_world.inverted_safe()
-        P, rot, width = particles_utils.get_particles(ob, psys, inv_mtx, self.rman_scene.bl_scene.frame_current)
+        cur_frame = self.rman_scene.bl_scene.frame_current
+        do_motion = do_motion = self.rman_scene.do_motion_blur
+        P, next_P, width = particles_utils.get_particles(ob, psys, inv_mtx, cur_frame, get_next_P=do_motion)
 
-        if (len(P) < 3):
+        if not P:
             return
 
-        nm_pts = int(len(P)/3)
-        sg_emitter_node.Define(nm_pts)          
+        rman_sg_emitter.npoints = len(P)
+        sg_emitter_node.Define(rman_sg_emitter.npoints)          
 
         primvar = sg_emitter_node.GetPrimVars()
         primvar.Clear()
@@ -69,9 +58,13 @@ class RmanEmitterTranslator(RmanTranslator):
             super().set_primvar_times(rman_sg_emitter.motion_steps, primvar)
         
         
-        particles_utils.get_primvars_particle(primvar, self.rman_scene.bl_scene.frame_current, psys, [self.rman_scene.bl_scene.frame_current], 0)      
+        particles_utils.get_primvars_particle(primvar, cur_frame, psys, [cur_frame], 0)      
         
-        primvar.SetPointDetail(self.rman_scene.rman.Tokens.Rix.k_P, P, "vertex")                   
+        if self.rman_scene.do_motion_blur:
+            primvar.SetPointDetail(self.rman_scene.rman.Tokens.Rix.k_P, P, "vertex", 0) 
+            primvar.SetPointDetail(self.rman_scene.rman.Tokens.Rix.k_P, next_P, "vertex", 1)  
+        else:
+            primvar.SetPointDetail(self.rman_scene.rman.Tokens.Rix.k_P, P, "vertex")                   
         if rm.constant_width:
             width = rm.width
             primvar.SetFloatDetail(self.rman_scene.rman.Tokens.Rix.k_width, width, "constant")
