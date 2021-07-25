@@ -509,8 +509,7 @@ class RmanRender(object):
                 except:
                     pass
                 self.bl_engine.end_result(result)     
-                if not self.stopping:
-                    self.stop_render()   
+                self.stop_render()   
 
             else:
                 dspy_dict = display_utils.get_dspy_dict(self.rman_scene)
@@ -571,15 +570,13 @@ class RmanRender(object):
                             bl_image.file_format = 'OPEN_EXR'
                             bl_image.update()
                             bl_image.save()
-                            bpy.data.images.remove(bl_image)
-                if not self.stopping:            
-                    self.stop_render()                              
+                            bpy.data.images.remove(bl_image)           
+                self.stop_render()                              
 
         else:
             while not self.bl_engine.test_break() and self.rman_is_live_rendering:
-                time.sleep(0.01)  
-            if not self.stopping:                 
-                self.stop_render()                                
+                time.sleep(0.01)              
+            self.stop_render()                                
 
         return True   
 
@@ -943,6 +940,11 @@ class RmanRender(object):
         global __DRAW_THREAD__
         global __RMAN_STATS_THREAD__
 
+        if self.stopping:
+            # another thread is already trying to stop the render
+            return
+
+        rfb_log().debug("Trying to acquire stop_render_mtx")
         self.stop_render_mtx.acquire()   
         self.stopping = True     
 

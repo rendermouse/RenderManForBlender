@@ -116,12 +116,12 @@ class RmanFluidTranslator(RmanTranslator):
         primvar = sg_node.GetPrimVars()
         primvar.Clear()
             
-        if rman_sg_fluid.motion_steps:
+        if do_motion and rman_sg_fluid.motion_steps:
             super().set_primvar_times(rman_sg_fluid.motion_steps, primvar)
         
         particles_utils.get_primvars_particle(primvar, cur_frame, psys, [cur_frame], 0)      
         
-        if self.rman_scene.do_motion_blur:
+        if do_motion:
             primvar.SetPointDetail(self.rman_scene.rman.Tokens.Rix.k_P, P, "vertex", 0) 
             primvar.SetPointDetail(self.rman_scene.rman.Tokens.Rix.k_P, next_P, "vertex", 1)  
         else:
