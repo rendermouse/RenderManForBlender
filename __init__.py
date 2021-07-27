@@ -30,6 +30,7 @@ from .rfb_utils.prefs_utils import get_pref
 from .rfb_utils import string_utils
 from .rfb_logger import rfb_log
 from .rfb_utils.envconfig_utils import envconfig
+from .rman_constants import RFB_FLOAT3
 
 bl_info = {
     "name": "RenderMan For Blender",
@@ -51,6 +52,7 @@ class PRManRender(bpy.types.RenderEngine):
     bl_use_shading_nodes = True # We support shading nodes
     bl_use_shading_nodes_custom = False
     bl_use_eevee_viewport = True # Use Eevee for look dev viewport mode
+    bl_use_postprocess = True
 
     def __init__(self):
         from . import rman_render
@@ -63,7 +65,6 @@ class PRManRender(bpy.types.RenderEngine):
             # If IPR is already running, just return. 
             # We report an error in render() if this is a render attempt
             return 
-        self.rman_render.bl_engine = self
 
     def __del__(self):
         pass
@@ -80,9 +81,10 @@ class PRManRender(bpy.types.RenderEngine):
         # check if we are already doing a regular render
         if self.rman_render.is_regular_rendering():
             return
-        
+
         # if interactive rendering has not started, start it
         if not self.rman_render.rman_interactive_running and self.rman_render.sg_scene is None:
+            self.rman_render.bl_engine = self
             self.rman_render.start_interactive_render(context, depsgraph)
 
         if self.rman_render.rman_interactive_running and not self.rman_render.rman_license_failed:
@@ -112,6 +114,35 @@ class PRManRender(bpy.types.RenderEngine):
             bl_scene.renderman.take_token += 1
             string_utils.set_var('take', bl_scene.renderman.take_token)            
 
+    def update_render_passes(self, scene=None, renderlayer=None):
+        # this method allows us to add our AOVs as ports to the RenderLayer node
+        # in the compositor.
+
+        from .rfb_utils import display_utils
+        if self.is_preview:
+            return
+
+        if self.rman_render.rman_render_into != 'blender':
+            return
+
+        self.rman_render.rman_scene.bl_scene = scene
+        dspy_dict = display_utils.get_dspy_dict(self.rman_render.rman_scene)
+        self.register_pass(scene, renderlayer, "Combined", 4, "RGBA", 'COLOR')
+        for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
+            if i == 0:
+                continue
+            dspy = dspy_dict['displays'][dspy_nm]
+            dspy_chan = dspy['params']['displayChannels'][0]
+            chan_info = dspy_dict['channels'][dspy_chan]
+            chan_type = chan_info['channelType']['value']
+
+            if chan_type  == 'color':
+                 self.register_pass(scene, renderlayer, dspy_nm, 3, "RGB", 'VECTOR')
+            elif chan_type in ['vector', 'normal', 'point']:
+                self.register_pass(scene, renderlayer, dspy_nm, 3, "XYZ", 'VECTOR')
+            else:
+                self.register_pass(scene, renderlayer, dspy_nm, 1, "Z", 'VALUE')
+     
     def render(self, depsgraph):
         '''
         Main render entry point. Blender calls this when doing final renders or preview renders.
@@ -120,6 +151,7 @@ class PRManRender(bpy.types.RenderEngine):
         bl_scene = depsgraph.scene_eval
         rm = bl_scene.renderman
         baking = (rm.hider_type in ['BAKE', 'BAKE_BRICKMAP_SELECTED'])
+        self.rman_render.bl_engine = self        
 
         if self.rman_render.rman_interactive_running:
             # report an error if a render is trying to start while IPR is running
