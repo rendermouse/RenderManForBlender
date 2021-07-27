@@ -383,8 +383,8 @@ class RendermanPreferences(AddonPreferences):
         name="Viewport Refresh Rate",
         description="The number of seconds to wait before the viewport refreshes during IPR.",
         default=0.01,
-        precision=5,
-        min=0.00001,
+        precision=6,
+        min=0.000001,
         max=0.1
     )    
 
