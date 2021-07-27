@@ -213,20 +213,19 @@ def _set_blender_dspy_dict(layer, dspys_dict, dspy_drv, rman_scene, expandTokens
 
     # so use built in aovs
     blender_aovs = [
-        ('z_depth', layer.use_pass_z, 'z'),
+        ('z_depth', layer.use_pass_z, 'Depth'),
         ('Nn', layer.use_pass_normal, "Normal"),
-        ("dPdtime", layer.use_pass_vector, "Vectors"),
-        ("u", layer.use_pass_uv, "u"),
-        ("v", layer.use_pass_uv, "v"),
-        ("id", layer.use_pass_object_index, "id"),
-        ("blender_shadows", layer.use_pass_shadow, "Shadows"),
-        ("blender_diffuse", layer.use_pass_diffuse_direct, "Diffuse"),
-        ("blender_indirectdiffuse", layer.use_pass_diffuse_indirect, "IndirectDiffuse"),
-        ("blender_albedo", layer.use_pass_diffuse_color, "Albedo"),
-        ("blender_specular", layer.use_pass_glossy_direct, "Specular"),
-        ("blender_indirectspecular", layer.use_pass_glossy_indirect, "IndirectSpecular"),
-        ("blender_subsurface", layer.use_pass_subsurface_indirect,"Subsurface"),
-        ("blender_emission", layer.use_pass_emit, "Emission")
+        ("dPdtime", layer.use_pass_vector, "Vector"),
+        ("st", layer.use_pass_uv, "UV"),
+        ("id", layer.use_pass_object_index, "IndexOB"),
+        ("blender_shadows", layer.use_pass_ambient_occlusion, "AO"),
+        ("blender_diffuse", layer.use_pass_diffuse_direct, "DiffDir"),
+        ("blender_indirectdiffuse", layer.use_pass_diffuse_indirect, "DiffInd"),
+        ("blender_albedo", layer.use_pass_diffuse_color, "DiffCol"),
+        ("blender_specular", layer.use_pass_glossy_direct, "GlossDir"),
+        ("blender_indirectspecular", layer.use_pass_glossy_indirect, "GlossInd"),
+        ("blender_subsurface", layer.use_pass_subsurface_indirect,"SubsurfaceInd"),
+        ("blender_emission", layer.use_pass_emit, "Emit")
     ]     
 
 
@@ -421,26 +420,37 @@ def _set_rman_dspy_dict(rm_rl, dspys_dict, dspy_drv, rman_scene, expandTokens, d
 
         if aov.name != 'beauty' and (display_driver in ['it', 'blender']): #(display_driver == 'it' or rman_scene.is_viewport_render):
             # break up display per channel when rendering to it
-            for chan_ptr in aov.dspy_channels:
-                chan = rm_rl.dspy_channels[chan_ptr.dspy_chan_idx]
-                ch_name = _get_real_chan_name(chan)
-                dspy_name = '%s_%s' % (aov.name, ch_name)
-                new_dspy_params = deepcopy(dspy_params)
-                new_dspy_params['displayChannels'] = [ch_name]
-                if display_driver == 'it':
-                    new_file_path = filePath.replace('.it', '_%s.it' % ch_name)
-                else:
-                    new_file_path = filePath.replace('.exr', '_%s.exr' % ch_name)
-
-                dspys_dict['displays'][dspy_name] = {
+            if len(aov.dspy_channels) == 1:
+                dspys_dict['displays'][aov.name] = {
                     'driverNode': display_driver,
-                    'filePath': new_file_path,
+                    'filePath': filePath,
                     'denoise': aov_denoise,
                     'denoise_mode': aov_denoise_mode,
                     'camera': aov.camera,
                     'bake_mode': aov.aov_bake,
-                    'params': new_dspy_params,
-                    'dspyDriverParams': param_list }
+                    'params': dspy_params,
+                    'dspyDriverParams': param_list }         
+            else:       
+                for chan_ptr in aov.dspy_channels:
+                    chan = rm_rl.dspy_channels[chan_ptr.dspy_chan_idx]
+                    ch_name = _get_real_chan_name(chan)
+                    dspy_name = '%s_%s' % (aov.name, ch_name)
+                    new_dspy_params = deepcopy(dspy_params)
+                    new_dspy_params['displayChannels'] = [ch_name]
+                    if display_driver == 'it':
+                        new_file_path = filePath.replace('.it', '_%s.it' % ch_name)
+                    else:
+                        new_file_path = filePath.replace('.exr', '_%s.exr' % ch_name)
+
+                    dspys_dict['displays'][dspy_name] = {
+                        'driverNode': display_driver,
+                        'filePath': new_file_path,
+                        'denoise': aov_denoise,
+                        'denoise_mode': aov_denoise_mode,
+                        'camera': aov.camera,
+                        'bake_mode': aov.aov_bake,
+                        'params': new_dspy_params,
+                        'dspyDriverParams': param_list }
 
         else:
             dspys_dict['displays'][aov.name] = {
@@ -605,6 +615,9 @@ def get_dspy_dict(rman_scene, expandTokens=True):
     rm = rman_scene.bl_scene.renderman
     rm_rl = rman_scene.rm_rl
     layer = rman_scene.bl_view_layer
+    if not layer:
+        layer = bpy.context.view_layer
+
     dspys_dict = {'displays': OrderedDict(), 'channels': {}}
     display_driver = None
     do_optix_denoise = False

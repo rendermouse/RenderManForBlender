@@ -420,24 +420,23 @@ class PRMAN_OT_add_renderman_aovs(bpy.types.Operator):
 
         blender_aovs = [
             ('rgba', active_layer.use_pass_combined, ''),
-            ('z_depth', active_layer.use_pass_z, 'z'),
+            ('z_depth', active_layer.use_pass_z, 'Depth'),
             ('Nn', active_layer.use_pass_normal, "Normal"),
-            ("dPdtime", active_layer.use_pass_vector, "Vectors"),
-            ("u", active_layer.use_pass_uv, "u"),
-            ("v", active_layer.use_pass_uv, "v"),
-            ("id", active_layer.use_pass_object_index, "id"),
-            ("blender_shadows", active_layer.use_pass_shadow, "Shadows"),
-            ("blender_diffuse", active_layer.use_pass_diffuse_direct, "Diffuse"),
-            ("blender_indirectdiffuse", active_layer.use_pass_diffuse_indirect, "IndirectDiffuse"),
-            ("blender_albedo", active_layer.use_pass_diffuse_color, "Albedo"),
-            ("blender_specular", active_layer.use_pass_glossy_direct, "Specular"),
-            ("blender_indirectspecular", active_layer.use_pass_glossy_indirect, "IndirectSpecular"),
-            ("blender_subsurface", active_layer.use_pass_subsurface_indirect,"Subsurface"),
-            ("blender_emission", active_layer.use_pass_emit, "Emission")
+            ("dPdtime", active_layer.use_pass_vector, "Vector"),
+            ("st", active_layer.use_pass_uv, "UV"),
+            ("id", active_layer.use_pass_object_index, "IndexOB"),
+            ("blender_shadows", active_layer.use_pass_ambient_occlusion, "AO"),
+            ("blender_diffuse", active_layer.use_pass_diffuse_direct, "DiffDir"),
+            ("blender_indirectdiffuse", active_layer.use_pass_diffuse_indirect, "DiffInd"),
+            ("blender_albedo", active_layer.use_pass_diffuse_color, "DiffCol"),
+            ("blender_specular", active_layer.use_pass_glossy_direct, "GlossDir"),
+            ("blender_indirectspecular", active_layer.use_pass_glossy_indirect, "GlossInd"),
+            ("blender_subsurface", active_layer.use_pass_subsurface_indirect,"SubsurfaceInd"),
+            ("blender_emission", active_layer.use_pass_emit, "Emit")
         ]     
 
         for source, attr, name in blender_aovs:
-            if attr:
+            if attr:                
                 if source == "rgba":
                     aov_setting = rm_rl.custom_aovs.add()
                     aov_setting.name = 'beauty'
@@ -459,7 +458,8 @@ class PRMAN_OT_add_renderman_aovs(bpy.types.Operator):
                     chan_ptr.name = 'a'
                     chan_ptr.dspy_chan_idx = 1                   
 
-                else:                
+                else:   
+                    attr = False             
                     aov_setting = rm_rl.custom_aovs.add()
                     aov_setting.name = name
                     settings = rman_config.__RMAN_DISPLAY_CHANNELS__[source]

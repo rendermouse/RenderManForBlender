@@ -520,37 +520,59 @@ class RmanRender(object):
                 width = int(render.resolution_x * image_scale)
                 height = int(render.resolution_y * image_scale)
 
-                bl_image_lyrs= dict()
-                # register any AOV's as passes
-                for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
-                    if i == 0:
-                        continue     
-                    self.bl_engine.add_pass(dspy_nm, 4, 'RGBA')
-
+                bl_image_rps= dict()
                 size_x = width
                 size_y = height
                 if render.use_border:
                     size_x = int(width * (render.border_max_x - render.border_min_x))
-                    size_y = int(height * (render.border_max_y - render.border_min_y))
+                    size_y = int(height * (render.border_max_y - render.border_min_y))     
 
                 result = self.bl_engine.begin_result(0, 0,
                                             size_x,
                                             size_y,
                                             view=render_view)
 
+                # register any AOV's as passes
                 for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
                     if i == 0:
-                        lyr = result.layers[0].passes.find_by_name("Combined", render_view)           
+                        continue     
+
+                    # try and look for the pass name
+                    render_pass = result.layers[0].passes.find_by_name(dspy_nm, render_view)
+                    if render_pass:
+                        # pass name exists, continue
+                        continue
+
+                    num_channels = -1
+                    while num_channels == -1:
+                        num_channels = self.get_numchannels(i)    
+
+                    if num_channels == 4:
+                        self.bl_engine.add_pass(dspy_nm, 4, 'RGBA')
+                    elif num_channels == 3:
+                        self.bl_engine.add_pass(dspy_nm, 3, 'RGB')
+                    elif num_channels == 2:
+                        self.bl_engine.add_pass(dspy_nm, 2, 'XY')                        
                     else:
-                        lyr = result.layers[0].passes.find_by_name(dspy_nm, render_view)
-                    bl_image_lyrs[i] = lyr            
+                        self.bl_engine.add_pass(dspy_nm, 1, 'X')
+
+                for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
+                    if i == 0:
+                        render_pass = result.layers[0].passes.find_by_name("Combined", render_view)           
+                    else:
+                        render_pass = result.layers[0].passes.find_by_name(dspy_nm, render_view)
+                    bl_image_rps[i] = render_pass            
                 
                 while not self.bl_engine.test_break() and self.rman_is_live_rendering:
                     time.sleep(0.01)
-                    for i, img in bl_image_lyrs.items():
-                        buffer = self._get_buffer(width, height, image_num=i, as_flat=False, render=render)
+                    for i, rp in bl_image_rps.items():
+                        buffer = self._get_buffer(width, height, image_num=i, 
+                                                    num_channels=rp.channels, 
+                                                    as_flat=False, 
+                                                    back_fill=False,
+                                                    render=render)
                         if buffer:
-                            img.rect = buffer
+                            rp.rect = buffer
             
                     self.bl_engine.update_result(result)        
           
@@ -558,7 +580,7 @@ class RmanRender(object):
                     self.bl_engine.end_result(result) 
 
                     # Try to save out the displays out to disk. This matches
-                    # Cycles behavior
+                    # Cycles behavior                    
                     for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
                         filepath = dspy_dict['displays'][dspy_nm]['filePath']
                         buffer = self._get_buffer(width, height, image_num=i, as_flat=True)
@@ -570,7 +592,7 @@ class RmanRender(object):
                             bl_image.file_format = 'OPEN_EXR'
                             bl_image.update()
                             bl_image.save()
-                            bpy.data.images.remove(bl_image)           
+                            bpy.data.images.remove(bl_image) 
                 self.stop_render()                              
 
         else:
@@ -1071,12 +1093,18 @@ class RmanRender(object):
                 shader.bind()
                 batch.draw(shader)
 
-    def _get_buffer(self, width, height, image_num=0, as_flat=True, render=None):
+    def get_numchannels(self, image_num):
         dspy_plugin = self.get_blender_dspy_plugin()
         num_channels = dspy_plugin.GetNumberOfChannels(ctypes.c_size_t(image_num))
-        if num_channels > 4 or num_channels < 0:
-            rfb_log().debug("Could not get buffer. Incorrect number of channels: %d" % num_channels)
-            return None
+        return num_channels
+
+    def _get_buffer(self, width, height, image_num=0, num_channels=-1, back_fill=True, as_flat=True, render=None):
+        dspy_plugin = self.get_blender_dspy_plugin()
+        if num_channels == -1:
+            num_channels = self.get_numchannels(image_num)
+            if num_channels > 4 or num_channels < 0:
+                rfb_log().debug("Could not get buffer. Incorrect number of channels: %d" % num_channels)
+                return None
 
         ArrayType = ctypes.c_float * (width * height * num_channels)
         f = dspy_plugin.GetFloatFramebuffer
@@ -1106,12 +1134,12 @@ class RmanRender(object):
                             pixels.append(buffer[j])
                             pixels.append(buffer[j+1])
                             pixels.append(buffer[j+2])
-                            pixels.append(1.0)
+                            pixels.append(1.0)                        
                         elif num_channels == 2:
                             pixels.append(buffer[j])
                             pixels.append(buffer[j+1])
                             pixels.append(1.0)                        
-                            pixels.append(1.0)                        
+                            pixels.append(1.0)
                         elif num_channels == 1:
                             pixels.append(buffer[j])
                             pixels.append(buffer[j])
@@ -1137,11 +1165,15 @@ class RmanRender(object):
 
                     for x in range(start_x, end_x):
                         j = i + (num_channels * x)
+                        if not back_fill:
+                            pixels.append(buffer[j:j+num_channels])
+                            continue
+                        
                         if num_channels == 4:
                             pixels.append(buffer[j:j+4])
                             continue
 
-                        pixel = [1.0] * 4
+                        pixel = [1.0] * num_channels
                         pixel[0] = buffer[j]                             
                         if num_channels == 3:
                             pixel[1] = buffer[j+1]
@@ -1156,7 +1188,7 @@ class RmanRender(object):
 
             return pixels
         except Exception as e:
-            rfb_log().error("Could not get buffer: %s" % str(e))
+            rfb_log().debug("Could not get buffer: %s" % str(e))
             return None                             
 
     def save_viewport_snapshot(self, frame=1):
