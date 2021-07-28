@@ -170,7 +170,7 @@ class PRManRender(bpy.types.RenderEngine):
             if not get_pref('rman_do_preview_renders', False):
                 # user has turned off preview renders, just load the placeholder image
                 self.rman_render.bl_scene = depsgraph.scene_eval
-                self.rman_render._load_placeholder_image()
+                #self.rman_render._load_placeholder_image()
                 return    
             if self.rman_render.rman_swatch_render_running:
                 return       
