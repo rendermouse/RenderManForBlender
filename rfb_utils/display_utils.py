@@ -213,7 +213,7 @@ def _set_blender_dspy_dict(layer, dspys_dict, dspy_drv, rman_scene, expandTokens
 
     # so use built in aovs
     blender_aovs = [
-        ('z_depth', layer.use_pass_z, 'Depth'),
+        ('zfiltered', layer.use_pass_z, 'Depth'),
         ('Nn', layer.use_pass_normal, "Normal"),
         ("dPdtime", layer.use_pass_vector, "Vector"),
         ("st", layer.use_pass_uv, "UV"),

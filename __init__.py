@@ -137,7 +137,7 @@ class PRManRender(bpy.types.RenderEngine):
             chan_type = chan_info['channelType']['value']
 
             if chan_type  == 'color':
-                 self.register_pass(scene, renderlayer, dspy_nm, 3, "RGB", 'VECTOR')
+                 self.register_pass(scene, renderlayer, dspy_nm, 3, "RGB", 'COLOR')
             elif chan_type in ['vector', 'normal', 'point']:
                 self.register_pass(scene, renderlayer, dspy_nm, 3, "XYZ", 'VECTOR')
             else:
@@ -150,8 +150,7 @@ class PRManRender(bpy.types.RenderEngine):
    
         bl_scene = depsgraph.scene_eval
         rm = bl_scene.renderman
-        baking = (rm.hider_type in ['BAKE', 'BAKE_BRICKMAP_SELECTED'])
-        self.rman_render.bl_engine = self        
+        baking = (rm.hider_type in ['BAKE', 'BAKE_BRICKMAP_SELECTED'])   
 
         if self.rman_render.rman_interactive_running:
             # report an error if a render is trying to start while IPR is running
@@ -174,18 +173,22 @@ class PRManRender(bpy.types.RenderEngine):
                 self.rman_render._load_placeholder_image()
                 return    
             if self.rman_render.rman_swatch_render_running:
-                return                     
+                return       
+            self.rman_render.bl_engine = self                                  
             self.rman_render.start_swatch_render(depsgraph)
         elif baking:
+            self.rman_render.bl_engine = self    
             if rm.enable_external_rendering:
                 self.rman_render.start_external_bake_render(depsgraph) 
             elif not self.rman_render.start_bake_render(depsgraph, for_background=bpy.app.background):
                 return
         elif rm.enable_external_rendering:
+            self.rman_render.bl_engine = self
             self.rman_render.start_external_render(depsgraph)         
             self._increment_version_tokens(external_render=True)                 
         else:
-            for_background = bpy.app.background                
+            for_background = bpy.app.background
+            self.rman_render.bl_engine = self
             if not self.rman_render.start_render(depsgraph, for_background=for_background):
                 return    
             if not for_background:

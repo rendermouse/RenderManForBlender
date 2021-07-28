@@ -420,7 +420,7 @@ class PRMAN_OT_add_renderman_aovs(bpy.types.Operator):
 
         blender_aovs = [
             ('rgba', active_layer.use_pass_combined, ''),
-            ('z_depth', active_layer.use_pass_z, 'Depth'),
+            ('zfiltered', active_layer.use_pass_z, 'Depth'),
             ('Nn', active_layer.use_pass_normal, "Normal"),
             ("dPdtime", active_layer.use_pass_vector, "Vector"),
             ("st", active_layer.use_pass_uv, "UV"),
