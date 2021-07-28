@@ -521,6 +521,33 @@ class RmanRender(object):
                 height = int(render.resolution_y * image_scale)
 
                 bl_image_rps= dict()
+
+                # register any AOV's as passes
+                for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
+                    if i == 0:
+                        continue     
+
+                    num_channels = -1
+                    while num_channels == -1:
+                        num_channels = self.get_numchannels(i)    
+
+                    dspy = dspy_dict['displays'][dspy_nm]
+                    dspy_chan = dspy['params']['displayChannels'][0]
+                    chan_info = dspy_dict['channels'][dspy_chan]
+                    chan_type = chan_info['channelType']['value']                        
+
+                    if num_channels == 4:
+                        self.bl_engine.add_pass(dspy_nm, 4, 'RGBA')
+                    elif num_channels == 3:
+                        if chan_type == 'color':
+                            self.bl_engine.add_pass(dspy_nm, 3, 'RGB')
+                        else:
+                            self.bl_engine.add_pass(dspy_nm, 3, 'XYZ')
+                    elif num_channels == 2:
+                        self.bl_engine.add_pass(dspy_nm, 2, 'XY')                        
+                    else:
+                        self.bl_engine.add_pass(dspy_nm, 1, 'X')
+
                 size_x = width
                 size_y = height
                 if render.use_border:
@@ -530,31 +557,7 @@ class RmanRender(object):
                 result = self.bl_engine.begin_result(0, 0,
                                             size_x,
                                             size_y,
-                                            view=render_view)
-
-                # register any AOV's as passes
-                for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
-                    if i == 0:
-                        continue     
-
-                    # try and look for the pass name
-                    render_pass = result.layers[0].passes.find_by_name(dspy_nm, render_view)
-                    if render_pass:
-                        # pass name exists, continue
-                        continue
-
-                    num_channels = -1
-                    while num_channels == -1:
-                        num_channels = self.get_numchannels(i)    
-
-                    if num_channels == 4:
-                        self.bl_engine.add_pass(dspy_nm, 4, 'RGBA')
-                    elif num_channels == 3:
-                        self.bl_engine.add_pass(dspy_nm, 3, 'RGB')
-                    elif num_channels == 2:
-                        self.bl_engine.add_pass(dspy_nm, 2, 'XY')                        
-                    else:
-                        self.bl_engine.add_pass(dspy_nm, 1, 'X')
+                                            view=render_view)                        
 
                 for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
                     if i == 0:

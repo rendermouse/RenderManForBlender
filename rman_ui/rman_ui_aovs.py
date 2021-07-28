@@ -422,7 +422,7 @@ class PRMAN_OT_add_renderman_aovs(bpy.types.Operator):
             ('rgba', active_layer.use_pass_combined, ''),
             ('zfiltered', active_layer.use_pass_z, 'Depth'),
             ('Nn', active_layer.use_pass_normal, "Normal"),
-            ("dPdtime", active_layer.use_pass_vector, "Vector"),
+            ("dPdtime", active_layer.use_pass_vector, "dPdtime"),
             ("st", active_layer.use_pass_uv, "UV"),
             ("id", active_layer.use_pass_object_index, "IndexOB"),
             ("blender_shadows", active_layer.use_pass_ambient_occlusion, "AO"),

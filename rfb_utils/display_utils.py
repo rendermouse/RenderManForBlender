@@ -215,7 +215,7 @@ def _set_blender_dspy_dict(layer, dspys_dict, dspy_drv, rman_scene, expandTokens
     blender_aovs = [
         ('zfiltered', layer.use_pass_z, 'Depth'),
         ('Nn', layer.use_pass_normal, "Normal"),
-        ("dPdtime", layer.use_pass_vector, "Vector"),
+        ("dPdtime", layer.use_pass_vector, "dPdtime"),
         ("st", layer.use_pass_uv, "UV"),
         ("id", layer.use_pass_object_index, "IndexOB"),
         ("blender_shadows", layer.use_pass_ambient_occlusion, "AO"),
