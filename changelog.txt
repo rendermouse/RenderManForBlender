@@ -1,3 +1,15 @@
+v24.1 July 30, 2021
+New Features:
+* Added initial support for Liquid Fluids.
+* Added shortcuts to the light linking, light mixer, and trace sets editor to the RenderMan tab (change by King-Wally)
+
+Bug Fixes:
+* Correct the variable type for the __st AOV.
+* Fixed issues with scalpST on hair not working properly with child particles.
+* Hair particles should now respect the Viewport Display Amount setting.
+* Fix issue with particles not motion blurring correctly.
+* Fix issue with primvars not exporting correctly on particles.
+
 v24.0.1 July 12, 2021
 New Features:
 * Certain specific lights will now be textured in the viewport (ex: PxrRectLight). This can be turned off in the preferences.
