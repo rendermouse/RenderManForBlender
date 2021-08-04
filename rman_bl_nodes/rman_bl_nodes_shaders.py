@@ -359,7 +359,10 @@ class RendermanShadingNode(bpy.types.ShaderNode):
 
             if not shadergraph_utils.is_socket_same_type(link.from_socket, link.to_socket):
                 node_tree = self.id_data
-                node_tree.links.remove(link) 
+                try:
+                    node_tree.links.remove(link) 
+                except:
+                    pass
 
     @classmethod
     def poll(cls, ntree):
@@ -519,7 +522,10 @@ class RendermanOutputNode(RendermanShadingNode):
                 if link.to_socket.bl_idname == 'RendermanShaderSocket':
                     continue
                 node_tree = self.id_data
-                node_tree.links.remove(link)
+                try:
+                    node_tree.links.remove(link)
+                except:
+                    pass
         
         self.new_links.clear()
 
@@ -562,7 +568,10 @@ class RendermanIntegratorsOutputNode(RendermanShadingNode):
                 continue            
             if from_node_type != 'integrator':
                 node_tree = self.id_data
-                node_tree.links.remove(link)
+                try:
+                    node_tree.links.remove(link)
+                except:
+                    pass
 
         self.new_links.clear()    
         world = getattr(bpy.context, 'world', None)
@@ -623,7 +632,10 @@ class RendermanSamplefiltersOutputNode(RendermanShadingNode):
                 continue            
             if from_node_type != 'samplefilter':
                 node_tree = self.id_data
-                node_tree.links.remove(link)
+                try:
+                    node_tree.links.remove(link)
+                except:
+                    pass
 
         self.new_links.clear()  
         world = getattr(bpy.context, 'world', None)
@@ -683,7 +695,10 @@ class RendermanDisplayfiltersOutputNode(RendermanShadingNode):
                 continue
             if from_node_type != 'displayfilter':
                 node_tree = self.id_data
-                node_tree.links.remove(link)
+                try:
+                    node_tree.links.remove(link)
+                except:
+                    pass
 
         self.new_links.clear()     
         world = getattr(bpy.context, 'world', None)
@@ -723,7 +738,10 @@ class RendermanProjectionsOutputNode(RendermanShadingNode):
                 continue            
             if from_node_type != 'projection':
                 node_tree = self.id_data
-                node_tree.links.remove(link)
+                try:
+                    node_tree.links.remove(link)
+                except:
+                    pass
 
         self.new_links.clear()    
         cam = getattr(bpy.context, 'active_object', None)
@@ -763,14 +781,20 @@ class RendermanPatternNode(RendermanShadingNode):
 
             if not shadergraph_utils.is_socket_same_type(link.from_socket, link.to_socket):
                 node_tree = self.id_data
-                node_tree.links.remove(link)                
+                try:
+                    node_tree.links.remove(link)
+                except:
+                    pass
 
 
             # if this is a struct, check that the struct name matches
             if from_node_type == 'struct':
                 if link.from_socket.struct_name != link.to_socket.struct_name:
                     node_tree = self.id_data
-                    node_tree.links.remove(link)
+                    try:
+                        node_tree.links.remove(link)
+                    except:
+                        pass
 
         self.new_links.clear()    
         ob = getattr(bpy.context, 'active_object', None)

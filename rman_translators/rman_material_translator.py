@@ -77,6 +77,11 @@ class RmanMaterialTranslator(RmanTranslator):
                 gpmaterial_utils.gp_material_fill_gradient(mat, self.rman_scene.rman, rman_sg_material, '%s-FILL' % handle)
             else:
                 gpmaterial_utils.gp_material_fill_solid(mat, self.rman_scene.rman, rman_sg_material, '%s-FILL' % handle)
+
+    def create_pxrdiffuse_node(self, rman_sg_material, handle):     
+        instance = string_utils.sanitize_node_name(handle + '_PXRDIFFUSE')
+        sg_node = self.rman_scene.rman.SGManager.RixSGShader("Bxdf", 'PxrDiffuse', instance) 
+        rman_sg_material.sg_node.SetBxdf([sg_node])                   
              
     def export_shader_nodetree(self, material, rman_sg_material, handle):
 
@@ -97,36 +102,46 @@ class RmanMaterialTranslator(RmanTranslator):
 
                 # bxdf
                 socket = out.inputs['Bxdf']
-                if socket.is_linked:
-                    bxdfList = []
-                    for sub_node in shadergraph_utils.gather_nodes(socket.links[0].from_node):
-                        shader_sg_nodes = self.shader_node_sg(material, sub_node, rman_sg_material, mat_name=handle)
-                        for s in shader_sg_nodes:
-                            bxdfList.append(s) 
-                    if bxdfList:
-                        rman_sg_material.sg_node.SetBxdf(bxdfList)         
+                if socket.is_linked and len(socket.links) > 0:
+                    linked_node = socket.links[0].from_node
+                    if linked_node.renderman_node_type == 'bxdf':
+                        bxdfList = []
+                        for sub_node in shadergraph_utils.gather_nodes(linked_node):
+                            shader_sg_nodes = self.shader_node_sg(material, sub_node, rman_sg_material, mat_name=handle)
+                            for s in shader_sg_nodes:
+                                bxdfList.append(s) 
+                        if bxdfList:
+                            rman_sg_material.sg_node.SetBxdf(bxdfList)   
+                    else:
+                        self.create_pxrdiffuse_node(rman_sg_material, handle)         
+                else:
+                    self.create_pxrdiffuse_node(rman_sg_material, handle)
 
                 # light
                 socket = out.inputs['Light']
-                if socket.is_linked:
-                    lightNodesList = []
-                    for sub_node in shadergraph_utils.gather_nodes(socket.links[0].from_node):
-                        shader_sg_nodes = self.shader_node_sg(material, sub_node, rman_sg_material, mat_name=handle)
-                        for s in shader_sg_nodes:
-                            lightNodesList.append(s) 
-                    if lightNodesList:
-                        rman_sg_material.sg_node.SetLight(lightNodesList)                                   
+                if socket.is_linked and len(socket.links) > 0:
+                    linked_node = socket.links[0].from_node
+                    if linked_node.renderman_node_type == 'light':                    
+                        lightNodesList = []
+                        for sub_node in shadergraph_utils.gather_nodes(socket.links[0].from_node):
+                            shader_sg_nodes = self.shader_node_sg(material, sub_node, rman_sg_material, mat_name=handle)
+                            for s in shader_sg_nodes:
+                                lightNodesList.append(s) 
+                        if lightNodesList:
+                            rman_sg_material.sg_node.SetLight(lightNodesList)                                   
 
                 # displacement
                 socket = out.inputs['Displacement']
-                if socket.is_linked:
-                    dispList = []
-                    for sub_node in shadergraph_utils.gather_nodes(socket.links[0].from_node):
-                        shader_sg_nodes = self.shader_node_sg(material, sub_node, rman_sg_material, mat_name=handle)
-                        for s in shader_sg_nodes:
-                            dispList.append(s) 
-                    if dispList:
-                        rman_sg_material.sg_node.SetDisplace(dispList)  
+                if socket.is_linked and len(socket.links) > 0:
+                    linked_node = socket.links[0].from_node
+                    if linked_node.renderman_node_type == 'displacement':
+                        dispList = []
+                        for sub_node in shadergraph_utils.gather_nodes(linked_node):
+                            shader_sg_nodes = self.shader_node_sg(material, sub_node, rman_sg_material, mat_name=handle)
+                            for s in shader_sg_nodes:
+                                dispList.append(s) 
+                        if dispList:
+                            rman_sg_material.sg_node.SetDisplace(dispList)  
 
                 return True                        
                     

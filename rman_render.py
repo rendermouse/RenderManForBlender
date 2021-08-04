@@ -969,10 +969,10 @@ class RmanRender(object):
             # another thread is already trying to stop the render
             return
 
+        self.stopping = True
         rfb_log().debug("Trying to acquire stop_render_mtx")
         self.stop_render_mtx.acquire()   
-        self.stopping = True     
-
+        
         if not self.rman_interactive_running and not self.rman_running:
             return
 
