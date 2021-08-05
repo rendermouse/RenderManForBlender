@@ -359,7 +359,8 @@ class PRMAN_OT_Viewport_Enhance(bpy.types.Operator):
         help += "\nanchored in place relative to the image.  Camera effects such as"
         help += "\nvignetting will be scaled accordingly.  Intentionally does not"
         help += "\naffect level-of-detail, dicing, displacement, or MIP map levels."
-        help += "\n\nLeft click on the region you want to embiggen. Right click to reset the zoom. Esc or Enter to exit out of the operator."
+        help += "\n\nLeft click on the region you want to embiggen. Right click to reset the zoom."
+        help += "\n\nEnter to simply exit out of the operator, and keep the current zoom. Esc to exit and reset the zoom."
         return help
 
 
@@ -399,10 +400,14 @@ class PRMAN_OT_Viewport_Enhance(bpy.types.Operator):
                 self.reset(context)
                 return {'RUNNING_MODAL'}
 
-        elif event.type in {'ESC', 'RET'}:
+        elif event.type in {'ESC'}:
             context.window.cursor_modal_restore()
             self.reset(context)
             return {'FINISHED'}
+        
+        elif event.type in {'RET', 'NUMPAD_ENTER'}:
+            context.window.cursor_modal_restore()
+            return {'FINISHED'}            
 
         return {'RUNNING_MODAL'}
 
@@ -644,7 +649,7 @@ class PRMAN_OT_Viewport_Cropwindow(bpy.types.Operator):
             elif event.value == 'RELEASE':
                 self.execute(context)
 
-        elif event.type in {'ESC', 'RET'}:
+        elif event.type in {'ESC', 'RET', 'NUMPAD_ENTER'}:
             context.window.cursor_modal_restore()
             self.execute(context)
             return {'FINISHED'}
