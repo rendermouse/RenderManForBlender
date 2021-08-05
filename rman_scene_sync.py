@@ -270,7 +270,7 @@ class RmanSceneSync(object):
                 if self.rman_scene.check_light_local_view(ob, rman_sg_node):
                     update_instances = True
                     result = True
-                if not ob.hide_get():
+                elif not ob.hide_get():
                     rman_sg_node.sg_node.SetHidden(ob.renderman.mute)
                     update_instances = True
                     result = (vis != int(ob.renderman.mute))
