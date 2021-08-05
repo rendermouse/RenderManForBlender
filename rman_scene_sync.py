@@ -532,6 +532,11 @@ class RmanSceneSync(object):
                     self.update_instances.add(o)
                     continue
 
+            if rman_type == 'LIGHT':
+                # Check light visibility. Light visibility is already handled elsewhere
+                if self.rman_scene.check_light_local_view(o, rman_sg_node):
+                    continue
+
             self.update_instances.add(o.original)
             self.clear_instances(o)
             self.update_particles.add(o)  
