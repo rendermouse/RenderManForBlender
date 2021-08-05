@@ -260,18 +260,27 @@ class RmanSceneSync(object):
     def update_light_visibility(self, rman_sg_node, ob):
         if not self.rman_scene.scene_solo_light:
             vis = rman_sg_node.sg_node.GetHidden()
+            result = False
+            update_instances = False
             # if vis is inherit, and none of the other visibility attrs are set to hide
             if vis == -1 and not ob.hide_get() and int(ob.renderman.mute) == 0:
-                return
+                update_instances = True
+                result = False
             with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
                 if self.rman_scene.check_light_local_view(ob, rman_sg_node):
-                    return True                
+                    update_instances = True
+                    result = True
                 if not ob.hide_get():
                     rman_sg_node.sg_node.SetHidden(ob.renderman.mute)
-                    return (vis != int(ob.renderman.mute))
+                    update_instances = True
+                    result = (vis != int(ob.renderman.mute))
                 else:
                     rman_sg_node.sg_node.SetHidden(1)
-                    return (vis != 1)
+                    result = (vis != 1)
+
+            if update_instances and len(rman_sg_node.instances) < 1:
+                self.update_instances.add(ob.original)
+            return result
 
     def update_object_visibility(self, rman_sg_node, ob):                
         ob_data = bpy.data.objects.get(ob.name, ob)
@@ -282,7 +291,7 @@ class RmanSceneSync(object):
 
         # double check hidden value
         if rman_type in ['LIGHT']:
-            if self.update_light_visibility(rman_sg_node, ob_data):
+            if self.update_light_visibility(rman_sg_node, ob):
                 rfb_log().debug("Update light visibility: %s" % ob.name)
                 return True
         else:
@@ -534,11 +543,11 @@ class RmanSceneSync(object):
 
             if rman_type == 'LIGHT':
                 # Check light visibility. Light visibility is already handled elsewhere
-                if self.rman_scene.check_light_local_view(o, rman_sg_node):
-                    continue
+                with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene): 
+                    if self.rman_scene.check_light_local_view(o, rman_sg_node):
+                        continue
 
             self.update_instances.add(o.original)
-            self.clear_instances(o)
             self.update_particles.add(o)  
             self.update_geometry_node_instances(o) 
 
