@@ -257,7 +257,7 @@ class RmanSceneSync(object):
                 else:
                     rman_sg_node.sg_node.SetHidden(-1)
 
-    def _update_light_visibility(self, rman_sg_node, ob):
+    def update_light_visibility(self, rman_sg_node, ob):
         if not self.rman_scene.scene_solo_light:
             vis = rman_sg_node.sg_node.GetHidden()
             # if vis is inherit, and none of the other visibility attrs are set to hide
@@ -272,6 +272,32 @@ class RmanSceneSync(object):
                 else:
                     rman_sg_node.sg_node.SetHidden(1)
                     return (vis != 1)
+
+    def update_object_visibility(self, rman_sg_node, ob):                
+        ob_data = bpy.data.objects.get(ob.name, ob)
+        rman_type = object_utils._detect_primitive_(ob_data)
+        particle_systems = getattr(ob_data, 'particle_systems', list())
+        has_particle_systems = len(particle_systems) > 0
+        is_hidden = ob_data.hide_get()
+
+        # double check hidden value
+        if rman_type in ['LIGHT']:
+            if self.update_light_visibility(rman_sg_node, ob_data):
+                rfb_log().debug("Update light visibility: %s" % ob.name)
+                return True
+        else:
+            if rman_sg_node.is_hidden != is_hidden:
+                self.do_delete = False
+                rman_sg_node.is_hidden = is_hidden
+                if rman_type == 'EMPTY':
+                    self.update_empty(ob, rman_sg_node)
+                else:         
+                    self.update_instances.add(ob.original) 
+                    self.clear_instances(ob, rman_sg_node)      
+                    if has_particle_systems:                                     
+                        self.update_particles.add(ob.original)  
+                return True
+        return False      
                 
     def update_particle_settings(self, obj, particle_settings_node):
         rfb_log().debug("Check %s for particle settings." % obj.id.name)
@@ -697,23 +723,8 @@ class RmanSceneSync(object):
                     # update db_name
                     db_name = object_utils.get_db_name(ob, rman_type=rman_type)
                     rman_sg_node.db_name = db_name
-
-                    # double check hidden value
-                    if rman_type in ['LIGHT']:
-                        if self._update_light_visibility(rman_sg_node, ob_data):
-                            rfb_log().debug("Update light visibility: %s" % obj.id.name)
-                            continue
-                    else:
-                        if rman_sg_node.is_hidden != is_hidden:
-                            self.do_delete = False
-                            rman_sg_node.is_hidden = is_hidden
-                            if rman_type == 'EMPTY':
-                                self.update_empty(ob, rman_sg_node)
-                            else:         
-                                self.update_instances.add(obj.id.original) 
-                                self.clear_instances(obj.id, rman_sg_node)      
-                                if has_particle_systems:                                     
-                                    self.update_particles.add(obj.id.original)
+                    if self.update_object_visibility(rman_sg_node, ob):
+                        continue
                 else:
                     continue        
 
@@ -792,16 +803,21 @@ class RmanSceneSync(object):
         # add new objs:
         if self.new_objects:
             self.add_objects()
+        elif self.do_add:
+            # if we didn't detect any new objects, but the number of
+            # instances changed, check our existing objects for object
+            # deletion and/or visibility
+            self.delete_objects()
+
+        # delete any objects, if necessary    
+        if self.do_delete:
+            self.delete_objects()
 
         # update any particle systems
         self.update_particle_systems()
 
         # re-emit any instances needed
-        self.reemit_instances()
-
-        # delete any objects, if necessary    
-        if self.do_delete:
-            self.delete_objects()                             
+        self.reemit_instances()                          
                         
         rfb_log().debug("------End update scene----------")
 
@@ -824,6 +840,10 @@ class RmanSceneSync(object):
                     # NOTE: objects that are hidden from the viewport are considered deleted
                     # objects as well
                     if ob and not ob.hide_viewport:
+                        rman_sg_node = self.rman_scene.rman_objects.get(obj, None)
+                        if rman_sg_node:
+                            # Double check object visibility
+                            self.update_object_visibility(rman_sg_node, ob)
                         continue
                 except Exception as e:
                     pass
