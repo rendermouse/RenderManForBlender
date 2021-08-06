@@ -14,37 +14,6 @@ import math
 DEFAULT_SENSOR_WIDTH = 32.0
 DEFAULT_SENSOR_HEIGHT = 18.0
 
-def _render_get_resolution_(r):
-    xres = int(r.resolution_x * r.resolution_percentage * 0.01)
-    yres = int(r.resolution_y * r.resolution_percentage * 0.01)
-    return xres, yres    
-
-def _render_get_aspect_(r, camera=None, x=-1, y=-1):
-    if x != -1 and y != -1:
-        xratio = x * r.pixel_aspect_x / 200.0
-        yratio = y * r.pixel_aspect_y / 200.0        
-    else:
-        xres, yres = _render_get_resolution_(r)
-        xratio = xres * r.pixel_aspect_x / 200.0
-        yratio = yres * r.pixel_aspect_y / 200.0
-
-    if camera is None or camera.type != 'PERSP':
-        fit = 'AUTO'
-    else:
-        fit = camera.sensor_fit
-
-    if fit == 'HORIZONTAL' or fit == 'AUTO' and xratio > yratio:
-        aspectratio = xratio / yratio
-        xaspect = aspectratio
-        yaspect = 1.0
-    elif fit == 'VERTICAL' or fit == 'AUTO' and yratio > xratio:
-        aspectratio = yratio / xratio
-        xaspect = 1.0
-        yaspect = aspectratio
-    else:
-        aspectratio = xaspect = yaspect = 1.0
-
-    return xaspect, yaspect, aspectratio    
 
 class RmanCameraTranslator(RmanTranslator):
 
@@ -191,7 +160,7 @@ class RmanCameraTranslator(RmanTranslator):
                 cam = ob.data
                 r = self.rman_scene.bl_scene.render
 
-                xaspect, yaspect, aspectratio = _render_get_aspect_(r, cam, x=width, y=height)
+                xaspect, yaspect, aspectratio = camera_utils.render_get_aspect_(r, cam, x=width, y=height)
 
                 # magic zoom formula copied from blenderseed, which got it from cycles
                 zoom = 4 / ((math.sqrt(2) + rman_sg_camera.view_camera_zoom / 50) ** 2)   
@@ -268,7 +237,7 @@ class RmanCameraTranslator(RmanTranslator):
                     cam = ob.data
                 r = self.rman_scene.bl_scene.render
 
-                xaspect, yaspect, aspectratio = _render_get_aspect_(r, cam, x=width, y=height)          
+                xaspect, yaspect, aspectratio = camera_utils.render_get_aspect_(r, cam, x=width, y=height)          
                 zoom = 2.0
                 if not cam:
                     zoom = 1.0
@@ -324,7 +293,7 @@ class RmanCameraTranslator(RmanTranslator):
                 
                 r = self.rman_scene.bl_scene.render
 
-                xaspect, yaspect, aspectratio = _render_get_aspect_(r, cam, x=width, y=height)
+                xaspect, yaspect, aspectratio = camera_utils.render_get_aspect_(r, cam, x=width, y=height)
 
                 # 2.0 zoom value copied from cycles
                 zoom = 2.0
@@ -380,6 +349,7 @@ class RmanCameraTranslator(RmanTranslator):
                 from ..rman_ui.rman_ui_viewport import __DRAW_CROP_HANDLER__ as crop_handler
                 if crop_handler and crop_handler.crop_windowing:
                     crop_handler.reset()
+                    crop_window = [0.0, 1.0, 0.0, 1.0]
                     
             options.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_CropWindow, crop_window, 4)
             self.rman_scene.sg_scene.SetOptions(options)
@@ -522,7 +492,7 @@ class RmanCameraTranslator(RmanTranslator):
         cam_rm = cam.renderman
         rman_sg_camera.bl_camera = ob
 
-        xaspect, yaspect, aspectratio = _render_get_aspect_(r, cam)
+        xaspect, yaspect, aspectratio = camera_utils.render_get_aspect_(r, cam)
 
         options = self.rman_scene.sg_scene.GetOptions()
 
@@ -541,7 +511,7 @@ class RmanCameraTranslator(RmanTranslator):
             options.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_CropWindow, (min_x, max_x, min_y, max_y), 4)   
 
         # convert the crop border to screen window, flip y
-        resolution = _render_get_resolution_(self.rman_scene.bl_scene.render)
+        resolution = camera_utils.render_get_resolution_(self.rman_scene.bl_scene.render)
         if self.rman_scene.bl_scene.render.use_border and self.rman_scene.bl_scene.render.use_crop_to_border:
             res_x = resolution[0] * (self.rman_scene.bl_scene.render.border_max_x -
                                     self.rman_scene.bl_scene.render.border_min_x)
@@ -602,7 +572,7 @@ class RmanCameraTranslator(RmanTranslator):
         cam_rm = cam.renderman
         rman_sg_camera.bl_camera = ob
 
-        xaspect, yaspect, aspectratio = _render_get_aspect_(r, cam)
+        xaspect, yaspect, aspectratio = camera_utils.render_get_aspect_(r, cam)
         rman_sg_camera.projection_shader = None
 
         node = shadergraph_utils.find_projection_node(ob)        
