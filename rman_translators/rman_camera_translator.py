@@ -6,6 +6,7 @@ from ..rfb_utils import property_utils
 from ..rfb_utils import object_utils
 from ..rfb_utils import scene_utils
 from ..rfb_utils import shadergraph_utils
+from ..rfb_utils import camera_utils
 from mathutils import Matrix, Vector
 import math
 
@@ -158,6 +159,7 @@ class RmanCameraTranslator(RmanTranslator):
         resolution_updated = False
         ob = None
         prop = rman_sg_camera.sg_camera_node.GetProperties()
+        crop_window = [0.0, 1.0, 0.0, 1.0]
         if rman_sg_camera.res_width != width:
             rman_sg_camera.res_width = width
             updated = True
@@ -235,10 +237,31 @@ class RmanCameraTranslator(RmanTranslator):
                     rman_sg_camera.screenwindow = sw
                     updated = True
                 
-                prop.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_ScreenWindow, sw, 4)      
-                
+                prop.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_ScreenWindow, sw, 4)  
+
+                if r.use_border:
+
+                    x0, x1, y0, y1 = camera_utils.get_viewport_cam_borders(ob, r, region, region_data, self.rman_scene.bl_scene)
+                    min_x = (x0) / width
+                    max_x = (x1) / width
+                    min_y = 1.0 - (y0 / height)
+                    max_y = 1.0 - (y1 / height)
+
+                    crop_window = [min_x, max_x, min_y, max_y]
+
 
             elif region_data.view_perspective ==  'PERSP': 
+                if self.rman_scene.context.space_data.use_render_border:
+                    space = self.rman_scene.context.space_data
+                    min_x = space.render_border_min_x
+                    max_x = space.render_border_max_x
+                    if (min_x >= max_x):
+                        min_x = 0.0
+                        max_x = 1.0
+                    min_y = 1.0 - space.render_border_min_y
+                    max_y = 1.0 - space.render_border_max_y
+                    crop_window = [min_x, max_x, min_y, max_y]
+
                 ob = self.rman_scene.context.space_data.camera 
                 cam = None
                 if ob:
@@ -357,8 +380,8 @@ class RmanCameraTranslator(RmanTranslator):
                 from ..rman_ui.rman_ui_viewport import __DRAW_CROP_HANDLER__ as crop_handler
                 if crop_handler and crop_handler.crop_windowing:
                     crop_handler.reset()
-                options.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_CropWindow, [0.0, 1.0, 0.0, 1.0], 4)
-
+                    
+            options.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_CropWindow, crop_window, 4)
             self.rman_scene.sg_scene.SetOptions(options)
             rman_sg_camera.sg_camera_node.SetProperties(prop)
             return ob

@@ -1,9 +1,11 @@
+import re
 from bpy.props import EnumProperty, StringProperty, IntProperty, FloatProperty
 from ..rman_render import RmanRender
 from .. import rman_bl_nodes
 from .. import rfb_icons
 from ..rfb_utils.prefs_utils import get_pref, get_addon_prefs
 from ..rfb_utils import display_utils
+from ..rfb_utils import camera_utils
 from bpy.types import Menu
 
 import bpy
@@ -181,13 +183,13 @@ class PRMAN_OT_Viewport_Snapshot(bpy.types.Operator):
 
         return {"FINISHED"}
 
-
 class DrawCropWindowHelper(object):
     def __init__(self):
         self.crop_windowing = False
         self.reset()
         self.__draw_handler = None
         self.__draw_handler = bpy.types.SpaceView3D.draw_handler_add(self.draw, (), 'WINDOW', 'POST_PIXEL')
+        self.use_render_border = None
 
     def __del__(self):
         bpy.types.SpaceView3D.draw_handler_remove(self.__draw_handler, 'WINDOW')
@@ -223,10 +225,70 @@ class DrawCropWindowHelper(object):
     def edit_cropwindow(self, edit_cropwindow):
         self.__edit_cropwindow = edit_cropwindow
 
+    def get_crop_window(self, width, height):
+        x0 = self.cw_c1[0]
+        x1 = self.cw_c2[0]
+        y1 = height - self.cw_c4[1]
+        y0 = height - self.cw_c1[1]
+
+        remap_start_x = x0 / width
+        remap_end_x = x1 / width
+        remap_start_y = y1 / height
+        remap_end_y = y0 / height       
+
+        return [remap_start_x, remap_end_x, remap_start_y, remap_end_y] 
+
+    def check_render_border(self):
+        space = bpy.context.space_data
+        region_data = bpy.context.region_data
+        region = bpy.context.region
+        height = region.height
+        width = region.width        
+        use_render_border = False
+        if region_data.view_perspective in ["ORTHO", "PERSP"]:
+            if space.use_render_border:
+                self.cw_c1 = (width*space.render_border_min_x, height*space.render_border_min_y)
+                self.cw_c2 = (width*space.render_border_max_x, height*space.render_border_min_y)
+                self.cw_c3 = (width*space.render_border_max_x, height*space.render_border_max_y)
+                self.cw_c4 = (width*space.render_border_min_x, height*space.render_border_max_y)
+
+                use_render_border = True
+            else:
+                self.reset()
+
+        else:
+            use_render_border = False
+            r = bpy.context.scene.render
+            if r.use_border:
+                use_render_border = True
+                ob = bpy.context.space_data.camera     
+                x0, x1, y0, y1 = camera_utils.get_viewport_cam_borders(ob, r, region, region_data, bpy.context.scene) 
+                self.cw_c1 = (x0, y0)
+                self.cw_c2 = (x1, y0)
+                self.cw_c3 = (x1, y1)
+                self.cw_c4 = (x0, y1)
+            else:
+                self.reset()
+
+
+        if self.use_render_border != use_render_border:
+            self.use_render_border = use_render_border
+            rman_render = RmanRender.get_rman_render()
+            if rman_render.rman_interactive_running:
+                if self.use_render_border:
+                    rman_render.rman_scene_sync.update_cropwindow(self.get_crop_window(width, height))                
+                else:                    
+                    rman_render.rman_scene_sync.update_cropwindow([0.0,1.0,0.0,1.0])                
+
     def valid_crop_window(self):
         return not (self.cw_c1[0] == -1 and self.cw_c1[0] == -1 and self.cw_c2[0] == -1 and self.cw_c2[0] == -1 and self.cw_c3[0] == -1 and self.cw_c3[0] == -1 and  self.cw_c4[0] == -1 and self.cw_c4[0] == -1 )
 
     def draw(self):
+        if not self.edit_cropwindow:
+            self.check_render_border()
+            if self.use_render_border:
+                return
+
         if not self.valid_crop_window():
             return
 
@@ -430,6 +492,7 @@ class PRMAN_OT_Viewport_CropWindow_Reset(bpy.types.Operator):
         rman_render = RmanRender.get_rman_render()
         if rman_render.rman_interactive_running:
             get_crop_helper().reset()
+            bpy.ops.view3d.clear_render_border()
             rman_render.rman_scene_sync.update_cropwindow([0.0, 1.0, 0.0, 1.0])
 
         return {"FINISHED"}
@@ -466,7 +529,7 @@ class PRMAN_OT_Viewport_Cropwindow(bpy.types.Operator):
         help += "Crop windows will tell RenderMan to only update the portion of the image within the window. "
         help += "\nCrop windows can be moved around. Clicking the X in the top right corner will reset the window."
         help += "\nPress and hold the left mouse button to draw the window."
-        help += "\nPress Esc or Enter to exit the operator."
+        help += "\nPress to Esc to reset the crop and exit the operator. Press Enter to exit the operator."
         return help
 
     def reset(self):
@@ -476,6 +539,29 @@ class PRMAN_OT_Viewport_Cropwindow(bpy.types.Operator):
         self.resize_from_right = False
         self.moving_crop_window = False
         self.is_inside_del_box = False
+
+    def init_crop_window(self, context):
+        space = context.space_data
+        region_data = context.region_data
+        region = context.region
+        height = region.height
+        width = region.width        
+        if region_data.view_perspective in ["ORTHO", "PERSP"]:
+            if space.use_render_border:
+                self.crop_handler.cw_c1 = (width*space.render_border_min_x, height*space.render_border_min_y)
+                self.crop_handler.cw_c2 = (width*space.render_border_max_x, height*space.render_border_min_y)
+                self.crop_handler.cw_c3 = (width*space.render_border_max_x, height*space.render_border_max_y)
+                self.crop_handler.cw_c4 = (width*space.render_border_min_x, height*space.render_border_max_y)
+
+        else:
+            render = context.scene.render
+            if render.use_border:  
+                ob = bpy.context.space_data.camera     
+                x0, x1, y0, y1 = camera_utils.get_viewport_cam_borders(ob, render, region, region_data, context.scene) 
+                self.crop_handler.cw_c1 = (x0, y0)
+                self.crop_handler.cw_c2 = (x1, y0)
+                self.crop_handler.cw_c3 = (x1, y1)
+                self.crop_handler.cw_c4 = (x0, y1)
 
     def execute(self, context):
         rman_render = RmanRender.get_rman_render()
@@ -488,18 +574,14 @@ class PRMAN_OT_Viewport_Cropwindow(bpy.types.Operator):
 
             region_width = region.width
             region_height = region.height
-
+            
             x0 = self.crop_handler.cw_c1[0]
             x1 = self.crop_handler.cw_c2[0]
-            y1= region_height - self.crop_handler.cw_c4[1]
-            y0 = region_height - self.crop_handler.cw_c1[1]
+            y1=  self.crop_handler.cw_c4[1]
+            y0 = self.crop_handler.cw_c1[1]
 
-            remap_start_x = x0 / region_width
-            remap_end_x = x1 / region_width
-            remap_start_y = y1 / region_height
-            remap_end_y = y0 / region_height
-
-            rman_render.rman_scene_sync.update_cropwindow([remap_start_x, remap_end_x, remap_start_y, remap_end_y])
+            bpy.ops.view3d.render_border(xmin=x0, xmax=x1, ymin=y0, ymax=y1, wait_for_input=False)
+            rman_render.rman_scene_sync.update_cropwindow(self.crop_handler.get_crop_window(region_width, region_height))
 
         return {'FINISHED'}
 
@@ -649,7 +731,13 @@ class PRMAN_OT_Viewport_Cropwindow(bpy.types.Operator):
             elif event.value == 'RELEASE':
                 self.execute(context)
 
-        elif event.type in {'ESC', 'RET', 'NUMPAD_ENTER'}:
+        elif event.type in {'ESC'}:
+            context.window.cursor_modal_restore()
+            bpy.ops.renderman_viewport.cropwindow_reset()
+            self.crop_handler.crop_windowing = False
+            return {'CANCELLED'}            
+
+        elif event.type in {'RET', 'NUMPAD_ENTER'}:
             context.window.cursor_modal_restore()
             self.execute(context)
             return {'FINISHED'}
@@ -676,6 +764,7 @@ class PRMAN_OT_Viewport_Cropwindow(bpy.types.Operator):
     def invoke(self, context, event):
         context.window_manager.modal_handler_add(self)
         context.window.cursor_modal_set('CROSSHAIR')
+        self.init_crop_window(context)
         self.crop_handler.crop_windowing = True
         return {'RUNNING_MODAL'}
 
