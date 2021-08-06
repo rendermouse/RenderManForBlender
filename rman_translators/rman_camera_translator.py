@@ -224,9 +224,6 @@ class RmanCameraTranslator(RmanTranslator):
                     space = self.rman_scene.context.space_data
                     min_x = space.render_border_min_x
                     max_x = space.render_border_max_x
-                    if (min_x >= max_x):
-                        min_x = 0.0
-                        max_x = 1.0
                     min_y = 1.0 - space.render_border_min_y
                     max_y = 1.0 - space.render_border_max_y
                     crop_window = [min_x, max_x, min_y, max_y]
@@ -499,14 +496,8 @@ class RmanCameraTranslator(RmanTranslator):
         if self.rman_scene.bl_scene.render.use_border and not self.rman_scene.bl_scene.render.use_crop_to_border:
             min_x = self.rman_scene.bl_scene.render.border_min_x
             max_x = self.rman_scene.bl_scene.render.border_max_x
-            if (min_x >= max_x):
-                min_x = 0.0
-                max_x = 1.0
             min_y = 1.0 - self.rman_scene.bl_scene.render.border_min_y
             max_y = 1.0 - self.rman_scene.bl_scene.render.border_max_y
-            if (min_y >= max_y):
-                min_y = 0.0
-                max_y = 1.0
 
             options.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_CropWindow, (min_x, max_x, min_y, max_y), 4)   
 
