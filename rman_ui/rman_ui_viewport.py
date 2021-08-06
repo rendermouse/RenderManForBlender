@@ -245,17 +245,18 @@ class DrawCropWindowHelper(object):
         height = region.height
         width = region.width        
         use_render_border = False
+        update = False
+        prev_crop = self.get_crop_window(width, height)
         if region_data.view_perspective in ["ORTHO", "PERSP"]:
             if space.use_render_border:
                 self.cw_c1 = (width*space.render_border_min_x, height*space.render_border_min_y)
                 self.cw_c2 = (width*space.render_border_max_x, height*space.render_border_min_y)
                 self.cw_c3 = (width*space.render_border_max_x, height*space.render_border_max_y)
                 self.cw_c4 = (width*space.render_border_min_x, height*space.render_border_max_y)
-
                 use_render_border = True
             else:
+                use_render_border = False
                 self.reset()
-
         else:
             use_render_border = False
             r = bpy.context.scene.render
@@ -270,13 +271,19 @@ class DrawCropWindowHelper(object):
             else:
                 self.reset()
 
-
         if self.use_render_border != use_render_border:
             self.use_render_border = use_render_border
+            update = True 
+
+        current_crop = self.get_crop_window(width, height)
+        if prev_crop != current_crop:
+            update = True
+
+        if update:            
             rman_render = RmanRender.get_rman_render()
             if rman_render.rman_interactive_running:
                 if self.use_render_border:
-                    rman_render.rman_scene_sync.update_cropwindow(self.get_crop_window(width, height))                
+                    rman_render.rman_scene_sync.update_cropwindow(current_crop)                
                 else:                    
                     rman_render.rman_scene_sync.update_cropwindow([0.0,1.0,0.0,1.0])                
 
