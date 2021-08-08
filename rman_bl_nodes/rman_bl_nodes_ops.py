@@ -97,6 +97,7 @@ class NODE_OT_remove_displayfilter_node_socket(bpy.types.Operator):
 
     def execute(self, context):
         if hasattr(context, 'node'):
+            world = context.scene.world
             node = context.node
         else:
             world = context.scene.world
@@ -112,6 +113,8 @@ class NODE_OT_remove_displayfilter_node_socket(bpy.types.Operator):
         else:
             socket = node.inputs[self.index]
             node.remove_input_index(socket)
+            
+        world.update_tag()            
         return {'FINISHED'}                
 
 class NODE_OT_move_displayfilter_node_up(bpy.types.Operator):
@@ -239,6 +242,7 @@ class NODE_OT_remove_samplefilter_node_socket(bpy.types.Operator):
 
     def execute(self, context):
         if hasattr(context, 'node'):
+            world = context.scene.world 
             node = context.node
         else:
             world = context.scene.world
@@ -254,6 +258,8 @@ class NODE_OT_remove_samplefilter_node_socket(bpy.types.Operator):
         else:
             socket = node.inputs[self.index]
             node.remove_input_index(socket)
+
+        world.update_tag()
         return {'FINISHED'}             
 
 class NODE_OT_move_samplefilter_node_up(bpy.types.Operator):
