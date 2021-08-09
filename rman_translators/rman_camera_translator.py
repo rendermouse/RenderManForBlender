@@ -188,7 +188,15 @@ class RmanCameraTranslator(RmanTranslator):
 
                 if rman_sg_camera.shift_y != cam.shift_y:
                     rman_sg_camera.shift_y = cam.shift_y
-                    updated = True                    
+                    updated = True
+
+                if rman_sg_camera.clip_start != cam.clip_start:
+                    rman_sg_camera.clip_start = cam.clip_start
+                    updated = True       
+
+                if rman_sg_camera.clip_end != cam.clip_end:
+                    rman_sg_camera.clip_end = cam.clip_end
+                    updated = True                                                        
 
                 if rman_sg_camera.xaspect != xaspect or rman_sg_camera.yaspect != yaspect: 
                     rman_sg_camera.xaspect = xaspect
@@ -217,6 +225,10 @@ class RmanCameraTranslator(RmanTranslator):
                     max_y = 1.0 - (y1 / height)
 
                     crop_window = [min_x, max_x, min_y, max_y]
+
+                # clipping planes         
+                prop.SetFloat(self.rman_scene.rman.Tokens.Rix.k_nearClip, cam.clip_start)
+                prop.SetFloat(self.rman_scene.rman.Tokens.Rix.k_farClip, cam.clip_end)                    
 
 
             elif region_data.view_perspective ==  'PERSP': 
@@ -268,7 +280,15 @@ class RmanCameraTranslator(RmanTranslator):
 
                 if rman_sg_camera.shift_y != shift_y:
                     rman_sg_camera.shift_y = shift_y
-                    updated = True                        
+                    updated = True         
+
+                if rman_sg_camera.clip_start != self.rman_scene.context.space_data.clip_start:
+                    rman_sg_camera.clip_start = self.rman_scene.context.space_data.clip_start
+                    updated = True       
+
+                if rman_sg_camera.clip_end != self.rman_scene.context.space_data.clip_end:
+                    rman_sg_camera.clip_end = self.rman_scene.context.space_data.clip_end
+                    updated = True                                               
 
                 sw = [-xaspect * zoom, xaspect * zoom, -yaspect * zoom, yaspect * zoom]
                 sw[0] += dx
@@ -280,7 +300,10 @@ class RmanCameraTranslator(RmanTranslator):
                     rman_sg_camera.screenwindow = sw
                     updated = True
                 
-                prop.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_ScreenWindow, sw, 4)                                     
+                prop.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_ScreenWindow, sw, 4)    
+                # clipping planes         
+                prop.SetFloat(self.rman_scene.rman.Tokens.Rix.k_nearClip, self.rman_scene.context.space_data.clip_start)
+                prop.SetFloat(self.rman_scene.rman.Tokens.Rix.k_farClip, self.rman_scene.context.space_data.clip_end)                                                   
 
             else: 
                 ob = self.rman_scene.context.space_data.camera 
@@ -310,7 +333,16 @@ class RmanCameraTranslator(RmanTranslator):
                     rman_sg_camera.xaspect = xaspect
                     rman_sg_camera.yaspect = yaspect  
                     rman_sg_camera.aspectratio = aspectratio
-                    updated = True                               
+                    updated = True          
+
+                if rman_sg_camera.clip_start != self.rman_scene.context.space_data.clip_start:
+                    rman_sg_camera.clip_start = self.rman_scene.context.space_data.clip_start
+                    updated = True       
+
+                if rman_sg_camera.clip_end != self.rman_scene.context.space_data.clip_end:
+                    rman_sg_camera.clip_end = self.rman_scene.context.space_data.clip_end
+                    updated = True                                    
+
 
                 # shift and offset   
                 shift_x = 0.0
@@ -330,7 +362,10 @@ class RmanCameraTranslator(RmanTranslator):
                 sw[2] += dy
                 sw[3] += dy
 
-                prop.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_ScreenWindow, sw, 4)                                                                               
+                prop.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_ScreenWindow, sw, 4)    
+                # clipping planes         
+                prop.SetFloat(self.rman_scene.rman.Tokens.Rix.k_nearClip, self.rman_scene.context.space_data.clip_start)
+                prop.SetFloat(self.rman_scene.rman.Tokens.Rix.k_farClip, self.rman_scene.context.space_data.clip_end)                                                                                                                                              
 
         if updated:
             options = self.rman_scene.sg_scene.GetOptions()

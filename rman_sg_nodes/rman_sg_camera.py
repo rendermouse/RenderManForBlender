@@ -22,6 +22,8 @@ class RmanSgCamera(RmanSgNode):
         self.screenwindow = None
         self.sg_camera_node = None
         self.projection_shader = None
+        self.clip_start = -1
+        self.clip_end = -1
 
     @property
     def bl_camera(self):
@@ -125,4 +127,20 @@ class RmanSgCamera(RmanSgNode):
 
     @projection_shader.setter
     def projection_shader(self, projection_shader):
-        self.__projection_shader = projection_shader                                         
+        self.__projection_shader = projection_shader        
+
+    @property
+    def clip_start(self):
+        return self.__clip_start
+
+    @clip_start.setter
+    def clip_start(self, clip_start):
+        self.__clip_start = clip_start
+
+    @property
+    def clip_end(self):
+        return self.__clip_end
+
+    @clip_end.setter
+    def clip_end(self, clip_end):
+        self.__clip_end = clip_end                   
