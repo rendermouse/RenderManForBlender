@@ -1076,7 +1076,8 @@ class RmanRender(object):
                     if len(self.viewport_buckets) > RFB_VIEWPORT_MAX_BUCKETS:
                         self.viewport_buckets.pop()
                     self.viewport_buckets.insert(0,[vertices, indices])
-                    bucket_color = get_pref('rman_viewport_bucket_color', default=RMAN_RENDERMAN_BLUE)
+                    
+                bucket_color = get_pref('rman_viewport_bucket_color', default=RMAN_RENDERMAN_BLUE)
 
                 # draw from newest to oldest
                 for v, i in (self.viewport_buckets):      
