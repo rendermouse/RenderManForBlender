@@ -1,4 +1,4 @@
-from rfb_logger import rfb_log
+from ..rfb_logger import rfb_log
 from .rman_translator import RmanTranslator
 from ..rman_sg_nodes.rman_sg_camera import RmanSgCamera
 from ..rman_sg_nodes.rman_sg_node import RmanSgNode
