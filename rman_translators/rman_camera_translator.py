@@ -1,3 +1,4 @@
+from rfb_logger import rfb_log
 from .rman_translator import RmanTranslator
 from ..rman_sg_nodes.rman_sg_camera import RmanSgCamera
 from ..rman_sg_nodes.rman_sg_node import RmanSgNode
@@ -9,6 +10,7 @@ from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import camera_utils
 from mathutils import Matrix, Vector
 import math
+import sys
 
 # copied from Blender's source code
 DEFAULT_SENSOR_WIDTH = 32.0
@@ -127,6 +129,10 @@ class RmanCameraTranslator(RmanTranslator):
         updated = False
         resolution_updated = False
         ob = None
+
+        clip_start = 0.1
+        clip_end = sys.float_info.max
+
         prop = rman_sg_camera.sg_camera_node.GetProperties()
         crop_window = [0.0, 1.0, 0.0, 1.0]
         if rman_sg_camera.res_width != width:
@@ -176,7 +182,10 @@ class RmanCameraTranslator(RmanTranslator):
                 # shift and offset            
                 offset = tuple(rman_sg_camera.view_camera_offset)
                 dx = 2.0 * (aspectratio * cam.shift_x + offset[0] * xaspect * 2.0)
-                dy = 2.0 * (aspectratio * cam.shift_y + offset[1] * yaspect * 2.0)       
+                dy = 2.0 * (aspectratio * cam.shift_y + offset[1] * yaspect * 2.0)    
+
+                clip_start = cam.clip_start
+                clip_end = cam.clip_end   
                 
                 if rman_sg_camera.lens != lens:
                     rman_sg_camera.lens = lens
@@ -189,14 +198,6 @@ class RmanCameraTranslator(RmanTranslator):
                 if rman_sg_camera.shift_y != cam.shift_y:
                     rman_sg_camera.shift_y = cam.shift_y
                     updated = True
-
-                if rman_sg_camera.clip_start != cam.clip_start:
-                    rman_sg_camera.clip_start = cam.clip_start
-                    updated = True       
-
-                if rman_sg_camera.clip_end != cam.clip_end:
-                    rman_sg_camera.clip_end = cam.clip_end
-                    updated = True                                                        
 
                 if rman_sg_camera.xaspect != xaspect or rman_sg_camera.yaspect != yaspect: 
                     rman_sg_camera.xaspect = xaspect
@@ -224,12 +225,7 @@ class RmanCameraTranslator(RmanTranslator):
                     min_y = 1.0 - (y0 / height)
                     max_y = 1.0 - (y1 / height)
 
-                    crop_window = [min_x, max_x, min_y, max_y]
-
-                # clipping planes         
-                prop.SetFloat(self.rman_scene.rman.Tokens.Rix.k_nearClip, cam.clip_start)
-                prop.SetFloat(self.rman_scene.rman.Tokens.Rix.k_farClip, cam.clip_end)                    
-
+                    crop_window = [min_x, max_x, min_y, max_y]              
 
             elif region_data.view_perspective ==  'PERSP': 
                 if self.rman_scene.context.space_data.use_render_border:
@@ -262,7 +258,10 @@ class RmanCameraTranslator(RmanTranslator):
                 # Need to do some more testing, but taking it into account seems to shift the image
                 offset = (0.0, 0.0) #tuple(rman_sg_camera.view_camera_offset)
                 dx = 2.0 * (aspectratio * shift_x + offset[0] * xaspect * 2.0)
-                dy = 2.0 * (aspectratio * shift_y + offset[1] * yaspect * 2.0)               
+                dy = 2.0 * (aspectratio * shift_y + offset[1] * yaspect * 2.0)    
+
+                clip_start = self.rman_scene.context.space_data.clip_start
+                clip_end = self.rman_scene.context.space_data.clip_end
 
                 if rman_sg_camera.lens != self.rman_scene.context.space_data.lens:
                     rman_sg_camera.lens = self.rman_scene.context.space_data.lens
@@ -280,15 +279,7 @@ class RmanCameraTranslator(RmanTranslator):
 
                 if rman_sg_camera.shift_y != shift_y:
                     rman_sg_camera.shift_y = shift_y
-                    updated = True         
-
-                if rman_sg_camera.clip_start != self.rman_scene.context.space_data.clip_start:
-                    rman_sg_camera.clip_start = self.rman_scene.context.space_data.clip_start
-                    updated = True       
-
-                if rman_sg_camera.clip_end != self.rman_scene.context.space_data.clip_end:
-                    rman_sg_camera.clip_end = self.rman_scene.context.space_data.clip_end
-                    updated = True                                               
+                    updated = True                                                  
 
                 sw = [-xaspect * zoom, xaspect * zoom, -yaspect * zoom, yaspect * zoom]
                 sw[0] += dx
@@ -301,9 +292,6 @@ class RmanCameraTranslator(RmanTranslator):
                     updated = True
                 
                 prop.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_ScreenWindow, sw, 4)    
-                # clipping planes         
-                prop.SetFloat(self.rman_scene.rman.Tokens.Rix.k_nearClip, self.rman_scene.context.space_data.clip_start)
-                prop.SetFloat(self.rman_scene.rman.Tokens.Rix.k_farClip, self.rman_scene.context.space_data.clip_end)                                                   
 
             else: 
                 ob = self.rman_scene.context.space_data.camera 
@@ -329,20 +317,14 @@ class RmanCameraTranslator(RmanTranslator):
                 yaspect = yaspect * ortho_scale / (aspectratio * 2.0)
                 aspectratio = ortho_scale / 2.0  
 
+                clip_start = self.rman_scene.context.space_data.clip_start
+                clip_end = self.rman_scene.context.space_data.clip_end                
+
                 if rman_sg_camera.xaspect != xaspect or rman_sg_camera.yaspect != yaspect:
                     rman_sg_camera.xaspect = xaspect
                     rman_sg_camera.yaspect = yaspect  
                     rman_sg_camera.aspectratio = aspectratio
                     updated = True          
-
-                if rman_sg_camera.clip_start != self.rman_scene.context.space_data.clip_start:
-                    rman_sg_camera.clip_start = self.rman_scene.context.space_data.clip_start
-                    updated = True       
-
-                if rman_sg_camera.clip_end != self.rman_scene.context.space_data.clip_end:
-                    rman_sg_camera.clip_end = self.rman_scene.context.space_data.clip_end
-                    updated = True                                    
-
 
                 # shift and offset   
                 shift_x = 0.0
@@ -362,12 +344,24 @@ class RmanCameraTranslator(RmanTranslator):
                 sw[2] += dy
                 sw[3] += dy
 
-                prop.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_ScreenWindow, sw, 4)    
-                # clipping planes         
-                prop.SetFloat(self.rman_scene.rman.Tokens.Rix.k_nearClip, self.rman_scene.context.space_data.clip_start)
-                prop.SetFloat(self.rman_scene.rman.Tokens.Rix.k_farClip, self.rman_scene.context.space_data.clip_end)                                                                                                                                              
+                prop.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_ScreenWindow, sw, 4) 
+
+        if clip_end > clip_start:   
+            if rman_sg_camera.clip_start != clip_start:
+                rman_sg_camera.clip_start = clip_start
+                updated = True       
+
+            if rman_sg_camera.clip_end != clip_end:
+                rman_sg_camera.clip_end = clip_end
+                updated = True          
+        else:
+            rfb_log().debug("Clipping start is greater than clipping end.")       
 
         if updated:
+            # clipping planes    
+            prop.SetFloat(self.rman_scene.rman.Tokens.Rix.k_nearClip, clip_start)
+            prop.SetFloat(self.rman_scene.rman.Tokens.Rix.k_farClip, clip_end)    
+
             options = self.rman_scene.sg_scene.GetOptions()
             options.SetFloat(self.rman_scene.rman.Tokens.Rix.k_Ri_FormatPixelAspectRatio, 1.0)   
             options.SetIntegerArray(self.rman_scene.rman.Tokens.Rix.k_Ri_FormatResolution, (width, height), 2)
@@ -668,8 +662,11 @@ class RmanCameraTranslator(RmanTranslator):
             prop.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_stereoplaneoffsets, stereoplaneoffsets, rman_stereoplaneoffsets_arraylen)            
 
         # clipping planes         
-        prop.SetFloat(self.rman_scene.rman.Tokens.Rix.k_nearClip, cam.clip_start)
-        prop.SetFloat(self.rman_scene.rman.Tokens.Rix.k_farClip, cam.clip_end)
+        if cam.clip_end > cam.clip_start:
+            prop.SetFloat(self.rman_scene.rman.Tokens.Rix.k_nearClip, cam.clip_start)
+            prop.SetFloat(self.rman_scene.rman.Tokens.Rix.k_farClip, cam.clip_end)
+        else:
+            rfb_log().debug("Clipping start is greater than clipping end.")             
 
         # aperture
         prop.SetInteger(self.rman_scene.rman.Tokens.Rix.k_apertureNSides, cam_rm.rman_aperture_blades)
