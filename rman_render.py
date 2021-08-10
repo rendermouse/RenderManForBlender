@@ -405,7 +405,7 @@ class RmanRender(object):
         return (self.rman_running and not self.rman_interactive_running)   
 
     def do_draw_buckets(self):
-        return self.do_draw_buckets and get_pref('rman_viewport_draw_bucket', default=True)
+        return get_pref('rman_viewport_draw_bucket', default=True)
 
     def start_stats_thread(self): 
         # start a stats thread so we can periodically call update_payloads
@@ -1038,44 +1038,45 @@ class RmanRender(object):
             # (the driver will handle pixel scaling to the given viewport size)
             dspy_plugin.DrawBufferToBlender(ctypes.c_int(width), ctypes.c_int(height))
 
-            image_num = 0
-            arXMin = ctypes.c_int(0)
-            arXMax = ctypes.c_int(0)
-            arYMin = ctypes.c_int(0)
-            arYMax = ctypes.c_int(0)            
-            dspy_plugin.GetActiveRegion(ctypes.c_size_t(image_num), ctypes.byref(arXMin), ctypes.byref(arXMax), ctypes.byref(arYMin), ctypes.byref(arYMax))
-            # draw bucket indicators
-            if self.do_draw_buckets() and ( (arXMin.value + arXMax.value + arYMin.value + arYMax.value) > 0):
-                yMin = height-1 - arYMin.value
-                yMax = height-1 - arYMax.value
-                xMin = arXMin.value
-                xMax = arXMax.value
-                if self.rman_scene.viewport_render_res_mult != 1.0:
-                    # render resolution multiplier is set, we need to re-scale the bucket markers
-                    scaled_width = width * self.rman_scene.viewport_render_res_mult
-                    xMin = int(width * ((arXMin.value) / (scaled_width)))
-                    xMax = int(width * ((arXMax.value) / (scaled_width)))
+            if self.do_draw_buckets():
+                # draw bucket indicator
+                image_num = 0
+                arXMin = ctypes.c_int(0)
+                arXMax = ctypes.c_int(0)
+                arYMin = ctypes.c_int(0)
+                arYMax = ctypes.c_int(0)            
+                dspy_plugin.GetActiveRegion(ctypes.c_size_t(image_num), ctypes.byref(arXMin), ctypes.byref(arXMax), ctypes.byref(arYMin), ctypes.byref(arYMax))
+                if ( (arXMin.value + arXMax.value + arYMin.value + arYMax.value) > 0):
+                    yMin = height-1 - arYMin.value
+                    yMax = height-1 - arYMax.value
+                    xMin = arXMin.value
+                    xMax = arXMax.value
+                    if self.rman_scene.viewport_render_res_mult != 1.0:
+                        # render resolution multiplier is set, we need to re-scale the bucket markers
+                        scaled_width = width * self.rman_scene.viewport_render_res_mult
+                        xMin = int(width * ((arXMin.value) / (scaled_width)))
+                        xMax = int(width * ((arXMax.value) / (scaled_width)))
 
-                    scaled_height = height * self.rman_scene.viewport_render_res_mult
-                    yMin = height-1 - int(height * ((arYMin.value) / (scaled_height)))
-                    yMax = height-1 - int(height * ((arYMax.value) / (scaled_height)))
-                   
-                vertices = []
-                c1 = (xMin, yMin)
-                c2 = (xMax, yMin)
-                c3 = (xMax, yMax)
-                c4 = (xMin, yMax)
-                vertices.append(c1)
-                vertices.append(c2)
-                vertices.append(c3)
-                vertices.append(c4)
-                indices = [(0, 1), (1, 2), (2,3), (3, 0)]
+                        scaled_height = height * self.rman_scene.viewport_render_res_mult
+                        yMin = height-1 - int(height * ((arYMin.value) / (scaled_height)))
+                        yMax = height-1 - int(height * ((arYMax.value) / (scaled_height)))
+                    
+                    vertices = []
+                    c1 = (xMin, yMin)
+                    c2 = (xMax, yMin)
+                    c3 = (xMax, yMax)
+                    c4 = (xMin, yMax)
+                    vertices.append(c1)
+                    vertices.append(c2)
+                    vertices.append(c3)
+                    vertices.append(c4)
+                    indices = [(0, 1), (1, 2), (2,3), (3, 0)]
 
-                # we've reach our max buckets, pop the oldest one off the list
-                if len(self.viewport_buckets) > RFB_VIEWPORT_MAX_BUCKETS:
-                    self.viewport_buckets.pop()
-                self.viewport_buckets.insert(0,[vertices, indices])
-                bucket_color = get_pref('rman_viewport_bucket_color', default=RMAN_RENDERMAN_BLUE)
+                    # we've reach our max buckets, pop the oldest one off the list
+                    if len(self.viewport_buckets) > RFB_VIEWPORT_MAX_BUCKETS:
+                        self.viewport_buckets.pop()
+                    self.viewport_buckets.insert(0,[vertices, indices])
+                    bucket_color = get_pref('rman_viewport_bucket_color', default=RMAN_RENDERMAN_BLUE)
 
                 # draw from newest to oldest
                 for v, i in (self.viewport_buckets):      
