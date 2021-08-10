@@ -1091,7 +1091,7 @@ def draw_arc(a, b, numSteps, quadrant, xOffset, yOffset, pts):
         pts.append(Vector([x+xOffset, y+yOffset, 0.0]))
         #pts.append(Vector([x+xOffset, 0.0, y+yOffset]))
 
-def draw_rounded_rectangles( left, right,
+def draw_rounded_rectangles(ob, left, right,
                             top,  bottom,
                             radius,
                             leftEdge,  rightEdge,
@@ -1126,7 +1126,7 @@ def draw_rounded_rectangles( left, right,
 
     draw_line_shape(ob, _SHADER_, shape_pts, shape_pts_indices)
 
-def draw_rod(leftEdge, rightEdge, topEdge,  bottomEdge,
+def draw_rod(ob, leftEdge, rightEdge, topEdge,  bottomEdge,
             frontEdge,  backEdge,  scale, width,  radius, 
             left,  right,  top,  bottom,  front, back, world_mat):
 
@@ -1140,7 +1140,7 @@ def draw_rod(leftEdge, rightEdge, topEdge,  bottomEdge,
     m = world_mat
     
     # front and back
-    draw_rounded_rectangles(left, right, top, bottom, radius,
+    draw_rounded_rectangles(ob, left, right, top, bottom, radius,
                           leftEdge, rightEdge,
                           topEdge, bottomEdge, front, -back, m)
 
@@ -1150,7 +1150,7 @@ def draw_rod(leftEdge, rightEdge, topEdge,  bottomEdge,
     
     # top and bottom
     
-    draw_rounded_rectangles(left, right, back, front, radius,
+    draw_rounded_rectangles(ob, left, right, back, front, radius,
                           leftEdge, rightEdge,
                           backEdge, frontEdge, top, -bottom, m)
  
@@ -1158,7 +1158,7 @@ def draw_rod(leftEdge, rightEdge, topEdge,  bottomEdge,
     
     
     # left and right
-    draw_rounded_rectangles(front, back, top, bottom, radius,
+    draw_rounded_rectangles(ob, front, back, top, bottom, radius,
                           frontEdge, backEdge,
                           topEdge, bottomEdge, -left, right, m)
 
@@ -1227,7 +1227,7 @@ def draw_rod_light_filter(ob):
     front += scale_depth * depth
     back += scale_depth * depth
 
-    draw_rod(left_edge, right_edge,
+    draw_rod(ob, left_edge, right_edge,
             top_edge, bottom_edge,
             front_edge, back_edge, rod_scale,
             width, radius,
@@ -1238,7 +1238,7 @@ def draw_rod_light_filter(ob):
             
         # draw outside box
         rod_scale = 1.0
-        draw_rod(left_edge, right_edge,
+        draw_rod(ob, left_edge, right_edge,
             top_edge, bottom_edge,
             front_edge, back_edge, rod_scale,
             width, radius,
