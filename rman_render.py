@@ -189,8 +189,8 @@ def call_stats_update_payloads(db):
 
     while db.rman_running:
         db.stats_mgr.update_payloads()
-        panel_region.tag_redraw()
-        time.sleep(0.01)
+        #panel_region.tag_redraw()
+        time.sleep(0.1)
 
 def progress_cb(e, d, db):
     if not db.stats_mgr.is_connected():
