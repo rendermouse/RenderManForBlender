@@ -31,14 +31,12 @@ def get_config_path():
     """return ocio config path. updating with $OCIO
     """
     clrmgr = color_manager()
+    if clrmgr:
+        return clrmgr.config_file_path()
 
     ociopath = envconfig().getenv('OCIO')
     if ociopath is None:
         ociopath = envconfig().get_blender_ocio_config()
-
-    if ColorManager:
-        clrmgr.update(ociopath)
-        return clrmgr.config_file_path()
 
     return ociopath
 
