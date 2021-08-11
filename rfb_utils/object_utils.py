@@ -158,8 +158,10 @@ def _detect_primitive_(ob):
         elif ob.type == 'LIGHT':
             if ob.data.renderman.renderman_light_role == 'RMAN_LIGHTFILTER':
                 return 'LIGHTFILTER'
-            return ob.type                       
-        elif ob.type in ['CURVE', 'FONT']:
+            return ob.type
+        elif ob.type == 'FONT':
+            return 'MESH'                       
+        elif ob.type in ['CURVE']:
             return 'CURVE'
         elif ob.type == 'SURFACE':
             if get_pref('rman_render_nurbs_as_mesh', True):

@@ -107,7 +107,10 @@ class RmanCurveTranslator(RmanMeshTranslator):
 
     def export(self, ob, db_name):
         is_mesh = False
-        if ob.data.dimensions == '2D':
+        if len(ob.modifiers) > 0:
+            sg_node = self.rman_scene.sg_scene.CreateMesh(db_name)
+            is_mesh = True            
+        elif ob.data.dimensions == '2D':
             sg_node = self.rman_scene.sg_scene.CreateGroup(db_name)
         elif len(ob.data.splines) < 1:
             sg_node = self.rman_scene.sg_scene.CreateMesh(db_name)
