@@ -130,8 +130,8 @@ class RmanCameraTranslator(RmanTranslator):
         resolution_updated = False
         ob = None
 
-        clip_start = 0.1
-        clip_end = sys.float_info.max
+        clip_start = None
+        clip_end = None
 
         prop = rman_sg_camera.sg_camera_node.GetProperties()
         crop_window = [0.0, 1.0, 0.0, 1.0]
@@ -346,21 +346,29 @@ class RmanCameraTranslator(RmanTranslator):
 
                 prop.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_ScreenWindow, sw, 4) 
 
-        if clip_end > clip_start:   
-            if rman_sg_camera.clip_start != clip_start:
-                rman_sg_camera.clip_start = clip_start
-                updated = True       
+        if clip_start and clip_end:
+            if clip_start > clip_end:
+                rfb_log().debug("Clipping start is greater than clipping end.") 
+                clip_start = None
+                clip_end = None
+            elif clip_start == clip_end:
+                rfb_log().debug("Clipping start is equal to clipping end.") 
+                clip_start = None
+                clip_end = None                
+            else: 
+                if rman_sg_camera.clip_start != clip_start:
+                    rman_sg_camera.clip_start = clip_start
+                    updated = True       
 
-            if rman_sg_camera.clip_end != clip_end:
-                rman_sg_camera.clip_end = clip_end
-                updated = True          
-        else:
-            rfb_log().debug("Clipping start is greater than clipping end.")       
-
+                if rman_sg_camera.clip_end != clip_end:
+                    rman_sg_camera.clip_end = clip_end
+                    updated = True          
         if updated:
             # clipping planes    
-            prop.SetFloat(self.rman_scene.rman.Tokens.Rix.k_nearClip, clip_start)
-            prop.SetFloat(self.rman_scene.rman.Tokens.Rix.k_farClip, clip_end)    
+            if clip_start:
+                prop.SetFloat(self.rman_scene.rman.Tokens.Rix.k_nearClip, clip_start)
+            if clip_end:
+                prop.SetFloat(self.rman_scene.rman.Tokens.Rix.k_farClip, clip_end)    
 
             options = self.rman_scene.sg_scene.GetOptions()
             options.SetFloat(self.rman_scene.rman.Tokens.Rix.k_Ri_FormatPixelAspectRatio, 1.0)   
