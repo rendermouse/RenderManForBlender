@@ -319,7 +319,7 @@ class RfBStatsManager(object):
             try:
                 self.rman_render.bl_engine.update_stats('RenderMan (Stats)', message)
             except ReferenceError as e:
-                rfb_log().debug("Error calling update stats (%s). Aborting..." % str(e))
+                #rfb_log().debug("Error calling update stats (%s). Aborting..." % str(e))
                 return
         else:
             message = ''
@@ -337,5 +337,5 @@ class RfBStatsManager(object):
                 progress = float(self._progress) / 100.0  
                 self.rman_render.bl_engine.update_progress(progress)
             except ReferenceError as e:
-                rfb_log().debug("Error calling update stats (%s). Aborting..." % str(e))
+                #rfb_log().debug("Error calling update stats (%s). Aborting..." % str(e))
                 return                
