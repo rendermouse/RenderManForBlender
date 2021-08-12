@@ -88,6 +88,7 @@ class RmanLightTranslator(RmanTranslator):
 
         sg_node = None            
         light_shader_name = ''
+        is_bl_light = False
         if light_shader:
             light_shader_name = rm.get_light_node_name()
 
@@ -124,27 +125,7 @@ class RmanLightTranslator(RmanTranslator):
                     rixparams.SetString('portalName', rman_sg_light.db_name)
                     property_utils.portal_inherit_dome_params(light_shader, portal_parent, parent_node, rixparams)
 
-                    orient_mtx = Matrix()
-                    orient_mtx[0][0] = s_orientPxrLight[0]
-                    orient_mtx[1][0] = s_orientPxrLight[1]
-                    orient_mtx[2][0] = s_orientPxrLight[2]
-                    orient_mtx[3][0] = s_orientPxrLight[3]
-
-                    orient_mtx[0][1] = s_orientPxrLight[4]
-                    orient_mtx[1][1] = s_orientPxrLight[5]
-                    orient_mtx[2][1] = s_orientPxrLight[6]
-                    orient_mtx[3][1] = s_orientPxrLight[7]
-
-                    orient_mtx[0][2] = s_orientPxrLight[8]
-                    orient_mtx[1][2] = s_orientPxrLight[9]
-                    orient_mtx[2][2] = s_orientPxrLight[10]
-                    orient_mtx[3][2] = s_orientPxrLight[11]
-
-                    orient_mtx[0][3] = s_orientPxrLight[12]
-                    orient_mtx[1][3] = s_orientPxrLight[13]
-                    orient_mtx[2][3] = s_orientPxrLight[14]
-                    orient_mtx[3][3] = s_orientPxrLight[15]
-                    
+                    orient_mtx = transform_utils.convert_to_blmatrix(s_orientPxrLight)
                     portal_mtx = orient_mtx @ Matrix(ob.matrix_world)                   
                     dome_mtx = Matrix(portal_parent.matrix_world)
                     dome_mtx.invert()
@@ -158,6 +139,7 @@ class RmanLightTranslator(RmanTranslator):
                     rman_sg_light.sg_node.SetLight(None)
 
         else:
+            is_bl_light = True
             names = {'POINT': 'PxrSphereLight', 'SUN': 'PxrDistantLight',
                     'SPOT': 'PxrDiskLight', 'HEMI': 'PxrDomeLight', 'AREA': 'PxrRectLight'}
             light_shader_name = names[light.type]
@@ -182,7 +164,14 @@ class RmanLightTranslator(RmanTranslator):
                                 "PxrPortalLight",
                                 "PxrCylinderLight"):
 
-            rman_sg_light.sg_node.SetOrientTransform(s_orientPxrLight)  
+            if is_bl_light:
+                m = transform_utils.convert_to_blmatrix(s_orientPxrLight)
+                if light_shader_name == 'PxrSphereLight':                    
+                    m = m @ Matrix.Scale(light.shadow_soft_size * 2, 4)
+                rman_sg_light.sg_node.SetOrientTransform(transform_utils.convert_matrix4x4(m))
+            else:
+                rman_sg_light.sg_node.SetOrientTransform(s_orientPxrLight)                  
+            
 
         elif light_shader_name == 'PxrEnvDayLight': 
             if int(light_shader.month) != 0:   

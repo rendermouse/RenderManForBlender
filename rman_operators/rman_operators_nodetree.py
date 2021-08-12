@@ -5,6 +5,7 @@ from ..rfb_utils import shadergraph_utils
 from .. import rman_bl_nodes
 from .rman_operators_utils import get_bxdf_items, get_projection_items
 from ..rman_render import RmanRender
+from mathutils import Matrix
 import math
 
 class SHADING_OT_convert_all_renderman_nodetree(bpy.types.Operator):
@@ -37,8 +38,22 @@ class SHADING_OT_convert_all_renderman_nodetree(bpy.types.Operator):
                 traceback.print_exc()
 
             for n in nt.nodes:
-                n.select = False                
+                n.select = False      
 
+        # convert cycles vis settings
+        for ob in context.scene.objects:
+            if not ob.cycles_visibility.camera:
+                ob.renderman.visibility_camera = False
+            if not ob.cycles_visibility.diffuse or not ob.cycles_visibility.glossy:
+                ob.renderman.visibility_trace_indirect = False
+            if not ob.cycles_visibility.transmission:
+                ob.renderman.visibility_trace_transmission = False
+
+            if ob.type == 'LIGHT' and not ob.data.use_nodes:
+                if ob.data.type == 'POINT':
+                    scale = ob.data.shadow_soft_size * 2
+                    ob.scale = [scale, scale, scale]      
+                    
         for light in bpy.data.lights:
             if light.renderman.use_renderman_node:
                 continue
@@ -93,16 +108,6 @@ class SHADING_OT_convert_all_renderman_nodetree(bpy.types.Operator):
 
             for n in nt.nodes:
                 n.select = False   
-
-        # convert cycles vis settings
-        for ob in context.scene.objects:
-            if not ob.cycles_visibility.camera:
-                ob.renderman.visibility_camera = False
-            if not ob.cycles_visibility.diffuse or not ob.cycles_visibility.glossy:
-                ob.renderman.visibility_trace_indirect = False
-            if not ob.cycles_visibility.transmission:
-                ob.renderman.visibility_trace_transmission = False
-
 
         return {'FINISHED'}
 
@@ -238,10 +243,17 @@ class SHADING_OT_add_renderman_nodetree(bpy.types.Operator):
                 light_shader = 'PxrDiskLight'
             elif light_type == 'POINT':
                 light_shader = 'PxrSphereLight' 
+                ob = context.object
+                scale = light.shadow_soft_size * 2
+                ob.scale = [scale, scale, scale]             
             else:
                 light_shader = 'PxrRectLight'
 
-            light.type = 'AREA'
+            #light.type = 'AREA'
+            if hasattr(light, 'size'):
+                light.size = 0.0
+            light.type = 'POINT'
+
             light.renderman.use_renderman_node = True
 
             output = nt.nodes.new('RendermanOutputNode')
@@ -259,7 +271,7 @@ class SHADING_OT_add_renderman_nodetree(bpy.types.Operator):
             if light_type == 'SPOT':
                 node = context.light.renderman.get_light_node()
                 node.coneAngle = math.degrees(light.spot_size)
-                node.coneSoftness = light.spot_blend            
+                node.coneSoftness = light.spot_blend       
 
         elif idtype == 'world':
             # world

@@ -375,6 +375,8 @@ class DATA_PT_renderman_light(ShaderPanel, Panel):
             layout.prop(light, "type", expand=True)
             layout.prop(light, "color")
             layout.prop(light, "energy")
+            if light.type == 'POINT':
+                layout.prop(light, "shadow_soft_size")
             layout.label(text='')
             layout.operator('material.rman_add_rman_nodetree').idtype = 'light'
             return
