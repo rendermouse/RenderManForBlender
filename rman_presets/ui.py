@@ -218,7 +218,8 @@ class PRMAN_MT_renderman_preset_ops_menu(bpy.types.Menu):
             assign.preset_path = json_path
             assign.assign = True           
         layout.context_pointer_set("op_ptr", op)
-        layout.operator("renderman.load_asset_to_scene", text="Import", )
+        op = layout.operator("renderman.load_asset_to_scene", text="Import", )
+        op.preset_path = json_path
         layout.separator()
         layout.operator('renderman.move_preset', icon='EXPORT', text="Move to category...").preset_path = json_path
         layout.separator()
