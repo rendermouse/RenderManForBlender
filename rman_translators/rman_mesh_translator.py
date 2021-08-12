@@ -254,17 +254,19 @@ class RmanMeshTranslator(RmanTranslator):
 
         return rman_sg_mesh
 
-    def export_deform_sample(self, rman_sg_mesh, ob, time_sample):
+    def export_deform_sample(self, rman_sg_mesh, ob, time_sample, sg_node=None):
 
         mesh = None
         mesh = ob.to_mesh()
-        primvar = rman_sg_mesh.sg_node.GetPrimVars()
+        if not sg_node:
+            sg_node = rman_sg_mesh.sg_node
+        primvar = sg_node.GetPrimVars()
         P = object_utils._get_mesh_points_(mesh)
         npoints = len(P)
 
         if rman_sg_mesh.npoints != npoints:
             primvar.SetTimes([])
-            rman_sg_mesh.sg_node.SetPrimVars(primvar)
+            sg_node.SetPrimVars(primvar)
             rman_sg_mesh.is_transforming = False
             rman_sg_mesh.is_deforming = False
             if rman_sg_mesh.is_multi_material:
@@ -276,7 +278,7 @@ class RmanMeshTranslator(RmanTranslator):
 
         primvar.SetPointDetail(self.rman_scene.rman.Tokens.Rix.k_P, P, "vertex", time_sample)                            
 
-        rman_sg_mesh.sg_node.SetPrimVars(primvar)
+        sg_node.SetPrimVars(primvar)
 
         if rman_sg_mesh.is_multi_material:
             for c in rman_sg_mesh.multi_material_children:
@@ -286,7 +288,7 @@ class RmanMeshTranslator(RmanTranslator):
 
         ob.to_mesh_clear()    
 
-    def update(self, ob, rman_sg_mesh, input_mesh=None):
+    def update(self, ob, rman_sg_mesh, input_mesh=None, sg_node=None):
 
         rm = ob.renderman
         mesh = input_mesh
@@ -294,6 +296,9 @@ class RmanMeshTranslator(RmanTranslator):
             mesh = ob.to_mesh()
             if not mesh:
                 return True
+
+        if not sg_node:
+            sg_node = rman_sg_mesh.sg_node
 
         rman_sg_mesh.is_subdiv = object_utils.is_subdmesh(ob)
         use_smooth_normals = getattr(ob.data.renderman, 'rman_smoothnormals', False)
@@ -304,7 +309,7 @@ class RmanMeshTranslator(RmanTranslator):
         if nverts == []:
             if not input_mesh:
                 ob.to_mesh_clear()
-            rman_sg_mesh.sg_node = None
+            sg_node = None
             rman_sg_mesh.is_transforming = False
             rman_sg_mesh.is_deforming = False
             return None
@@ -317,10 +322,10 @@ class RmanMeshTranslator(RmanTranslator):
         rman_sg_mesh.npolys = npolys
         rman_sg_mesh.nverts = numnverts
 
-        rman_sg_mesh.sg_node.Define( npolys, npoints, numnverts )
+        sg_node.Define( npolys, npoints, numnverts )
         rman_sg_mesh.is_multi_material = _is_multi_material_(ob, mesh)
             
-        primvar = rman_sg_mesh.sg_node.GetPrimVars()
+        primvar = sg_node.GetPrimVars()
         primvar.Clear()
 
         if rman_sg_mesh.is_deforming:
@@ -336,12 +341,12 @@ class RmanMeshTranslator(RmanTranslator):
             creases = self._get_subd_tags_(ob, mesh, primvar)
             if ob.data.renderman.rman_subdiv_scheme == 'none':
                 # we were tagged as a subdiv by a modifier
-                rman_sg_mesh.sg_node.SetScheme(self.rman_scene.rman.Tokens.Rix.k_catmullclark) 
+                sg_node.SetScheme(self.rman_scene.rman.Tokens.Rix.k_catmullclark) 
             else:
-                rman_sg_mesh.sg_node.SetScheme(ob.data.renderman.rman_subdiv_scheme) 
+                sg_node.SetScheme(ob.data.renderman.rman_subdiv_scheme) 
 
         else:
-            rman_sg_mesh.sg_node.SetScheme(None)
+            sg_node.SetScheme(None)
             if N:
                 if len(N) == numnverts:
                     primvar.SetNormalDetail(self.rman_scene.rman.Tokens.Rix.k_N, N, "facevarying")         
@@ -363,7 +368,7 @@ class RmanMeshTranslator(RmanTranslator):
 
                 if mat_id == 0:
                     primvar.SetIntegerArray(self.rman_scene.rman.Tokens.Rix.k_shade_faceset, faces, len(faces))
-                    scenegraph_utils.set_material(rman_sg_mesh.sg_node, sg_material.sg_node)
+                    scenegraph_utils.set_material(sg_node, sg_material.sg_node)
                 else:                
                     sg_sub_mesh =  self.rman_scene.sg_scene.CreateMesh("")
                     sg_sub_mesh.Define( npolys, npoints, numnverts )                   
@@ -376,12 +381,12 @@ class RmanMeshTranslator(RmanTranslator):
                     pvars.SetIntegerArray(self.rman_scene.rman.Tokens.Rix.k_shade_faceset, faces, len(faces))
                     sg_sub_mesh.SetPrimVars(pvars)
                     scenegraph_utils.set_material(sg_sub_mesh, sg_material.sg_node)
-                    rman_sg_mesh.sg_node.AddChild(sg_sub_mesh)
+                    sg_node.AddChild(sg_sub_mesh)
                     rman_sg_mesh.multi_material_children.append(sg_sub_mesh)
         else:
             rman_sg_mesh.multi_material_children = []
 
-        rman_sg_mesh.sg_node.SetPrimVars(primvar)
+        sg_node.SetPrimVars(primvar)
 
         if not input_mesh:
             ob.to_mesh_clear()  

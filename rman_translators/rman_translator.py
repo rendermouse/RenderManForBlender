@@ -67,13 +67,16 @@ class RmanTranslator(object):
 
         sg_node.SetTransform( v )        
 
-    def export_object_primvars(self, ob, rman_sg_node):
-        if not rman_sg_node.sg_node:
+    def export_object_primvars(self, ob, rman_sg_node, sg_node=None):
+        if not sg_node:
+            sg_node = rman_sg_node.sg_node
+
+        if not sg_node:
             return
         rm = ob.renderman
         rm_scene = self.rman_scene.bl_scene.renderman
         try:
-            primvars = rman_sg_node.sg_node.GetPrimVars()
+            primvars = sg_node.GetPrimVars()
         except AttributeError:
             rfb_log().debug("Cannot get RtPrimVar for this node")
             return
@@ -101,7 +104,7 @@ class RmanTranslator(object):
             param_type = meta['renderman_type']
             property_utils.set_rix_param(primvars, param_type, ri_name, val, is_reference=False, is_array=is_array, array_len=array_len)                
 
-        rman_sg_node.sg_node.SetPrimVars(primvars)
+        sg_node.SetPrimVars(primvars)
 
     def export_object_id(self, ob, rman_sg_node, ob_inst):
         name = ob.name_full

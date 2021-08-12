@@ -106,23 +106,9 @@ class RmanCurveTranslator(RmanMeshTranslator):
         self.bl_type = 'CURVE'       
 
     def export(self, ob, db_name):
-        is_mesh = False
-        if len(ob.modifiers) > 0:
-            sg_node = self.rman_scene.sg_scene.CreateMesh(db_name)
-            is_mesh = True            
-        elif ob.data.dimensions == '2D':
-            sg_node = self.rman_scene.sg_scene.CreateGroup(db_name)
-        elif len(ob.data.splines) < 1:
-            sg_node = self.rman_scene.sg_scene.CreateMesh(db_name)
-            is_mesh = True
-        else:
-            l = ob.data.extrude + ob.data.bevel_depth
-            if l > 0:
-                sg_node = self.rman_scene.sg_scene.CreateMesh(db_name)
-                is_mesh = True                            
-            else:
-                sg_node = self.rman_scene.sg_scene.CreateGroup(db_name)
-
+    
+        sg_node = self.rman_scene.sg_scene.CreateGroup(db_name)
+        is_mesh = self._is_mesh(ob)        
         rman_sg_curve = RmanSgCurve(self.rman_scene, sg_node, db_name)
         rman_sg_curve.is_mesh = is_mesh
 
@@ -132,18 +118,38 @@ class RmanCurveTranslator(RmanMeshTranslator):
 
         return rman_sg_curve
 
+    def _is_mesh(self, ob):
+        is_mesh = False
+        if len(ob.modifiers) > 0:
+            is_mesh = True            
+        elif len(ob.data.splines) < 1:
+            is_mesh = True
+        else:
+            l = ob.data.extrude + ob.data.bevel_depth
+            if l > 0:
+                is_mesh = True                            
+
+        return is_mesh
+
     def export_deform_sample(self, rman_sg_curve, ob, time_sample):
         if rman_sg_curve.is_mesh:
-            super().export_deform_sample(rman_sg_curve, ob, time_sample)
+            super().export_deform_sample(rman_sg_curve, ob, time_sample, sg_node=rman_sg_curve.sg_mesh_node)
 
     def export_object_primvars(self, ob, rman_sg_node):
         if rman_sg_node.is_mesh:
-            super().export_object_primvars(ob, rman_sg_node)
+            super().export_object_primvars(ob, rman_sg_node, sg_node=rman_sg_node.sg_mesh_node)
 
     def update(self, ob, rman_sg_curve):
+        for c in [ rman_sg_curve.sg_node.GetChild(i) for i in range(0, rman_sg_curve.sg_node.GetNumChildren())]:
+            rman_sg_curve.sg_node.RemoveChild(c)
+            self.rman_scene.sg_scene.DeleteDagNode(c)         
+
+        rman_sg_curve.is_mesh = self._is_mesh(ob)
 
         if rman_sg_curve.is_mesh:
-            super().update(ob, rman_sg_curve)
+            rman_sg_curve.sg_mesh_node = self.rman_scene.sg_scene.CreateMesh('%s-MESH' % rman_sg_curve.db_name)
+            rman_sg_curve.sg_node.AddChild(rman_sg_curve.sg_mesh_node)            
+            super().update(ob, rman_sg_curve, sg_node=rman_sg_curve.sg_mesh_node)
             return True    
 
         curve_type =  get_curve_type(ob.data)
@@ -155,10 +161,6 @@ class RmanCurveTranslator(RmanMeshTranslator):
             self.update_curve(ob, rman_sg_curve)
 
     def update_bspline_curve(self, ob, rman_sg_curve):
-        for c in [ rman_sg_curve.sg_node.GetChild(i) for i in range(0, rman_sg_curve.sg_node.GetNumChildren())]:
-            rman_sg_curve.sg_node.RemoveChild(c)
-            self.rman_scene.sg_scene.DeleteDagNode(c) 
-
         P, num_curves, nvertices, widths, index, name = get_bspline_curve(ob.data)
         num_pts = len(P)
          
@@ -176,10 +178,6 @@ class RmanCurveTranslator(RmanMeshTranslator):
         rman_sg_curve.sg_node.AddChild(curves_sg)                       
 
     def update_curve(self, ob, rman_sg_curve):
-        for c in [ rman_sg_curve.sg_node.GetChild(i) for i in range(0, rman_sg_curve.sg_node.GetNumChildren())]:
-            rman_sg_curve.sg_node.RemoveChild(c)
-            self.rman_scene.sg_scene.DeleteDagNode(c) 
-
         P, num_curves, nvertices, widths, index, name = get_curve(ob.data)
         num_pts = len(P)
          
@@ -197,11 +195,6 @@ class RmanCurveTranslator(RmanMeshTranslator):
         rman_sg_curve.sg_node.AddChild(curves_sg)          
 
     def update_bezier_curve(self, ob, rman_sg_curve):
-
-        for c in [ rman_sg_curve.sg_node.GetChild(i) for i in range(0, rman_sg_curve.sg_node.GetNumChildren())]:
-            rman_sg_curve.sg_node.RemoveChild(c)
-            self.rman_scene.sg_scene.DeleteDagNode(c)             
-
         curves = get_bezier_curve(ob.data)
         for P, width, period, name in curves:
             num_pts = len(P)
