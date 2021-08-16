@@ -65,6 +65,8 @@ class DATA_PT_renderman_projection(ShaderPanel, Panel):
                 rman_icon = rfb_icons.get_projection_icon(node.bl_label)
                 split.menu('NODE_MT_renderman_connection_menu', text='%s (%s)' % (node.name, node.bl_label), icon_value=rman_icon.icon_id)
                 layout.prop(rm, "rman_use_cam_fov")
+                if node.bl_label == 'PxrCamera':
+                    layout.prop(rm, "rman_tilt_shift_object")
                 draw_node_properties_recursive(layout, context, nt, node)
             else:
                 split.menu('NODE_MT_renderman_connection_menu', text='None', icon='NODE_MATERIAL')  

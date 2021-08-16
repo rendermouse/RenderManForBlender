@@ -116,6 +116,21 @@ class RmanCameraTranslator(RmanTranslator):
         else:
             return self._update_render_cam(ob, rman_sg_camera)   
 
+    def set_tilt_shift_focus(self, ob, cam, params):
+        rm = cam.renderman
+        tilt_shift_ob = rm.rman_tilt_shift_object
+        if tilt_shift_ob is None:
+            return
+        mesh = tilt_shift_ob.data
+        if len(mesh.vertices) != 3:
+            rfb_log().error("The selected tilt-shift object is not a triangle.")
+
+        mtx = tilt_shift_ob.matrix_world
+        params.SetPoint('focus1', mtx @ mesh.vertices[0].co )
+        params.SetPoint('focus2', mtx @ mesh.vertices[1].co )
+        params.SetPoint('focus3', mtx @ mesh.vertices[2].co )
+        
+
     def update_viewport_resolution(self, rman_sg_camera):
         region = self.rman_scene.context.region
         region_data = self.rman_scene.context.region_data
@@ -439,11 +454,14 @@ class RmanCameraTranslator(RmanTranslator):
                     projparams = rman_sg_camera.projection_shader.params
                     if cam_rm.rman_use_cam_fov:
                         projparams.SetFloat(self.rman_scene.rman.Tokens.Rix.k_fov, fov) 
+                    if node.bl_label == 'PxrCamera':
+                        self.set_tilt_shift_focus(ob, cam, projparams)
   
                 else:                
                     rman_sg_camera.projection_shader = self.rman_scene.rman.SGManager.RixSGShader("Projection", "PxrCamera", "proj")
                     projparams = rman_sg_camera.projection_shader.params         
                     projparams.SetFloat(self.rman_scene.rman.Tokens.Rix.k_fov, fov) 
+                    self.set_tilt_shift_focus(ob, cam, projparams)
 
                 if cam_rm.rman_use_dof:
                     if cam_rm.rman_focus_object:
@@ -610,11 +628,14 @@ class RmanCameraTranslator(RmanTranslator):
             property_utils.property_group_to_rixparams(node, rman_sg_node, rman_sg_camera.projection_shader, ob=cam)   
             if cam_rm.rman_use_cam_fov:
                 self._set_fov(ob, cam, aspectratio, rman_sg_camera.projection_shader.params)
+            if node.bl_label == 'PxrCamera':
+                self.set_tilt_shift_focus(ob, cam, rman_sg_camera.projection_shader.params)
 
 
         elif cam.type == 'PERSP':
             rman_sg_camera.projection_shader = self.rman_scene.rman.SGManager.RixSGShader("Projection", "PxrCamera", "proj")
-            self._set_fov(ob, cam, aspectratio, rman_sg_camera.projection_shader.params)              
+            self._set_fov(ob, cam, aspectratio, rman_sg_camera.projection_shader.params)
+            self.set_tilt_shift_focus(ob, cam, rman_sg_camera.projection_shader.params)
                      
         elif cam.type == 'PANO':
             rman_sg_camera.projection_shader = self.rman_scene.rman.SGManager.RixSGShader("Projection", "PxrSphereCamera", "proj")
