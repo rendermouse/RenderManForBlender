@@ -80,9 +80,40 @@ class RendermanShadingNode(bpy.types.ShaderNode):
         nt = self.id_data
         out_node = shadergraph_utils.find_node_from_nodetree(nt, 'RendermanOutputNode')        
         rman_icon = rfb_icons.get_node_icon(self.bl_label)
-        layout.label(text=self.bl_label, icon_value=rman_icon.icon_id)             
+        split = layout.split(factor=0.75)
+        col = split.column(align=True)
+        col.label(text=self.bl_label, icon_value=rman_icon.icon_id)  
+        if shadergraph_utils.is_soloable_node(self):
+            self.draw_solo_button(nt, out_node, split)
         layout.separator()
         self.draw_nonconnectable_props(context, layout, self.prop_names, output_node=out_node)
+
+    def draw_solo_button(self, nt, rman_output_node, layout):
+        layout.context_pointer_set("nodetree", nt)  
+        layout.context_pointer_set("node", rman_output_node)                  
+
+        if rman_output_node.solo_node_name == '':
+            col = layout.column(align=True)
+            rman_icon = rfb_icons.get_icon('rman_solo_off')
+            op = col.operator('node.rman_set_node_solo', text='', icon_value=rman_icon.icon_id, emboss=False)
+            op.refresh_solo = False
+            op.solo_node_name = self.name           
+        else:
+            rman_icon = rfb_icons.get_icon('rman_solo_on')
+            if self.name == rman_output_node.solo_node_name:
+                col = layout.column(align=True)
+                op = col.operator('node.rman_set_node_solo', text='', icon_value=rman_icon.icon_id, emboss=False)
+                op.refresh_solo = True
+                op.solo_node_name = self.name                             
+            else:
+                rman_icon = rfb_icons.get_icon('rman_solo_off')
+                col = layout.column(align=True)
+                op = col.operator('node.rman_set_node_solo', text='', icon_value=rman_icon.icon_id, emboss=False)
+                op.refresh_solo = False
+                op.solo_node_name = self.name 
+                col = layout.column(align=True)
+                op = col.operator('node.rman_set_node_solo', text='', icon='FILE_REFRESH', emboss=False)
+                op.refresh_solo = True                          
 
     def draw_nonconnectable_props(self, context, layout, prop_names, output_node=None):
         
