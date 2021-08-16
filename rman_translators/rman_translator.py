@@ -125,7 +125,8 @@ class RmanTranslator(object):
                     'PROCEDURAL_RUN_PROGRAM',
                     'DYNAMIC_LOAD_DSO'
                 ]:
-                procprimid = float(hashlib.sha1(rman_sg_node.db_name.encode()).hexdigest())
+                id = int(hashlib.sha1(rman_sg_node.db_name.encode()).hexdigest(), 16) % 10**8
+                procprimid = float(id)
                 attrs.SetFloat('user:procprimid', procprimid)  
 
         rman_sg_node.sg_node.SetAttributes(attrs)      
