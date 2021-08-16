@@ -2,6 +2,7 @@ from . import scene_utils
 from .rman_socket_utils import node_add_inputs
 from .rman_socket_utils import node_add_outputs
 from .rman_socket_utils import update_inputs
+from .shadergraph_utils import has_lobe_enable_props
 from ..rfb_logger import rfb_log
 import bpy
 
@@ -110,7 +111,7 @@ def update_func_with_inputs(self, context):
         if mat:
             node.update_mat(mat)
 
-    if node.bl_idname in ['PxrLayerPatternOSLNode', 'PxrLayerPatternNode', 'PxrSurfaceBxdfNode']:
+    if has_lobe_enable_props(node):
         node_add_inputs(node, node.name, node.prop_names)
     else:
         update_inputs(node)

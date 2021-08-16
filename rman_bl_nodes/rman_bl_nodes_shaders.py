@@ -115,9 +115,9 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                 op = col.operator('node.rman_set_node_solo', text='', icon='FILE_REFRESH', emboss=False)
                 op.refresh_solo = True                          
 
-    def draw_nonconnectable_props(self, context, layout, prop_names, output_node=None):
+    def draw_nonconnectable_props(self, context, layout, prop_names, output_node=None, level=0):
         
-        if self.bl_idname in ['PxrLayerPatternOSLNode', 'PxrLayerPatternNode', 'PxrSurfaceBxdfNode']:
+        if level == 0 and shadergraph_utils.has_lobe_enable_props(self):
             col = layout.column(align=True)
             for prop_name in prop_names:
                 if prop_name not in self.inputs:
@@ -130,7 +130,6 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                         if name.startswith('enable'):
                             col.prop(self, name, text=prop_name.split('.')[-1])
                             break
-            return
 
         if self.bl_idname == "PxrOSLPatternNode":
             prop = getattr(self, "codetypeswitch")
@@ -176,8 +175,45 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                 if prop_name not in self.inputs:
                     if renderman_type == 'page':
                         prop = getattr(self, prop_name)
-                        self.draw_nonconnectable_props(
-                            context, layout, prop, output_node)          
+                        sub_prop_names = list(prop)                         
+                        if shadergraph_utils.has_lobe_enable_props(self):
+                            lobe_enabled = True
+                            for pn in sub_prop_names:
+                                if pn.startswith('enable'):
+                                    sub_prop_names.remove(pn)
+                                    if not getattr(self, pn):
+                                        lobe_enabled = False
+                                    break                   
+                            if not lobe_enabled:
+                                # lobe is not enabled
+                                continue     
+                        has_any = False
+                        for nm in sub_prop_names:
+                            if nm not in self.inputs:
+                                has_any = True
+
+                        if not has_any:
+                            # don't draw the page if all subprops are inputs/outputs
+                            continue
+
+                        prop_disabled = getattr(self, '%s_disabled' % prop_name, False)
+                        
+                        ui_prop = prop_name + "_uio"
+                        ui_open = getattr(self, ui_prop)
+                        icon = draw_utils.get_open_close_icon(ui_open)
+
+                        split = layout.split(factor=NODE_LAYOUT_SPLIT)
+                        row = split.row()
+                        row.enabled = not prop_disabled
+                        draw_utils.draw_indented_label(row, None, level)
+
+                        row.context_pointer_set("node", self)               
+                        op = row.operator('node.rman_open_close_page', text='', icon=icon, emboss=False)            
+                        op.prop_name = ui_prop
+                        row.label(text=prop_name.split('.')[-1] + ':')
+                        if ui_open:                  
+                            self.draw_nonconnectable_props(
+                                context, layout, sub_prop_names, output_node, level=level+1)          
 
                     
                     elif renderman_type == 'array':
@@ -197,6 +233,7 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                         draw_utils.draw_sticky_toggle(layout, self, prop_name, output_node)                         
                     elif widget in ['fileinput','assetidinput']:  
                         row = layout.row(align=True)
+                        draw_utils.draw_indented_label(row, None, level)
                         row.prop(self, prop_name)                                                  
                         prop_val = getattr(self, prop_name)
                         draw_utils.draw_sticky_toggle(row, self, prop_name, output_node)
@@ -221,6 +258,7 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                     else:
                         split = layout.split(factor=0.95)
                         row = split.row()
+                        draw_utils.draw_indented_label(row, None, level)
                         col = row.column()
                         if read_only:
                             col.enabled = False

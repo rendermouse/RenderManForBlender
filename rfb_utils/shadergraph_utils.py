@@ -135,6 +135,10 @@ def get_socket_name(node, socket):
                     return socket.name.replace(' ', '') + suffix
         return socket.identifier.replace(' ', '')
 
+def has_lobe_enable_props(node):
+    if node.bl_idname in {"PxrSurfaceBxdfNode", "PxrLayerPatternOSLNode", "PxrLayerPatternNode"}:
+        return True
+    return False
 
 def get_socket_type(node, socket):
     sock_type = socket.type.lower()

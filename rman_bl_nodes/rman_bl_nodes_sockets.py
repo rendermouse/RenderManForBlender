@@ -2,6 +2,7 @@ import bpy
 from bpy.props import *
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import draw_utils
+from .. import rfb_icons
 
 # update node during ipr for a socket default_value
 def update_func(self, context):
@@ -252,6 +253,14 @@ class RendermanSocket:
                         text=self.get_pretty_name(node), slider=True)
         else:
             layout.label(text=self.get_pretty_name(node))
+
+        if not self.hide and context.region.type == 'UI' and node.renderman_node_type != 'output':            
+            nt = context.space_data.edit_tree
+            layout.context_pointer_set("socket", self)
+            layout.context_pointer_set("node", node)
+            layout.context_pointer_set("nodetree", nt)
+            rman_icon = rfb_icons.get_icon('rman_connection_menu')
+            layout.menu('NODE_MT_renderman_connection_menu', text='', icon_value=rman_icon.icon_id)                
             
         mat = getattr(context, 'material')
         if mat:
