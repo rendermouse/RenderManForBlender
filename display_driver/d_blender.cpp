@@ -47,7 +47,6 @@ struct BlenderImage
         isReady = false;
         sampleCountOffset = -1;
         isXpu = false;
-        isDirty = false;
         framebuffer = nullptr;
         denoiseFrameBuffer = nullptr;
     }
@@ -71,7 +70,6 @@ struct BlenderImage
     unsigned char* denoiseFrameBuffer;
     size_t size;
     GLuint texture_id;
-    bool isDirty;
     int use_denoiser;
 #ifndef OSX
     BlenderOptiXDenoiser blenderDenoiser;
@@ -207,13 +205,13 @@ void CopyXpuBuffer(BlenderImage* blenderImage)
             }
             pixel++;
         }
+        int ypos = blenderImage->height - y;
         unsigned char* fb = blenderImage->framebuffer
-                          + (y * (blenderImage->width * blenderImage->entrysize));
+                          + (ypos * (blenderImage->width * blenderImage->entrysize));
                          
         memcpy(fb, (unsigned char*) linebuffer, blenderImage->width * blenderImage->entrysize);
 
     }
-    blenderImage->isDirty = true;
     delete[] linebuffer;
 }
 
@@ -272,7 +270,7 @@ float* GetFloatFramebuffer(size_t pos)
     if (blenderImage == nullptr)
         return nullptr;
 
-    if (blenderImage->isXpu && blenderImage->isDirty)
+    if (blenderImage->isXpu)
     {
         CopyXpuBuffer(blenderImage);
     }
@@ -337,7 +335,7 @@ void DrawBufferToBlender(int viewWidth, int viewHeight)
         return;
     }    
 
-    if (blenderImage->isXpu && blenderImage->isDirty)
+    if (blenderImage->isXpu)
     {
         CopyXpuBuffer(blenderImage);
         GenerateTexture(blenderImage);
@@ -350,20 +348,16 @@ void DrawBufferToBlender(int viewWidth, int viewHeight)
             return;
         }
 
-        if (blenderImage->isDirty)
-        {
-            GenerateTexture(blenderImage);
-            blenderImage->isDirty = true;
-        }
-
+        GenerateTexture(blenderImage);
     }
 
     std::array<GLfloat, 8> position = {0.0f,              0.0f,
                                        (float) viewWidth, 0.0f,
                                        (float) viewWidth, (float) viewHeight,
                                        0.0f,              (float) viewHeight};
-    std::array<GLfloat, 8> texture_coords = {0.0, 1.0, 1.0, 1.0,  
-                                            1.0, 0.0,  0.0, 0.0};
+    
+    std::array<GLfloat, 8> texture_coords = {0.0, 0.0, 1.0, 0.0,  
+                                            1.0, 1.0,  0.0, 1.0};
 
     GLuint vertex_array;
     std::array<GLint, 2> vertex_buffer;
@@ -412,7 +406,12 @@ void DrawBufferToBlender(int viewWidth, int viewHeight)
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
     glBindVertexArray(0);
     glDeleteVertexArrays(1, &vertex_array);
-    glBindTexture(GL_TEXTURE_2D, 0); 
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    glDeleteVertexArrays(1, &vertex_array);
+    glDeleteBuffers(1, &vertex_vbo_id);
+    glDeleteBuffers(1, &texture_vbo_id);
+    
     glDeleteTextures(1, &blenderImage->texture_id);
 }
 } // extern "C"
@@ -604,10 +603,11 @@ DspyImageData(
     int width = (blenderImage->cropXMin + xmax_plus_1) - (blenderImage->cropXMin + xmin);
     int height = (blenderImage->cropYMin + ymax_plus_1) - (blenderImage->cropYMin + ymin);
     for (int y = 0; y < height; ++y) {
+        int ypos = (blenderImage->height) - (y + ymin + blenderImage->cropYMin);
         unsigned char* fb = blenderImage->framebuffer
                           + (blenderImage->cropXMin + xmin) 
                           * blenderImage->entrysize
-                          + blenderImage->width * (y + ymin + blenderImage->cropYMin) 
+                          + blenderImage->width * ypos 
                           * blenderImage->entrysize;
         for (int x = 0; x < width; ++x) {
             memcpy(fb, data, blenderImage->entrysize);
@@ -630,7 +630,6 @@ DspyImageData(
         blenderImage->useActiveRegion = false;
     }
    
-    blenderImage->isDirty = true;
     return PkDspyErrorNone;
 }
 
@@ -801,7 +800,6 @@ void DisplayBlender::Notify(const uint32_t iteration, const uint32_t totaliterat
         // shared memory
         m_image->isReady = true;
     }
-    m_image->isDirty = true;
 
 }
 

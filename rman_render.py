@@ -567,7 +567,7 @@ class RmanRender(object):
                     bl_image_rps[i] = render_pass            
                 
                 while not self.bl_engine.test_break() and self.rman_is_live_rendering:
-                    time.sleep(0.01)
+                    time.sleep(0.001)
                     for i, rp in bl_image_rps.items():
                         buffer = self._get_buffer(width, height, image_num=i, 
                                                     num_channels=rp.channels, 
@@ -1109,7 +1109,107 @@ class RmanRender(object):
         num_channels = dspy_plugin.GetNumberOfChannels(ctypes.c_size_t(image_num))
         return num_channels
 
+    def _get_buffer_242(self, width, height, image_num=0, num_channels=-1, back_fill=True, as_flat=True, render=None):
+        dspy_plugin = self.get_blender_dspy_plugin()
+        if num_channels == -1:
+            num_channels = self.get_numchannels(image_num)
+            if num_channels > 4 or num_channels < 0:
+                rfb_log().debug("Could not get buffer. Incorrect number of channels: %d" % num_channels)
+                return None
+
+        ArrayType = ctypes.c_float * (width * height * num_channels)
+        f = dspy_plugin.GetFloatFramebuffer
+        f.restype = ctypes.POINTER(ArrayType)
+
+        try:
+            buffer = numpy.array(f(ctypes.c_size_t(image_num)).contents)
+            pixels = list()
+
+            # we need to flip the image
+            # also, Blender is expecting a 4 channel image
+
+            if as_flat:
+                if num_channels == 4:
+                    return buffer.tolist()
+                else:
+                    for y in range(0, height):
+                        i = (width * y * num_channels)
+                        
+                        for x in range(0, width):
+                            j = i + (num_channels * x)
+                            if num_channels == 3:
+                                pixels.append(buffer[j])
+                                pixels.append(buffer[j+1])
+                                pixels.append(buffer[j+2])
+                                pixels.append(1.0)                        
+                            elif num_channels == 2:
+                                pixels.append(buffer[j])
+                                pixels.append(buffer[j+1])
+                                pixels.append(1.0)                        
+                                pixels.append(1.0)
+                            elif num_channels == 1:
+                                pixels.append(buffer[j])
+                                pixels.append(buffer[j])
+                                pixels.append(buffer[j])   
+                                pixels.append(1.0)  
+                    return pixels                             
+            else:
+                if render and render.use_border:
+                    start_x = 0
+                    end_x = width
+                    start_y = 0
+                    end_y = height
+
+                
+                    if render.border_min_y > 0.0:
+                        start_y = int(height * (render.border_min_y))-1
+                    if render.border_max_y > 0.0:                        
+                        end_y = int(height * (render.border_max_y))-1 
+                    if render.border_min_x > 0.0:
+                        start_x = int(width * render.border_min_x)-1
+                    if render.border_max_x < 1.0:
+                        end_x =  int(width * render.border_max_x)-2
+
+                    # return the buffer as a list of lists
+                    for y in range(start_y, end_y):
+                        i = (width * y * num_channels)
+
+                        for x in range(start_x, end_x):
+                            j = i + (num_channels * x)
+                            if not back_fill:
+                                pixels.append(buffer[j:j+num_channels])
+                                continue
+                            
+                            if num_channels == 4:
+                                pixels.append(buffer[j:j+4])
+                                continue
+
+                            pixel = [1.0] * num_channels
+                            pixel[0] = buffer[j]                             
+                            if num_channels == 3:
+                                pixel[1] = buffer[j+1]
+                                pixel[2] = buffer[j+2]
+                            elif num_channels == 2:
+                                pixel[1] = buffer[j+1]
+                            elif num_channels == 1:
+                                pixel[1] = buffer[j]
+                                pixel[2] = buffer[j]
+
+                            pixels.append(pixel)            
+
+                    return pixels
+                else:
+                    buffer = numpy.reshape(buffer, (-1, num_channels))
+                    return buffer.tolist()
+        except Exception as e:
+            rfb_log().debug("Could not get buffer: %s" % str(e))
+            return None                                     
+
     def _get_buffer(self, width, height, image_num=0, num_channels=-1, back_fill=True, as_flat=True, render=None):
+        if envconfig().build_info.version() >= "24.2":
+            return self._get_buffer_242(width, height, image_num=image_num, num_channels=num_channels, back_fill=back_fill, as_flat=as_flat, render=render)
+
+
         dspy_plugin = self.get_blender_dspy_plugin()
         if num_channels == -1:
             num_channels = self.get_numchannels(image_num)
