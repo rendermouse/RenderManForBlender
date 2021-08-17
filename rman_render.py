@@ -92,8 +92,9 @@ class ItHandler(chatserver.ItBaseHandler):
         rfb_log().debug("Stop Render Requested.")
         if __RMAN_RENDER__.rman_interactive_running:
             __turn_off_viewport__()
-        if not __RMAN_RENDER__.stopping:
-            __RMAN_RENDER__.stop_render()      
+        __RMAN_RENDER__.del_bl_engine()
+        #if not __RMAN_RENDER__.stopping:
+        #    __RMAN_RENDER__.stop_render()      
 
     def selectObjectById(self):
         global __RMAN_RENDER__
@@ -159,8 +160,9 @@ def draw_threading_func(db):
             # if there are no 3d viewports, stop IPR
             #rfb_log().debug("No 3d viewports set to RENDER. Stop IPR.")
             if not db.stopping:
-                db.rman_is_live_rendering = False
-                db.stop_render(stop_draw_thread=False)
+                db.del_bl_engine()
+            #    db.rman_is_live_rendering = False
+            #    db.stop_render(stop_draw_thread=False)
             break
         if db.rman_is_viewport_rendering:
             try:
@@ -172,8 +174,9 @@ def draw_threading_func(db):
                 # stop IPR.
                 #rfb_log().debug("Error calling tag_redraw (%s). Aborting..." % str(e))
                 if not db.stopping:
-                    db.rman_is_live_rendering = False
-                    db.stop_render(stop_draw_thread=False)
+                    #db.rman_is_live_rendering = False
+                    #db.stop_render(stop_draw_thread=False)
+                    db.del_bl_engine()
                 return
 
 def call_stats_update_payloads(db):
@@ -188,6 +191,8 @@ def call_stats_update_payloads(db):
                         break   
 
     while db.rman_running:
+        if not db.bl_engine:
+            break
         db.stats_mgr.update_payloads()
         #panel_region.tag_redraw()
         time.sleep(0.1)
@@ -275,8 +280,8 @@ class RmanRender(object):
         self.viewport_buckets = list()
         self._draw_viewport_buckets = False
         self.stats_mgr = RfBStatsManager(self)
+        self.deleting_bl_engine = threading.Lock()
         self.stop_render_mtx = threading.Lock()
-        self.stopping = False
 
         self._start_prman_begin()
 
@@ -299,6 +304,10 @@ class RmanRender(object):
     def bl_engine(self, bl_engine):
         self.__bl_engine = bl_engine        
 
+    @property
+    def stopping(self):
+        return self.stop_render_mtx.locked()        
+
     def _start_prman_begin(self):
         argv = []
         argv.append("prman") 
@@ -319,6 +328,12 @@ class RmanRender(object):
     def __del__(self):   
         self.rictl.PRManEnd()
 
+    def del_bl_engine(self):
+        if not self.deleting_bl_engine.acquire(timeout=2.0):
+            return
+        self.bl_engine = None
+        self.deleting_bl_engine.release()
+        
     def _append_render_cmd(self, render_cmd):
         return render_cmd
 
@@ -566,8 +581,8 @@ class RmanRender(object):
                         render_pass = result.layers[0].passes.find_by_name(dspy_nm, render_view)
                     bl_image_rps[i] = render_pass            
                 
-                while not self.bl_engine.test_break() and self.rman_is_live_rendering:
-                    time.sleep(0.001)
+                while self.bl_engine and not self.bl_engine.test_break() and self.rman_is_live_rendering:
+                    time.sleep(0.01)
                     for i, rp in bl_image_rps.items():
                         buffer = self._get_buffer(width, height, image_num=i, 
                                                     num_channels=rp.channels, 
@@ -577,10 +592,12 @@ class RmanRender(object):
                         if buffer:
                             rp.rect = buffer
             
-                    self.bl_engine.update_result(result)        
+                    if self.bl_engine:
+                        self.bl_engine.update_result(result)        
           
-                if result:   
-                    self.bl_engine.end_result(result) 
+                if result:
+                    if self.bl_engine:
+                        self.bl_engine.end_result(result) 
 
                     # Try to save out the displays out to disk. This matches
                     # Cycles behavior                    
@@ -595,13 +612,13 @@ class RmanRender(object):
                             bl_image.file_format = 'OPEN_EXR'
                             bl_image.update()
                             bl_image.save()
-                            bpy.data.images.remove(bl_image) 
-                self.stop_render()                              
+                            bpy.data.images.remove(bl_image)  
+                self.del_bl_engine()                          
 
         else:
-            while not self.bl_engine.test_break() and self.rman_is_live_rendering:
-                time.sleep(0.01)              
-            self.stop_render()                                
+            while self.bl_engine and not self.bl_engine.test_break() and self.rman_is_live_rendering:
+                time.sleep(0.01)               
+            self.del_bl_engine()                           
 
         return True   
 
@@ -673,6 +690,7 @@ class RmanRender(object):
             spooler.batch_render()
         self.rman_running = False
         self.sg_scene = None
+        self.del_bl_engine()
         return True          
 
     def start_bake_render(self, depsgraph, for_background=False):
@@ -722,6 +740,7 @@ class RmanRender(object):
         self.stop_render()
         if rm.hider_type == 'BAKE_BRICKMAP_SELECTED':
             self._call_brickmake_for_selected()
+        self.del_bl_engine()
         return True        
 
     def start_external_bake_render(self, depsgraph):  
@@ -792,6 +811,7 @@ class RmanRender(object):
             spooler.batch_render()
         self.rman_running = False
         self.sg_scene = None
+        self.del_bl_engine()
         return True                  
 
     def start_interactive_render(self, context, depsgraph):
@@ -916,7 +936,8 @@ class RmanRender(object):
                 layer.rect = buffer
                 self.bl_engine.update_result(result)        
         self.stop_render()              
-        self.bl_engine.end_result(result)           
+        self.bl_engine.end_result(result)  
+        self.del_bl_engine()         
        
         return True  
 
@@ -969,11 +990,11 @@ class RmanRender(object):
             # another thread is already trying to stop the render
             return
 
-        self.stopping = True
         is_main_thread = (threading.current_thread() == threading.main_thread())
         if is_main_thread:
             rfb_log().debug("Trying to acquire stop_render_mtx")
-        self.stop_render_mtx.acquire()   
+        if not self.stop_render_mtx.acquire(timeout=2.0):
+            return
         
         if not self.rman_interactive_running and not self.rman_running:
             return
@@ -1019,7 +1040,6 @@ class RmanRender(object):
         self.viewport_buckets.clear()
         self._draw_viewport_buckets = False                
         __update_areas__()
-        self.stopping = False
         self.stop_render_mtx.release()
         if is_main_thread:
             rfb_log().debug("RenderMan has Stopped.")

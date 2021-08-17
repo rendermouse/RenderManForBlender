@@ -211,6 +211,7 @@ class PRMAN_OT_StopInteractive(bpy.types.Operator):
 
         rr = RmanRender.get_rman_render()
         rr.rman_running = False
+        rr.del_bl_engine()
 
         return {'FINISHED'}
 

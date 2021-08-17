@@ -33,7 +33,7 @@ class PRMAN_PT_Renderman_UI_Panel(bpy.types.Panel, _RManPanelHeader):
         elif rm.is_rman_running:
             row = layout.row(align=True)
             rman_rerender_controls = rfb_icons.get_icon("rman_ipr_cancel")
-            row.operator('renderman.stop_render', text="Stop IPR",
+            row.operator('renderman.stop_render', text="Stop Render",
                             icon_value=rman_rerender_controls.icon_id)              
         else:
 

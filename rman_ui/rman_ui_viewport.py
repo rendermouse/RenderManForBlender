@@ -827,7 +827,8 @@ def draw_rman_viewport_props(self, context):
 
             # stop rendering if we're not in viewport rendering
             if rman_render.rman_interactive_running:
-                rman_render.stop_render()
+                #rman_render.stop_render()
+                rman_render.del_bl_engine()
             rman_rerender_controls = rfb_icons.get_icon("rman_ipr_on")
             row.operator('renderman.start_ipr', text="",
                             icon_value=rman_rerender_controls.icon_id)
