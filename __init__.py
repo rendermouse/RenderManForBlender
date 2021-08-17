@@ -69,6 +69,12 @@ class PRManRender(bpy.types.RenderEngine):
     def __del__(self):
         from . import rman_render
         rr = rman_render.RmanRender.get_rman_render()
+        try:
+            if self.is_preview:
+                # If this was a preview render, return
+                return
+        except:
+            pass
         if not rr.stopping:
             if rr.rman_interactive_running:
                 rfb_log().debug("Stop interactive render.")
