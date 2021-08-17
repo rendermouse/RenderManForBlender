@@ -178,6 +178,9 @@ def draw_threading_func(db):
                     #db.stop_render(stop_draw_thread=False)
                     db.del_bl_engine()
                 return
+        else:
+            # rendering to "it" add a 1 second sleep
+            time.sleep(1.0)
 
 def call_stats_update_payloads(db):
     panel_region = None
