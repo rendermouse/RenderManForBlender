@@ -92,9 +92,7 @@ class ItHandler(chatserver.ItBaseHandler):
         rfb_log().debug("Stop Render Requested.")
         if __RMAN_RENDER__.rman_interactive_running:
             __turn_off_viewport__()
-        __RMAN_RENDER__.del_bl_engine()
-        #if not __RMAN_RENDER__.stopping:
-        #    __RMAN_RENDER__.stop_render()      
+        __RMAN_RENDER__.del_bl_engine() 
 
     def selectObjectById(self):
         global __RMAN_RENDER__
@@ -158,11 +156,7 @@ def draw_threading_func(db):
     while db.rman_is_live_rendering:
         if not __any_areas_shading():
             # if there are no 3d viewports, stop IPR
-            #rfb_log().debug("No 3d viewports set to RENDER. Stop IPR.")
-            if not db.stopping:
-                db.del_bl_engine()
-            #    db.rman_is_live_rendering = False
-            #    db.stop_render(stop_draw_thread=False)
+            db.del_bl_engine()
             break
         if db.rman_is_viewport_rendering:
             try:
@@ -173,10 +167,7 @@ def draw_threading_func(db):
                 # that there are no more view_3d areas that are shading. Try to
                 # stop IPR.
                 #rfb_log().debug("Error calling tag_redraw (%s). Aborting..." % str(e))
-                if not db.stopping:
-                    #db.rman_is_live_rendering = False
-                    #db.stop_render(stop_draw_thread=False)
-                    db.del_bl_engine()
+                db.del_bl_engine()
                 return
         else:
             # rendering to "it" add a 1 second sleep
@@ -307,10 +298,6 @@ class RmanRender(object):
     def bl_engine(self, bl_engine):
         self.__bl_engine = bl_engine        
 
-    @property
-    def stopping(self):
-        return self.stop_render_mtx.locked()        
-
     def _start_prman_begin(self):
         argv = []
         argv.append("prman") 
@@ -332,6 +319,8 @@ class RmanRender(object):
         self.rictl.PRManEnd()
 
     def del_bl_engine(self):
+        if not self.bl_engine:
+            return
         if not self.deleting_bl_engine.acquire(timeout=2.0):
             return
         self.bl_engine = None
@@ -609,13 +598,17 @@ class RmanRender(object):
                         buffer = self._get_buffer(width, height, image_num=i, as_flat=True)
                         if buffer:
                             bl_image = bpy.data.images.new(dspy_nm, width, height)
-                            bl_image.use_generated_float = True
-                            bl_image.filepath_raw = filepath                            
-                            bl_image.pixels = buffer
-                            bl_image.file_format = 'OPEN_EXR'
-                            bl_image.update()
-                            bl_image.save()
-                            bpy.data.images.remove(bl_image)  
+                            try:
+                                bl_image.use_generated_float = True
+                                bl_image.filepath_raw = filepath                            
+                                bl_image.pixels = buffer
+                                bl_image.file_format = 'OPEN_EXR'
+                                bl_image.update()
+                                bl_image.save()
+                            except:
+                                pass
+                            finally:
+                                bpy.data.images.remove(bl_image)  
                 self.del_bl_engine()                          
 
         else:
@@ -989,14 +982,10 @@ class RmanRender(object):
         global __DRAW_THREAD__
         global __RMAN_STATS_THREAD__
 
-        if self.stopping:
-            # another thread is already trying to stop the render
-            return
-
         is_main_thread = (threading.current_thread() == threading.main_thread())
         if is_main_thread:
             rfb_log().debug("Trying to acquire stop_render_mtx")
-        if not self.stop_render_mtx.acquire(timeout=2.0):
+        if not self.stop_render_mtx.acquire(timeout=5.0):
             return
         
         if not self.rman_interactive_running and not self.rman_running:
@@ -1018,8 +1007,7 @@ class RmanRender(object):
         self.rman_is_live_rendering = False
 
         # wait for the drawing thread to finish
-        # if we are told to. stop_render() may also
-        # be called from the drawing thread
+        # if we are told to.
         if stop_draw_thread and __DRAW_THREAD__:
             __DRAW_THREAD__.join()
             __DRAW_THREAD__ = None

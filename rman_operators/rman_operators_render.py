@@ -209,10 +209,6 @@ class PRMAN_OT_StopInteractive(bpy.types.Operator):
                                 if space.shading.type == 'RENDERED':    
                                     space.shading.type = 'SOLID'
 
-        rr = RmanRender.get_rman_render()
-        rr.rman_running = False
-        rr.del_bl_engine()
-
         return {'FINISHED'}
 
 class PRMAN_OT_StopRender(bpy.types.Operator):
@@ -226,14 +222,7 @@ class PRMAN_OT_StopRender(bpy.types.Operator):
         rm = context.scene.renderman      
         if rm.is_rman_running:  
             rr = RmanRender.get_rman_render()   
-            
-            # FIXME: For some reason if we call
-            # rr.stop_render() directly, we crash
-            # blender. For now, just set rman_is_live_rendering
-            # to False and wait
-            rr.rman_is_live_rendering = False  
-            while rr.rman_running:
-                time.sleep(0.001)
+            rr.del_bl_engine()
 
         return {'FINISHED'}
 
