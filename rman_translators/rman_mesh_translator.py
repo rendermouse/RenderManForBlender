@@ -4,6 +4,7 @@ from ..rfb_utils import object_utils
 from ..rfb_utils import string_utils
 from ..rfb_utils import property_utils
 from ..rfb_utils import scenegraph_utils
+from ..rfb_logger import rfb_log
 
 import bpy
 import math
@@ -66,6 +67,26 @@ def _get_mesh_vcol_(mesh, name=""):
     cols = [ [c[0], c[1], c[2]] for c in pre_cols ]
 
     return cols    
+
+def _get_mesh_vattr_(mesh, name=""):
+    if not name in mesh.attributes and mesh != "":
+        rfb_log().error("Cannot find color attribute ")
+        return None
+    vattr_layer = mesh.attributes[name] if name != "" \
+        else mesh.attributes.active
+
+    if vattr_layer is None:
+        return None
+
+    vcol_count = len(vattr_layer.data)
+    fastvattrs = np.zeros(vcol_count * 4)
+    vattr_layer.data.foreach_get("color", fastvattrs)
+    fastvattrs = np.reshape(fastvattrs, (vcol_count, 4))
+    pre_cols = fastvattrs.tolist()     
+    
+    attrs = [ [a[0], a[1], a[2]] for a in pre_cols ]
+
+    return attrs 
 
 def _get_mesh_vgroup_(ob, mesh, name=""):
     vgroup = ob.vertex_groups[name] if name != "" else ob.vertex_groups.active
@@ -139,8 +160,10 @@ def _export_reference_pose(ob, rm, rixparams, vertex_detail):
     '''
 
 def _get_primvars_(ob, rman_sg_mesh, geo, rixparams):
-
-    rm = ob.data.renderman
+    #rm = ob.data.renderman
+    # Stange problem here : ob seems to not be in sync with the scene
+    # when a geometry node is active...
+    rm = ob.original.data.renderman
 
     vertex_detail = rman_sg_mesh.npoints 
     facevarying_detail = rman_sg_mesh.nverts 
@@ -162,7 +185,6 @@ def _get_primvars_(ob, rman_sg_mesh, geo, rixparams):
         _export_reference_pose(ob, rm, rixparams, vertex_detail)
     
     # custom prim vars
-
     for p in rm.prim_vars:
         if p.data_source == 'VERTEX_COLOR':
             vcols = _get_mesh_vcol_(geo, p.data_name)
@@ -182,7 +204,13 @@ def _get_primvars_(ob, rman_sg_mesh, geo, rixparams):
             if weights and len(weights) > 0:
                 detail = "facevarying" if facevarying_detail == len(weights) else "vertex"
                 rixparams.SetFloatDetail(p.name, weights, detail)
+        elif p.data_source == 'VERTEX_ATTR_COLOR':
+            vattr = _get_mesh_vattr_(geo, p.data_name)            
+            if vattr and len(vattr) > 0:
+                detail = "facevarying" if facevarying_detail == len(vattr) else "vertex"
+                rixparams.SetColorDetail(p.data_name, vattr, detail)
 
+    rm_scene = rman_sg_mesh.rman_scene.bl_scene.renderman
     for prop_name, meta in rm.prop_meta.items():
         if 'primvar' not in meta:
             continue
@@ -289,7 +317,6 @@ class RmanMeshTranslator(RmanTranslator):
         ob.to_mesh_clear()    
 
     def update(self, ob, rman_sg_mesh, input_mesh=None, sg_node=None):
-
         rm = ob.renderman
         mesh = input_mesh
         if not mesh:

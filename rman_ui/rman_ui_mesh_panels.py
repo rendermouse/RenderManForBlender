@@ -41,10 +41,11 @@ class MESH_PT_renderman_prim_vars(CollectionPanel, Panel):
         if item.data_source == 'VERTEX_COLOR':
             row.prop_search(item, "data_name", geo, "vertex_colors", text="")
         elif item.data_source == 'UV_TEXTURE':
-            row.prop_search(item, "data_name", geo, "uv_textures", text="")
+            row.prop_search(item, "data_name", geo, "uv_layers", text="")
         elif item.data_source == 'VERTEX_GROUP':
             row.prop_search(item, "data_name", ob, "vertex_groups", text="")
-
+        elif item.data_source == 'VERTEX_ATTR_COLOR':
+            row.prop(item, "data_name", text="Attr")
     @classmethod
     def poll(cls, context):
         if not context.mesh:
