@@ -35,8 +35,6 @@ class RmanOpenVDBTranslator(RmanTranslator):
             rman_sg_openvdb.sg_node.SetPrimVars(primvar)   
             return
 
-        openvdb_file = filepath_utils.get_real_path(db.filepath)
-
         grids = db.grids
         if not grids.is_loaded:
             if not grids.load():
@@ -44,6 +42,11 @@ class RmanOpenVDBTranslator(RmanTranslator):
                 primvar.SetString(self.rman_scene.rman.Tokens.Rix.k_Ri_type, "box")
                 rman_sg_openvdb.sg_node.SetPrimVars(primvar)   
                 return
+
+        openvdb_file = filepath_utils.get_real_path(db.filepath)
+        if db.is_sequence:
+            # if we have a sequence, get the current frame filepath from the grids
+            openvdb_file = filepath_utils.get_real_path(grids.frame_filepath)
 
         active_index = grids.active_index
         active_grid = grids[active_index]        
