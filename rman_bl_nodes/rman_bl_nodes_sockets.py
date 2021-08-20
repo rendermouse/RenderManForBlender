@@ -2,7 +2,9 @@ import bpy
 from bpy.props import *
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import draw_utils
+from ..rfb_logger import rfb_log
 from .. import rfb_icons
+import time
 
 # update node during ipr for a socket default_value
 def update_func(self, context):
@@ -284,7 +286,7 @@ class RendermanSocketInterface:
         self.name = socket.name
 
     def init_socket(self, node, socket, data_path):
-        sleep(.01)
+        time.sleep(.01)
         socket.name = self.name
         if hasattr(self, 'default_value'):
             socket.default_value = self.default_value
@@ -320,19 +322,19 @@ def register_socket_classes():
 def register_socket_interface_classes():
     global classes
 
-    def draw_color(self, context):
+    def draw_socket_color(self, context):
         return self.socket_color
-
+    
     for socket_info in __RENDERMAN_TYPES_SOCKET_INTERFACES__:
         renderman_type = socket_info[0]
         label = socket_info[1]
         typename = 'RendermanNodeSocketInterface%s' % label
         ntype = type(typename, (socket_info[2], RendermanSocketInterface,), {})        
-        ntype.bl_label = 'RenderMan %s Socket' % label
-        ntype.bl_idname = typename
+        # bl_socket_idname needs to correspond to the RendermanNodeSocket class
+        ntype.bl_socket_idname = 'RendermanNodeSocket%s' % label
         if "__annotations__" not in ntype.__dict__:
             setattr(ntype, "__annotations__", {})        
-        ntype.draw_color = draw_color
+        ntype.draw_color = draw_socket_color
         ntype.socket_color = socket_info[3]
         if socket_info[4]:
             ntype.__annotations__['hide_value'] = True        
@@ -340,10 +342,12 @@ def register_socket_interface_classes():
         for k, v in ann_dict.items():
             ntype.__annotations__[k] = v
 
+        classes.append(ntype)            
+
 def register():
 
-    register_socket_classes()
     register_socket_interface_classes()
+    register_socket_classes()
 
     for cls in classes:
         bpy.utils.register_class(cls)

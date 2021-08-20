@@ -14,6 +14,19 @@ import bpy
 # hack!!!
 current_group_node = None
 
+def get_root_node(node, type='bxdf'):
+    rman_type = getattr(node, 'renderman_node_type', node.bl_idname)
+    if rman_type == type:
+        return node
+    elif rman_type =='ShaderNodeGroup':
+        ng = node.node_tree
+        out = next((n for n in ng.nodes if n.bl_idname == 'NodeGroupOutput'),
+                None)
+        if out is None:
+            return None
+        return out        
+    return None
+
 class RmanMaterialTranslator(RmanTranslator):
 
     def __init__(self, rman_scene):
@@ -103,8 +116,8 @@ class RmanMaterialTranslator(RmanTranslator):
                 # bxdf
                 socket = out.inputs['Bxdf']
                 if socket.is_linked and len(socket.links) > 0:
-                    linked_node = socket.links[0].from_node
-                    if linked_node.renderman_node_type == 'bxdf':
+                    linked_node = get_root_node(socket.links[0].from_node, type='bxdf')
+                    if linked_node:
                         bxdfList = []
                         for sub_node in shadergraph_utils.gather_nodes(linked_node):
                             shader_sg_nodes = self.shader_node_sg(material, sub_node, rman_sg_material, mat_name=handle)
@@ -120,8 +133,8 @@ class RmanMaterialTranslator(RmanTranslator):
                 # light
                 socket = out.inputs['Light']
                 if socket.is_linked and len(socket.links) > 0:
-                    linked_node = socket.links[0].from_node
-                    if linked_node.renderman_node_type == 'light':                    
+                    linked_node = get_root_node(socket.links[0].from_node, type='light')
+                    if linked_node:
                         lightNodesList = []
                         for sub_node in shadergraph_utils.gather_nodes(socket.links[0].from_node):
                             shader_sg_nodes = self.shader_node_sg(material, sub_node, rman_sg_material, mat_name=handle)
@@ -133,8 +146,8 @@ class RmanMaterialTranslator(RmanTranslator):
                 # displacement
                 socket = out.inputs['Displacement']
                 if socket.is_linked and len(socket.links) > 0:
-                    linked_node = socket.links[0].from_node
-                    if linked_node.renderman_node_type == 'displacement':
+                    linked_node = get_root_node(socket.links[0].from_node, type='displacement')
+                    if linked_node:                    
                         dispList = []
                         for sub_node in shadergraph_utils.gather_nodes(linked_node):
                             shader_sg_nodes = self.shader_node_sg(material, sub_node, rman_sg_material, mat_name=handle)
