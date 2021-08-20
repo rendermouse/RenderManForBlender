@@ -524,5 +524,6 @@ def generate_property(node, sp, update_function=None):
     prop_meta['renderman_name'] = renderman_name
     prop_meta['label'] = param_label
     prop_meta['type'] = param_type
+    prop_meta['default_value'] = param_default
 
     return (param_name, prop_meta, prop)

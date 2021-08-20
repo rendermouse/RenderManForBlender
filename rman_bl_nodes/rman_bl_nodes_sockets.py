@@ -256,7 +256,8 @@ class RendermanSocket:
         else:
             layout.label(text=self.get_pretty_name(node))
 
-        if not self.hide and context.region.type == 'UI' and node.renderman_node_type != 'output':            
+        renderman_node_type = getattr(node, 'renderman_node_type', '')
+        if not self.hide and context.region.type == 'UI' and renderman_node_type != 'output':            
             nt = context.space_data.edit_tree
             layout.context_pointer_set("socket", self)
             layout.context_pointer_set("node", node)

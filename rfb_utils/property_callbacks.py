@@ -40,6 +40,9 @@ def assetid_update_func(self, context, param_name):
     elif ob_type == bpy.types.World:
         active = ob
         node_type = node.bl_label
+    elif isinstance(ob, bpy.types.NodeTree):
+        active = ob
+        node_type = node.bl_label
     elif ob.type == 'LIGHT':
         light = ob.data
         obj_texture = light

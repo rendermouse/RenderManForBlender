@@ -6,8 +6,45 @@ from ..rman_constants import RMAN_STYLIZED_FILTERS, RMAN_STYLIZED_PATTERNS, RMAN
 import math
 import bpy
 
+class BlNodeInfo:
+    def __init__(self, sg_node, group_node=None):
+        self.sg_node = sg_node
+        self.group_node = group_node
+
 def is_renderman_nodetree(material):
     return find_node(material, 'RendermanOutputNode')
+
+def find_rman_output_node(nt):
+    nodetype = 'RendermanOutputNode'
+    ntree = None
+    for mat in bpy.data.materials:
+        if mat.node_tree == nt:
+            ntree = nt
+            break
+
+    for mat in bpy.data.materials:
+        if mat.node_tree is None:
+            continue
+        if mat.node_tree == nt:
+            ntree = mat.node_tree
+            break
+
+        for node in mat.node_tree.nodes:
+            # check if the node belongs to a group node
+            node_tree = getattr(node, 'node_tree', None)
+            if node_tree is None:
+                continue            
+            if node_tree == nt:
+                ntree = mat.node_tree    
+
+    for node in ntree.nodes:
+        if getattr(node, "bl_idname", None) == nodetype:
+            if getattr(node, "is_active_output", True):
+                return node
+            if not active_output_node:
+                active_output_node = node
+    return active_output_node    
+
 
 def is_mesh_light(ob):
     '''Checks to see if ob is a RenderMan mesh light
@@ -250,8 +287,6 @@ def find_node_from_nodetree(ntree, nodetype):
                 active_output_node = node
     return active_output_node
 
-    return None
-
 def find_material_from_nodetree(ntree):
     mat = None
     for m in bpy.data.materials:
@@ -309,7 +344,14 @@ def gather_nodes(node):
                 if sub_node not in nodes:
                     nodes.append(sub_node)
 
-            # if this is a float -> color inset a tofloat3
+            
+            if link.from_node.bl_idname == 'NodeReroute':
+                continue
+
+            if node.bl_idname == 'NodeReroute':
+                continue
+            
+            # if this is a float -> color inset a tofloat3                
             if is_socket_float_type(link.from_socket) and is_socket_float3_type(socket):
                 convert_node = ('PxrToFloat3', link.from_node,
                                 link.from_socket)

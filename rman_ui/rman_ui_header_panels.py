@@ -99,6 +99,8 @@ class NODE_HT_DrawRenderHeaderNode(bpy.types.Header):
                 row.operator(
                     'material.rman_add_rman_nodetree', text="", icon_value=rman_icon.icon_id).idtype = "node_editor"
             else:
+                pass
+                '''
                 nt = context.space_data.id.node_tree
                 row.context_pointer_set("nodetree", nt)  
                 row.context_pointer_set("node", rman_output_node)                  
@@ -120,6 +122,7 @@ class NODE_HT_DrawRenderHeaderNode(bpy.types.Header):
                         op = row.operator('node.rman_set_node_solo', text='', icon_value=rman_icon.icon_id)
                         op.refresh_solo = False
                         op.solo_node_name = selected_node.name   
+                '''
 
         elif type(context.space_data.id) == bpy.types.World:
             if not context.space_data.id.renderman.use_renderman_node:

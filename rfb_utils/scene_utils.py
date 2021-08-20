@@ -238,8 +238,17 @@ def find_node_owner(node, context=None):
     nt = node.id_data
 
     for mat in bpy.data.materials:
+        if mat.node_tree is None:
+            continue
         if mat.node_tree == nt:
             return mat
+        for node in mat.node_tree.nodes:
+            # check if the node belongs to a group node
+            node_tree = getattr(node, 'node_tree', None)
+            if node_tree is None:
+                continue            
+            if node_tree == nt:
+                return node_tree
 
     for world in bpy.data.worlds:
         if world.node_tree == nt:

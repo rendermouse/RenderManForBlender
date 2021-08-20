@@ -9,7 +9,7 @@ from ..rman_config import __RFB_CONFIG_DICT__
 from .. import rfb_icons
 from .. import rman_render
 from bpy.types import Menu
-from bpy.props import EnumProperty, StringProperty, CollectionProperty, BoolProperty
+from bpy.props import EnumProperty, StringProperty, CollectionProperty, BoolProperty, PointerProperty
 import _cycles
 import bpy
 import os
@@ -71,14 +71,14 @@ class RendermanShadingNode(bpy.types.ShaderNode):
     # node_props = None
     def draw_buttons(self, context, layout):
         nt = self.id_data
-        out_node = shadergraph_utils.find_node_from_nodetree(nt, 'RendermanOutputNode')
+        out_node = shadergraph_utils.find_rman_output_node(nt)
         self.draw_nonconnectable_props(context, layout, self.prop_names, output_node=out_node)
         if self.bl_idname == "PxrOSLPatternNode":
             layout.operator("node.rman_refresh_osl_shader")
 
     def draw_buttons_ext(self, context, layout):
         nt = self.id_data
-        out_node = shadergraph_utils.find_node_from_nodetree(nt, 'RendermanOutputNode')        
+        out_node = shadergraph_utils.find_rman_output_node(nt)        
         rman_icon = rfb_icons.get_node_icon(self.bl_label)
         split = layout.split(factor=0.75)
         col = split.column(align=True)
@@ -518,6 +518,7 @@ class RendermanOutputNode(RendermanShadingNode):
 
     solo_node_name: StringProperty(name='Solo Node', update=update_solo_node_name)
     solo_node_output: StringProperty(name='Solo Node Output')
+    solo_nodetree: PointerProperty(type=bpy.types.NodeTree)
 
 
     bxdf_filter_method: EnumProperty(name="Filter Method",

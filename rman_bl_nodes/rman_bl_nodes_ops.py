@@ -561,12 +561,14 @@ class NODE_OT_rman_node_set_solo(bpy.types.Operator):
         selected_node = None
 
         if self.refresh_solo:
+            output_node.solo_nodetree = None
             output_node.solo_node_name = ''
             output_node.solo_node_output = ''
             self.unhide_all(nt)
             return {'FINISHED'}           
 
         if self.solo_node_name:
+            output_node.solo_nodetree = nt
             output_node.solo_node_name = self.solo_node_name
             output_node.solo_node_output = ''
             self.hide_all(nt, nt.nodes[self.solo_node_name])
@@ -578,6 +580,7 @@ class NODE_OT_rman_node_set_solo(bpy.types.Operator):
             self.report({'ERROR'}, "Pattern node not selected")
             return {'FINISHED'}   
 
+        output_node.solo_nodetree = nt
         output_node.solo_node_name = selected_node.name
         output_node.solo_node_output = ''
         self.hide_all(nt, nt.nodes[selected_node.name])

@@ -9,6 +9,7 @@ class RmanSgMaterial(RmanSgNode):
         self.is_gp_material = False
         self.sg_stroke_mat = None
         self.sg_fill_mat = None
+        self.nodes_to_blnodeinfo = dict()
 
     @property
     def has_meshlight(self):
