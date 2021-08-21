@@ -17,11 +17,7 @@ def is_renderman_nodetree(material):
 def find_rman_output_node(nt):
     nodetype = 'RendermanOutputNode'
     ntree = None
-    for mat in bpy.data.materials:
-        if mat.node_tree == nt:
-            ntree = nt
-            break
-
+            
     for mat in bpy.data.materials:
         if mat.node_tree is None:
             continue
@@ -36,6 +32,9 @@ def find_rman_output_node(nt):
                 continue            
             if node_tree == nt:
                 ntree = mat.node_tree    
+
+    if ntree is None:
+        return None
 
     for node in ntree.nodes:
         if getattr(node, "bl_idname", None) == nodetype:
