@@ -86,7 +86,7 @@ def node_add_inputs(node, node_name, prop_names, first_level=True, label_prefix=
         socket = node.inputs.new(
             __RMAN_SOCKET_MAP__[param_type], param_name, identifier=param_label)
         socket.link_limit = 1
-        socket.default_value = meta['default_value']
+        #socket.default_value = meta['default_value']
 
         if param_type in ['struct', 'normal', 'vector', 'vstruct', 'void']:
             socket.hide_value = True
