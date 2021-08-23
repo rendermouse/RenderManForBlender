@@ -37,8 +37,9 @@ def _get_mesh_uv_(mesh, name=""):
         uv_loop_layer = mesh.uv_layers.active
     else:
         # assuming uv loop layers and uv textures share identical indices
-        idx = mesh.uv_textures.keys().index(name)
-        uv_loop_layer = mesh.uv_layers[idx]
+        #idx = mesh.uv_textures.keys().index(name)
+        #uv_loop_layer = mesh.uv_layers[idx]
+        uv_loop_layer = mesh.uv_layers.get(name, None)
 
     if uv_loop_layer is None:
         return None
