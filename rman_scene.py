@@ -623,6 +623,7 @@ class RmanScene(object):
                 # Make sure empties that are hidden still go out. Children
                 # could still be visible
                 self._export_hidden_instance(ob, rman_sg_node)
+                return rman_sg_node
 
 
             # motion blur
@@ -671,6 +672,10 @@ class RmanScene(object):
         self.attach_material(ob, rman_sg_node)        
         if ob.parent and object_utils._detect_primitive_(ob.parent) == 'EMPTY':
             rman_empty_node = self.rman_objects.get(ob.parent.original)
+            if not rman_empty_node:
+                # Empty was not created. Export it.
+                parent = ob.parent
+                rman_empty_node = self.export_data_block(parent)
             rman_empty_node.sg_node.AddChild(rman_sg_node.sg_node)
         else:
             self.get_root_sg_node().AddChild(rman_sg_node.sg_node)          
