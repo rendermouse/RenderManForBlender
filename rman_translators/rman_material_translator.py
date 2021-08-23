@@ -153,7 +153,7 @@ class RmanMaterialTranslator(RmanTranslator):
                 # displacement
                 socket = out.inputs['Displacement']
                 if socket.is_linked and len(socket.links) > 0:
-                    linked_node = get_root_node(socket.links[0].from_node, type='displacement')
+                    linked_node = get_root_node(socket.links[0].from_node, type='displace')
                     if linked_node:                    
                         dispList = []
                         rman_sg_material.nodes_to_blnodeinfo.clear()
