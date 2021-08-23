@@ -72,9 +72,9 @@ class RmanFluidTranslator(RmanTranslator):
 
         if fluid_data.domain_type == 'GAS':
             rman_sg_fluid.rman_sg_liquid_node = None
-            rman_sg_fluid.rman_sg_volume_node = self.rman_scene.sg_scene.CreateGroup('%s-GAS' % rman_sg_fluid.db_name)
+            rman_sg_fluid.rman_sg_volume_node = self.rman_scene.sg_scene.CreateVolume('%s-GAS' % rman_sg_fluid.db_name)
 
-            rman_sg_fluid.rman_sg_volume_node.sg_node.Define(0,0,0)
+            #rman_sg_fluid.rman_sg_volume_node.Define(0,0,0)
             if fluid_data.cache_data_format == 'OPENVDB':
                 pass
                 # for now, read the grids directly from the domain settings.
@@ -147,7 +147,7 @@ class RmanFluidTranslator(RmanTranslator):
             rfb_log().debug('error', "Please save and export OpenVDB files before rendering.")
             return
 
-        primvar = rman_sg_fluid.rman_sg_volume_node.sg_node.GetPrimVars()
+        primvar = rman_sg_fluid.rman_sg_volume_node.GetPrimVars()
         primvar.SetString(self.rman_scene.rman.Tokens.Rix.k_Ri_type, "blobbydso:impl_openvdb")
         primvar.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_Bound, transform_utils.convert_ob_bounds(ob.bound_box), 6)
         primvar.SetStringArray(self.rman_scene.rman.Tokens.Rix.k_blobbydso_stringargs, [cacheFile, "density:fogvolume"], 2)
@@ -155,15 +155,15 @@ class RmanFluidTranslator(RmanTranslator):
         primvar.SetFloatDetail("density", [], "varying")
         primvar.SetFloatDetail("flame", [], "varying")        
         primvar.SetColorDetail("color", [], "varying")                  
-        rman_sg_fluid.rman_sg_volume_node.sg_node.SetPrimVars(primvar)             
+        rman_sg_fluid.rman_sg_volume_node.SetPrimVars(primvar)             
 
 
     def update_fluid(self, ob, rman_sg_fluid, fluid_data):
 
         fluid_res = fluid_data.domain_resolution
-        rman_sg_fluid.rman_sg_volume_node.sg_node.Define(fluid_res[0], fluid_res[1], fluid_res[2])
+        rman_sg_fluid.rman_sg_volume_node.Define(fluid_res[0], fluid_res[1], fluid_res[2])
 
-        primvar = rman_sg_fluid.rman_sg_volume_node.sg_node.GetPrimVars()
+        primvar = rman_sg_fluid.rman_sg_volume_node.GetPrimVars()
         primvar.SetString(self.rman_scene.rman.Tokens.Rix.k_Ri_type, "box")
         primvar.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_Bound, transform_utils.convert_ob_bounds(ob.bound_box), 6)
 
@@ -174,4 +174,4 @@ class RmanFluidTranslator(RmanTranslator):
         primvar.SetVectorDetail("velocity", fluid_data.velocity_grid, "varying")
         primvar.SetFloatDetail("temperature", fluid_data.temperature_grid, "varying")
 
-        rman_sg_fluid.rman_sg_volume_node.sg_node.SetPrimVars(primvar)     
+        rman_sg_fluid.rman_sg_volume_node.SetPrimVars(primvar)     
