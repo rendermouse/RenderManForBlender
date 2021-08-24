@@ -476,7 +476,7 @@ class RendermanPreferences(AddonPreferences):
         row.label(text='Behavior', icon_value=rman_r_icon.icon_id)
         row = layout.row()
         col = row.column()
-        col.prop(self, 'rman_do_preview_renders')  
+        #col.prop(self, 'rman_do_preview_renders')  
         col.prop(self, 'rman_render_nurbs_as_mesh')
         col.prop(self, 'rman_show_cycles_convert')     
         col.prop(self, 'rman_emit_default_params')    

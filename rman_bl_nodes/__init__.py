@@ -347,7 +347,7 @@ def generate_node_type(node_desc, is_oso=False):
 
         if color_rman_ramps or float_rman_ramps:
             node_group = bpy.data.node_groups.new(
-                '__RMAN_FAKE_NODEGROUP__', 'ShaderNodeTree') 
+                '.__RMAN_FAKE_NODEGROUP__', 'ShaderNodeTree') 
             node_group.use_fake_user = True                 
             self.rman_fake_node_group = node_group.name    
 

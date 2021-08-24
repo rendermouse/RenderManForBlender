@@ -532,7 +532,7 @@ class RmanScene(object):
     def export_materials(self, materials):
         for mat in materials:   
             db_name = object_utils.get_db_name(mat)
-            rman_sg_material = self.rman_translators['MATERIAL'].export(mat, db_name)
+            rman_sg_material = self.rman_translators['MATERIAL'].export(mat.original, db_name)
             if rman_sg_material:                       
                 self.rman_materials[mat.original] = rman_sg_material
             

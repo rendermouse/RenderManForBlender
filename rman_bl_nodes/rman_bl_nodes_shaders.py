@@ -162,7 +162,8 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                     ramp_node = node_group.nodes[ramp_name]
                     layout.template_color_ramp(
                             ramp_node, 'color_ramp') 
-                    #draw_utils.draw_sticky_toggle(layout, self, prop_name, output_node)                               
+                    #draw_utils.draw_sticky_toggle(layout, self, prop_name, output_node)   
+                    continue                            
                 elif widget == 'floatramp':
                     node_group = bpy.data.node_groups[self.rman_fake_node_group]
                     ramp_name =  getattr(self, prop_name)
@@ -170,8 +171,8 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                     layout.template_curve_mapping(
                             ramp_node, 'mapping')                   
                     #draw_utils.draw_sticky_toggle(layout, self, prop_name, output_node)
-                                      
-
+                    continue
+                            
                 if prop_name not in self.inputs:
                     if renderman_type == 'page':
                         prop = getattr(self, prop_name)
@@ -275,7 +276,7 @@ class RendermanShadingNode(bpy.types.ShaderNode):
             self_float_rman_ramps = self.__annotations__.get('__FLOAT_RAMPS__', [])   
 
             node_group = bpy.data.node_groups.new(
-                '__RMAN_FAKE_NODEGROUP__', 'ShaderNodeTree') 
+                '.__RMAN_FAKE_NODEGROUP__', 'ShaderNodeTree') 
             node_group.use_fake_user = True                 
             self.rman_fake_node_group = node_group.name  
 
