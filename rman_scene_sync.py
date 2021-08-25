@@ -633,6 +633,13 @@ class RmanSceneSync(object):
                     translator = self.rman_scene.rman_translators['CAMERA']
                     with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
                         translator.update_viewport_cam(self.rman_scene.bl_scene.camera, rman_sg_camera, force_update=True)       
+                else:
+                    translator = self.rman_scene.rman_translators['CAMERA']                 
+                    with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
+                        for ob, rman_sg_camera in self.rman_scene.rman_cameras.items():     
+                            if ob.original.name != obj.id.name:
+                                continue
+                            translator._update_render_cam(ob.original, rman_sg_camera)
 
             elif isinstance(obj.id, bpy.types.Material):
                 rfb_log().debug("Material updated: %s" % obj.id.name)
