@@ -606,12 +606,13 @@ class RmanCameraTranslator(RmanTranslator):
         self.rman_scene.sg_scene.SetOptions(options)  
 
         # update screen window
-        self._update_screen_window(ob, xaspect, yaspect, aspectratio)    
+        prop = rman_sg_camera.sg_camera_node.GetProperties()
+        self._update_screen_window(ob, xaspect, yaspect, aspectratio, prop)    
+        rman_sg_camera.sg_camera_node.SetProperties(prop)
 
-    def _update_screen_window(self, ob, xaspect, yaspect, aspectratio):
+    def _update_screen_window(self, ob, xaspect, yaspect, aspectratio, prop):
         cam = ob.data
 
-        options = self.rman_scene.sg_scene.GetOptions()
         dx = 0
         dy = 0
 
@@ -621,10 +622,10 @@ class RmanCameraTranslator(RmanTranslator):
             screen_min_y = -yaspect + 2.0 * (self.rman_scene.bl_scene.render.border_min_y) * yaspect
             screen_max_y = -yaspect + 2.0 * (self.rman_scene.bl_scene.render.border_max_y) * yaspect
 
-            options.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_ScreenWindow, (screen_min_x, screen_max_x, screen_min_y, screen_max_y), 4)   
+            prop.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_ScreenWindow, (screen_min_x, screen_max_x, screen_min_y, screen_max_y), 4)   
         else:            
             if cam.type == 'PANO':
-                options.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_ScreenWindow, (-1, 1, -1, 1), 4)
+                prop.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_ScreenWindow, (-1, 1, -1, 1), 4)
             elif cam.type == 'ORTHO':
                 lens = cam.ortho_scale
                 xaspect = xaspect * lens / (aspectratio * 2.0)
@@ -637,11 +638,11 @@ class RmanCameraTranslator(RmanTranslator):
                 sw[1] += dx
                 sw[2] += dy
                 sw[3] += dy                
-                options.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_ScreenWindow, sw, 4)   
+                prop.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_ScreenWindow, sw, 4)   
             else:
-                options.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_ScreenWindow, (-xaspect+dx, xaspect+dx, -yaspect+dy, yaspect+dy), 4)        
-
-        self.rman_scene.sg_scene.SetOptions(options)  
+                dx = 2.0 * (aspectratio * cam.shift_x) 
+                dy = 2.0 * (aspectratio * cam.shift_y)   
+                prop.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_ScreenWindow, (-xaspect+dx, xaspect+dx, -yaspect+dy, yaspect+dy), 4)        
 
     def _update_render_cam(self, ob, rman_sg_camera):
 
@@ -681,11 +682,11 @@ class RmanCameraTranslator(RmanTranslator):
             yaspect = yaspect * lens / (aspectratio * 2.0)
             rman_sg_camera.projection_shader = self.rman_scene.rman.SGManager.RixSGShader("Projection", "PxrOrthographic", "proj")
 
-        # Update screen window. Ortho scale may have change
-        self._update_screen_window(ob, xaspect, yaspect, aspectratio)
-
         rman_sg_camera.sg_camera_node.SetProjection(rman_sg_camera.projection_shader)
         prop = rman_sg_camera.sg_camera_node.GetProperties()
+
+        # Update screen window. Ortho scale may have change
+        self._update_screen_window(ob, xaspect, yaspect, aspectratio, prop)        
 
         # Shutter Timings
         prop.SetFloat(self.rman_scene.rman.Tokens.Rix.k_shutterOpenTime, self.rman_scene.bl_scene.renderman.shutter_open)
