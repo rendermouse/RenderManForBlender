@@ -112,7 +112,7 @@ class RmanCameraTranslator(RmanTranslator):
 
     def update(self, ob, rman_sg_camera):
         if self.rman_scene.is_viewport_render:
-            return self.update_viewport_cam(rman_sg_camera)
+            return self.update_viewport_cam(ob, rman_sg_camera, force_update=True)
         else:
             return self._update_render_cam(ob, rman_sg_camera)   
 
@@ -129,7 +129,22 @@ class RmanCameraTranslator(RmanTranslator):
         params.SetPoint('focus1', mtx @ mesh.vertices[0].co )
         params.SetPoint('focus2', mtx @ mesh.vertices[1].co )
         params.SetPoint('focus3', mtx @ mesh.vertices[2].co )
-        
+
+    def find_scene_camera(self):
+        if not self.rman_scene.is_viewport_render:
+            return self.rman_scene.bl_scene.camera
+
+        region_data = self.rman_scene.context.region_data   
+        ob = None
+
+        if region_data: 
+            if region_data.view_perspective == 'CAMERA':
+                ob = self.rman_scene.bl_scene.camera    
+                if self.rman_scene.context.space_data.use_local_camera:
+                    ob = self.rman_scene.context.space_data.camera      
+            else: 
+                ob = self.rman_scene.context.space_data.camera 
+        return ob        
 
     def update_viewport_resolution(self, rman_sg_camera):
         region = self.rman_scene.context.region
@@ -464,15 +479,22 @@ class RmanCameraTranslator(RmanTranslator):
                     self.set_tilt_shift_focus(ob, cam, projparams)
 
                 if cam_rm.rman_use_dof:
+                    rman_sg_camera.use_focus_object = cam_rm.rman_focus_object
                     if cam_rm.rman_focus_object:
                         dof_focal_distance = (ob.location - cam_rm.rman_focus_object.location).length
+                        rman_sg_node = self.rman_scene.rman_objects.get(cam_rm.rman_focus_object.original, None)
+                        rman_sg_camera.rman_focus_object = rman_sg_node                        
                     else:
                         dof_focal_distance = cam_rm.rman_focus_distance
+                        rman_sg_camera.rman_focus_object = None
                     if dof_focal_distance > 0.0:
                         dof_focal_length = (cam.lens * 0.001)
                         projparams.SetFloat(self.rman_scene.rman.Tokens.Rix.k_fStop, cam_rm.rman_aperture_fstop)
                         projparams.SetFloat(self.rman_scene.rman.Tokens.Rix.k_focalLength, dof_focal_length)
                     projparams.SetFloat(self.rman_scene.rman.Tokens.Rix.k_focalDistance, dof_focal_distance)                       
+                else:
+                    rman_sg_camera.use_focus_object = False
+                    rman_sg_camera.rman_focus_object = None                    
 
         elif rman_sg_camera.view_perspective ==  'PERSP': 
             cam = None
@@ -504,17 +526,21 @@ class RmanCameraTranslator(RmanTranslator):
 
             rman_sg_camera.projection_shader = self.rman_scene.rman.SGManager.RixSGShader("Projection", "PxrCamera", "proj")
             projparams = rman_sg_camera.projection_shader.params         
-            projparams.SetFloat(self.rman_scene.rman.Tokens.Rix.k_fov, fov)   
+            projparams.SetFloat(self.rman_scene.rman.Tokens.Rix.k_fov, fov)  
+            rman_sg_camera.use_focus_object = False
+            rman_sg_camera.rman_focus_object = None             
 
         else:
             # orthographic
+            rman_sg_camera.use_focus_object = False
+            rman_sg_camera.rman_focus_object = None            
             rman_sg_camera.projection_shader = self.rman_scene.rman.SGManager.RixSGShader("Projection", "PxrOrthographic", "proj")  
             updated = True        
 
         if updated or force_update:   
             rman_sg_camera.sg_camera_node.SetProjection(rman_sg_camera.projection_shader)         
 
-    def _set_fov(self, ob, cam, aspectratio, projparams):
+    def _set_fov(self, ob, rman_sg_camera, cam, aspectratio, projparams):
         lens = cam.lens
         cam_rm = cam.renderman
         sensor = cam.sensor_height \
@@ -527,15 +553,22 @@ class RmanCameraTranslator(RmanTranslator):
         projparams.SetFloat(self.rman_scene.rman.Tokens.Rix.k_fov, fov)
 
         if cam_rm.rman_use_dof:
+            rman_sg_camera.use_focus_object = cam_rm.rman_focus_object
             if cam_rm.rman_focus_object:
                 dof_focal_distance = (ob.location - cam_rm.rman_focus_object.location).length
+                rman_sg_node = self.rman_scene.rman_objects.get(cam_rm.rman_focus_object.original, None)
+                rman_sg_camera.rman_focus_object = rman_sg_node
             else:
                 dof_focal_distance = cam_rm.rman_focus_distance
+                rman_sg_camera.rman_focus_object = None
             if dof_focal_distance > 0.0:
                 dof_focal_length = (cam.lens * 0.001)
                 projparams.SetFloat(self.rman_scene.rman.Tokens.Rix.k_fStop, cam_rm.rman_aperture_fstop)
                 projparams.SetFloat(self.rman_scene.rman.Tokens.Rix.k_focalLength, dof_focal_length)
-            projparams.SetFloat(self.rman_scene.rman.Tokens.Rix.k_focalDistance, dof_focal_distance)          
+            projparams.SetFloat(self.rman_scene.rman.Tokens.Rix.k_focalDistance, dof_focal_distance)   
+        else:       
+            rman_sg_camera.use_focus_object = False
+            rman_sg_camera.rman_focus_object = None
 
     def _update_render_resolution(self, ob, rman_sg_camera):
         r = self.rman_scene.bl_scene.render
@@ -627,14 +660,14 @@ class RmanCameraTranslator(RmanTranslator):
             rman_sg_node = RmanSgNode(self.rman_scene, rman_sg_camera.projection_shader, "")                           
             property_utils.property_group_to_rixparams(node, rman_sg_node, rman_sg_camera.projection_shader, ob=cam)   
             if cam_rm.rman_use_cam_fov:
-                self._set_fov(ob, cam, aspectratio, rman_sg_camera.projection_shader.params)
+                self._set_fov(ob, rman_sg_camera, cam, aspectratio, rman_sg_camera.projection_shader.params)
             if node.bl_label == 'PxrCamera':
                 self.set_tilt_shift_focus(ob, cam, rman_sg_camera.projection_shader.params)
 
 
         elif cam.type == 'PERSP':
             rman_sg_camera.projection_shader = self.rman_scene.rman.SGManager.RixSGShader("Projection", "PxrCamera", "proj")
-            self._set_fov(ob, cam, aspectratio, rman_sg_camera.projection_shader.params)
+            self._set_fov(ob, rman_sg_camera, cam, aspectratio, rman_sg_camera.projection_shader.params)
             self.set_tilt_shift_focus(ob, cam, rman_sg_camera.projection_shader.params)
                      
         elif cam.type == 'PANO':

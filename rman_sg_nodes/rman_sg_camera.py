@@ -24,6 +24,8 @@ class RmanSgCamera(RmanSgNode):
         self.projection_shader = None
         self.clip_start = -1
         self.clip_end = -1
+        self.use_focus_object = False
+        self.rman_focus_object = None
 
     @property
     def bl_camera(self):

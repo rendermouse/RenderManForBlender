@@ -786,6 +786,15 @@ class RmanSceneSync(object):
                         self.update_geometry_node_instances(obj.id)
                         self.do_delete = False
 
+                    # Check if this object is the focus object the camera. If it is
+                    # we need to update the camera
+                    rman_sg_camera = self.rman_scene.main_camera
+                    if rman_sg_camera.rman_focus_object and rman_sg_camera.rman_focus_object == rman_sg_node:
+                        translator = self.rman_scene.rman_translators['CAMERA']
+                        with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
+                            cam_object = translator.find_scene_camera()
+                            translator.update(cam_object, rman_sg_camera)
+
                 elif obj.is_updated_geometry:
                     if is_hidden:
                         # don't update if this is hidden
