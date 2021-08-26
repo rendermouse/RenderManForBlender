@@ -106,7 +106,9 @@
                 "conditionalVisOp": "equalTo",
                 "conditionalVisPath": "rman_focus_object",
                 "conditionalVisValue": "NoneType"
-            }            
+            },
+            "update_function_name": "update_rman_focus_distance",
+            "update_function": "def update_rman_focus_distance(self, context):\n    ob = context.object\n    cam = ob.data\n    cam.dof.focus_distance=self.rman_focus_distance"
         },
         {
             "panel": "DATA_PT_renderman_camera",            
