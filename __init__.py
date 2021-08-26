@@ -76,12 +76,13 @@ class PRManRender(bpy.types.RenderEngine):
         except:
             pass
 
-        if rr.rman_interactive_running:
-            rfb_log().debug("Stop interactive render.")
-            rr.rman_is_live_rendering = False            
-        elif rr.is_regular_rendering():
-            rfb_log().debug("Stop render.")
-        rr.stop_render(stop_draw_thread=False)                 
+        if rr.rman_running:
+            if rr.rman_interactive_running:
+                rfb_log().debug("Stop interactive render.")
+                rr.rman_is_live_rendering = False            
+            elif rr.is_regular_rendering():
+                rfb_log().debug("Stop render.")
+            rr.stop_render(stop_draw_thread=False)                 
 
     def update(self, data, depsgraph):
         pass

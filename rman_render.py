@@ -608,13 +608,14 @@ class RmanRender(object):
                             except:
                                 pass
                             finally:
-                                bpy.data.images.remove(bl_image)  
-                self.del_bl_engine()                          
+                                bpy.data.images.remove(bl_image)                                        
 
         else:
             while self.bl_engine and not self.bl_engine.test_break() and self.rman_is_live_rendering:
-                time.sleep(0.01)               
-            self.del_bl_engine()                           
+                time.sleep(0.01)        
+
+        self.del_bl_engine()
+        self.stop_render()                          
 
         return True   
 
