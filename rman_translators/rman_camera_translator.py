@@ -1,6 +1,6 @@
 from ..rfb_logger import rfb_log
 from .rman_translator import RmanTranslator
-from ..rman_sg_nodes.rman_sg_camera import RmanSgCamera
+from ..rman_sg_nodes.rman_sg_camera import RmanSgCamera, BlCameraProps
 from ..rman_sg_nodes.rman_sg_node import RmanSgNode
 from ..rfb_utils import transform_utils
 from ..rfb_utils import property_utils
@@ -9,6 +9,7 @@ from ..rfb_utils import scene_utils
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import camera_utils
 from mathutils import Matrix, Vector
+from copy import deepcopy
 import math
 import sys
 
@@ -165,28 +166,15 @@ class RmanCameraTranslator(RmanTranslator):
 
         prop = rman_sg_camera.sg_camera_node.GetProperties()
         crop_window = [0.0, 1.0, 0.0, 1.0]
-        if rman_sg_camera.res_width != width:
-            rman_sg_camera.res_width = width
-            updated = True
-            resolution_updated = True
-        
-        if rman_sg_camera.res_height != height:
-            rman_sg_camera.res_height = height                
-            updated = True      
-            resolution_updated = True
+
+        bl_cam_props = deepcopy(rman_sg_camera.bl_cam_props)
+        bl_cam_props.res_width = width
+        bl_cam_props.res_height = height   
 
         if region_data:
-            if rman_sg_camera.view_perspective != region_data.view_perspective:
-                rman_sg_camera.view_perspective = region_data.view_perspective
-                updated = True            
-
-            if rman_sg_camera.view_camera_zoom != self.rman_scene.context.region_data.view_camera_zoom:
-                rman_sg_camera.view_camera_zoom = self.rman_scene.context.region_data.view_camera_zoom
-                updated = True
-
-            if rman_sg_camera.view_camera_offset != self.rman_scene.context.region_data.view_camera_offset:
-                rman_sg_camera.view_camera_offset = self.rman_scene.context.region_data.view_camera_offset
-                updated = True            
+            bl_cam_props.view_perspective = region_data.view_perspective
+            bl_cam_props.view_camera_zoom = region_data.view_camera_zoom
+            bl_cam_props.view_camera_offset = tuple(region_data.view_camera_offset)
 
             if region_data.view_perspective == 'CAMERA':
                 ob = self.rman_scene.bl_scene.camera    
@@ -199,7 +187,7 @@ class RmanCameraTranslator(RmanTranslator):
                 xaspect, yaspect, aspectratio = camera_utils.render_get_aspect_(r, cam, x=width, y=height)
 
                 # magic zoom formula copied from blenderseed, which got it from cycles
-                zoom = 4 / ((math.sqrt(2) + rman_sg_camera.view_camera_zoom / 50) ** 2)   
+                zoom = 4 / ((math.sqrt(2) + bl_cam_props.view_camera_zoom / 50) ** 2)   
 
                 if cam.type == 'ORTHO':
                     lens = cam.ortho_scale
@@ -210,30 +198,20 @@ class RmanCameraTranslator(RmanTranslator):
                     lens = ob.data.lens             
                     
                 # shift and offset            
-                offset = tuple(rman_sg_camera.view_camera_offset)
+                #offset = tuple(rman_sg_camera.view_camera_offset)
+                offset = tuple(bl_cam_props.view_camera_offset)
                 dx = 2.0 * (aspectratio * cam.shift_x + offset[0] * xaspect * 2.0)
                 dy = 2.0 * (aspectratio * cam.shift_y + offset[1] * yaspect * 2.0)    
 
                 clip_start = cam.clip_start
                 clip_end = cam.clip_end   
                 
-                if rman_sg_camera.lens != lens:
-                    rman_sg_camera.lens = lens
-                    updated = True
-
-                if rman_sg_camera.shift_x != cam.shift_x:
-                    rman_sg_camera.shift_x = cam.shift_x
-                    updated = True
-
-                if rman_sg_camera.shift_y != cam.shift_y:
-                    rman_sg_camera.shift_y = cam.shift_y
-                    updated = True
-
-                if rman_sg_camera.xaspect != xaspect or rman_sg_camera.yaspect != yaspect: 
-                    rman_sg_camera.xaspect = xaspect
-                    rman_sg_camera.yaspect = yaspect  
-                    rman_sg_camera.aspectratio = aspectratio
-                    updated = True                    
+                bl_cam_props.lens = lens
+                bl_cam_props.shift_x = cam.shift_x
+                bl_cam_props.shift_y = cam.shift_y
+                bl_cam_props.xaspect = xaspect
+                bl_cam_props.yaspect = yaspect
+                bl_cam_props.aspectratio = aspectratio
 
                 sw = [-xaspect * zoom, xaspect * zoom, -yaspect * zoom, yaspect * zoom]
                 sw[0] += dx
@@ -241,9 +219,7 @@ class RmanCameraTranslator(RmanTranslator):
                 sw[2] += dy
                 sw[3] += dy
  
-                if rman_sg_camera.screenwindow != sw:
-                    rman_sg_camera.screenwindow = sw
-                    updated = True
+                bl_cam_props.screenwindow = sw
                 
                 prop.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_ScreenWindow, sw, 4)  
 
@@ -293,33 +269,20 @@ class RmanCameraTranslator(RmanTranslator):
                 clip_start = self.rman_scene.context.space_data.clip_start
                 clip_end = self.rman_scene.context.space_data.clip_end
 
-                if rman_sg_camera.lens != self.rman_scene.context.space_data.lens:
-                    rman_sg_camera.lens = self.rman_scene.context.space_data.lens
-                    updated = True
-                    
-                if rman_sg_camera.xaspect != xaspect or rman_sg_camera.yaspect != yaspect:
-                    rman_sg_camera.xaspect = xaspect
-                    rman_sg_camera.yaspect = yaspect  
-                    rman_sg_camera.aspectratio = aspectratio
-                    updated = True               
-
-                if rman_sg_camera.shift_x != shift_x:
-                    rman_sg_camera.shift_x = shift_x
-                    updated = True
-
-                if rman_sg_camera.shift_y != shift_y:
-                    rman_sg_camera.shift_y = shift_y
-                    updated = True                                                  
+                bl_cam_props.lens = self.rman_scene.context.space_data.lens
+                bl_cam_props.shift_x = shift_x
+                bl_cam_props.shift_y = shift_y
+                bl_cam_props.xaspect = xaspect
+                bl_cam_props.yaspect = yaspect
+                bl_cam_props.aspectratio = aspectratio                
 
                 sw = [-xaspect * zoom, xaspect * zoom, -yaspect * zoom, yaspect * zoom]
                 sw[0] += dx
                 sw[1] += dx
                 sw[2] += dy
                 sw[3] += dy
- 
-                if rman_sg_camera.screenwindow != sw:
-                    rman_sg_camera.screenwindow = sw
-                    updated = True
+
+                bl_cam_props.screenwindow = sw                
                 
                 prop.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_ScreenWindow, sw, 4)    
 
@@ -381,18 +344,27 @@ class RmanCameraTranslator(RmanTranslator):
                 rfb_log().debug("Clipping start is greater than clipping end.") 
                 clip_start = None
                 clip_end = None
+                bl_cam_props.clip_start = -1
+                bl_cam_props.clip_end = -1
             elif clip_start == clip_end:
                 rfb_log().debug("Clipping start is equal to clipping end.") 
                 clip_start = None
-                clip_end = None                
+                clip_end = None
+                bl_cam_props.clip_start = -1
+                bl_cam_props.clip_end = -1                
             else: 
-                if rman_sg_camera.clip_start != clip_start:
-                    rman_sg_camera.clip_start = clip_start
-                    updated = True       
+                bl_cam_props.clip_start = clip_start
+                bl_cam_props.clip_end = clip_end
 
-                if rman_sg_camera.clip_end != clip_end:
-                    rman_sg_camera.clip_end = clip_end
-                    updated = True          
+        if bl_cam_props != rman_sg_camera.bl_cam_props:
+            if bl_cam_props.res_width != rman_sg_camera.bl_cam_props.res_width:
+                resolution_updated = True
+            
+            if bl_cam_props.res_height != rman_sg_camera.bl_cam_props.res_height:
+                resolution_updated = True                
+            rman_sg_camera.bl_cam_props = bl_cam_props            
+            updated = True
+
         if updated:
             # clipping planes    
             if clip_start:
@@ -428,22 +400,23 @@ class RmanCameraTranslator(RmanTranslator):
         # get the current resolution multiplier
         res_mult = self.rman_scene.viewport_render_res_mult
 
-        width = rman_sg_camera.res_width
-        height = rman_sg_camera.res_height
-        view_camera_zoom = rman_sg_camera.view_camera_zoom
+        width = rman_sg_camera.bl_cam_props.res_width
+        height = rman_sg_camera.bl_cam_props.res_height
+        view_camera_zoom = rman_sg_camera.bl_cam_props.view_camera_zoom
 
         rman_sg_camera.projection_shader = None
         fov = -1
 
         updated = False
 
-        if rman_sg_camera.view_perspective == 'CAMERA':
+        bl_cam_props = deepcopy(rman_sg_camera.bl_cam_props)
+        if rman_sg_camera.bl_cam_props.view_perspective == 'CAMERA':
             ob = ob.original
             cam = ob.data
             rman_sg_camera.bl_camera = ob
             cam_rm = cam.renderman
 
-            aspectratio = rman_sg_camera.aspectratio
+            aspectratio = rman_sg_camera.bl_cam_props.aspectratio
             lens = cam.lens
             sensor = cam.sensor_height \
                 if cam.sensor_fit == 'VERTICAL' else cam.sensor_width
@@ -454,12 +427,7 @@ class RmanCameraTranslator(RmanTranslator):
             else:
                 fov = 360.0 * math.atan((sensor * 0.5) / lens / aspectratio) / math.pi
 
-                if rman_sg_camera.rman_fov == -1:
-                    rman_sg_camera.rman_fov = fov  
-                    updated = True
-                elif rman_sg_camera.rman_fov != fov:              
-                    rman_sg_camera.rman_fov = fov  
-                    updated = True
+                bl_cam_props.rman_fov = fov
 
                 node = shadergraph_utils.find_projection_node(ob)        
                 if node:
@@ -496,14 +464,14 @@ class RmanCameraTranslator(RmanTranslator):
                     rman_sg_camera.use_focus_object = False
                     rman_sg_camera.rman_focus_object = None                    
 
-        elif rman_sg_camera.view_perspective ==  'PERSP': 
+        elif rman_sg_camera.bl_cam_props.view_perspective ==  'PERSP': 
             cam = None
             if ob:
                 cam = ob.data
             rman_sg_camera.bl_camera = ob
             
-            aspectratio = rman_sg_camera.aspectratio
-            lens = rman_sg_camera.lens 
+            aspectratio = rman_sg_camera.bl_cam_props.aspectratio
+            lens = rman_sg_camera.bl_cam_props.lens 
             if cam:
                 sensor = cam.sensor_height \
                     if cam.sensor_fit == 'VERTICAL' else cam.sensor_width
@@ -517,12 +485,7 @@ class RmanCameraTranslator(RmanTranslator):
                 pmat = region_data.perspective_matrix @ vmat_inv
                 fov = 360.0 * math.atan(1.0/pmat[1][1]) / math.pi
 
-            if rman_sg_camera.rman_fov == -1:
-                rman_sg_camera.rman_fov = fov  
-                updated = True
-            elif rman_sg_camera.rman_fov != fov:              
-                rman_sg_camera.rman_fov = fov  
-                updated = True               
+            bl_cam_props.rman_fov = fov
 
             rman_sg_camera.projection_shader = self.rman_scene.rman.SGManager.RixSGShader("Projection", "PxrCamera", "proj")
             projparams = rman_sg_camera.projection_shader.params         
@@ -536,6 +499,10 @@ class RmanCameraTranslator(RmanTranslator):
             rman_sg_camera.rman_focus_object = None            
             rman_sg_camera.projection_shader = self.rman_scene.rman.SGManager.RixSGShader("Projection", "PxrOrthographic", "proj")  
             updated = True        
+
+        if bl_cam_props != rman_sg_camera.bl_cam_props:
+            rman_sg_camera.bl_cam_props = bl_cam_props
+            updated = True
 
         if updated or force_update:   
             rman_sg_camera.sg_camera_node.SetProjection(rman_sg_camera.projection_shader)         
