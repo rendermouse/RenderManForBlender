@@ -406,8 +406,10 @@ class RmanMeshTranslator(RmanTranslator):
                     if rman_sg_mesh.is_deforming:
                         super().set_primvar_times(rman_sg_mesh.motion_steps, pvars)
                     pvars.Inherit(primvar)
-                    pvars.SetIntegerArray(self.rman_scene.rman.Tokens.Rix.k_shade_faceset, faces, len(faces))
+                    pvars.SetIntegerArray(self.rman_scene.rman.Tokens.Rix.k_shade_faceset, faces, len(faces))                    
                     sg_sub_mesh.SetPrimVars(pvars)
+                    # call export_object_primvars so we can get things like displacement bound
+                    super().export_object_primvars(ob, rman_sg_mesh, sg_sub_mesh)
                     scenegraph_utils.set_material(sg_sub_mesh, sg_material.sg_node)
                     sg_node.AddChild(sg_sub_mesh)
                     rman_sg_mesh.multi_material_children.append(sg_sub_mesh)
