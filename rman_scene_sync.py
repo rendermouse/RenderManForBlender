@@ -260,6 +260,8 @@ class RmanSceneSync(object):
     def update_light_visibility(self, rman_sg_node, ob):
         if not self.rman_scene.scene_solo_light:
             vis = rman_sg_node.sg_node.GetHidden()
+            if vis == -1:
+                vis = 0
             result = False
             update_instances = False
             # if vis is inherit, and none of the other visibility attrs are set to hide
