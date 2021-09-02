@@ -37,12 +37,8 @@ class PRMAN_OT_Renderman_printer(Operator):
 
         col.label(text='%s' % self.message, icon=rman_icon)  
 
-    def execute(self, context):  
-        try:
-            self.report({'%s' % self.level}, '%s' % self.message )
-        except RuntimeError as e:
-            pass
-
+    def execute(self, context): 
+        #self.report({'ERROR'}, '%s' % self.message ) 
         return{'FINISHED'}
 
     def invoke(self, context, event):

@@ -595,6 +595,7 @@ class RendermanOutputNode(RendermanShadingNode):
                 node_tree = self.id_data
                 try:
                     node_tree.links.remove(link)
+                    bpy.ops.renderman.printer('INVOKE_DEFAULT', level="ERROR", message="Link is not valid")
                 except:
                     pass
         
@@ -641,6 +642,7 @@ class RendermanIntegratorsOutputNode(RendermanShadingNode):
                 node_tree = self.id_data
                 try:
                     node_tree.links.remove(link)
+                    bpy.ops.renderman.printer('INVOKE_DEFAULT', level="ERROR", message="Link is not valid")
                 except:
                     pass
 
@@ -705,6 +707,7 @@ class RendermanSamplefiltersOutputNode(RendermanShadingNode):
                 node_tree = self.id_data
                 try:
                     node_tree.links.remove(link)
+                    bpy.ops.renderman.printer('INVOKE_DEFAULT', level="ERROR", message="Link is not valid")
                 except:
                     pass
 
@@ -768,6 +771,7 @@ class RendermanDisplayfiltersOutputNode(RendermanShadingNode):
                 node_tree = self.id_data
                 try:
                     node_tree.links.remove(link)
+                    bpy.ops.renderman.printer('INVOKE_DEFAULT', level="ERROR", message="Link is not valid")
                 except:
                     pass
 
@@ -811,6 +815,7 @@ class RendermanProjectionsOutputNode(RendermanShadingNode):
                 node_tree = self.id_data
                 try:
                     node_tree.links.remove(link)
+                    bpy.ops.renderman.printer('INVOKE_DEFAULT', level="ERROR", message="Link is not valid")
                 except:
                     pass
 
@@ -854,16 +859,18 @@ class RendermanPatternNode(RendermanShadingNode):
                 node_tree = self.id_data
                 try:
                     node_tree.links.remove(link)
+                    bpy.ops.renderman.printer('INVOKE_DEFAULT', level="ERROR", message="Link is not valid")
                 except:
                     pass
 
 
             # if this is a struct, check that the struct name matches
-            if from_node_type == 'struct':
+            elif from_node_type == 'struct':
                 if link.from_socket.struct_name != link.to_socket.struct_name:
                     node_tree = self.id_data
                     try:
                         node_tree.links.remove(link)
+                        bpy.ops.renderman.printer('INVOKE_DEFAULT', level="ERROR", message="Struct names do not match")
                     except:
                         pass
 
