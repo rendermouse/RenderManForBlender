@@ -19,6 +19,7 @@ _DRAW_HANDLER_ = None
 _BARN_LIGHT_DRAW_HELPER_ = None
 _PI0_5_ = 1.570796327
 _PRMAN_TEX_CACHE_ = dict()
+_RMAN_TEXTURED_LIGHTS_ = ['PxrRectLight', 'PxrDomeLight']
 
 s_rmanLightLogo = dict()
 s_rmanLightLogo['box'] = [
@@ -1367,6 +1368,7 @@ def draw_barn_light_filter(ob):
 
 def draw():
     global _PRMAN_TEX_CACHE_
+    global _RMAN_TEXTURED_LIGHTS_
 
     if bpy.context.engine != 'PRMAN_RENDER':
         return
@@ -1433,16 +1435,34 @@ def draw():
         elif light_shader_name == 'PxrBarnLightFilter':
             # get all lights that the barn is attached to
             draw_barn_light_filter(ob)
-        else: 
+        else:   
             draw_sphere_light(ob)
 
     # Clear out any textures not used
     remove_textures = list()
     for k, v in _PRMAN_TEX_CACHE_.items():
-        txfile = texture_utils.get_txmanager().get_txfile_from_path(k)
-        if not txfile:
+        still_exists = False
+        for ob in lights_set:  
+            rm = ob.data.renderman
+            if not rm.use_renderman_node:
+                continue
+            light_shader = rm.get_light_node()
+            if not light_shader:
+                continue
+            light_shader_name = rm.get_light_node_name()
+            if light_shader_name == '':
+                return            
+            if light_shader_name not in _RMAN_TEXTURED_LIGHTS_:
+                continue
+
+            if light_shader.lightColorMap == k:
+                still_exists = True
+                break
+
+        if not still_exists:
             bgl.glDeleteTextures(1, v)
-            remove_textures.append(k)
+            remove_textures.append(k)            
+
     for k in remove_textures:
         rfb_log().debug("Call glDeleteTextures for: %s" % k)
         del _PRMAN_TEX_CACHE_[k]
@@ -1450,10 +1470,11 @@ def draw():
 @persistent 
 def clear_gl_tex_cache(bl_scene=None):
     global _PRMAN_TEX_CACHE_
-    rfb_log().debug("Clearing _PRMAN_TEX_CACHE_.")
-    for k, v in _PRMAN_TEX_CACHE_.items():
-        bgl.glDeleteTextures(1, v)
-    _PRMAN_TEX_CACHE_.clear()    
+    if _PRMAN_TEX_CACHE_:
+        rfb_log().debug("Clearing _PRMAN_TEX_CACHE_.")
+        for k, v in _PRMAN_TEX_CACHE_.items():
+            bgl.glDeleteTextures(1, v)
+        _PRMAN_TEX_CACHE_.clear()    
 
 def register():
     global _DRAW_HANDLER_

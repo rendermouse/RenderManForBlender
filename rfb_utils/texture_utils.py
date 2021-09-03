@@ -107,6 +107,13 @@ class RfBTxManager(object):
             return ''
 
         return self.get_output_tex(txfile)
+
+    def get_txfile_from_id(self, nodeID):
+        '''
+        Get the txfile from given a nodeID
+        '''
+        txfile = self.txmanager.get_txfile_from_id(nodeID)
+        return txfile       
             
     def get_txfile_from_path(self, filepath):
         return self.txmanager.get_txfile_from_path(filepath)                
