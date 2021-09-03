@@ -729,7 +729,7 @@ class RmanRender(object):
         self.rman_scene.export_for_bake_render(depsgraph, self.sg_scene, bl_layer, is_external=is_external)
         self.rman_is_exporting = False
 
-        self._dump_rib_()
+        self._dump_rib_(self.bl_scene.frame_current)
         rfb_log().info("Finished parsing scene. Total time: %s" % string_utils._format_time_(time.time() - time_start)) 
         render_cmd = "prman -blocking"
         render_cmd = self._append_render_cmd(render_cmd)        
@@ -863,7 +863,7 @@ class RmanRender(object):
         self.rman_scene.export_for_interactive_render(context, depsgraph, self.sg_scene)
         self.rman_is_exporting = False
 
-        self._dump_rib_()      
+        self._dump_rib_(self.bl_scene.frame_current)
         rfb_log().info("Finished parsing scene. Total time: %s" % string_utils._format_time_(time.time() - time_start))      
         self.rman_is_live_rendering = True     
         render_cmd = "prman -live"   
