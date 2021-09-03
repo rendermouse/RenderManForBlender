@@ -40,15 +40,11 @@ class RmanParticlesTranslator(RmanTranslator):
         rman_sg_particles.rman_sg_emitter.motion_steps = motion_steps
         rman_sg_particles.rman_sg_hair.motion_steps = motion_steps
 
-    def export_deform_sample(self, rman_sg_particles, ob, psys, time_sample):
-        emitter_translator = self.rman_scene.rman_translators['EMITTER']
-        hair_translator = self.rman_scene.rman_translators['HAIR']        
+    def export_deform_sample(self, rman_sg_particles, ob, psys, time_sample):              
 
-        if psys.settings.type == 'EMITTER' and not object_utils.is_particle_instancer(psys):
-            emitter_translator.export_deform_sample(rman_sg_particles.rman_sg_emitter, ob, psys, time_sample)
-        elif psys.settings.type == 'HAIR' and psys.settings.render_type == 'PATH':
-            #hair_translator.export_deform_sample(rman_sg_particles.rman_sg_hair, ob, psys, time_sample)
-            pass
+        if psys.settings.type == 'HAIR' and psys.settings.render_type == 'PATH':
+            hair_translator = self.rman_scene.rman_translators['HAIR']  
+            hair_translator.export_deform_sample(rman_sg_particles.rman_sg_hair, ob, psys, time_sample)
 
 
     def clear_children(self, ob, psys, rman_sg_particles):

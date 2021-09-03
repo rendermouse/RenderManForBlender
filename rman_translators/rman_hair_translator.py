@@ -30,8 +30,8 @@ class RmanHairTranslator(RmanTranslator):
 
     def export_deform_sample(self, rman_sg_hair, ob, psys, time_sample):
 
-        curves = self._get_points(ob, psys)
-        for i, points in enumerate(curves):
+        curves = self._get_strands_(ob, psys)
+        for i, (vertsArray, points, widths, scalpST) in enumerate(curves):
             curves_sg = rman_sg_hair.sg_curves_list[i]
             if not curves_sg:
                 continue
@@ -91,80 +91,6 @@ class RmanHairTranslator(RmanTranslator):
         rman_sg_hair.sg_node.AddChild(rman_sg_group.sg_node)                
         rman_sg_hair.instances[rman_sg_group.db_name] = rman_sg_group
         rman_sg_group.rman_sg_group_parent = rman_sg_hair
-
-    def _get_points(self, ob, psys):
-        psys_modifier = None
-        for mod in ob.modifiers:
-            if hasattr(mod, 'particle_system') and mod.particle_system == psys:
-                psys_modifier = mod
-                break
-
-        if self.rman_scene.is_interactive:
-            if psys_modifier and not psys_modifier.show_viewport:
-                return None
-        else:
-            if psys_modifier and not psys_modifier.show_render:
-                return None             
-                
-        if self.rman_scene.is_interactive:
-            steps = 2 ** psys.settings.display_step
-        else:
-            steps = 2 ** psys.settings.render_step
-            
-        num_parents = len(psys.particles)
-        num_children = len(psys.child_particles)
-        total_hair_count = num_parents + num_children
-        curve_sets = []
-        points = []
-        vertsArray = []
-        nverts = 0
-
-        ob_inv_mtx = ob.matrix_world.inverted_safe()
-        
-        for pindex in range(total_hair_count):
-            if psys.settings.child_type != 'NONE' and pindex < num_parents:
-                continue
-
-            strand_points = []
-            # walk through each strand
-            for step in range(0, steps + 1):           
-                pt = psys.co_hair(ob, particle_no=pindex, step=step)
-
-                if pt.length_squared == 0:
-                    # this strand ends prematurely                    
-                    break                
-
-                # put points in object space
-                pt = ob_inv_mtx @ pt
-
-                strand_points.append(pt)
-
-            if len(strand_points) > 1:
-                # double the first and last
-                strand_points = strand_points[:1] + \
-                    strand_points + strand_points[-1:]
-                vertsInStrand = len(strand_points)
-
-                if vertsInStrand < 4:
-                    continue
-
-                # add the last point again
-                points.extend(strand_points)
-                vertsArray.append(vertsInStrand)
-                nverts += vertsInStrand
-
-            if nverts > 100000:
-                curve_sets.append(points)
-
-                nverts = 0
-                points = []
-                vertsArray = []
-
-        if nverts > 0:
-            curve_sets.append(points)
-
-        return curve_sets              
-                    
 
     def _get_strands_(self, ob, psys):
 
