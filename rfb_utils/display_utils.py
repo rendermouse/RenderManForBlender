@@ -642,7 +642,7 @@ def get_dspy_dict(rman_scene, expandTokens=True):
         _add_stylized_channels(dspys_dict, display_driver, rman_scene, expandTokens)        
        
     if rm_rl:     
-        _set_rman_dspy_dict(rm_rl, dspys_dict, display_driver, rman_scene, expandTokens)        
+        _set_rman_dspy_dict(rm_rl, dspys_dict, display_driver, rman_scene, expandTokens, do_optix_denoise=do_optix_denoise)        
 
     else:
         # We're using blender's layering system
