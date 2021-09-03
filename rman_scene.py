@@ -293,8 +293,8 @@ class RmanScene(object):
             self.is_xpu = (self.bl_scene.renderman.renderVariant != 'prman')
 
         # update variables
-        string_utils.set_var('scene', self.bl_scene.name)
-        string_utils.set_var('layer', self.bl_view_layer.name)
+        string_utils.set_var('scene', self.bl_scene.name.replace(' ', '_'))
+        string_utils.set_var('layer', self.bl_view_layer.name.replace(' ', '_'))
 
         self.bl_frame_current = self.bl_scene.frame_current
 
@@ -354,8 +354,8 @@ class RmanScene(object):
         self.reset()
 
         # update tokens
-        string_utils.set_var('scene', self.bl_scene.name)
-        string_utils.set_var('layer', self.bl_view_layer.name)
+        string_utils.set_var('scene', self.bl_scene.name.replace(' ', '_'))
+        string_utils.set_var('layer', self.bl_view_layer.name.replace(' ', '_'))
 
         self.bl_frame_current = self.bl_scene.frame_current
         rfb_log().debug("Creating root scene graph node")
@@ -405,8 +405,8 @@ class RmanScene(object):
         self.reset()
 
         # update variables
-        string_utils.set_var('scene', self.bl_scene.name)
-        string_utils.set_var('layer', self.bl_view_layer.name)
+        string_utils.set_var('scene', self.bl_scene.name.replace(' ', '_'))
+        string_utils.set_var('layer', self.bl_view_layer.name.replace(' ', '_'))
 
         self.bl_frame_current = self.bl_scene.frame_current
         rfb_log().debug("Creating root scene graph node")
