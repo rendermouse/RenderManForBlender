@@ -223,7 +223,6 @@ class StringExpression(object):
             # Can not have ':' after the drive descriptor on windows. Allow
             # for a leading space before the drive letter
             result = re.sub(r'((?<!^[A-Z])(?<!^[ ][A-Z]))\:', '_', result)
-            result = result.replace(' ', '_')
           
             # get the real path
             result = filepath_utils.get_real_path(result)
