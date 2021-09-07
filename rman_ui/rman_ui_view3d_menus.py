@@ -221,9 +221,48 @@ class VIEW3D_MT_renderman_object_context_menu(Menu):
         layout.label(text='Groups')
         layout.menu('VIEW3D_MT_RM_Add_Selected_To_ObjectGroup_Menu', text='Trace Sets')     
         layout.menu('VIEW3D_MT_RM_Add_Selected_To_LightMixer_Menu', text='Light Mixer Groups')  
-        layout.operator("scene.rman_open_light_linking", text="Light Linking Editor")    
+        layout.menu('VIEW3D_MT_RM_LightLinking_Menu', text='Light Linking')  
         layout.separator()
         layout.menu('VIEW3D_MT_RM_Stylized_Menu', text='Stylized Looks')  
+
+class VIEW3D_MT_RM_LightLinking_Menu(bpy.types.Menu):
+    bl_label = "Light Linking"
+    bl_idname = "VIEW3D_MT_RM_LightLinking_Menu"
+
+    @classmethod
+    def poll(cls, context):
+        rd = context.scene.render
+        return rd.engine == 'PRMAN_RENDER'
+
+    @classmethod
+    def get_icon_id(cls):  
+        return rfb_icons.get_icon("rman_blender").icon_id
+
+    def draw(self, context):
+        rm = context.scene.renderman
+        layout = self.layout
+        layout.operator("scene.rman_open_light_linking", text="Light Linking Editor")
+
+        active_light = context.active_object
+        if active_light.type != 'LIGHT':
+            return
+        light_props = shadergraph_utils.get_rman_light_properties_group(active_light)
+        if light_props.renderman_light_role != 'RMAN_LIGHT':
+            return
+        selected_objects = context.selected_objects
+        layout.separator()
+        op = layout.operator('renderman.update_light_link_illuminate', text="Default")
+        op.illuminate = 'DEFAULT'
+        op = layout.operator('renderman.update_light_link_illuminate', text="On")
+        op.illuminate = 'ON'
+        op = layout.operator('renderman.update_light_link_illuminate', text="Off")
+        op.illuminate = 'OFF'
+        if selected_objects:
+            layout.separator()
+            op = layout.operator('renderman.update_light_link_objects', text="Link selected to %s" % active_light.name)
+            op.update_type = 'ADD'
+            op = layout.operator('renderman.update_light_link_objects', text="Remove Selected from %s" % active_light.name)
+            op.update_type = 'REMOVE'
 
 class VIEW3D_MT_RM_Stylized_Menu(bpy.types.Menu):
     bl_label = "Stylized Looks"
@@ -498,7 +537,8 @@ classes = [
     VIEW3D_MT_RM_Add_bxdf_Menu,
     VIEW3D_MT_RM_Add_Export_Menu,
     VIEW3D_MT_RM_Add_Render_Menu,
-    VIEW3D_MT_RM_Stylized_Menu
+    VIEW3D_MT_RM_Stylized_Menu,
+    VIEW3D_MT_RM_LightLinking_Menu
 ]
 
 def register():

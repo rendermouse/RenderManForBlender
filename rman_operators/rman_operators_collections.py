@@ -713,6 +713,152 @@ class PRMAN_OT_remove_light_link(bpy.types.Operator):
 
         return {'FINISHED'}
 
+class PRMAN_OT_light_link_update_illuminate(bpy.types.Operator):
+    bl_idname = 'renderman.update_light_link_illuminate'
+    bl_label = 'Update Illuminate'
+
+    illuminate: EnumProperty(
+        name="Illuminate",
+        items=[
+              ('DEFAULT', 'Default', ''),
+               ('ON', 'On', ''),
+               ('OFF', 'Off', '')])
+
+    @classmethod
+    def description(cls, context, properties):
+        active_light = context.active_object
+        info = 'Inherit the illumination'    
+        if properties.illuminate == 'ON':
+            info = 'Turn on illumination for all objects linked to %s' % active_light.name
+        elif properties.illuminate == 'OFF':
+            info = 'Turn off illumination for all objects linked to %s' % active_light.name
+        return info               
+
+    def execute(self, context):
+        active_light = context.active_object
+        if active_light.type != 'LIGHT':
+            return
+        light_props = shadergraph_utils.get_rman_light_properties_group(active_light)
+        if light_props.renderman_light_role != 'RMAN_LIGHT':
+            return
+
+        scene = context.scene
+        rm = scene.renderman
+
+        light_link = None
+        for ll in rm.light_links:
+            if ll.light_ob == active_light:
+                light_link = ll
+                break
+
+        if light_link is None:
+            light_link = rm.light_links.add()
+            light_link.light_ob = active_light            
+
+        for ob in context.selected_objects:
+            if ob.type == 'LIGHT':
+                continue
+            member = None
+            for m in light_link.members:
+                if m.ob_pointer == ob:
+                    member = m
+                    break
+            if member is None:
+                m = light_link.members.add()
+                m.name = ob.name
+                m.ob_pointer = ob
+
+        light_link.illuminate = self.illuminate
+
+        return {'FINISHED'}     
+
+class PRMAN_OT_light_link_update_objects(bpy.types.Operator):
+    bl_idname = 'renderman.update_light_link_objects'
+    bl_label = 'Update Light Link Objects'
+
+    update_type: EnumProperty(
+        name="Illuminate",
+        items=[
+              ('ADD', 'Add', ''),
+               ('REMOVE', 'Remove', '')])
+
+    @classmethod
+    def description(cls, context, properties):
+        info = 'Link the selected objects to this light'    
+        if properties.illuminate == 'REMOVE':
+            info = 'Unlink the selected objects from this light'
+        return info               
+
+    def execute(self, context):
+        active_light = context.active_object
+        if active_light.type != 'LIGHT':
+            return
+        light_props = shadergraph_utils.get_rman_light_properties_group(active_light)
+        if light_props.renderman_light_role != 'RMAN_LIGHT':
+            return
+
+        scene = context.scene
+        rm = scene.renderman
+
+        light_link = None
+        for ll in rm.light_links:
+            if ll.light_ob == active_light:
+                light_link = ll
+                break
+
+        if light_link is None:
+            light_link = rm.light_links.add()
+            light_link.light_ob = active_light
+
+        if self.update_type == 'ADD':
+            for ob in context.selected_objects:
+                if ob.type == 'LIGHT':
+                    continue
+                member = None
+                for m in light_link.members:
+                    if m.ob_pointer == ob:
+                        member = m
+                        break
+                if member is None:
+                    m = light_link.members.add()
+                    m.name = ob.name
+                    m.ob_pointer = ob
+                    light_ob = light_link.light_ob
+                    if light_link.illuminate == 'OFF':
+                        subset = ob.renderman.rman_lighting_excludesubset.add()
+                        subset.name = light_ob.name
+                        subset.light_ob = light_ob  
+                    else:
+                        for j, subset in enumerate(ob.renderman.rman_lighting_excludesubset):
+                            if subset.light_ob == light_ob:
+                                ob.renderman.rman_lighting_excludesubset.remove(j)
+                                break        
+                ob.update_tag(refresh={'OBJECT'})                                                  
+        else:
+            for ob in context.selected_objects:
+                if ob.type == 'LIGHT':
+                    continue
+                member = None
+                idx = -1
+                for j, m in enumerate(light_link.members):
+                    if m.ob_pointer == ob:
+                        member = m
+                        idx = j
+                        break
+                if member:
+                    m = light_link.members.add()
+                    m.name = ob.name
+                    m.ob_pointer = ob   
+                    light_ob = light_link.light_ob  
+                    for j, subset in enumerate(ob.renderman.rman_lighting_excludesubset):
+                        if subset.light_ob == light_ob:
+                            ob.renderman.rman_lighting_excludesubset.remove(j)
+                            break      
+                    light_link.members.remove(j)
+                    light_link.members_index = j-1
+
+        return {'FINISHED'}              
+
 classes = [
     COLLECTION_OT_add_remove,
     COLLECTION_OT_add_remove_dspymeta,
@@ -727,7 +873,9 @@ classes = [
     PRMAN_OT_add_light_link_object,
     PRMAN_OT_remove_light_link_object,
     PRMAN_OT_add_light_link,
-    PRMAN_OT_remove_light_link
+    PRMAN_OT_remove_light_link,
+    PRMAN_OT_light_link_update_illuminate,
+    PRMAN_OT_light_link_update_objects
 ]
 
 def register():
