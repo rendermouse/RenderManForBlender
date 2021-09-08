@@ -546,17 +546,6 @@ class PRMAN_OT_add_light_link_object(bpy.types.Operator):
             ob_in_group = ll.members.add()
             ob_in_group.name = ob.name
             ob_in_group.ob_pointer = ob   
-            light_props = shadergraph_utils.get_rman_light_properties_group(ll.light_ob)
-            if light_props.renderman_light_role == 'RMAN_LIGHTFILTER':
-                subset = ob.renderman.rman_lightfilter_subset.add()
-                subset.name = ll.light_ob.name
-                subset.light_ob = ll.light_ob              
-            else:
-                if ll.illuminate == 'OFF':
-                    subset = ob.renderman.rman_lighting_excludesubset.add()
-                    subset.name = ll.light_ob.name
-                    subset.light_ob = ll.light_ob
-            ob.update_tag(refresh={'OBJECT'})
 
             op = getattr(context, 'op_ptr')
             if op:
@@ -735,12 +724,12 @@ class PRMAN_OT_light_link_update_illuminate(bpy.types.Operator):
         return info               
 
     def execute(self, context):
-        active_light = context.active_object
-        if active_light.type != 'LIGHT':
-            return
+        active_light = getattr(context, 'light_ob', None)
+        if not active_light:
+            return {'FINISHED'}
         light_props = shadergraph_utils.get_rman_light_properties_group(active_light)
-        if light_props.renderman_light_role != 'RMAN_LIGHT':
-            return
+        if light_props.renderman_light_role not in {'RMAN_LIGHTFILTER', 'RMAN_LIGHT'}:
+            return {'FINISHED'}
 
         scene = context.scene
         rm = scene.renderman
@@ -764,11 +753,11 @@ class PRMAN_OT_light_link_update_illuminate(bpy.types.Operator):
                     member = m
                     break
             if member is None:
-                m = light_link.members.add()
-                m.name = ob.name
-                m.ob_pointer = ob
+                member = light_link.members.add()
+                member.name = ob.name
+                member.ob_pointer = ob
 
-        light_link.illuminate = self.illuminate
+            member.illuminate = self.illuminate
 
         return {'FINISHED'}     
 
@@ -785,17 +774,15 @@ class PRMAN_OT_light_link_update_objects(bpy.types.Operator):
     @classmethod
     def description(cls, context, properties):
         info = 'Link the selected objects to this light'    
-        if properties.illuminate == 'REMOVE':
+        if properties.update_type == 'REMOVE':
             info = 'Unlink the selected objects from this light'
         return info               
 
     def execute(self, context):
-        active_light = context.active_object
-        if active_light.type != 'LIGHT':
-            return
-        light_props = shadergraph_utils.get_rman_light_properties_group(active_light)
-        if light_props.renderman_light_role != 'RMAN_LIGHT':
-            return
+        
+        active_light = getattr(context, 'light_ob', None)
+        if not active_light:
+            return {'FINISHED'}
 
         scene = context.scene
         rm = scene.renderman
@@ -824,15 +811,6 @@ class PRMAN_OT_light_link_update_objects(bpy.types.Operator):
                     m.name = ob.name
                     m.ob_pointer = ob
                     light_ob = light_link.light_ob
-                    if light_link.illuminate == 'OFF':
-                        subset = ob.renderman.rman_lighting_excludesubset.add()
-                        subset.name = light_ob.name
-                        subset.light_ob = light_ob  
-                    else:
-                        for j, subset in enumerate(ob.renderman.rman_lighting_excludesubset):
-                            if subset.light_ob == light_ob:
-                                ob.renderman.rman_lighting_excludesubset.remove(j)
-                                break        
                 ob.update_tag(refresh={'OBJECT'})                                                  
         else:
             for ob in context.selected_objects:
@@ -846,16 +824,14 @@ class PRMAN_OT_light_link_update_objects(bpy.types.Operator):
                         idx = j
                         break
                 if member:
-                    m = light_link.members.add()
-                    m.name = ob.name
-                    m.ob_pointer = ob   
                     light_ob = light_link.light_ob  
                     for j, subset in enumerate(ob.renderman.rman_lighting_excludesubset):
                         if subset.light_ob == light_ob:
                             ob.renderman.rman_lighting_excludesubset.remove(j)
                             break      
-                    light_link.members.remove(j)
-                    light_link.members_index = j-1
+                    ob.update_tag(refresh={'OBJECT'})  
+                    light_link.members.remove(idx)
+                    light_link.members_index = idx-1
 
         return {'FINISHED'}              
 

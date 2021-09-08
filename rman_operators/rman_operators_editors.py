@@ -495,7 +495,10 @@ class PRMAN_PT_Renderman_Open_Light_Linking(bpy.types.Operator):
       
             col = flow.column()
             if is_rman_light and len(light_link_item.members) > 0:
-                col.prop(light_link_item, 'illuminate', text='')         
+                #col.prop(light_link_item, 'illuminate', text='') 
+                member = light_link_item.members[light_link_item.members_index]
+                col.context_pointer_set('light_ob', light_link_item.light_ob) 
+                col.prop(member, 'illuminate', text='')        
 
     def cancel(self, context):
         if self.event and self.event.type == 'LEFTMOUSE':

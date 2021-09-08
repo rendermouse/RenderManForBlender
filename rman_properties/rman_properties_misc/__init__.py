@@ -53,7 +53,53 @@ class RendermanObjectPointer(bpy.types.PropertyGroup):
     def update_ob_pointer(self, context):
         self.ob_pointer.update_tag(refresh={'OBJECT'})
 
-    ob_pointer: PointerProperty(type=bpy.types.Object, update=update_ob_pointer)          
+    ob_pointer: PointerProperty(type=bpy.types.Object, update=update_ob_pointer)   
+
+    def update_link(self, context):
+        light_ob = getattr(context, 'light_ob', None)
+        if not light_ob:
+            light_ob = context.active_object
+            if light_ob.type != 'LIGHT':
+                return
+
+        light_props = shadergraph_utils.get_rman_light_properties_group(light_ob)
+        if light_props.renderman_light_role not in {'RMAN_LIGHTFILTER', 'RMAN_LIGHT'}:
+            return
+
+        light_ob.update_tag(refresh={'DATA'})
+
+        ob = self.ob_pointer
+        light_props = shadergraph_utils.get_rman_light_properties_group(light_ob)
+        if light_props.renderman_light_role == 'RMAN_LIGHT':
+            if self.illuminate == 'OFF':
+                subset = ob.renderman.rman_lighting_excludesubset.add()
+                subset.name = light_ob.name
+                subset.light_ob = light_ob
+            else:
+                for j, subset in enumerate(ob.renderman.rman_lighting_excludesubset):
+                    if subset.light_ob == light_ob:
+                        ob.renderman.rman_lighting_excludesubset.remove(j)
+                        break
+        else:
+            if self.illuminate == 'OFF':
+                for j, subset in enumerate(ob.renderman.rman_lightfilter_subset):
+                    if subset.light_ob == light_ob:
+                        ob.renderman.rman_lightfilter_subset.remove(j)
+                        break                     
+            else:  
+                subset = ob.renderman.rman_lightfilter_subset.add()
+                subset.name = light_ob.name
+                subset.light_ob = light_ob                             
+
+        ob.update_tag(refresh={'OBJECT'})    
+
+    illuminate: EnumProperty(
+        name="Illuminate",
+        update=update_link,
+        items=[
+              ('DEFAULT', 'Default', ''),
+               ('ON', 'On', ''),
+               ('OFF', 'Off', '')])             
 
 class RendermanGroup(bpy.types.PropertyGroup):
     def update_name(self, context):
@@ -78,24 +124,6 @@ class RendermanGroup(bpy.types.PropertyGroup):
 
 class LightLinking(bpy.types.PropertyGroup):
 
-    def update_link(self, context):
-        if self.light_ob.type == 'LIGHT':
-            self.light_ob.update_tag(refresh={'DATA'})
-        for member in self.members:
-            ob = member.ob_pointer
-            light_props = shadergraph_utils.get_rman_light_properties_group(self.light_ob)
-            if light_props.renderman_light_role == 'RMAN_LIGHT':
-                if self.illuminate == 'OFF':
-                    subset = ob.renderman.rman_lighting_excludesubset.add()
-                    subset.name = self.light_ob.name
-                    subset.light_ob = self.light_ob
-                else:
-                    for j, subset in enumerate(ob.renderman.rman_lighting_excludesubset):
-                        if subset.light_ob == self.light_ob:
-                            ob.renderman.rman_lighting_excludesubset.remove(j)
-                            break        
-            ob.update_tag(refresh={'OBJECT'})
-
     def validate_light_obj(self, ob):
         if shadergraph_utils.is_rman_light(ob, include_light_filters=True):
             return True
@@ -118,14 +146,6 @@ class LightLinking(bpy.types.PropertyGroup):
         context.view_layer.objects.active = ob                                      
 
     members_index: IntProperty(min=-1, default=-1, update=update_members_index)                                      
-
-    illuminate: EnumProperty(
-        name="Illuminate",
-        update=update_link,
-        items=[
-              ('DEFAULT', 'Default', ''),
-               ('ON', 'On', ''),
-               ('OFF', 'Off', '')])    
 
 class RendermanMeshPrimVar(bpy.types.PropertyGroup):
     name: StringProperty(
