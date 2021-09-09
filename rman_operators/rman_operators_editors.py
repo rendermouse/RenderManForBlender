@@ -6,6 +6,7 @@ from ..rfb_utils import scene_utils
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import string_utils
 from ..rfb_utils import object_utils
+from ..rfb_utils import prefs_utils
 from ..rfb_utils.envconfig_utils import envconfig
 from ..rfb_logger import rfb_log
 from .. import rfb_icons
@@ -444,14 +445,21 @@ class PRMAN_PT_Renderman_Open_Light_Linking(bpy.types.Operator):
         flow.label(text='')
 
         row = layout.row()
-        flow = row.column_flow(columns=3)
+        if not prefs_utils.get_pref('rman_invert_light_linking'):
+            flow = row.column_flow(columns=3)
+        else:
+            flow = row.column_flow(columns=2)
 
         flow.label(text='Lights')
         flow.label(text='Objects')
-        flow.label(text='Illumination')
+        if not prefs_utils.get_pref('rman_invert_light_linking'):
+            flow.label(text='Illumination')
 
         row = layout.row()
-        flow = row.column_flow(columns=3)
+        if not prefs_utils.get_pref('rman_invert_light_linking'):
+            flow = row.column_flow(columns=3)
+        else:
+            flow = row.column_flow(columns=2)
 
         flow.template_list("RENDERMAN_UL_LightLink_Light_List", "Renderman_light_link_list",
                             scene.renderman, "light_links", rm, 'light_links_index', rows=6)
@@ -493,12 +501,12 @@ class PRMAN_PT_Renderman_Open_Light_Linking(bpy.types.Operator):
                 flow.template_list("RENDERMAN_UL_LightLink_Object_List", "Renderman_light_link_list",
                                 light_link_item, "members", light_link_item, 'members_index', rows=4)                                          
       
-            col = flow.column()
-            if is_rman_light and len(light_link_item.members) > 0:
-                #col.prop(light_link_item, 'illuminate', text='') 
-                member = light_link_item.members[light_link_item.members_index]
-                col.context_pointer_set('light_ob', light_link_item.light_ob) 
-                col.prop(member, 'illuminate', text='')        
+            if not prefs_utils.get_pref('rman_invert_light_linking'):
+                col = flow.column()
+                if is_rman_light and len(light_link_item.members) > 0:
+                    member = light_link_item.members[light_link_item.members_index]
+                    col.context_pointer_set('light_ob', light_link_item.light_ob) 
+                    col.prop(member, 'illuminate', text='')        
 
     def cancel(self, context):
         if self.event and self.event.type == 'LEFTMOUSE':

@@ -2,6 +2,7 @@ from bpy.props import StringProperty, BoolProperty, EnumProperty, IntProperty,  
 from ..rfb_utils import string_utils
 from ..rfb_logger import rfb_log
 from ..rfb_utils import shadergraph_utils
+from ..rfb_utils import prefs_utils
 
 import bpy
 
@@ -546,6 +547,7 @@ class PRMAN_OT_add_light_link_object(bpy.types.Operator):
             ob_in_group = ll.members.add()
             ob_in_group.name = ob.name
             ob_in_group.ob_pointer = ob   
+            ob.update_tag(refresh={'OBJECT'})
 
             op = getattr(context, 'op_ptr')
             if op:
@@ -581,15 +583,18 @@ class PRMAN_OT_remove_light_link_object(bpy.types.Operator):
             if member.ob_pointer == ob:
                 ll.members.remove(i)
                 ll.members_index -= 1
-                grp = ob.renderman.rman_lighting_excludesubset
-                light_props = shadergraph_utils.get_rman_light_properties_group(ll.light_ob)
-                if light_props.renderman_light_role == 'RMAN_LIGHTFILTER':
-                    grp = ob.renderman.rman_lightfilter_subset
-                for j, subset in enumerate(grp):
-                    if subset.light_ob == ll.light_ob:
-                        grp.remove(j)
-                        ob.update_tag(refresh={'OBJECT'})
-                        break
+                if not prefs_utils.get_pref('rman_invert_light_linking'):
+                    grp = ob.renderman.rman_lighting_excludesubset
+                    light_props = shadergraph_utils.get_rman_light_properties_group(ll.light_ob)
+                    if light_props.renderman_light_role == 'RMAN_LIGHTFILTER':
+                        grp = ob.renderman.rman_lightfilter_subset
+                    for j, subset in enumerate(grp):
+                        if subset.light_ob == ll.light_ob:
+                            grp.remove(j)
+                            ob.update_tag(refresh={'OBJECT'})
+                            break
+                else:
+                    ob.update_tag(refresh={'OBJECT'})
                 break                            
 
         return {'FINISHED'}
@@ -824,11 +829,12 @@ class PRMAN_OT_light_link_update_objects(bpy.types.Operator):
                         idx = j
                         break
                 if member:
-                    light_ob = light_link.light_ob  
-                    for j, subset in enumerate(ob.renderman.rman_lighting_excludesubset):
-                        if subset.light_ob == light_ob:
-                            ob.renderman.rman_lighting_excludesubset.remove(j)
-                            break      
+                    if not prefs_utils.get_pref('rman_invert_light_linking'):
+                        light_ob = light_link.light_ob  
+                        for j, subset in enumerate(ob.renderman.rman_lighting_excludesubset):
+                            if subset.light_ob == light_ob:
+                                ob.renderman.rman_lighting_excludesubset.remove(j)
+                                break      
                     ob.update_tag(refresh={'OBJECT'})  
                     light_link.members.remove(idx)
                     light_link.members_index = idx-1

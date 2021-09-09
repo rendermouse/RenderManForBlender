@@ -346,6 +346,12 @@ class RendermanPreferences(AddonPreferences):
         update=lambda s,c: fix_path(s, 'rman_editor')
     )
 
+    rman_invert_light_linking: BoolProperty(
+        name="Invert Light Linking",
+        default=False,
+        description="Invert the behavior of light linking. Only objects linked to the light in the light linking editor will be illuminated. Changing this requires an IPR restart.",
+    )    
+
     rman_show_cycles_convert: BoolProperty(
         name="Convert Cycles Nodes",
         default=False,
@@ -480,6 +486,7 @@ class RendermanPreferences(AddonPreferences):
         col.prop(self, 'rman_render_nurbs_as_mesh')
         col.prop(self, 'rman_show_cycles_convert')     
         col.prop(self, 'rman_emit_default_params')    
+        col.prop(self, 'rman_invert_light_linking')
         col.prop(self, 'rman_editor')      
 
         # XPU Prefs

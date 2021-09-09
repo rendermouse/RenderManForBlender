@@ -3,6 +3,7 @@ from .. import rman_bl_nodes
 from ..rman_operators.rman_operators_utils import get_bxdf_items, get_light_items, get_lightfilter_items
 from ..rfb_utils import scene_utils
 from ..rfb_utils import shadergraph_utils
+from ..rfb_utils import prefs_utils
 from ..rman_config import __RFB_CONFIG_DICT__ as rfb_config
 from bpy.types import Menu
 import bpy
@@ -246,11 +247,14 @@ class VIEW3D_MT_RM_LightLinking_Menu(bpy.types.Menu):
         active_light = context.active_object
         selected_objects = context.selected_objects
         if active_light.type != 'LIGHT':
+            pass
+            '''
             if selected_objects:
                 layout.separator()
                 for l in scene_utils.get_all_lights(context.scene):
                     layout.context_pointer_set('light_ob', l)
                     layout.menu('VIEW3D_MT_RM_LightLinking_SubMenu', text=l.name)  
+            '''
             return
         light_props = shadergraph_utils.get_rman_light_properties_group(active_light)
         if light_props.renderman_light_role not in {'RMAN_LIGHTFILTER', 'RMAN_LIGHT'}:
@@ -258,13 +262,14 @@ class VIEW3D_MT_RM_LightLinking_Menu(bpy.types.Menu):
         selected_objects = context.selected_objects
         if selected_objects:
             layout.context_pointer_set('light_ob', active_light)
-            layout.separator()
-            op = layout.operator('renderman.update_light_link_illuminate', text="Default")
-            op.illuminate = 'DEFAULT'
-            op = layout.operator('renderman.update_light_link_illuminate', text="On")
-            op.illuminate = 'ON'
-            op = layout.operator('renderman.update_light_link_illuminate', text="Off")
-            op.illuminate = 'OFF'
+            if not prefs_utils.get_pref('rman_invert_light_linking'):
+                layout.separator()
+                op = layout.operator('renderman.update_light_link_illuminate', text="Default")
+                op.illuminate = 'DEFAULT'
+                op = layout.operator('renderman.update_light_link_illuminate', text="On")
+                op.illuminate = 'ON'
+                op = layout.operator('renderman.update_light_link_illuminate', text="Off")
+                op.illuminate = 'OFF'
             layout.separator()
             op = layout.operator('renderman.update_light_link_objects', text="Link selected to %s" % active_light.name)
             op.update_type = 'ADD'

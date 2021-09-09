@@ -3,6 +3,9 @@ from ..rfb_utils import transform_utils
 from ..rfb_utils import property_utils
 from ..rfb_utils import string_utils
 from ..rfb_utils import object_utils
+from ..rfb_utils import prefs_utils
+from ..rfb_utils import shadergraph_utils
+from ..rfb_utils import scene_utils
 import hashlib
 import os
 
@@ -129,7 +132,65 @@ class RmanTranslator(object):
                 procprimid = float(id)
                 attrs.SetFloat('user:procprimid', procprimid)  
 
-        rman_sg_node.sg_node.SetAttributes(attrs)      
+        rman_sg_node.sg_node.SetAttributes(attrs)     
+
+    def export_light_linking_attributes(self, ob, attrs): 
+        rm = ob.renderman
+
+        if prefs_utils.get_pref('rman_invert_light_linking'):
+            lighting_subset = []
+            lightfilter_subset = []
+            for ll in self.rman_scene.bl_scene.renderman.light_links:
+                light_ob = ll.light_ob                
+                light_props = shadergraph_utils.get_rman_light_properties_group(light_ob)
+                found = False
+                for member in ll.members:
+                    if member.ob_pointer == ob.original:
+                        found = True
+                        break
+                    
+                if light_props.renderman_light_role == 'RMAN_LIGHT':
+                    nm = string_utils.sanitize_node_name(light_ob.name)
+                    if found:                        
+                        lighting_subset.append(nm)
+
+                elif light_props.renderman_light_role == 'RMAN_LIGHT':                        
+                    if found:
+                        nm = string_utils.sanitize_node_name(light_ob.name)
+                        lightfilter_subset.append(nm)
+
+            if lighting_subset:
+                attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lighting_subset, ' '. join(lighting_subset) )
+                attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lighting_excludesubset, '')
+            else:
+                attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lighting_subset, '')
+                attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lighting_excludesubset, 'World')
+
+            if lightfilter_subset:
+                attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lightfilter_subset, ' ' . join(lightfilter_subset))
+            else:
+                attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lightfilter_subset, '')                 
+
+        else:
+            exclude_subset = []
+            lightfilter_subset = []
+            for subset in rm.rman_lighting_excludesubset:
+                nm = string_utils.sanitize_node_name(subset.light_ob.name)
+                exclude_subset.append(nm)
+
+            for subset in rm.rman_lightfilter_subset:
+                nm = string_utils.sanitize_node_name(subset.light_ob.name)
+                lightfilter_subset.append(nm)            
+
+            if exclude_subset:
+                attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lighting_excludesubset, ' '. join(exclude_subset) )
+            else:
+                attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lighting_excludesubset, '')
+
+            if lightfilter_subset:
+                attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lightfilter_subset, ' ' . join(lightfilter_subset))
+            else:
+                attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lightfilter_subset, '')                    
 
     def export_object_attributes(self, ob, rman_sg_node):
 
@@ -178,27 +239,7 @@ class RmanTranslator(object):
         if lpe_groups_str != '*':                       
             attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_identifier_lpegroup, lpe_groups_str)
       
-        # for each light link do illuminates
-        exclude_subset = []
-        lightfilter_subset = []
-
-        for subset in rm.rman_lighting_excludesubset:
-            nm = string_utils.sanitize_node_name(subset.light_ob.name)
-            exclude_subset.append(nm)
-
-        for subset in rm.rman_lightfilter_subset:
-            nm = string_utils.sanitize_node_name(subset.light_ob.name)
-            lightfilter_subset.append(nm)            
-
-        if exclude_subset:
-            attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lighting_excludesubset, ' '. join(exclude_subset) )
-        else:
-            attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lighting_excludesubset, '')
-
-        if lightfilter_subset:
-            attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lightfilter_subset, ' ' . join(lightfilter_subset))
-        else:
-            attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lightfilter_subset, '')
+        self.export_light_linking_attributes(ob, attrs)
 
         if hasattr(ob, 'color'):
             attrs.SetColor('user:Cs', ob.color[:3])   
