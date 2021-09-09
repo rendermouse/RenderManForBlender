@@ -202,6 +202,8 @@ def update_func(self, context):
                 socket.hide = True      
 
 def update_integrator_func(self, context):
+    node = self.node if hasattr(self, 'node') else self
+    update_conditional_visops(node)
     from .. import rman_render
     rr = rman_render.RmanRender.get_rman_render()
     rr.rman_scene_sync.update_integrator(context)            
