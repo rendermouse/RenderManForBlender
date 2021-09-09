@@ -35,6 +35,8 @@ class RendermanSceneSettings(RmanBasePropertyGroup, bpy.types.PropertyGroup):
     def update_light_link_index(self, context):
         scene = context.scene
         rm = scene.renderman
+        if rm.light_links_index == -1 or rm.light_links_index >= len(rm.light_links):
+            return
         light_links = rm.light_links[rm.light_links_index]
         light_ob = light_links.light_ob
                 

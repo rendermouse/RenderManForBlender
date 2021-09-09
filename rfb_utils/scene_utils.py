@@ -204,6 +204,25 @@ def get_all_lights(scene, include_light_filters=True):
                         lights.append(ob)       
     return lights
 
+def get_all_lightfilters(scene):
+    """Return a list of all lightfilters in the scene
+
+    Args:
+    scene (byp.types.Scene) - scene file to look for lights
+    
+    Returns:
+    (list) - list of all lightfilters
+    """
+
+    lightfilters = list()
+    for ob in scene.objects:
+        if ob.type == 'LIGHT':
+            if hasattr(ob.data, 'renderman'):
+                if ob.data.renderman.renderman_light_role == 'RMAN_LIGHTFILTER':            
+                    lightfilters.append(ob)
+
+    return lightfilters    
+
 def get_light_groups_in_scene(scene):
     """ Return a dictionary of light groups in the scene
 

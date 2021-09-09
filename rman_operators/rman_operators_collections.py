@@ -3,6 +3,7 @@ from ..rfb_utils import string_utils
 from ..rfb_logger import rfb_log
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import prefs_utils
+from ..rfb_utils import scenegraph_utils
 
 import bpy
 
@@ -671,7 +672,9 @@ class PRMAN_OT_add_light_link(bpy.types.Operator):
         if self.properties.do_scene_selected:
             self.add_scene_selected(context)
         else:
-            self.add_selected(context)               
+            self.add_selected(context)   
+        if prefs_utils.get_pref('rman_invert_light_linking'):
+            scenegraph_utils.update_sg_root_node(context)                        
 
         return {'FINISHED'}
 
@@ -704,6 +707,9 @@ class PRMAN_OT_remove_light_link(bpy.types.Operator):
             light_link.light_ob.update_tag(refresh={'DATA'})
             rm.light_links.remove(group_index)
             rm.light_links_index -= 1
+            
+        if prefs_utils.get_pref('rman_invert_light_linking'):
+            scenegraph_utils.update_sg_root_node(context)              
 
         return {'FINISHED'}
 
@@ -816,7 +822,10 @@ class PRMAN_OT_light_link_update_objects(bpy.types.Operator):
                     m.name = ob.name
                     m.ob_pointer = ob
                     light_ob = light_link.light_ob
-                ob.update_tag(refresh={'OBJECT'})                                                  
+                if prefs_utils.get_pref('rman_invert_light_linking'):
+                    scenegraph_utils.update_sg_root_node(context)
+                ob.update_tag(refresh={'OBJECT'})
+
         else:
             for ob in context.selected_objects:
                 if ob.type == 'LIGHT':
@@ -835,6 +844,8 @@ class PRMAN_OT_light_link_update_objects(bpy.types.Operator):
                             if subset.light_ob == light_ob:
                                 ob.renderman.rman_lighting_excludesubset.remove(j)
                                 break      
+                    if prefs_utils.get_pref('rman_invert_light_linking'):
+                        scenegraph_utils.update_sg_root_node(context)                            
                     ob.update_tag(refresh={'OBJECT'})  
                     light_link.members.remove(idx)
                     light_link.members_index = idx-1

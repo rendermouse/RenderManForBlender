@@ -161,10 +161,8 @@ class RmanTranslator(object):
 
             if lighting_subset:
                 attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lighting_subset, ' '. join(lighting_subset) )
-                attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lighting_excludesubset, '')
             else:
                 attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lighting_subset, '')
-                attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lighting_excludesubset, 'World')
 
             if lightfilter_subset:
                 attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lightfilter_subset, ' ' . join(lightfilter_subset))

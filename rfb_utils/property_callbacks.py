@@ -3,6 +3,7 @@ from .rman_socket_utils import node_add_inputs
 from .rman_socket_utils import node_add_outputs
 from .rman_socket_utils import update_inputs
 from .shadergraph_utils import has_lobe_enable_props
+from . import scenegraph_utils
 from ..rfb_logger import rfb_log
 import bpy
 
@@ -204,16 +205,10 @@ def update_func(self, context):
 def update_integrator_func(self, context):
     node = self.node if hasattr(self, 'node') else self
     update_conditional_visops(node)
-    from .. import rman_render
-    rr = rman_render.RmanRender.get_rman_render()
-    rr.rman_scene_sync.update_integrator(context)            
+    scenegraph_utils.update_sg_integrator(context)           
 
 def update_options_func(self, context):
-    from .. import rman_render
-    rr = rman_render.RmanRender.get_rman_render()
-    rr.rman_scene_sync.update_global_options(context)   
+    scenegraph_utils.update_sg_options(context)
 
 def update_root_node_func(self, context):
-    from .. import rman_render
-    rr = rman_render.RmanRender.get_rman_render()
-    rr.rman_scene_sync.update_root_node_func(context)      
+    scenegraph_utils.update_sg_root_node(context)
