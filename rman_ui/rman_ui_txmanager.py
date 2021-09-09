@@ -359,7 +359,7 @@ class PRMAN_OT_Renderman_txmanager_apply_preset(Operator):
         # update any nodes with colorspace in it
         tokens = item.nodeID.split('|')
         if len(tokens) < 3:
-            return
+            return {'FINISHED'}
         node_name,prop_name,ob_name = tokens            
         prop_colorspace_name = '%s_colorspace' % prop_name
 
@@ -377,7 +377,7 @@ class PRMAN_OT_Renderman_txmanager_apply_preset(Operator):
         except AttributeError:
             pass        
 
-        return {'FINISHED'}        
+        return {'FINISHED'}
 
 class PRMAN_OT_Renderman_txmanager_add_texture(Operator):
     """Add texture."""
