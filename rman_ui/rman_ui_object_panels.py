@@ -530,49 +530,6 @@ class OBJECT_PT_renderman_object_geometry_rib_archive(Panel, CollectionPanel):
             col.prop(anim, "sequence_in")
             col.prop(anim, "sequence_out")
 
-class OBJECT_PT_renderman_object_geometry_openvdb(Panel, CollectionPanel):
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = "object"
-    bl_label = "OpenVDB"
-    bl_parent_id = "OBJECT_PT_renderman_object_geometry"
-
-    @classmethod
-    def poll(cls, context):
-        rd = context.scene.render
-        rm = context.object.renderman
-        if context.object.type in ['LIGHT']:
-            return False
-        if rm.primitive != 'OPENVDB':
-            return False
-        return (context.object and rd.engine in {'PRMAN_RENDER'})
-
-    def draw_item(self, layout, context, item):
-        col = layout.column()
-        col.prop(item, "name")
-        col.prop(item, "type")
-
-    def draw(self, context):
-
-        self.layout.use_property_split = True
-        self.layout.use_property_decorate = False
-
-        layout = self.layout        
-        ob = context.object
-        rm = ob.renderman
-        active = context.active_object
-        rman_type = object_utils._detect_primitive_(active)
-
-        rman_interactive_running = context.scene.renderman.is_rman_interactive_running
-
-        col = layout.column()
-        col.enabled = not rman_interactive_running        
-        col = layout.column(align = True)   
-        _draw_ui_from_rman_config('rman_properties_object', 'OBJECT_PT_renderman_object_geometry_openvdb', context, layout, rm)                     
-        self._draw_collection(context, layout, rm, "",
-                            "collection.add_remove", "object.renderman",
-                            "openvdb_channels", "openvdb_channel_index")
-
 class OBJECT_PT_renderman_object_geometry_points(Panel, CollectionPanel):
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
@@ -906,7 +863,6 @@ classes = [
     OBJECT_PT_renderman_object_geometry_runprogram,
     OBJECT_PT_renderman_object_geometry_dynamic_load_dso,
     OBJECT_PT_renderman_object_geometry_rib_archive,
-    OBJECT_PT_renderman_object_geometry_openvdb,
     OBJECT_PT_renderman_object_geometry_points,
     OBJECT_PT_renderman_object_geometry_volume,
     OBJECT_PT_renderman_object_geometry_brickmap,
