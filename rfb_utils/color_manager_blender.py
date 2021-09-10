@@ -53,9 +53,6 @@ def get_colorspace_name():
     """
     clrmgr = color_manager()
     
-    ociopath = envconfig().getenv('OCIO')
-    if ociopath is None:
-        ociopath = envconfig().get_blender_ocio_config()
     if ColorManager:
         clrmgr.update()
         return clrmgr.scene_colorspace_name
