@@ -305,6 +305,7 @@ class PRMAN_OT_Renderman_txmanager_reconvert_selected(Operator):
         if txfile:
             rr = rman_render.RmanRender.get_rman_render()
             txfile.delete_texture_files()
+            txfile.build_texture_dict()
             if item.nodeID:
                 rr.rman_scene_sync.texture_updated(item.nodeID)
             texture_utils.get_txmanager().txmake_all(blocking=False)
@@ -352,6 +353,7 @@ class PRMAN_OT_Renderman_txmanager_apply_preset(Operator):
             if txfile:
                 txfile.params.from_dict(txsettings)
                 txfile.delete_texture_files()
+                txfile.build_texture_dict()
                 texture_utils.get_txmanager().txmake_all(blocking=False)
 
         texture_utils.get_txmanager().txmanager.save_state()

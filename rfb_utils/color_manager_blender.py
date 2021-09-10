@@ -9,6 +9,14 @@ except:
 
 __clrmgr__ = None
 
+class ColorManagerBlender(ColorManager):
+    def __init__(self, config_path, **kwargs):
+        super(ColorManagerBlender, self).__init__(config_path, **kwargs)
+
+    def update(self):
+        ociopath = get_config_path()
+        super(ColorManagerBlender, self).update(ociopath)
+
 def color_manager():
     """return the color manager singleton
     """
@@ -25,7 +33,7 @@ def init():
     if __clrmgr__ is None:
         ociopath = envconfig().getenv('OCIO', envconfig().get_blender_ocio_config())
         if ColorManager:
-            __clrmgr__ = ColorManager(ociopath)
+            __clrmgr__ = ColorManagerBlender(ociopath)
 
 def get_config_path():
     """return ocio config path. updating with $OCIO
