@@ -8,6 +8,7 @@ from . import rman_properties_world
 from . import rman_properties_renderlayers
 from . import rman_properties_camera
 from . import rman_properties_particles
+from . import rman_properties_volume
 
 def register():
     rman_properties_misc.register()    
@@ -20,6 +21,7 @@ def register():
     rman_properties_world.register()
     rman_properties_camera.register()
     rman_properties_particles.register()
+    rman_properties_volume.register()
 
 def unregister():
     rman_properties_misc.unregister()    
@@ -32,3 +34,4 @@ def unregister():
     rman_properties_world.unregister()
     rman_properties_camera.unregister()
     rman_properties_particles.unregister()
+    rman_properties_volume.unregister()

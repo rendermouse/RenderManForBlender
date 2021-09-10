@@ -1,0 +1,45 @@
+{
+    "name": "rman_properties_volume",
+    "params": [
+        {
+            "panel": "VOLUME_PT_renderman_openvdb_attributes",
+            "name": "openvdb_filterwidth",
+            "label": "Filter Width",
+            "type": "float",
+            "editable": true,
+            "default": 0.0,
+            "page": "",
+            "help": ""
+        },                   
+        {
+            "panel": "VOLUME_PT_renderman_openvdb_attributes",
+            "name": "openvdb_velocityscale",
+            "label": "Velocity Scale",
+            "type": "float",
+            "editable": true,
+            "default": 1.0,
+            "page": "",
+            "help": ""
+        }, 
+        {
+            "panel": "VOLUME_PT_renderman_openvdb_attributes",
+            "name": "openvdb_densitymult",
+            "label": "Density Multiplier",
+            "type": "float",
+            "editable": true,
+            "default": 1.0,
+            "page": "",
+            "help": ""
+        }, 
+        {
+            "panel": "VOLUME_PT_renderman_openvdb_attributes",
+            "name": "openvdb_densityrolloff",
+            "label": "Density Rollout",
+            "type": "float",
+            "editable": true,
+            "default": 0.0,
+            "page": "",
+            "help": ""
+        }
+    ]
+}        

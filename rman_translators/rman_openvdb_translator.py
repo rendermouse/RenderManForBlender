@@ -4,6 +4,7 @@ from ..rfb_utils import filepath_utils
 from ..rfb_utils import transform_utils
 from ..rfb_utils import string_utils
 from ..rfb_logger import rfb_log
+import json
 
 class RmanOpenVDBTranslator(RmanTranslator):
 
@@ -25,6 +26,7 @@ class RmanOpenVDBTranslator(RmanTranslator):
 
     def update(self, ob, rman_sg_openvdb):
         db = ob.data
+        rm = db.renderman
 
         primvar = rman_sg_openvdb.sg_node.GetPrimVars()
         primvar.Clear()
@@ -49,10 +51,24 @@ class RmanOpenVDBTranslator(RmanTranslator):
             openvdb_file = filepath_utils.get_real_path(grids.frame_filepath)
 
         active_index = grids.active_index
-        active_grid = grids[active_index]        
+        active_grid = grids[active_index]    
+
+        openvdb_attrs = dict()
+        openvdb_attrs['FilterWidth'] = getattr(rm, 'openvdb_filterwidth')
+        openvdb_attrs['VelocityScale'] = getattr(rm, 'openvdb_velocityscale')
+        openvdb_attrs['densitymult'] = getattr(rm, 'openvdb_densitymult')
+        openvdb_attrs['densityrolloff'] = getattr(rm, 'openvdb_densityrolloff')
+
+        json_attrs = str(json.dumps(openvdb_attrs))
+
 
         primvar.SetString(self.rman_scene.rman.Tokens.Rix.k_Ri_type, "blobbydso:impl_openvdb")  
-        primvar.SetStringArray(self.rman_scene.rman.Tokens.Rix.k_blobbydso_stringargs, [openvdb_file, "%s:fogvolume" % active_grid.name], 2)
+        string_args = []
+        string_args.append(openvdb_file)
+        string_args.append("%s:fogvolume" % active_grid.name)
+        string_args.append('') # for now, we don't support specifying the velocity grid
+        string_args.append(json_attrs)
+        primvar.SetStringArray(self.rman_scene.rman.Tokens.Rix.k_blobbydso_stringargs, string_args, len(string_args))
 
         for i, grid in enumerate(grids):
             if grid.data_type in ['FLOAT', 'DOUBLE']:
