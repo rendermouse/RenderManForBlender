@@ -14,7 +14,7 @@ class ColorManagerBlender(ColorManager):
         super(ColorManagerBlender, self).__init__(config_path, **kwargs)
 
     def update(self):
-        ociopath = get_config_path()
+        ociopath = get_env_config_path()
         super(ColorManagerBlender, self).update(ociopath)
 
 def color_manager():
@@ -31,22 +31,25 @@ def init():
     global __clrmgr__
 
     if __clrmgr__ is None:
-        ociopath = envconfig().getenv('OCIO', envconfig().get_blender_ocio_config())
+        ociopath = get_env_config_path()
         if ColorManager:
             __clrmgr__ = ColorManagerBlender(ociopath)
 
+def get_env_config_path():
+    """return ocio config path from the environment
+    """
+    blender_config_path = envconfig().get_blender_ocio_config()
+    ociopath = envconfig().getenv('OCIO', blender_config_path)
+    return ociopath
+
 def get_config_path():
-    """return ocio config path. updating with $OCIO
+    """return ocio config path
     """
     clrmgr = color_manager()
     if clrmgr:
         return clrmgr.config_file_path()
 
-    ociopath = envconfig().getenv('OCIO')
-    if ociopath is None:
-        ociopath = envconfig().get_blender_ocio_config()
-
-    return ociopath
+    return get_env_config_path()
 
 def get_colorspace_name():
     """return the scene colorspace name. updating with $OCIO
