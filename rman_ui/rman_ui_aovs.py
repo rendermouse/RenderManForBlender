@@ -373,7 +373,12 @@ class RENDER_PT_layer_custom_aovs(CollectionPanel, Panel):
             col.prop(rl, "use_pass_ambient_occlusion")
         else:  
             if scene.renderman.is_rman_interactive_running:
-                layout.operator("renderman.dspy_displays_reload")            
+                layout.operator("renderman.dspy_displays_reload")  
+            split = layout.split(factor=0.9)
+            col = split.column()
+            col = split.column()
+            col.enabled = not scene.renderman.is_rman_interactive_running
+            col.operator('renderman.revert_renderman_displays', text='Revert')                          
             layout.operator_menu_enum(
                 "renderman.dspy_rman_add_dspy_template", 'dspy_template', text="Add Display Template")  
             layout.context_pointer_set("pass_list", rm_rl)
@@ -406,6 +411,20 @@ class RENDER_PT_layer_options(PRManButtonsPanel, Panel):
             split = layout.split()
             col = split.column()
 
+class PRMAN_OT_revert_renderman_aovs(bpy.types.Operator):
+    bl_idname = 'renderman.revert_renderman_displays'
+    bl_label = "Revert to Blender Displays"
+    bl_description = "Switch back to the Blender display system"
+
+    def execute(self, context):
+        active_layer = context.view_layer
+        rm_rl = active_layer.renderman
+        rm_rl.custom_aovs.clear()        
+        rm_rl.use_renderman = False
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_confirm(self, event)
 
 class PRMAN_OT_add_renderman_aovs(bpy.types.Operator):
     bl_idname = 'renderman.dspy_convert_renderman_displays'
@@ -609,6 +628,7 @@ classes = [
     RENDER_PT_layer_custom_aovs,
     RENDER_PT_layer_options,
     PRMAN_OT_add_renderman_aovs,
+    PRMAN_OT_revert_renderman_aovs,
     PRMAN_OT_Renderman_Displays_Reload,
     PRMAN_MT_renderman_create_dspychan_menu,
     PRMAN_MT_renderman_create_dspychan_submenu_existing    
