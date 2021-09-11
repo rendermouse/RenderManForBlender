@@ -26,6 +26,7 @@ def update_colorspace_name(self, context, param_name):
                 params['ocioconvert'] = ociconvert
                 txfile.params.from_dict(params)
                 txfile.delete_texture_files()
+                txfile.build_texture_dict()
                 texture_utils.get_txmanager().txmake_all(blocking=False)     
 
                 bpy.ops.rman_txmgr_list.refresh('EXEC_DEFAULT')  
