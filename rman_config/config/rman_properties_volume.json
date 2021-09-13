@@ -9,7 +9,7 @@
             "editable": true,
             "default": 0.0,
             "page": "",
-            "help": ""
+            "help": "If set to 0, disables mipmapping. If greater than 0, values less than 1 bias towards finer levels of the mipmap and values larger than one bias towards coarser levels."
         },                   
         {
             "panel": "VOLUME_PT_renderman_openvdb_attributes",
@@ -19,7 +19,7 @@
             "editable": true,
             "default": 1.0,
             "page": "",
-            "help": ""
+            "help": "Scales the values in the velocity field of the volume."
         }, 
         {
             "panel": "VOLUME_PT_renderman_openvdb_attributes",
@@ -29,7 +29,7 @@
             "editable": true,
             "default": 1.0,
             "page": "",
-            "help": ""
+            "help": "Scales the values in the density grid of the volume. This should be more efficient than scaling the density in the shader."
         }, 
         {
             "panel": "VOLUME_PT_renderman_openvdb_attributes",
@@ -39,7 +39,7 @@
             "editable": true,
             "default": 0.0,
             "page": "",
-            "help": ""
+            "help": "Values greater than 0 produce a logarithmic falloff in density values. Smaller rolloff values produce greater falloff."
         }
     ]
 }        
