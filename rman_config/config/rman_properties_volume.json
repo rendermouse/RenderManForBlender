@@ -34,7 +34,7 @@
         {
             "panel": "VOLUME_PT_renderman_openvdb_attributes",
             "name": "openvdb_densityrolloff",
-            "label": "Density Rollout",
+            "label": "Density Rolloff",
             "type": "float",
             "editable": true,
             "default": 0.0,
