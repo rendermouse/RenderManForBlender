@@ -137,38 +137,41 @@ class RmanTranslator(object):
     def export_light_linking_attributes(self, ob, attrs): 
         rm = ob.renderman
 
-        if prefs_utils.get_pref('rman_invert_light_linking'):
+        if self.rman_scene.bl_scene.renderman.invert_light_linking:
             lighting_subset = []
             lightfilter_subset = []
+            bl_scene = self.rman_scene.bl_scene
+            all_lights = [string_utils.sanitize_node_name(l.name) for l in scene_utils.get_all_lights(bl_scene, include_light_filters=False)]
+            all_lightfilters = [string_utils.sanitize_node_name(l.name) for l in scene_utils.get_all_lightfilters(bl_scene)]
             for ll in self.rman_scene.bl_scene.renderman.light_links:
                 light_ob = ll.light_ob                
                 light_props = shadergraph_utils.get_rman_light_properties_group(light_ob)
                 found = False
                 for member in ll.members:
-                    if member.ob_pointer == ob.original:
+                    if member.ob_pointer.original == ob.original:
                         found = True
                         break
                     
                 if light_props.renderman_light_role == 'RMAN_LIGHT':
                     nm = string_utils.sanitize_node_name(light_ob.name)
-                    if found:                        
+                    if found:
                         lighting_subset.append(nm)
+                    all_lights.remove(nm)
 
                 elif light_props.renderman_light_role == 'RMAN_LIGHT':                        
                     if found:
                         nm = string_utils.sanitize_node_name(light_ob.name)
                         lightfilter_subset.append(nm)
+                    all_lightfilters.remove(nm)
 
             if lighting_subset:
+                lighting_subset = lighting_subset + all_lights # include all other lights that are not linked
                 attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lighting_subset, ' '. join(lighting_subset) )
-            else:
-                attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lighting_subset, '')
 
             if lightfilter_subset:
+                lightfilter_subset = lightfilter_subset + all_lightfilters
                 attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lightfilter_subset, ' ' . join(lightfilter_subset))
-            else:
-                attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lightfilter_subset, '')                 
-
+             
         else:
             exclude_subset = []
             lightfilter_subset = []

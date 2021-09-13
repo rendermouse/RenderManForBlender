@@ -524,15 +524,29 @@ class RmanScene(object):
             param_type = meta['renderman_type']         
             property_utils.set_rix_param(attrs, param_type, ri_name, val, is_reference=False, is_array=is_array, array_len=array_len, node=rm)
 
-        if get_pref('rman_invert_light_linking'):
-            all_lights = [l.name for l in scene_utils.get_all_lights(self.bl_scene, include_light_filters=False)]
+        if rm.invert_light_linking:
+            all_lights = [string_utils.sanitize_node_name(l.name) for l in scene_utils.get_all_lights(self.bl_scene, include_light_filters=False)]
+            all_lightfilters = [string_utils.sanitize_node_name(l.name) for l in scene_utils.get_all_lightfilters(self.bl_scene)]
             for ll in rm.light_links:
                 light_ob = ll.light_ob
-                if light_ob.name in all_lights:
-                    all_lights.remove(light_ob.name)
-            
-            attrs.SetString(self.rman.Tokens.Rix.k_lighting_subset, ' '. join(all_lights) )
+                light_nm = string_utils.sanitize_node_name(light_ob.name)
+                light_props = shadergraph_utils.get_rman_light_properties_group(light_ob)
+                if light_props.renderman_light_role == 'RMAN_LIGHT':
+                    if light_nm in all_lights:
+                        all_lights.remove(light_nm)
+                elif light_nm in all_lightfilters:
+                    all_lightfilters.remove(light_nm)
+                
+            if all_lights:
+                attrs.SetString(self.rman.Tokens.Rix.k_lighting_subset, ' '. join(all_lights) )
+            else:
+                attrs.SetString(self.rman.Tokens.Rix.k_lighting_subset, '*')
 
+            if all_lightfilters:
+                attrs.SetString(self.rman.Tokens.Rix.k_lightfilter_subset, ' '. join(all_lightfilters) )
+            else:
+                attrs.SetString(self.rman.Tokens.Rix.k_lightfilter_subset, '*')                
+            
         root_sg.SetAttributes(attrs)
         
     def get_root_sg_node(self):

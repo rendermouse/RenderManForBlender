@@ -3,7 +3,6 @@ from .. import rman_bl_nodes
 from ..rman_operators.rman_operators_utils import get_bxdf_items, get_light_items, get_lightfilter_items
 from ..rfb_utils import scene_utils
 from ..rfb_utils import shadergraph_utils
-from ..rfb_utils import prefs_utils
 from ..rman_config import __RFB_CONFIG_DICT__ as rfb_config
 from bpy.types import Menu
 import bpy
@@ -262,7 +261,7 @@ class VIEW3D_MT_RM_LightLinking_Menu(bpy.types.Menu):
         selected_objects = context.selected_objects
         if selected_objects:
             layout.context_pointer_set('light_ob', active_light)
-            if not prefs_utils.get_pref('rman_invert_light_linking'):
+            if not rm.invert_light_linking:
                 layout.separator()
                 op = layout.operator('renderman.update_light_link_illuminate', text="Default")
                 op.illuminate = 'DEFAULT'

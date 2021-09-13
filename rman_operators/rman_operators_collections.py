@@ -2,7 +2,6 @@ from bpy.props import StringProperty, BoolProperty, EnumProperty, IntProperty,  
 from ..rfb_utils import string_utils
 from ..rfb_logger import rfb_log
 from ..rfb_utils import shadergraph_utils
-from ..rfb_utils import prefs_utils
 from ..rfb_utils import scenegraph_utils
 
 import bpy
@@ -584,7 +583,7 @@ class PRMAN_OT_remove_light_link_object(bpy.types.Operator):
             if member.ob_pointer == ob:
                 ll.members.remove(i)
                 ll.members_index -= 1
-                if not prefs_utils.get_pref('rman_invert_light_linking'):
+                if not rm.invert_light_linking:
                     grp = ob.renderman.rman_lighting_excludesubset
                     light_props = shadergraph_utils.get_rman_light_properties_group(ll.light_ob)
                     if light_props.renderman_light_role == 'RMAN_LIGHTFILTER':
@@ -673,7 +672,7 @@ class PRMAN_OT_add_light_link(bpy.types.Operator):
             self.add_scene_selected(context)
         else:
             self.add_selected(context)   
-        if prefs_utils.get_pref('rman_invert_light_linking'):
+        if context.scene.renderman.invert_light_linking:
             scenegraph_utils.update_sg_root_node(context)                        
 
         return {'FINISHED'}
@@ -708,7 +707,7 @@ class PRMAN_OT_remove_light_link(bpy.types.Operator):
             rm.light_links.remove(group_index)
             rm.light_links_index -= 1
             
-        if prefs_utils.get_pref('rman_invert_light_linking'):
+        if rm.invert_light_linking:
             scenegraph_utils.update_sg_root_node(context)              
 
         return {'FINISHED'}
@@ -822,7 +821,7 @@ class PRMAN_OT_light_link_update_objects(bpy.types.Operator):
                     m.name = ob.name
                     m.ob_pointer = ob
                     light_ob = light_link.light_ob
-                if prefs_utils.get_pref('rman_invert_light_linking'):
+                if rm.invert_light_linking:
                     scenegraph_utils.update_sg_root_node(context)
                 ob.update_tag(refresh={'OBJECT'})
 
@@ -838,13 +837,13 @@ class PRMAN_OT_light_link_update_objects(bpy.types.Operator):
                         idx = j
                         break
                 if member:
-                    if not prefs_utils.get_pref('rman_invert_light_linking'):
+                    if not rm.invert_light_linking:
                         light_ob = light_link.light_ob  
                         for j, subset in enumerate(ob.renderman.rman_lighting_excludesubset):
                             if subset.light_ob == light_ob:
                                 ob.renderman.rman_lighting_excludesubset.remove(j)
                                 break      
-                    if prefs_utils.get_pref('rman_invert_light_linking'):
+                    if rm.invert_light_linking:
                         scenegraph_utils.update_sg_root_node(context)                            
                     ob.update_tag(refresh={'OBJECT'})  
                     light_link.members.remove(idx)

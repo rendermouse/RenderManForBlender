@@ -3,6 +3,7 @@ from bpy.props import PointerProperty, StringProperty, BoolProperty, \
     CollectionProperty
 
 from ...rfb_utils.envconfig_utils import envconfig
+from ...rfb_utils.prefs_utils import get_pref
 from ...rfb_logger import rfb_log
 from ... import rman_render
 from ... import rman_bl_nodes
@@ -119,6 +120,9 @@ class RendermanSceneSettings(RmanBasePropertyGroup, bpy.types.PropertyGroup):
         rman_render = RmanRender.get_rman_render()
         return rman_render.rman_is_viewport_rendering
 
+    def get_light_linking_inverted(self):
+        return get_pref('rman_invert_light_linking')
+
     current_platform: StringProperty(get=get_platform)
     is_ncr_license: BoolProperty(get=get_is_ncr_license)
     has_xpu_license: BoolProperty(get=get_has_xpu_license)
@@ -126,7 +130,8 @@ class RendermanSceneSettings(RmanBasePropertyGroup, bpy.types.PropertyGroup):
     is_rman_running: BoolProperty(get=get_is_rman_running)
     is_rman_interactive_running: BoolProperty(get=get_is_rman_interactive_running)         
     is_rman_swatch_render_running: BoolProperty(get=get_is_rman_swatch_render_running)  
-    is_rman_viewport_rendering:  BoolProperty(get=get_is_rman_viewport_rendering)  
+    is_rman_viewport_rendering:  BoolProperty(get=get_is_rman_viewport_rendering)
+    invert_light_linking: BoolProperty(get=get_light_linking_inverted)  
 
     # Roz Stats Properties
     def get_roz_stats_progress(self):

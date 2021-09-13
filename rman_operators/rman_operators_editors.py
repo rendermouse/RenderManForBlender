@@ -6,7 +6,6 @@ from ..rfb_utils import scene_utils
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import string_utils
 from ..rfb_utils import object_utils
-from ..rfb_utils import prefs_utils
 from ..rfb_utils.envconfig_utils import envconfig
 from ..rfb_logger import rfb_log
 from .. import rfb_icons
@@ -445,18 +444,18 @@ class PRMAN_PT_Renderman_Open_Light_Linking(bpy.types.Operator):
         flow.label(text='')
 
         row = layout.row()
-        if not prefs_utils.get_pref('rman_invert_light_linking'):
+        if not rm.invert_light_linking:
             flow = row.column_flow(columns=3)
         else:
             flow = row.column_flow(columns=2)
 
         flow.label(text='Lights')
         flow.label(text='Objects')
-        if not prefs_utils.get_pref('rman_invert_light_linking'):
+        if not rm.invert_light_linking:
             flow.label(text='Illumination')
 
         row = layout.row()
-        if not prefs_utils.get_pref('rman_invert_light_linking'):
+        if not rm.invert_light_linking:
             flow = row.column_flow(columns=3)
         else:
             flow = row.column_flow(columns=2)
@@ -501,7 +500,7 @@ class PRMAN_PT_Renderman_Open_Light_Linking(bpy.types.Operator):
                 flow.template_list("RENDERMAN_UL_LightLink_Object_List", "Renderman_light_link_list",
                                 light_link_item, "members", light_link_item, 'members_index', rows=4)                                          
       
-            if not prefs_utils.get_pref('rman_invert_light_linking'):
+            if not rm.invert_light_linking:
                 col = flow.column()
                 if is_rman_light and len(light_link_item.members) > 0:
                     member = light_link_item.members[light_link_item.members_index]
