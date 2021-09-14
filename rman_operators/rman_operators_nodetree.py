@@ -160,7 +160,6 @@ class SHADING_OT_convert_cycles_to_renderman_nodetree(bpy.types.Operator):
 
             output.inputs[3].hide = True
 
-
         for n in nt.nodes:
             n.select = False               
                       
@@ -374,7 +373,7 @@ class SHADING_OT_add_displayfilters_nodetree(bpy.types.Operator):
 
     ''''''
     bl_idname = "material.rman_add_displayfilters_nodetree"
-    bl_label = "Add RenderMan Dsiplay Filters Nodetree"
+    bl_label = "Add RenderMan Display Filters Nodetree"
     bl_description = "Add a RenderMan display filters node tree. Note, a PxrBackgroundDisplayFilter will be automatically added for you, that will inherit the world color."
     bl_options = {'INTERNAL'}
 
@@ -392,7 +391,13 @@ class SHADING_OT_add_displayfilters_nodetree(bpy.types.Operator):
         df_output.location = df_output.location
         df_output.location[0] -= 300
 
-        rman_cycles_convert.convert_world_nodetree(world, context, df_output)
+        node_name = rman_bl_nodes.__BL_NODES_MAP__.get('PxrBackgroundDisplayFilter')
+        filter_color = world.color
+        bg = nt.nodes.new(node_name)
+        bg.backgroundColor = filter_color
+        bg.location = df_output.location
+        bg.location[0] -= 300
+        nt.links.new(bg.outputs[0], df_output.inputs[0])          
 
         # unselect all nodes
         for n in nt.nodes:
@@ -401,7 +406,48 @@ class SHADING_OT_add_displayfilters_nodetree(bpy.types.Operator):
         return {'FINISHED'}
 
     def invoke(self, context, event): 
+        return self.execute(context)  
+
+class SHADING_OT_world_convert_material(bpy.types.Operator):
+
+    ''''''
+    bl_idname = "world.rman_convert_material"
+    bl_label = "Convert World Material"
+    bl_description = "Try to convert the world material"
+    bl_options = {'INTERNAL'}
+
+    def execute(self, context):
+        
+        world = context.scene.world
+        world.use_nodes = True
+        nt = world.node_tree
+
+        output = nt.nodes.new('RendermanIntegratorsOutputNode')
+        node_name = rman_bl_nodes.__BL_NODES_MAP__.get('PxrPathTracer')
+        default = nt.nodes.new(node_name)
+        default.location = output.location
+        default.location[0] -= 200
+        nt.links.new(default.outputs[0], output.inputs[0]) 
+
+        sf_output = nt.nodes.new('RendermanSamplefiltersOutputNode')
+        sf_output.location = default.location
+        sf_output.location[0] -= 300
+
+        df_output = nt.nodes.new('RendermanDisplayfiltersOutputNode')
+        df_output.location = sf_output.location
+        df_output.location[0] -= 300     
+       
+        rman_cycles_convert.convert_world_nodetree(world, context, df_output)
+
+        # unselect all nodes
+        for n in nt.nodes:
+            n.select = False   
+
+        return {'FINISHED'}
+
+    def invoke(self, context, event): 
         return self.execute(context)        
+
 
 
 class SHADING_OT_add_samplefilters_nodetree(bpy.types.Operator):
@@ -636,6 +682,7 @@ classes = [
     SHADING_OT_add_renderman_nodetree,
     SHADING_OT_add_integrator_nodetree,
     SHADING_OT_add_displayfilters_nodetree,
+    SHADING_OT_world_convert_material,
     SHADING_OT_add_samplefilters_nodetree,
     PRMAN_OT_New_bxdf,
     PRMAN_OT_New_Material_Override,

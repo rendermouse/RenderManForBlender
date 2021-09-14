@@ -6,6 +6,7 @@ from ..rfb_utils.scene_utils import EXCLUDED_OBJECT_TYPES
 from ..rfb_utils.envconfig_utils import envconfig
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import object_utils
+from ..rfb_utils import string_utils
 from .. import rfb_icons
 from ..rman_constants import RFB_ADDON_PATH, RMAN_BL_NODE_DESCRIPTIONS
 from .rman_operators_utils import get_bxdf_items, get_light_items, get_lightfilter_items, get_description
@@ -185,6 +186,8 @@ class PRMAN_OT_RM_Add_Light(bpy.types.Operator):
     def execute(self, context):
         bpy.ops.object.light_add(type='AREA')
         light_ob = context.object
+        if not light_ob:
+            light_ob = context.selected_objects[0]
 
         light_ob.data.renderman.renderman_light_role = 'RMAN_LIGHT'
         light_ob.data.renderman.renderman_lock_light_type = True

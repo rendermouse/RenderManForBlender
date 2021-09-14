@@ -5,6 +5,7 @@ from ..rfb_utils.draw_utils import _draw_ui_from_rman_config, draw_nodes_propert
 from ..rman_constants import NODE_LAYOUT_SPLIT
 from ..rfb_utils import prefs_utils
 from ..rfb_utils.shadergraph_utils import find_node
+from ..rfb_logger import rfb_log
 from .. import rfb_icons
 from bpy.types import Panel
 import bpy
@@ -153,7 +154,7 @@ class RENDER_PT_renderman_world_display_filters(PRManButtonsPanel, Panel):
             return        
         output = find_node(world, 'RendermanDisplayfiltersOutputNode')
         if not output:
-            layout.operator('material.rman_add_displayfilters_nodetree', icon_value=rman_icon.icon_id)            
+            layout.operator('material.rman_add_displayfilters_nodetree', icon_value=rman_icon.icon_id)  
             return           
 
         rm = world.renderman

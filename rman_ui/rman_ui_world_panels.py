@@ -31,13 +31,13 @@ class DATA_PT_renderman_world(ShaderPanel, Panel):
         world = context.scene.world
 
         output = find_node(world, 'RendermanDisplayfiltersOutputNode')  
-        #if not world.renderman.use_renderman_node:
-        if not output:
+        if not world.renderman.use_renderman_node:
             layout.prop(world, 'color')
             row = layout.row(align=True)
             col = row.column()
-            #rman_icon = rfb_icons.get_icon('rman_graph')
-            #col.operator('material.rman_add_rman_nodetree', icon_value=rman_icon.icon_id).idtype = 'world'
+            rman_icon = rfb_icons.get_icon('rman_graph')
+            if do_cycles_convert():
+                col.operator('material.rman_add_rman_nodetree', icon_value=rman_icon.icon_id).idtype = 'world'
         
 class DATA_PT_renderman_world_integrators(ShaderPanel, Panel):
     bl_label = "Integrator"
