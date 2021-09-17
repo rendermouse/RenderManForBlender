@@ -1,10 +1,10 @@
 from ..rfb_logger import rfb_log
 from ..rfb_utils.osl_utils import readOSO
 from ..rfb_utils import rman_socket_utils
-from .. import rman_render
 from ..rfb_utils import string_utils
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import draw_utils
+from ..rfb_utils import filepath_utils
 from ..rman_config import __RFB_CONFIG_DICT__
 from .. import rfb_icons
 from .. import rman_render
@@ -339,6 +339,7 @@ class RendermanShadingNode(bpy.types.ShaderNode):
 
         if getattr(node, "codetypeswitch") == "EXT":
             osl_path = string_utils.expand_string(getattr(node, 'shadercode'))
+            osl_path = filepath_utils.get_real_path(osl_path)
             FileName = os.path.basename(osl_path)
             FileNameNoEXT = os.path.splitext(FileName)[0]
             FileNameOSO = FileNameNoEXT
@@ -481,8 +482,9 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                     if prop_type == 'struct' or prop_type == 'point':
                         input.hide_value = True
                     input.renderman_type = prop_type
-        rfb_log().debug('osl', "Shader: ", shader_meta["shader"], "Properties: ",
-              prop_names, "Shader meta data: ", shader_meta)
+        rfb_log().debug("Shader: %s", shader_meta["shader"])
+        rfb_log().debug("Properties: %s" % str(prop_names))
+        rfb_log().debug("Shader meta data: %s" % str(shader_meta))
         compileLocation = self.name + "Compile"
 
 
