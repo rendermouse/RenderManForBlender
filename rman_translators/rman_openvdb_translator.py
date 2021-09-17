@@ -54,10 +54,10 @@ class RmanOpenVDBTranslator(RmanTranslator):
         active_grid = grids[active_index]    
 
         openvdb_attrs = dict()
-        openvdb_attrs['FilterWidth'] = getattr(rm, 'openvdb_filterwidth')
-        openvdb_attrs['VelocityScale'] = getattr(rm, 'openvdb_velocityscale')
-        openvdb_attrs['densitymult'] = getattr(rm, 'openvdb_densitymult')
-        openvdb_attrs['densityrolloff'] = getattr(rm, 'openvdb_densityrolloff')
+        openvdb_attrs['filterWidth'] = getattr(rm, 'openvdb_filterwidth')
+        openvdb_attrs['velocityScale'] = getattr(rm, 'openvdb_velocityscale')
+        openvdb_attrs['densityMult'] = getattr(rm, 'openvdb_densitymult')
+        openvdb_attrs['densityRolloff'] = getattr(rm, 'openvdb_densityrolloff')
 
         json_attrs = str(json.dumps(openvdb_attrs))
 
