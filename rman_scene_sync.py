@@ -111,10 +111,16 @@ class RmanSceneSync(object):
         if self.rman_scene.bl_frame_current != self.rman_scene.bl_scene.frame_current:
             # frame changed, update any materials and objects that 
             # are marked as frame sensitive
+            rfb_log().debug("Frame changed: %d -> %d" % (self.rman_scene.bl_frame_current, self.rman_scene.bl_scene.frame_current))
             self.rman_scene.bl_frame_current = self.rman_scene.bl_scene.frame_current
             material_translator = self.rman_scene.rman_translators["MATERIAL"]
 
             with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):  
+                # update frame number
+                options = self.rman_scene.sg_scene.GetOptions()
+                options.SetInteger(self.rman.Tokens.Rix.k_Ri_Frame, self.rman_scene.bl_frame_current)
+                self.rman_scene.sg_scene.SetOptions(options)        
+
                 for mat in bpy.data.materials:   
                     db_name = object_utils.get_db_name(mat)  
                     rman_sg_material = self.rman_scene.rman_materials.get(mat.original, None)
