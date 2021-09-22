@@ -1,4 +1,4 @@
-from bpy.props import BoolProperty, PointerProperty
+from bpy.props import BoolProperty, PointerProperty, StringProperty
 
 from ...rfb_logger import rfb_log 
 from ...rman_config import RmanBasePropertyGroup
@@ -14,6 +14,8 @@ class RendermanVolumeGeometrySettings(RmanBasePropertyGroup, bpy.types.PropertyG
         return os.path.exists(openvdb_file)
 
     has_openvdb: BoolProperty(name='', get=check_openvdb)
+
+    openvdb_velocity_grid_name: StringProperty(name="Velocity Grid", default="")
 
 classes = [         
     RendermanVolumeGeometrySettings

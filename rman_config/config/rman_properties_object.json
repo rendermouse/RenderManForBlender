@@ -659,6 +659,29 @@
         },
         {
             "panel": "OBJECT_PT_renderman_object_geometry_attributes",
+            "page": "Dicing",            
+            "name": "rman_minlength",
+            "primvar": "dice:minlength",
+            "label": "Min Length",
+            "type": "float",
+            "editable": true,            
+            "default": 1
+        },
+        {
+            "panel": "OBJECT_PT_renderman_object_geometry_attributes",
+            "page": "Dicing",            
+            "name": "rman_minlengthspace",
+            "primvar": "dice:minlengthspace",
+            "label": "Min Length Space",
+            "type": "string",
+            "default": "world",
+            "widget": "popup",
+            "editable": true,
+            "options": "world|object|camera"
+        },
+
+        {
+            "panel": "OBJECT_PT_renderman_object_geometry_attributes",
             "name": "rman_rasterorient",
             "primvar": "dice:rasterorient",
             "label": "Raster-Oriented Dicing",

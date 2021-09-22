@@ -28,6 +28,8 @@ PSYS_PREFIX = "psys_"
 DUPLI_PREFIX = "dupli_"
 DUPLI_SOURCE_PREFIX = "dup_src_"
 
+RMAN_VOL_TYPES = ['RI_VOLUME', 'OPENVDB', 'FLUID']
+
 # ------------- Filtering -------------
 def is_visible_layer(scene, ob):
     #
@@ -148,7 +150,23 @@ def set_render_variant_spool(bl_scene, args, is_tractor=False):
 
         if device_list:
             device_list = ','.join(device_list)
-            args.append('-xpudevices:%s' % device_list)            
+            args.append('-xpudevices:%s' % device_list)  
+
+def get_all_volume_objects(scene):
+    """Return a list of volume objects in the scene
+
+    Args:
+    scene (byp.types.Scene) - scene file to look for lights
+
+    Returns:
+    (list) - volume objects
+    """    
+    global RMAN_VOL_TYPES
+    volumes = list()
+    for ob in scene.objects:
+        if object_utils._detect_primitive_(ob) in RMAN_VOL_TYPES:
+            volumes.append(ob)
+    return volumes
 
 def get_light_group(light_ob, scene):
     """Return the name of the lightGroup for this

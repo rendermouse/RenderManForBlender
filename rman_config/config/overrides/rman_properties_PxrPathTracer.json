@@ -1,0 +1,29 @@
+{
+    "name": "PxrPathTracer.args",
+    "params": [
+        {
+            "name": "volumeAggregate",    
+            "widget": "propSearch",
+            "options": "prop_parent:context.scene.renderman|prop_name:vol_aggregates",
+            "connectable": false
+        },  
+        {
+            "name": "volumeAggregateCamera",    
+            "widget": "propSearch",
+            "options": "prop_parent:context.scene.renderman|prop_name:vol_aggregates",
+            "connectable": false
+        },
+        {
+            "name": "volumeAggregateIndirect",    
+            "widget": "propSearch",
+            "options": "prop_parent:context.scene.renderman|prop_name:vol_aggregates",
+            "connectable": false
+        },
+        {
+            "name": "volumeAggregateTransmission",    
+            "widget": "propSearch",
+            "options": "prop_parent:context.scene.renderman|prop_name:vol_aggregates",
+            "connectable": false
+        }                                    
+    ]
+}

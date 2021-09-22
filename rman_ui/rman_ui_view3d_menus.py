@@ -1,8 +1,10 @@
 from .. import rfb_icons
 from .. import rman_bl_nodes
 from ..rman_operators.rman_operators_utils import get_bxdf_items, get_light_items, get_lightfilter_items
-from ..rfb_utils import scene_utils
+from ..rfb_utils.scene_utils import RMAN_VOL_TYPES
 from ..rfb_utils import shadergraph_utils
+from ..rfb_utils import object_utils
+from ..rfb_logger import rfb_log
 from ..rman_config import __RFB_CONFIG_DICT__ as rfb_config
 from bpy.types import Menu
 import bpy
@@ -221,7 +223,8 @@ class VIEW3D_MT_renderman_object_context_menu(Menu):
         layout.label(text='Groups')
         layout.menu('VIEW3D_MT_RM_Add_Selected_To_ObjectGroup_Menu', text='Trace Sets')     
         layout.menu('VIEW3D_MT_RM_Add_Selected_To_LightMixer_Menu', text='Light Mixer Groups')  
-        layout.menu('VIEW3D_MT_RM_LightLinking_Menu', text='Light Linking')  
+        layout.menu('VIEW3D_MT_RM_LightLinking_Menu', text='Light Linking') 
+        layout.menu('VIEW3D_MT_RM_Volume_Aggregates_Menu', text='Volume Aggregates')  
         layout.separator()
         layout.menu('VIEW3D_MT_RM_Stylized_Menu', text='Stylized Looks')  
 
@@ -307,7 +310,45 @@ class VIEW3D_MT_RM_LightLinking_SubMenu(bpy.types.Menu):
             op = layout.operator('renderman.update_light_link_objects', text="Link selected to %s" % active_light.name)
             op.update_type = 'ADD'
             op = layout.operator('renderman.update_light_link_objects', text="Remove Selected from %s" % active_light.name)
-            op.update_type = 'REMOVE'            
+            op.update_type = 'REMOVE'      
+
+class VIEW3D_MT_RM_Volume_Aggregates_Menu(bpy.types.Menu):
+    bl_label = "Volume Aggregates"
+    bl_idname = "VIEW3D_MT_RM_Volume_Aggregates_Menu"
+
+    @classmethod
+    def poll(cls, context):
+        rd = context.scene.render
+        return rd.engine == 'PRMAN_RENDER'
+
+    @classmethod
+    def get_icon_id(cls):  
+        return rfb_icons.get_icon("rman_blender").icon_id
+
+    def draw(self, context):
+        rm = context.scene.renderman
+        layout = self.layout
+        layout.operator("scene.rman_open_vol_aggregates_editor", text="Volume Aggregates Editor")
+        layout.separator()
+        op = layout.operator("renderman.add_remove_volume_aggregates", text="Create New Group")
+        op.context="scene.renderman"
+        op.collection="vol_aggregates"
+        op.collection_index="vol_aggregates_index"
+        op.defaultname='VolumeAggreagte_%d' % len(rm.vol_aggregates)  
+        selected_objects = list()
+        for ob in context.selected_objects:
+            if object_utils._detect_primitive_(ob) in RMAN_VOL_TYPES:
+                selected_objects.append(ob)
+        if not selected_objects:
+            return
+        vol_aggregates = rm.vol_aggregates
+        if vol_aggregates:
+            layout.separator()
+            layout.label(text='Add Selected To: ')   
+            for i, v in enumerate(vol_aggregates):
+                op = layout.operator('renderman.add_to_vol_aggregate', text=v.name)
+                op.vol_aggregates_index = i
+                op.do_scene_selected = True
 
 class VIEW3D_MT_RM_Stylized_Menu(bpy.types.Menu):
     bl_label = "Stylized Looks"
@@ -584,7 +625,8 @@ classes = [
     VIEW3D_MT_RM_Add_Render_Menu,
     VIEW3D_MT_RM_Stylized_Menu,
     VIEW3D_MT_RM_LightLinking_Menu,
-    VIEW3D_MT_RM_LightLinking_SubMenu
+    VIEW3D_MT_RM_LightLinking_SubMenu,
+    VIEW3D_MT_RM_Volume_Aggregates_Menu
 ]
 
 def register():

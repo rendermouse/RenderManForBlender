@@ -37,6 +37,9 @@
         "tracesets_editor": {
             "width": 500
         },
+        "vol_aggregates_editor": {
+            "width": 500
+        },        
         "stylizedlooks_editor": {
             "width": 600
         }

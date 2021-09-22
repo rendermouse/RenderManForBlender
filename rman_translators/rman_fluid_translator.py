@@ -139,8 +139,8 @@ class RmanFluidTranslator(RmanTranslator):
                 rman_sg_material = self.rman_scene.rman_materials.get(mat.original, None)
                 if rman_sg_material:
                     material_sg_node = rman_sg_material.sg_node
-            scenegraph_utils.set_material(sg_node, material_sg_node)        
-
+            scenegraph_utils.set_material(sg_node, material_sg_node)   
+                 
     def update_fluid_openvdb(self, ob, rman_sg_fluid, fluid_data):
         cacheFile = locate_openVDB_cache(fluid_data.cache_directory, self.rman_scene.bl_frame_current)
         if not cacheFile:
@@ -155,8 +155,11 @@ class RmanFluidTranslator(RmanTranslator):
         primvar.SetFloatDetail("density", [], "varying")
         primvar.SetFloatDetail("flame", [], "varying")        
         primvar.SetColorDetail("color", [], "varying")                  
-        rman_sg_fluid.rman_sg_volume_node.SetPrimVars(primvar)             
-
+        rman_sg_fluid.rman_sg_volume_node.SetPrimVars(primvar)
+        
+        attrs = rman_sg_fluid.rman_sg_volume_node.GetAttributes() 
+        scenegraph_utils.export_vol_aggregate(self.rman_scene.bl_scene, attrs, ob)
+        rman_sg_fluid.rman_sg_volume_node.SetAttributes(attrs)  
 
     def update_fluid(self, ob, rman_sg_fluid, fluid_data):
 
@@ -174,4 +177,8 @@ class RmanFluidTranslator(RmanTranslator):
         primvar.SetVectorDetail("velocity", fluid_data.velocity_grid, "varying")
         primvar.SetFloatDetail("temperature", fluid_data.temperature_grid, "varying")
 
-        rman_sg_fluid.rman_sg_volume_node.SetPrimVars(primvar)     
+        rman_sg_fluid.rman_sg_volume_node.SetPrimVars(primvar)  
+
+        attrs = rman_sg_fluid.rman_sg_volume_node.GetAttributes() 
+        scenegraph_utils.export_vol_aggregate(self.rman_scene.bl_scene, attrs, ob)
+        rman_sg_fluid.rman_sg_volume_node.SetAttributes(attrs)         

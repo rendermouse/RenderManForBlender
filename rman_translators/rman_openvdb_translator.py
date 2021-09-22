@@ -3,6 +3,7 @@ from ..rman_sg_nodes.rman_sg_openvdb import RmanSgOpenVDB
 from ..rfb_utils import filepath_utils
 from ..rfb_utils import transform_utils
 from ..rfb_utils import string_utils
+from ..rfb_utils import scenegraph_utils
 from ..rfb_logger import rfb_log
 import json
 
@@ -22,7 +23,6 @@ class RmanOpenVDBTranslator(RmanTranslator):
 
     def export_deform_sample(self, rman_sg_openvdb, ob, time_sample):
         pass
-
 
     def update(self, ob, rman_sg_openvdb):
         db = ob.data
@@ -66,7 +66,7 @@ class RmanOpenVDBTranslator(RmanTranslator):
         string_args = []
         string_args.append(openvdb_file)
         string_args.append("%s:fogvolume" % active_grid.name)
-        string_args.append('') # for now, we don't support specifying the velocity grid
+        string_args.append(rm.openvdb_velocity_grid_name)
         string_args.append(json_attrs)
         primvar.SetStringArray(self.rman_scene.rman.Tokens.Rix.k_blobbydso_stringargs, string_args, len(string_args))
 
@@ -80,4 +80,9 @@ class RmanOpenVDBTranslator(RmanTranslator):
             elif grid.data_type == 'STRING':
                 primvar.SetStringDetail(grid.name, [], "uniform")
 
-        rman_sg_openvdb.sg_node.SetPrimVars(primvar)         
+        rman_sg_openvdb.sg_node.SetPrimVars(primvar)  
+        attrs = rman_sg_openvdb.sg_node.GetAttributes() 
+        scenegraph_utils.export_vol_aggregate(self.rman_scene.bl_scene, attrs, ob)      
+
+        attrs.SetInteger("volume:dsominmax", rm.volume_dsominmax)
+        rman_sg_openvdb.sg_node.SetAttributes(attrs)           

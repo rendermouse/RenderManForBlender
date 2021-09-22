@@ -1,6 +1,6 @@
 from .rman_translator import RmanTranslator
 from ..rman_sg_nodes.rman_sg_volume import RmanSgVolume
-from ..rfb_utils import object_utils
+from ..rfb_utils import scenegraph_utils
 from ..rfb_utils import transform_utils
 
 import bpy
@@ -32,4 +32,8 @@ class RmanVolumeTranslator(RmanTranslator):
             primvar.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_Bound, bound_box, 6)
         else:
             primvar.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_Bound, transform_utils.convert_ob_bounds(ob.bound_box), 6)
-        rman_sg_volume.sg_node.SetPrimVars(primvar)                
+        rman_sg_volume.sg_node.SetPrimVars(primvar)    
+
+        attrs = rman_sg_volume.sg_node.GetAttributes() 
+        scenegraph_utils.export_vol_aggregate(self.rman_scene.bl_scene, attrs, ob)
+        rman_sg_volume.sg_node.SetAttributes(attrs)          

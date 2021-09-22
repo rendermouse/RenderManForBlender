@@ -101,6 +101,27 @@ class RendermanObjectPointer(bpy.types.PropertyGroup):
                ('ON', 'On', ''),
                ('OFF', 'Off', '')])             
 
+class RendermanVolumeAggregate(bpy.types.PropertyGroup):
+    def update_name(self, context):
+        for member in self.members:
+            member.ob_pointer.update_tag(refresh={'OBJECT'})
+
+    def update_members_index(self, context):
+        if self.members_index < 0:
+            return        
+        member = self.members[self.members_index]
+        ob = member.ob_pointer
+                
+        if context.view_layer.objects.active:
+            context.view_layer.objects.active.select_set(False)
+        ob.select_set(True)
+        context.view_layer.objects.active = ob                  
+
+    name: StringProperty(name="Volume Aggregate Name", update=update_name)
+    members: CollectionProperty(type=RendermanObjectPointer,
+                                 name='Aggregate Members')
+    members_index: IntProperty(min=-1, default=-1, update=update_members_index)
+
 class RendermanGroup(bpy.types.PropertyGroup):
     def update_name(self, context):
         for member in self.members:
@@ -121,6 +142,7 @@ class RendermanGroup(bpy.types.PropertyGroup):
     members: CollectionProperty(type=RendermanObjectPointer,
                                  name='Group Members')
     members_index: IntProperty(min=-1, default=-1, update=update_members_index)
+
 
 class LightLinking(bpy.types.PropertyGroup):
 
@@ -266,6 +288,7 @@ classes = [
     RendermanLightGroup,
     RendermanObjectPointer,
     RendermanGroup,
+    RendermanVolumeAggregate,
     LightLinking,
     RendermanMeshPrimVar,   
     RendermanReferencePosePrimVars,
