@@ -6,6 +6,8 @@ from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import draw_utils
 from ..rfb_utils import filepath_utils
 from ..rman_config import __RFB_CONFIG_DICT__
+from ..rman_constants import RFB_FLOAT3
+from .. import rman_bl_nodes
 from .. import rfb_icons
 from .. import rman_render
 from bpy.types import Menu
@@ -869,8 +871,33 @@ class RendermanPatternNode(RendermanShadingNode):
             if not shadergraph_utils.is_socket_same_type(link.from_socket, link.to_socket):
                 node_tree = self.id_data
                 try:
-                    node_tree.links.remove(link)
-                    bpy.ops.renderman.printer('INVOKE_DEFAULT', level="ERROR", message="Link is not valid")
+                    from_node = node_tree.nodes[link.from_node.name]
+                    to_node = node_tree.nodes[link.to_node.name]
+                    from_socket = from_node.outputs[link.from_socket.name]
+                    to_socket = to_node.inputs[link.to_socket.name]
+                    
+                    if from_node_type == 'float' and to_node_type in RFB_FLOAT3:
+                        to_float3 = rman_bl_nodes.__BL_NODES_MAP__['PxrToFloat3']
+                        tofloat3_node = node_tree.nodes.new(to_float3)
+
+                        tofloat3_node.location = from_node.location
+                        tofloat3_node.location[0] += 300
+
+                        node_tree.links.new(from_socket, tofloat3_node.inputs['input'])
+                        node_tree.links.new(tofloat3_node.outputs['resultRGB'], to_socket)
+                        node_tree.links.remove(link)
+                    elif from_node_type in RFB_FLOAT3 and to_node_type == 'float':
+                        to_float = rman_bl_nodes.__BL_NODES_MAP__['PxrToFloat']
+                        tofloat_node = node_tree.nodes.new(to_float)
+                        tofloat_node.location = from_node.location
+                        tofloat_node.location[0] += 300
+
+                        node_tree.links.new(from_socket, tofloat_node.inputs['input'])
+                        node_tree.links.new(tofloat_node.outputs['resultF'], to_socket)
+                        node_tree.links.remove(link)                        
+                    else:
+                        bpy.ops.renderman.printer('INVOKE_DEFAULT', level="ERROR", message="Link is not valid")
+
                 except:
                     pass
 
