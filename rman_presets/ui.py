@@ -244,7 +244,6 @@ class PRMAN_OT_Renderman_Presets_Editor(bpy.types.Operator):
     bl_description = "Open the RenderMan Preset Browser"
 
     def load_presets(self, context):
-        print("LOAD PRESETS!")
         hostPrefs = rab.get_host_prefs()
 
         self.presets.clear()
