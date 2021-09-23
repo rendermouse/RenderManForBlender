@@ -46,8 +46,9 @@ class PRMAN_OT_init_preset_library(bpy.types.Operator):
     directory: bpy.props.StringProperty(subtype='FILE_PATH')
 
     def invoke(self, context, event):
+        self.op = getattr(context, 'op_ptr', None)      
         context.window_manager.fileselect_add(self)
-        self.op = getattr(context, 'op_ptr', None) 
+
         return {'RUNNING_MODAL'}
 
     def execute(self, context):
@@ -63,8 +64,12 @@ class PRMAN_OT_init_preset_library(bpy.types.Operator):
                 raise Exception("No preset library found or directory chosen is not writable.")
                 return {'FINISHED'}
 
-        hostPrefs.cfg.setCurrentLibraryByPath(FilePath(self.directory)) 
-        hostPrefs.setSelectedCategory(os.path.join(self.directory, 'EnvironmentMaps'))
+        hostPrefs.cfg.setCurrentLibraryByPath(FilePath(self.directory))
+        lib_info = hostPrefs.cfg.getCurrentLibraryInfos()
+        hostPrefs.setSelectedLibrary(FilePath(self.directory))
+        lib_info.setData('protected', False) 
+        lib_info.save(FilePath(self.directory))
+        hostPrefs.setSelectedCategory(os.path.join(FilePath(self.directory), 'EnvironmentMaps'))
         hostPrefs.setSelectedPreset('')
         hostPrefs.saveAllPrefs()     
 
@@ -72,6 +77,57 @@ class PRMAN_OT_init_preset_library(bpy.types.Operator):
         bpy.ops.renderman.rman_open_presets_editor('INVOKE_DEFAULT')
 
         return {'FINISHED'}
+
+class PRMAN_OT_edit_library_info(bpy.types.Operator):
+    bl_idname = "renderman.edit_library_info"
+    bl_label = "Edit Library Info"
+    bl_description = "Edit the current library info"
+
+    name: StringProperty(name="Library Name", default="")
+    author: StringProperty(name="Author", default="")
+    description: StringProperty(name="Description", default="")
+    protected: BoolProperty(name="Protected", default=True)
+    version: StringProperty(name="Version", default="")
+
+    def execute(self, context):
+
+        hostPrefs = rab.get_host_prefs()
+        directory = hostPrefs.cfg.getCurrentLibraryPath()
+        lib_info = hostPrefs.cfg.getCurrentLibraryInfos()
+        lib_info.setData('name', self.properties.name)
+        lib_info.setData('author', self.properties.author)
+        lib_info.setData('description', self.properties.description) 
+        lib_info.setData('version', self.properties.version)
+        lib_info.setData('protected', self.properties.protected) 
+        lib_info.save(FilePath(directory))
+
+        if self.op:
+            self.op.library_name = self.properties.name  
+            self.op.is_editable = not self.properties.protected    
+            self.op.preset_categories_index = self.op.preset_categories_index
+
+        return {'FINISHED'}        
+
+    def invoke(self, context, event):
+        hostPrefs = rab.get_host_prefs()
+        lib_info = hostPrefs.cfg.getCurrentLibraryInfos()
+        self.op = getattr(context, 'op_ptr', None)
+
+        self.properties.name = lib_info.getData('name')
+        self.properties.author = lib_info.getData('author')
+        self.properties.description = lib_info.getData('description')
+        self.properties.protected = lib_info.getData('protected')
+        self.properties.version = lib_info.getData('version')
+
+        return context.window_manager.invoke_props_dialog(self)
+
+    def draw(self, context):
+        row = self.layout
+        row.prop(self, "name")
+        row.prop(self, "author")
+        row.prop(self, "description")
+        row.prop(self, "version")
+        row.prop(self, "protected")
 
 class PRMAN_OT_load_asset_to_scene(bpy.types.Operator):
     bl_idname = "renderman.load_asset_to_scene"
@@ -626,7 +682,8 @@ classes = [
     PRMAN_OT_remove_preset,
     PRMAN_OT_view_preset_json,
     PRMAN_OT_forget_preset_library,
-    PRMAN_OT_select_preset_library
+    PRMAN_OT_select_preset_library,
+    PRMAN_OT_edit_library_info
 ]
 
 def register():

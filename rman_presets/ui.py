@@ -244,6 +244,7 @@ class PRMAN_OT_Renderman_Presets_Editor(bpy.types.Operator):
     bl_description = "Open the RenderMan Preset Browser"
 
     def load_presets(self, context):
+        print("LOAD PRESETS!")
         hostPrefs = rab.get_host_prefs()
 
         self.presets.clear()
@@ -251,7 +252,7 @@ class PRMAN_OT_Renderman_Presets_Editor(bpy.types.Operator):
         libInfo = hostPrefs.cfg.getCurrentLibraryInfos()
         self.library_name = libInfo.getData('name')
         self.library_path = libInfo.getPath()
-        self.is_editable = libInfo.isEditable()
+        self.is_editable = not libInfo.getData('protected')
 
         if self.preset_categories_index > -1:
             category = self.preset_categories[self.preset_categories_index]
@@ -307,9 +308,6 @@ class PRMAN_OT_Renderman_Presets_Editor(bpy.types.Operator):
         self.save_prefs(context)
         return{'FINISHED'}  
 
-    def cancel(self, context):
-        self.save_prefs(context)
-
     def save_prefs(self, context):
         rab.get_host_prefs().saveAllPrefs()
 
@@ -354,8 +352,13 @@ class PRMAN_OT_Renderman_Presets_Editor(bpy.types.Operator):
         col = row.column()
         col.context_pointer_set('op_ptr', self) 
         op = col.operator("renderman.forget_preset_library", text="Forget Library")
-        op.library_path = self.library_path        
-
+        op.library_path = self.library_path       
+        col = row.column()
+        col.enabled = self.is_editable
+        col.context_pointer_set('op_ptr', self)
+        col.operator_context = 'INVOKE_DEFAULT'
+        op = col.operator("renderman.edit_library_info", text="Edit Library Info")
+         
         row = layout.row()
         col = row.column()
         cat = self.preset_categories[self.preset_categories_index]
