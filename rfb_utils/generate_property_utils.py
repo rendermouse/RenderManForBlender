@@ -491,19 +491,83 @@ def generate_property(node, sp, update_function=None):
     elif param_type == 'int2':
         param_type = 'int'
         is_array = 2
-        prop = IntVectorProperty(name=param_label,
-                                 default=param_default, size=2,
-                                 description=param_help, update=update_function)
+        if param_widget == 'mapper':
+            items = []
+            in_items = False
+            if isinstance(sp.options, list):
+                for k in sp.options:
+                    v = str(k)
+                    items.append((v, k, ''))
+                    if v == str(param_default):
+                        in_items = True                    
+            else:
+                for k,v in sp.options.items():
+                    v = str(v)
+                    if len(v.split(':')) > 1:
+                        tokens = v.split(':')
+                        v = tokens[1]
+                        k = '%s:%s' % (k, tokens[0])
+                    items.append((str(v), k, ''))
+                    if v == str(param_default):
+                        in_items = True
+            
+            bl_default = ''
+            for item in items:
+                if item[0] == str(param_default):
+                    bl_default = item[0]
+                    break
+
+            if in_items:
+                prop = EnumProperty(name=param_label,
+                                    items=items,
+                                    default=bl_default,
+                                    description=param_help, update=update_function)
+        else:        
+            prop = IntVectorProperty(name=param_label,
+                                    default=param_default, size=2,
+                                    description=param_help, update=update_function)
         renderman_type = 'int'
         prop_meta['arraySize'] = 2   
 
     elif param_type == 'float2':
         param_type = 'float'
         is_array = 2
-        prop = FloatVectorProperty(name=param_label,
-                                 default=param_default, size=2,
-                                 step=prop_stepsize,
-                                 description=param_help, update=update_function)
+        if param_widget == 'mapper':
+            items = []
+            in_items = False
+            if isinstance(sp.options, list):
+                for k in sp.options:
+                    v = str(k)
+                    items.append((v, k, ''))
+                    if v == str(param_default):
+                        in_items = True                    
+            else:
+                for k,v in sp.options.items():
+                    v = str(v)
+                    if len(v.split(':')) > 1:
+                        tokens = v.split(':')
+                        v = tokens[1]
+                        k = '%s:%s' % (k, tokens[0])
+                    items.append((str(v), k, ''))
+                    if v == str(param_default):
+                        in_items = True
+            
+            bl_default = ''
+            for item in items:
+                if item[0] == str(param_default):
+                    bl_default = item[0]
+                    break
+
+            if in_items:
+                prop = EnumProperty(name=param_label,
+                                    items=items,
+                                    default=bl_default,
+                                    description=param_help, update=update_function)
+        else:        
+            prop = FloatVectorProperty(name=param_label,
+                                    default=param_default, size=2,
+                                    step=prop_stepsize,
+                                    description=param_help, update=update_function)
         renderman_type = 'float'
         prop_meta['arraySize'] = 2      
 

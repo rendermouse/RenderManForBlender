@@ -222,6 +222,8 @@ class RmanTranslator(object):
             if 'arraySize' in meta:
                 is_array = True
                 array_len = meta['arraySize']
+                if type(val) == str and val.startswith('['):
+                    val = eval(val)                
             param_type = meta['renderman_type']
             property_utils.set_rix_param(attrs, param_type, ri_name, val, is_reference=False, is_array=is_array, array_len=array_len)            
 

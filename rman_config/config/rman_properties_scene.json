@@ -813,7 +813,21 @@
                 "conditionalVisPath": "enable_checkpoint",
                 "conditionalVisValue": "1"
             }              
-        },          
+        }, 
+        {
+            "panel": "RENDER_PT_renderman_advanced_settings",
+            "name": "limits_bucketsize",
+            "riopt": "limits:bucketsize",
+            "label": "Bucket Size",
+            "type": "int2",
+            "default": [
+                16,
+                16
+            ],
+            "widget": "mapper",
+            "options": "4x4:[4,4]|8x8:[8,8]|16x16:[16,16]|32x32:[32,32]|64x64:[64,64]",
+            "connectable": false           
+        },                 
         {
             "panel": "RENDER_PT_renderman_advanced_settings",
             "name": "opt_bucket_order",
