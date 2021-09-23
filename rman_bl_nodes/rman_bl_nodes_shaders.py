@@ -85,6 +85,15 @@ class RendermanShadingNode(bpy.types.ShaderNode):
         col.label(text=self.bl_label, icon_value=rman_icon.icon_id)  
         if shadergraph_utils.is_soloable_node(self):
             self.draw_solo_button(nt, out_node, split)
+            # draw solo output select menu
+            if self.name == out_node.solo_node_name:            
+                solo_node = nt.nodes.get(out_node.solo_node_name, None)
+                if solo_node:
+                    col = layout.column(align=True)
+                    col.context_pointer_set("nodetree", nt)  
+                    col.context_pointer_set("node", out_node) 
+                    col.menu('NODE_MT_renderman_node_solo_output_menu', text='Select Output')
+
         layout.separator()
         self.draw_nonconnectable_props(context, layout, self.prop_names, output_node=out_node)
 
