@@ -637,7 +637,6 @@ def export_material_preset(mat, nodes_to_convert, renderman_output_node, Asset):
             renderman_node_type = getattr(node, 'renderman_node_type', '')            
             if node.bl_idname == "PxrOSLPatternNode":            
                 if getattr(node, "codetypeswitch") == "EXT":
-                    prefs = prefs_utils.get_addon_prefs()
                     osl_path = string_utils.expand_string(getattr(node, 'shadercode'))
                     FileName = os.path.basename(osl_path)
                     FileNameNoEXT,ext = os.path.splitext(FileName)
@@ -661,7 +660,7 @@ def export_material_preset(mat, nodes_to_convert, renderman_output_node, Asset):
                 out_file = os.path.join(cycles_shader_dir, '%s.oso' % cycles_shader_dir)
                 Asset.processExternalFile(out_file)
 
-            node_name = node.name
+            node_name = fix_blender_name(node.name)
             shader_name = node.bl_label
 
             Asset.addNode(
@@ -691,7 +690,7 @@ def export_light_rig(obs, Asset):
     for ob in obs:
         bl_node = shadergraph_utils.get_light_node(ob)
 
-        nodeName = bl_node.name
+        nodeName = fix_blender_name(bl_node.name)
         nodeType = bl_node.bl_label
         nodeClass = 'light'
         rmanNodeName = bl_node.bl_label
@@ -735,7 +734,7 @@ def export_light_rig(obs, Asset):
 
             bl_node = shadergraph_utils.get_light_node(light_filter)
 
-            nodeName = bl_node.name
+            nodeName = fix_blender_name(bl_node.name)
             nodeType = bl_node.bl_label
             nodeClass = 'lightfilter'
             rmanNodeName = bl_node.bl_label
@@ -759,7 +758,7 @@ def export_light_rig(obs, Asset):
 def export_displayfilter_nodes(world, nodes, Asset):
     any_stylized = False
     for node in nodes:
-        nodeName = node.name
+        nodeName = fix_blender_name(node.name)
         shaderName = node.bl_label
         externalosl = False
 
