@@ -209,15 +209,6 @@ class RendermanReferencePosePrimVars(bpy.types.PropertyGroup):
                                 subtype="XYZ")                                    
 
 
-class RendermanOpenVDBChannel(bpy.types.PropertyGroup):
-    name: StringProperty(name="Channel Name")
-    type: EnumProperty(name="Channel Type",
-                        items=[
-                            ('float', 'Float', ''),
-                            ('vector', 'Vector', ''),
-                            ('color', 'Color', ''),
-                        ])
-
 class RendermanAnimSequenceSettings(bpy.types.PropertyGroup):
     animated_sequence: BoolProperty(
         name="Animated Sequence",
@@ -292,7 +283,6 @@ classes = [
     LightLinking,
     RendermanMeshPrimVar,   
     RendermanReferencePosePrimVars,
-    RendermanOpenVDBChannel,
     RendermanAnimSequenceSettings,
     Tab_CollectionGroup
 ]
