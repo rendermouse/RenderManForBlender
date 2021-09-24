@@ -394,6 +394,12 @@ class RendermanPreferences(AddonPreferences):
         max=0.1
     )    
 
+    rman_solo_collapse_nodes: BoolProperty(
+        name="Collapse Non-Solo Nodes",
+        default=True,
+        description="If on, when soloing a node, all other nodes in the network will be collapsed."
+    )    
+
     # For the preset browser
     rpbConfigFile: StringProperty(default='')
     rpbUserLibraries: CollectionProperty(type=RendermanPreferencePath)
@@ -487,6 +493,7 @@ class RendermanPreferences(AddonPreferences):
         col.prop(self, 'rman_show_cycles_convert')     
         col.prop(self, 'rman_emit_default_params')    
         col.prop(self, 'rman_invert_light_linking')
+        col.prop(self, 'rman_solo_collapse_nodes')
         col.prop(self, 'rman_editor')      
 
         # XPU Prefs

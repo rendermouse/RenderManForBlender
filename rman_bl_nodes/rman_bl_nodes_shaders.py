@@ -66,7 +66,18 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                     mat.roughness = roughness   
         else:
             rr = rman_render.RmanRender.get_rman_render()             
-            rr.rman_scene_sync.update_material(mat)                    
+            rr.rman_scene_sync.update_material(mat) 
+
+    def draw_label(self):
+        nm = self.name
+        if self.label:
+            nm = self.label
+        if shadergraph_utils.is_soloable_node(self):
+            nt = self.id_data
+            out_node = shadergraph_utils.find_rman_output_node(nt) 
+            if self.name == out_node.solo_node_name:
+                nm = "%s (SOLO)" % nm
+        return nm
 
     # all the properties of a shader will go here, also inputs/outputs
     # on connectable props will have the same name

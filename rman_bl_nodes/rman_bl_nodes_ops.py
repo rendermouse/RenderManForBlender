@@ -2,6 +2,7 @@ from bpy.props import EnumProperty, StringProperty, BoolProperty, IntProperty
 from operator import attrgetter, itemgetter
 from .. import rman_bl_nodes
 from .. import rman_render
+from ..rfb_utils.prefs_utils import get_pref
 from ..rman_constants import RMAN_BL_NODE_DESCRIPTIONS
 from ..rfb_utils.shadergraph_utils import find_node, find_selected_pattern_node, is_socket_same_type, find_material_from_nodetree
 import bpy
@@ -524,6 +525,8 @@ class NODE_OT_rman_node_set_solo(bpy.types.Operator):
     refresh_solo: BoolProperty(default=False)
 
     def hide_all(self, nt, node):
+        if not get_pref('rman_solo_collapse_nodes'):
+            return
         for n in nt.nodes:
             hide = (n != node)
             if hasattr(n, 'prev_hidden'):
@@ -542,6 +545,8 @@ class NODE_OT_rman_node_set_solo(bpy.types.Operator):
                     output.hide = hide                        
 
     def unhide_all(self, nt):
+        if not get_pref('rman_solo_collapse_nodes'):
+            return        
         for n in nt.nodes:
             hide = getattr(n, 'prev_hidden', False)
             n.hide = hide
@@ -571,7 +576,8 @@ class NODE_OT_rman_node_set_solo(bpy.types.Operator):
             output_node.solo_nodetree = nt
             output_node.solo_node_name = self.solo_node_name
             output_node.solo_node_output = ''
-            self.hide_all(nt, nt.nodes[self.solo_node_name])
+            solo_node = nt.nodes[self.solo_node_name]
+            self.hide_all(nt, solo_node)
             return {'FINISHED'}        
 
         selected_node = find_selected_pattern_node(nt)
