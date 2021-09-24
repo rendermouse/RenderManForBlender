@@ -18,7 +18,7 @@ class RendermanVolumeGeometrySettings(RmanBasePropertyGroup, bpy.types.PropertyG
 
     has_openvdb: BoolProperty(name='', get=check_openvdb)
 
-    def get_items(self, context):
+    def get_velocity_grids(self, context):
         ob = context.object
         items = []
         items.append(('__NONE__', 'None', ''))
@@ -32,7 +32,7 @@ class RendermanVolumeGeometrySettings(RmanBasePropertyGroup, bpy.types.PropertyG
                 
         return items
 
-    openvdb_velocity_grid_name: EnumProperty(name="Velocity Grid", items=get_items)
+    openvdb_velocity_grid_name: EnumProperty(name="Velocity Grid", items=get_velocity_grids)
 
 classes = [         
     RendermanVolumeGeometrySettings
