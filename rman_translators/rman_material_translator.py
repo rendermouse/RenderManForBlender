@@ -5,6 +5,7 @@ from ..rfb_utils import property_utils
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import color_utils
 from ..rfb_utils import gpmaterial_utils
+from ..rfb_utils.shadergraph_utils import RmanConvertNode
 
 from ..rfb_logger import rfb_log
 import math
@@ -378,9 +379,11 @@ class RmanMaterialTranslator(RmanTranslator):
  
         sg_node = None
 
-        if type(node) == type(()):
-            shader, from_node, from_socket = node
-            input_type = 'float' if shader == 'PxrToFloat3' else 'color'
+        if type(node) == RmanConvertNode:
+            node_type = node.node_type
+            from_node = node.from_node
+            from_socket = node.from_socket
+            input_type = 'float' if node_type == 'PxrToFloat3' else 'color'
             node_name = 'convert_%s_%s' % (shadergraph_utils.get_node_name(
                 from_node, mat_name), shadergraph_utils.get_socket_name(from_node, from_socket))
             if from_node.bl_idname == 'ShaderNodeGroup':
@@ -388,7 +391,7 @@ class RmanMaterialTranslator(RmanTranslator):
                     from_node, mat_name, from_socket).replace(':', '_')
                     
             val = property_utils.get_output_param_str(rman_sg_material, from_node, mat_name, from_socket)
-            sg_node = self.rman_scene.rman.SGManager.RixSGShader("Pattern", shader, node_name)
+            sg_node = self.rman_scene.rman.SGManager.RixSGShader("Pattern", node_type, node_name)
             rix_params = sg_node.params       
             if input_type == 'color':
                 rix_params.SetColorReference('input', val)

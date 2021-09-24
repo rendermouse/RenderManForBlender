@@ -11,6 +11,15 @@ class BlNodeInfo:
         self.sg_node = sg_node
         self.group_node = group_node
 
+
+class RmanConvertNode:
+    def __init__(self, node_type, from_node, from_socket, to_node, to_socket):
+        self.node_type = node_type
+        self.from_node = from_node
+        self.from_socket = from_socket
+        self.to_node = to_node
+        self.to_socket = to_socket
+
 def is_renderman_nodetree(material):
     return find_node(material, 'RendermanOutputNode')
 
@@ -350,14 +359,14 @@ def gather_nodes(node):
             if node.bl_idname == 'NodeReroute':
                 continue
             
-            # if this is a float -> color inset a tofloat3                
+            # if this is a float->float3 type or float3->float connections, insert
+            # either PxrToFloat3 or PxrToFloat conversion nodes         
             if is_socket_float_type(link.from_socket) and is_socket_float3_type(socket):
-                convert_node = ('PxrToFloat3', link.from_node,
-                                link.from_socket)
+                convert_node = RmanConvertNode('PxrToFloat3', link.from_node, link.from_socket, link.to_node, link.to_socket)
                 if convert_node not in nodes:
                     nodes.append(convert_node)
             elif is_socket_float3_type(link.from_socket) and is_socket_float_type(socket):
-                convert_node = ('PxrToFloat', link.from_node, link.from_socket)
+                convert_node = RmanConvertNode('PxrToFloat', link.from_node, link.from_socket, link.to_node, link.to_socket)
                 if convert_node not in nodes:
                     nodes.append(convert_node)
 

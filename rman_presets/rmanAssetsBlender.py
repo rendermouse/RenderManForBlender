@@ -50,6 +50,7 @@ from ..rfb_utils.property_utils import __GAINS_TO_ENABLE__, is_vstruct_and_linke
 from ..rfb_logger import rfb_log
 from ..rman_bl_nodes import __BL_NODES_MAP__, __RMAN_NODE_TYPES__
 from ..rman_constants import RMAN_STYLIZED_FILTERS, RFB_FLOAT3, CYCLES_NODE_MAP
+from ..rfb_utils.shadergraph_utils import RmanConvertNode
 
 def default_label_from_file_name(filename):
     # print filename
@@ -568,6 +569,9 @@ def set_asset_params(ob, node, nodeName, Asset):
 
 def set_asset_connections(nodes_list, Asset):
     for node in nodes_list:
+        if type(node) == RmanConvertNode:
+            # conversion node, skip
+            continue
 
         cnx = [l for inp in node.inputs for l in inp.links ]
         if not cnx:
@@ -579,7 +583,12 @@ def set_asset_connections(nodes_list, Asset):
 
             if ignoreDst or ignoreSrc:
                 rfb_log().debug("Ignoring connection %s -> %s" % (l.from_node.name, l.to_node.name))
-                continue        
+                continue       
+
+            if shadergraph_utils.do_convert_socket(l.from_socket, l.to_socket):
+                # this needs a conversion node. 
+                # the connection should already have been dealt with earlier                
+                continue
 
             from_node = l.from_node
             to_node = l.to_node
@@ -631,8 +640,33 @@ def export_material_preset(mat, nodes_to_convert, renderman_output_node, Asset):
         Asset.addConnection(srcPlug, dstPlug) 
    
 
-    for node in nodes_to_convert:        
-        if type(node) != type((1,2,3)):
+    for node in nodes_to_convert:     
+        if type(node) == RmanConvertNode:
+            # insert conversion node
+
+            node_type = node.node_type
+            from_node = node.from_node
+            from_socket = node.from_socket
+            to_node = node.to_node
+            to_socket = node.to_socket
+            output_name = 'resultRGB' if node_type == 'PxrToFloat3' else 'resultF'
+            node_name = 'convert_%s_%s' % (fix_blender_name(from_node.name), from_socket.name)
+
+            Asset.addNode(
+                    node_name, node_type,
+                    'pattern', node_type, False)         
+
+            # from node to convert node
+            srcPlug = "%s.%s" % (fix_blender_name(from_node.name), from_socket.name)
+            dstPlug = "%s.%s" % (node_name, 'input')
+            Asset.addConnection(srcPlug, dstPlug)
+
+            # from convert node to destination node
+            srcPlug = "%s.%s" % (node_name, output_name)
+            dstPlug = "%s.%s" % (fix_blender_name(to_node.name), to_socket.name)
+            Asset.addConnection(srcPlug, dstPlug)                           
+
+        elif type(node) != type((1,2,3)):
             externalosl = False
             renderman_node_type = getattr(node, 'renderman_node_type', '')            
             if node.bl_idname == "PxrOSLPatternNode":            

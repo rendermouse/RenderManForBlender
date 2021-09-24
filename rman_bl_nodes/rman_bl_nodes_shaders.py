@@ -876,26 +876,14 @@ class RendermanPatternNode(RendermanShadingNode):
                     from_socket = from_node.outputs[link.from_socket.name]
                     to_socket = to_node.inputs[link.to_socket.name]
                     
-                    if from_node_type == 'float' and to_node_type in RFB_FLOAT3:
-                        to_float3 = rman_bl_nodes.__BL_NODES_MAP__['PxrToFloat3']
-                        tofloat3_node = node_tree.nodes.new(to_float3)
-
-                        tofloat3_node.location = from_node.location
-                        tofloat3_node.location[0] += 300
-
-                        node_tree.links.new(from_socket, tofloat3_node.inputs['input'])
-                        node_tree.links.new(tofloat3_node.outputs['resultRGB'], to_socket)
-                        node_tree.links.remove(link)
-                    elif from_node_type in RFB_FLOAT3 and to_node_type == 'float':
-                        to_float = rman_bl_nodes.__BL_NODES_MAP__['PxrToFloat']
-                        tofloat_node = node_tree.nodes.new(to_float)
-                        tofloat_node.location = from_node.location
-                        tofloat_node.location[0] += 300
-
-                        node_tree.links.new(from_socket, tofloat_node.inputs['input'])
-                        node_tree.links.new(tofloat_node.outputs['resultF'], to_socket)
-                        node_tree.links.remove(link)                        
+                    if shadergraph_utils.is_socket_float_type(from_socket) and shadergraph_utils.is_socket_float3_type(to_socket):
+                        # allow for float -> float3 like connections
+                        pass
+                    elif shadergraph_utils.is_socket_float3_type(from_socket) and shadergraph_utils.is_socket_float_type(to_socket):
+                        # allow for float3 -> float/int connections
+                        pass
                     else:
+                        node_tree.links.remove(link)
                         bpy.ops.renderman.printer('INVOKE_DEFAULT', level="ERROR", message="Link is not valid")
 
                 except:
