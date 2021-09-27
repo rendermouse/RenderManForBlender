@@ -994,12 +994,15 @@ def setParams(Asset, node, paramsList):
             elements = n.color_ramp.elements
             size = rman_ramp_size[nm]
             knots_vals = knots_param.value()
-            colors_vals = colors_param.value()            
+            colors_vals = colors_param.value()    
 
             if len(colors_vals) == size:
                 for i in range(0, size):
                     if i == 0:
                         elem = elements[0]
+                        elem.position = knots_vals[i]
+                    elif i == 1:
+                        elem = elements[1]
                         elem.position = knots_vals[i]
                     else:
                         elem = elements.new(knots_vals[i])
@@ -1010,6 +1013,9 @@ def setParams(Asset, node, paramsList):
                     if i == 0:
                         elem = elements[0]
                         elem.position = knots_vals[i]
+                    elif i == 1:
+                        elem = elements[1]
+                        elem.position = knots_vals[i]                       
                     else:
                         elem = elements.new(knots_vals[i])
                     elem.color = (colors_vals[j], colors_vals[j+1], colors_vals[j+2], 1.0)
@@ -1027,7 +1033,11 @@ def setParams(Asset, node, paramsList):
                 if i == 0:
                     point = points[0]
                     point.location[0] = knots_vals[i]
-                    point.location[0] = floats_vals[i]        
+                    point.location[0] = floats_vals[i]    
+                elif i == 1:
+                    point = points[1]
+                    point.location[0] = knots_vals[i]
+                    point.location[0] = floats_vals[i]                        
                 else:                
                     points.new(knots_vals[i], floats_vals[i])            
 
