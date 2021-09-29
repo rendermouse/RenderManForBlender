@@ -307,6 +307,26 @@ def generate_node_type(node_desc, is_oso=False):
         description = name
     ntype.bl_description = description
 
+    # Node sizes
+    bl_width_default = getattr(node_desc, 'bl_width_default', 0.0)
+    if bl_width_default > 0.0:
+        ntype.bl_width_default = bl_width_default
+    bl_width_min = getattr(node_desc, 'bl_width_min', 0.0)
+    if bl_width_min > 0.0:
+        ntype.bl_width_min = bl_width_min     
+    bl_width_max = getattr(node_desc, 'bl_width_max', 0.0)
+    if bl_width_max > 0.0:
+        ntype.bl_width_max = bl_width_max    
+    bl_height_default = getattr(node_desc, 'bl_height_default', 0.0)
+    if bl_height_default > 0.0:
+        ntype.bl_height_default = bl_height_default    
+    bl_height_min = getattr(node_desc, 'bl_height_min', 0.0) 
+    if bl_height_min > 0.0:
+        ntype.bl_height_min = bl_height_min    
+    bl_height_max = getattr(node_desc, 'bl_height_max', 0.0)    
+    if bl_height_max > 0.0:
+        ntype.bl_height_max = bl_height_max    
+
     def init(self, context):
         # add input/output sockets to nodes, based on type
         if self.renderman_node_type == 'bxdf':

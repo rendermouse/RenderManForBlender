@@ -17,6 +17,15 @@ __RFB_CONFIG_DICT__ = dict()
 __RMAN_DISPLAY_CHANNELS__ = dict()
 __RMAN_DISPLAY_TEMPLATES__ = dict()
 
+__OPTIONAL_ATTRS__ = {
+    'bl_width_default',
+    'bl_width_min',
+    'bl_width_max',
+    'bl_height_default',
+    'bl_height_min',
+    'bl_height_max'
+}
+
 class RmanBasePropertyGroup:
     """Base class that can be inhreited for custom PropertyGroups
     who want to use the JSON config files to dynamically add their properties.
@@ -107,6 +116,11 @@ class RmanConfig:
         for attr in mandatoryAttrList:
             setattr(self, attr, jdata[attr])
 
+        for attr in __OPTIONAL_ATTRS__:
+            val = jdata.get(attr, None)
+            if val:
+                setattr(self, attr, val)
+
         if 'params' in jdata:
             for pdata in jdata['params']:
                 try:
@@ -115,9 +129,6 @@ class RmanConfig:
                     rfb_log().error('FAILED to parse param: %s' % pdata)
                     raise
                 self.params[param.name] = param
-
-        else:
-            rfb_log().error("Could not parse JSON file: %s" % jsonfile)
 
 def _uniquify_list(seq):
     """Remove duplicates while preserving order."""
@@ -289,6 +300,11 @@ def apply_args_overrides(name, node_desc):
                 if val is not None:
                     setattr(ndp_org, attr, val)
 
+    for nm in __OPTIONAL_ATTRS__:
+        val = getattr(rman_config, nm, None)
+        if val:
+            setattr(node_desc, nm, val)
+
 def apply_overrides(rman_config_org, rman_config_override):
     """Given two RmanConfig objects, apply the overrides from the second
     one to the first one. Only certian attributes will be overridden. See
@@ -308,6 +324,11 @@ def apply_overrides(rman_config_org, rman_config_override):
         else:
             # if it doesn't exist, add it
             rman_config_org.params[param_name] = ndp
+
+    for nm in __OPTIONAL_ATTRS__:
+        val = getattr(rman_config_override, nm, None)
+        if val:
+            setattr(rman_config_org, nm, val)            
 
 def register():
 
