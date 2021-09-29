@@ -312,13 +312,7 @@ class RmanCameraTranslator(RmanTranslator):
 
                 clip_start = self.rman_scene.context.space_data.clip_start
                 clip_end = self.rman_scene.context.space_data.clip_end                
-
-                if rman_sg_camera.xaspect != xaspect or rman_sg_camera.yaspect != yaspect:
-                    rman_sg_camera.xaspect = xaspect
-                    rman_sg_camera.yaspect = yaspect  
-                    rman_sg_camera.aspectratio = aspectratio
-                    updated = True          
-
+                      
                 # shift and offset   
                 shift_x = 0.0
                 shift_y = 0.0
@@ -329,13 +323,22 @@ class RmanCameraTranslator(RmanTranslator):
                 # FIXME? See comment above                      
                 offset = (0.0, 0.0) #tuple(rman_sg_camera.view_camera_offset)
                 dx = 2.0 * (aspectratio * shift_x + offset[0] * xaspect * 2.0)
-                dy = 2.0 * (aspectratio * shift_y + offset[1] * yaspect * 2.0)                            
+                dy = 2.0 * (aspectratio * shift_y + offset[1] * yaspect * 2.0)      
+
+                bl_cam_props.lens = self.rman_scene.context.space_data.lens
+                bl_cam_props.shift_x = shift_x
+                bl_cam_props.shift_y = shift_y
+                bl_cam_props.xaspect = xaspect
+                bl_cam_props.yaspect = yaspect
+                bl_cam_props.aspectratio = aspectratio                                        
 
                 sw = [-xaspect * zoom, xaspect * zoom, -yaspect * zoom, yaspect * zoom]
                 sw[0] += dx
                 sw[1] += dx
                 sw[2] += dy
                 sw[3] += dy
+ 
+                bl_cam_props.screenwindow = sw                
 
                 prop.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_ScreenWindow, sw, 4) 
 
