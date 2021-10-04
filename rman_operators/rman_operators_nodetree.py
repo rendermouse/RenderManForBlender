@@ -698,6 +698,8 @@ class PRMAN_OT_Fix_Ramp(bpy.types.Operator):
             prop = getattr(node, prop_name)       
             ramp_name =  prop
             n.name = ramp_name
+            if len(bl_ramp_prop) < 1:
+                continue            
 
             elements = n.color_ramp.elements
             for i in range(0, len(bl_ramp_prop)):
@@ -715,6 +717,8 @@ class PRMAN_OT_Fix_Ramp(bpy.types.Operator):
             prop = getattr(node, prop_name)       
             ramp_name =  prop
             n.name = ramp_name
+            if len(bl_ramp_prop) < 1:
+                continue            
 
             curve = n.mapping.curves[0]
             points = curve.points
@@ -737,7 +741,7 @@ class PRMAN_OT_Fix_All_Ramps(bpy.types.Operator):
 
     def execute(self, context):
 
-        shadergraph_utils.reload_bl_ramps(None)
+        shadergraph_utils.reload_bl_ramps(None, check_library=False)
         return {"FINISHED"}        
 
 classes = [

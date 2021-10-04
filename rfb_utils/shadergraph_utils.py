@@ -410,9 +410,14 @@ def get_all_shading_nodes():
             nodes.append(n)
 
     for mat in bpy.data.materials:
-        output = is_renderman_nodetree(mat)
-        if output:
-            nodes.extend(gather_nodes(output))
+        if not mat.use_nodes:
+            continue
+
+        for n in mat.node_tree.nodes:
+            rman_type = getattr(n, 'renderman_node_type', None)
+            if not rman_type:
+                continue
+            nodes.append(n)
 
     return nodes
 
@@ -458,7 +463,7 @@ def save_bl_ramps(bl_scene):
                         r.position = p.location[0]
                         r.rman_value = p.location[1]
 
-def reload_bl_ramps(bl_scene):
+def reload_bl_ramps(bl_scene, check_library=True):
     '''
     Reload all ramps from our custom collection properties. We only
     do this if the NodeTree is from a library.
@@ -466,7 +471,10 @@ def reload_bl_ramps(bl_scene):
 
     for node in get_all_shading_nodes():
         nt = node.id_data
-        if not nt.library:
+        if check_library and not nt.library:
+            continue
+
+        if not hasattr(node, 'rman_fake_node_group'):
             continue
 
         color_rman_ramps = node.__annotations__.get('__COLOR_RAMPS__', [])
@@ -485,6 +493,8 @@ def reload_bl_ramps(bl_scene):
                 n = node_group.nodes.new('ShaderNodeValToRGB')
                 n.name = ramp_name                
             bl_ramp_prop = getattr(node, '%s_bl_ramp' % prop_name)
+            if len(bl_ramp_prop) < 1:
+                continue                 
 
             elements = n.color_ramp.elements
             for i in range(0, len(bl_ramp_prop)):
@@ -494,7 +504,7 @@ def reload_bl_ramps(bl_scene):
                     elem.position = r.position
                 else:                    
                     elem = elements.new(r.position)
-                elem.color = r.rman_value         
+                elem.color = r.rman_value                   
 
             if len(bl_ramp_prop) < len(elements):
                 for elem in [elements[i] for i in range(len(bl_ramp_prop), len(elements)-1)]:
@@ -516,7 +526,10 @@ def reload_bl_ramps(bl_scene):
             if not n:
                 n = node_group.nodes.new('ShaderNodeVectorCurve') 
                 n.name = ramp_name
-            bl_ramp_prop = getattr(node, '%s_bl_ramp' % prop_name)
+            bl_ramp_prop = getattr(node, '%s_bl_ramp' % prop_name)    
+            if len(bl_ramp_prop) < 1:
+                continue              
+
             curve = n.mapping.curves[0]
             points = curve.points
             for i in range(0, len(bl_ramp_prop)):
@@ -526,7 +539,7 @@ def reload_bl_ramps(bl_scene):
                     point.location[0] = r.position
                     point.location[1] = r.rman_value
                 else:
-                    points.new(r.position, r.rman_value)        
+                    points.new(r.position, r.rman_value)                               
 
             if len(bl_ramp_prop) < len(points):
                 for elem in [points[i] for i in range(len(bl_ramp_prop), len(points)-1)]:
