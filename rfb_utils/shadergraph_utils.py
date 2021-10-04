@@ -2,6 +2,7 @@ from . import color_utils
 from . import filepath_utils
 from . import string_utils
 from . import object_utils
+from . import scene_utils
 from ..rman_constants import RMAN_STYLIZED_FILTERS, RMAN_STYLIZED_PATTERNS, RMAN_UTILITY_PATTERN_NAMES, RFB_FLOAT3
 import math
 import bpy
@@ -376,6 +377,43 @@ def gather_nodes(node):
         nodes.append(node)
 
     return nodes    
+
+def get_all_shading_nodes():
+
+    '''Find all shading nodes in the scene
+
+    Returns:
+        (list) - list of all the shading nodes
+    '''    
+
+    nodes = list()
+
+    context = bpy.context
+    scene = context.scene
+    world = scene.world
+
+    integrator = find_integrator_node(world)
+    if integrator:
+        nodes.append(integrator)
+
+    nodes.extend(find_displayfilter_nodes(world))
+    nodes.extend(find_samplefilter_nodes(world))
+
+    for cam in bpy.data.cameras:
+        n = find_projection_node(cam)
+        if n:
+            nodes.append(n)
+
+    for light in scene_utils.get_all_lights(scene):
+        n = get_light_node(light) 
+        if n:
+            nodes.append(n)
+
+    for mat in bpy.data.materials:
+        output = find_rman_output_node(mat.node_tree)
+        nodes.extend(gather_nodes(output))
+
+    return nodes
 
 def get_rerouted_node(node):
     '''Find and return the rerouted node and socket, given
