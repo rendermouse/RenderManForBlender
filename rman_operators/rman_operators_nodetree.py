@@ -679,7 +679,7 @@ class PRMAN_OT_Add_Projection_Nodetree(bpy.types.Operator):
 class PRMAN_OT_Fix_Ramp(bpy.types.Operator):
     bl_idname = "node.rman_fix_ramp"
     bl_label = "Fix Ramp"
-    bl_description = "Try to fix any broken ramps. This may be needed if you are linking in a material from another blend file."
+    bl_description = "Try to fix this broken ramp. This may be needed if you are linking in a material from another blend file."
     bl_options = {"INTERNAL"}
 
     def execute(self, context):
@@ -729,6 +729,17 @@ class PRMAN_OT_Fix_Ramp(bpy.types.Operator):
 
         return {"FINISHED"}
 
+class PRMAN_OT_Fix_All_Ramps(bpy.types.Operator):
+    bl_idname = "node.rman_fix_all_ramps"
+    bl_label = "Fix All Ramps"
+    bl_description = "Try to fix all broken ramps in the scene. This may be needed if you are linking in a material from another blend file."
+    bl_options = {"INTERNAL"}
+
+    def execute(self, context):
+
+        shadergraph_utils.reload_bl_ramps(None)
+        return {"FINISHED"}        
+
 classes = [
     SHADING_OT_convert_all_renderman_nodetree,
     SHADING_OT_convert_cycles_to_renderman_nodetree,
@@ -743,7 +754,8 @@ classes = [
     PRMAN_OT_Force_Light_Refresh,
     PRMAN_OT_Force_LightFilter_Refresh,
     PRMAN_OT_Add_Projection_Nodetree,
-    PRMAN_OT_Fix_Ramp
+    PRMAN_OT_Fix_Ramp,
+    PRMAN_OT_Fix_All_Ramps
 ]
 
 def register():

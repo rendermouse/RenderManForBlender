@@ -186,6 +186,7 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                         row = layout.row(align=True)
                         row.context_pointer_set("node", self)
                         row.operator('node.rman_fix_ramp')
+                        row.operator('node.rman_fix_all_ramps')
                         continue                
                                   
                     ramp_name =  getattr(self, prop_name)
@@ -201,6 +202,7 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                         row = layout.row(align=True)
                         row.context_pointer_set("node", self)
                         row.operator('node.rman_fix_ramp')
+                        row.operator('node.rman_fix_all_ramps')
                         continue                       
 
                     ramp_name =  getattr(self, prop_name)

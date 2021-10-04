@@ -489,10 +489,10 @@ def reload_bl_ramps(bl_scene):
             elements = n.color_ramp.elements
             for i in range(0, len(bl_ramp_prop)):
                 r = bl_ramp_prop[i]
-                try:
+                if i < len(elements):
                     elem = elements[i]
                     elem.position = r.position
-                except:
+                else:                    
                     elem = elements.new(r.position)
                 elem.color = r.rman_value         
 
@@ -521,11 +521,11 @@ def reload_bl_ramps(bl_scene):
             points = curve.points
             for i in range(0, len(bl_ramp_prop)):
                 r = bl_ramp_prop[i]
-                try:
+                if i < len(points):
                     point = points[i]
                     point.location[0] = r.position
                     point.location[1] = r.rman_value
-                except:
+                else:
                     points.new(r.position, r.rman_value)        
 
             if len(bl_ramp_prop) < len(points):

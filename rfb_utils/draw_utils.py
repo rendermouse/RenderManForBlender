@@ -211,7 +211,8 @@ def draw_prop(node, prop_name, layout, level=0, nt=None, context=None, sticky=Fa
             if not node_group:
                 row = layout.row(align=True)
                 row.context_pointer_set("node", node)
-                row.operator('node.rman_fix_ramp')                
+                row.operator('node.rman_fix_ramp') 
+                row.operator('node.rman_fix_all_ramps')
                 return
 
             ramp_name =  prop
