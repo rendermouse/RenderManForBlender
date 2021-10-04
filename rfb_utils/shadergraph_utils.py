@@ -410,10 +410,133 @@ def get_all_shading_nodes():
             nodes.append(n)
 
     for mat in bpy.data.materials:
-        output = find_rman_output_node(mat.node_tree)
-        nodes.extend(gather_nodes(output))
+        output = is_renderman_nodetree(mat)
+        if output:
+            nodes.extend(gather_nodes(output))
 
     return nodes
+
+def save_bl_ramps(bl_scene):
+    '''
+    Save all ramps to our custom collection properties
+    '''
+
+    for node in get_all_shading_nodes():
+        for prop_name, meta in node.prop_meta.items():
+            param_widget = meta.get('widget', 'default')
+            param_type = meta['renderman_type']
+            prop = getattr(node, prop_name)            
+            if param_type == 'colorramp':
+                nt = bpy.data.node_groups[node.rman_fake_node_group]
+                if nt:
+                    ramp_name =  prop
+                    color_ramp_node = nt.nodes[ramp_name]                            
+                    colors = []
+                    positions = []
+                    bl_ramp = '%s_bl_ramp' % prop_name
+                    bl_ramp_prop = getattr(node, bl_ramp)
+                    bl_ramp_prop.clear()
+                    for e in color_ramp_node.color_ramp.elements:
+                        r = bl_ramp_prop.add()
+                        r.position = e.position
+                        r.rman_value = e.color
+       
+            elif param_type == 'floatramp':
+                nt = bpy.data.node_groups[node.rman_fake_node_group]
+                if nt:
+                    ramp_name =  prop
+                    float_ramp_node = nt.nodes[ramp_name]                            
+
+                    curve = float_ramp_node.mapping.curves[0]
+                    knots = []
+                    vals = []
+                    bl_ramp = '%s_bl_ramp' % prop_name
+                    bl_ramp_prop = getattr(node, bl_ramp)
+                    bl_ramp_prop.clear()
+                    for p in curve.points:
+                        r = bl_ramp_prop.add()
+                        r.position = p.location[0]
+                        r.rman_value = p.location[1]
+
+def reload_bl_ramps(bl_scene):
+    '''
+    Reload all ramps from our custom collection properties. We only
+    do this if the NodeTree is from a library.
+    '''
+
+    for node in get_all_shading_nodes():
+        nt = node.id_data
+        if not nt.library:
+            continue
+
+        color_rman_ramps = node.__annotations__.get('__COLOR_RAMPS__', [])
+        float_rman_ramps = node.__annotations__.get('__FLOAT_RAMPS__', [])
+        node_group = bpy.data.node_groups.get(node.rman_fake_node_group, None)
+        if not node_group:       
+            node_group = bpy.data.node_groups.new(
+                node.rman_fake_node_group, 'ShaderNodeTree') 
+            node_group.use_fake_user = True
+
+        for prop_name in color_rman_ramps:  
+            prop = getattr(node, prop_name)       
+            ramp_name =  prop               
+            n = node_group.nodes.get(ramp_name, None)
+            if not n:
+                n = node_group.nodes.new('ShaderNodeValToRGB')
+                n.name = ramp_name                
+            bl_ramp_prop = getattr(node, '%s_bl_ramp' % prop_name)
+
+            elements = n.color_ramp.elements
+            for i in range(0, len(bl_ramp_prop)):
+                r = bl_ramp_prop[i]
+                try:
+                    elem = elements[i]
+                    elem.position = r.position
+                except:
+                    elem = elements.new(r.position)
+                elem.color = r.rman_value         
+
+            if len(bl_ramp_prop) < len(elements):
+                for elem in [elements[i] for i in range(len(bl_ramp_prop), len(elements)-1)]:
+                    elements.remove(elem) 
+
+                # we cannot remove the last element, so 
+                # just copy the values and remove the second to last
+                # element
+                last_elem = elements[-1]
+                prev_elem = elements[-2]
+                last_elem.color = prev_elem.color
+                last_elem.position = prev_elem.position   
+                elements.remove(prev_elem)             
+
+        for prop_name in float_rman_ramps:
+            prop = getattr(node, prop_name)       
+            ramp_name =  prop               
+            n = node_group.nodes.get(ramp_name, None)
+            if not n:
+                n = node_group.nodes.new('ShaderNodeVectorCurve') 
+                n.name = ramp_name
+            bl_ramp_prop = getattr(node, '%s_bl_ramp' % prop_name)
+            curve = n.mapping.curves[0]
+            points = curve.points
+            for i in range(0, len(bl_ramp_prop)):
+                r = bl_ramp_prop[i]
+                try:
+                    point = points[i]
+                    point.location[0] = r.position
+                    point.location[1] = r.rman_value
+                except:
+                    points.new(r.position, r.rman_value)        
+
+            if len(bl_ramp_prop) < len(points):
+                for elem in [points[i] for i in range(len(bl_ramp_prop), len(points)-1)]:
+                    points.remove(elem) 
+
+                last_elem = points[-1]
+                prev_elem = points[-2]
+                last_elem.location[0] = prev_elem.location[0]
+                last_elem.location[1] = prev_elem.location[1]   
+                points.remove(prev_elem)                                 
 
 def get_rerouted_node(node):
     '''Find and return the rerouted node and socket, given
@@ -512,7 +635,10 @@ def find_projection_node(camera):
         (bpy.types.ShaderNode) - projection node
     '''    
     projection_node = None
-    nt = camera.data.renderman.rman_nodetree
+    if isinstance(camera, bpy.types.Camera):
+        nt = camera.renderman.rman_nodetree
+    else:
+        nt = camera.data.renderman.rman_nodetree
     if nt:
         output = find_node_from_nodetree(nt, 'RendermanProjectionsOutputNode')
         socket = output.inputs[0]

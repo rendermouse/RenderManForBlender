@@ -84,6 +84,7 @@ class RendermanShadingNode(bpy.types.ShaderNode):
     # node_props = None
     def draw_buttons(self, context, layout):
         nt = self.id_data
+        #layout.enabled = (nt.library is None)
         out_node = shadergraph_utils.find_rman_output_node(nt)
         self.draw_nonconnectable_props(context, layout, self.prop_names, output_node=out_node)
         if self.bl_idname == "PxrOSLPatternNode":
@@ -91,6 +92,7 @@ class RendermanShadingNode(bpy.types.ShaderNode):
 
     def draw_buttons_ext(self, context, layout):
         nt = self.id_data
+        #layout.enabled = (nt.library is None)
         out_node = shadergraph_utils.find_rman_output_node(nt)        
         rman_icon = rfb_icons.get_node_icon(self.bl_label)
         split = layout.split(factor=0.75)
@@ -179,17 +181,32 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                 if widget == 'null':
                     continue
                 elif widget == 'colorramp':
-                    node_group = bpy.data.node_groups[self.rman_fake_node_group]
+                    node_group = bpy.data.node_groups.get(self.rman_fake_node_group, None)
+                    if not node_group:
+                        row = layout.row(align=True)
+                        row.context_pointer_set("node", self)
+                        row.operator('node.rman_fix_ramp')
+                        continue                
+                                  
                     ramp_name =  getattr(self, prop_name)
                     ramp_node = node_group.nodes[ramp_name]
+                    nt = self.id_data
+                    layout.enabled = (nt.library is None)
                     layout.template_color_ramp(
                             ramp_node, 'color_ramp') 
                     #draw_utils.draw_sticky_toggle(layout, self, prop_name, output_node)   
                     continue                            
                 elif widget == 'floatramp':
-                    node_group = bpy.data.node_groups[self.rman_fake_node_group]
+                    if not node_group:
+                        row = layout.row(align=True)
+                        row.context_pointer_set("node", self)
+                        row.operator('node.rman_fix_ramp')
+                        continue                       
+
                     ramp_name =  getattr(self, prop_name)
                     ramp_node = node_group.nodes[ramp_name]
+                    nt = self.id_data
+                    layout.enabled = (nt.library is None)
                     layout.template_curve_mapping(
                             ramp_node, 'mapping')                   
                     #draw_utils.draw_sticky_toggle(layout, self, prop_name, output_node)

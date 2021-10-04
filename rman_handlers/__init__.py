@@ -10,10 +10,12 @@ def rman_load_post(bl_scene):
     string_utils.update_blender_tokens_cb(bl_scene)
     rman_ui_light_handlers.clear_gl_tex_cache(bl_scene)
     texture_utils.txmanager_load_cb(bl_scene)
+    shadergraph_utils.reload_bl_ramps(bl_scene)
 
 @persistent
 def rman_save_pre(bl_scene):
     string_utils.update_blender_tokens_cb(bl_scene)
+    shadergraph_utils.save_bl_ramps(bl_scene)
 
 @persistent
 def rman_save_post(bl_scene):

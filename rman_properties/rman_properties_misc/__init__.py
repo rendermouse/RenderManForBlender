@@ -8,6 +8,16 @@ from ... import rman_config
 
 import bpy
 
+class RendermanBlColorRamp(bpy.types.PropertyGroup):
+    rman_value: FloatVectorProperty(name="value",
+                            default=(1.0, 1.0, 1.0, 1.0), size=4,
+                            subtype="COLOR")
+    position: FloatProperty(name="position", default=0.0)
+
+class RendermanBlFloatRamp(bpy.types.PropertyGroup):
+    rman_value: FloatProperty(name="value", default=0.0)
+    position: FloatProperty(name="position", default=0.0)
+
 class RendermanUserTokenGroup(bpy.types.PropertyGroup):
     name: StringProperty(name="Name", default="")
     value: StringProperty(name="Value", default="")
@@ -274,6 +284,8 @@ class Tab_CollectionGroup(bpy.types.PropertyGroup):
         default=False)        
 
 classes = [      
+    RendermanBlColorRamp,
+    RendermanBlFloatRamp,
     RendermanUserTokenGroup,
     RendermanLightPointer,
     RendermanLightGroup,

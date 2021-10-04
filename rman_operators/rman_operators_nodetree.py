@@ -674,7 +674,60 @@ class PRMAN_OT_Add_Projection_Nodetree(bpy.types.Operator):
     def invoke(self, context, event):
 
         wm = context.window_manager
-        return wm.invoke_props_dialog(self)           
+        return wm.invoke_props_dialog(self)       
+
+class PRMAN_OT_Fix_Ramp(bpy.types.Operator):
+    bl_idname = "node.rman_fix_ramp"
+    bl_label = "Fix Ramp"
+    bl_description = "Try to fix any broken ramps. This may be needed if you are linking in a material from another blend file."
+    bl_options = {"INTERNAL"}
+
+    def execute(self, context):
+        node = context.node
+
+        node_group = bpy.data.node_groups.new(
+            node.rman_fake_node_group, 'ShaderNodeTree') 
+        node_group.use_fake_user = True                 
+
+        color_rman_ramps = node.__annotations__.get('__COLOR_RAMPS__', [])
+        float_rman_ramps = node.__annotations__.get('__FLOAT_RAMPS__', [])
+
+        for prop_name in color_rman_ramps:             
+            n = node_group.nodes.new('ShaderNodeValToRGB')
+            bl_ramp_prop = getattr(node, '%s_bl_ramp' % prop_name)
+            prop = getattr(node, prop_name)       
+            ramp_name =  prop
+            n.name = ramp_name
+
+            elements = n.color_ramp.elements
+            for i in range(0, len(bl_ramp_prop)):
+                r = bl_ramp_prop[i]
+                if i == 0 or i == 1:
+                    elem = elements[i]
+                    elem.position = r.position
+                else:
+                    elem = elements.new(r.position)
+                elem.color = r.rman_value            
+
+        for prop_name in float_rman_ramps:
+            n = node_group.nodes.new('ShaderNodeVectorCurve') 
+            bl_ramp_prop = getattr(node, '%s_bl_ramp' % prop_name)
+            prop = getattr(node, prop_name)       
+            ramp_name =  prop
+            n.name = ramp_name
+
+            curve = n.mapping.curves[0]
+            points = curve.points
+            for i in range(0, len(bl_ramp_prop)):
+                r = bl_ramp_prop[i]
+                if i == 0 or i == 1:
+                    point = points[i]
+                    point.location[0] = r.position
+                    point.location[1] = r.rman_value
+                else:
+                    points.new(r.position, r.rman_value)                 
+
+        return {"FINISHED"}
 
 classes = [
     SHADING_OT_convert_all_renderman_nodetree,
@@ -689,7 +742,8 @@ classes = [
     PRMAN_OT_Force_Material_Refresh,
     PRMAN_OT_Force_Light_Refresh,
     PRMAN_OT_Force_LightFilter_Refresh,
-    PRMAN_OT_Add_Projection_Nodetree
+    PRMAN_OT_Add_Projection_Nodetree,
+    PRMAN_OT_Fix_Ramp
 ]
 
 def register():

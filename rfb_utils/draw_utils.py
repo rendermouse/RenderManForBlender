@@ -207,16 +207,29 @@ def draw_prop(node, prop_name, layout, level=0, nt=None, context=None, sticky=Fa
         if widget == 'null' or prop_hidden:
             return
         elif widget == 'colorramp':
-            node_group = bpy.data.node_groups[node.rman_fake_node_group]
+            node_group = bpy.data.node_groups.get(node.rman_fake_node_group, None)
+            if not node_group:
+                row = layout.row(align=True)
+                row.context_pointer_set("node", node)
+                row.operator('node.rman_fix_ramp')                
+                return
+
             ramp_name =  prop
             ramp_node = node_group.nodes[ramp_name]
+            layout.enabled = (nt.library is None)
             layout.template_color_ramp(
                     ramp_node, 'color_ramp')  
             return       
         elif widget == 'floatramp':
-            node_group = bpy.data.node_groups[node.rman_fake_node_group]
+            node_group = bpy.data.node_groups.get(node.rman_fake_node_group, None)
+            if not node_group:
+                row = layout.row(align=True)
+                row.context_pointer_set("node", node)
+                row.operator('node.rman_fix_ramp')
+                
             ramp_name =  prop
             ramp_node = node_group.nodes[ramp_name]
+            layout.enabled = (nt.library is None)
             layout.template_curve_mapping(
                     ramp_node, 'mapping')  
             return     

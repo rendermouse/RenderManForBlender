@@ -268,10 +268,10 @@ def load_addon():
         from . import rman_handlers
 
         rman_config.register()
+        rman_properties.register() 
         rman_presets.register()        
         rman_operators.register()
-        rman_bl_nodes.register()
-        rman_properties.register()          
+        rman_bl_nodes.register()         
         rman_ui.register()      
         rman_handlers.register()
 

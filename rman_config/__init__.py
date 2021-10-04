@@ -1,6 +1,5 @@
 from ..rfb_utils.rfb_node_desc_utils.rfb_node_desc_param import RfbNodeDescParamJSON
 from ..rfb_utils.rfb_node_desc_utils.conditional_visibility import build_condvis_expr
-from ..rfb_utils import generate_property_utils
 from ..rfb_utils.prefs_utils import get_pref
 from ..rfb_utils import filepath_utils
 from ..rfb_utils.envconfig_utils import envconfig
@@ -54,6 +53,8 @@ class RmanBasePropertyGroup:
 
         if not rman_config_name in __RMAN_CONFIG__:
             return
+
+        from ..rfb_utils import generate_property_utils            
 
         config = __RMAN_CONFIG__[rman_config_name]
 

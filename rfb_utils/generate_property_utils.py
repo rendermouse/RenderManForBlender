@@ -212,18 +212,30 @@ def generate_property(node, sp, update_function=None):
         update_function = lcls['update_func']        
 
     if param_widget == 'colorramp':
+        from ..rman_properties.rman_properties_misc import RendermanBlColorRamp
+
         renderman_type = 'colorramp'
         prop = StringProperty(name=param_label, default='')
         rman_ramps = node.__annotations__.get('__COLOR_RAMPS__', [])
         rman_ramps.append(param_name)
-        node.__annotations__['__COLOR_RAMPS__'] = rman_ramps     
+        node.__annotations__['__COLOR_RAMPS__'] = rman_ramps 
+
+        bl_ramp_name = '%s_bl_ramp' % param_name
+        bl_ramp_prop = CollectionProperty(name=bl_ramp_name, type=RendermanBlColorRamp)
+        node.__annotations__[bl_ramp_name] = bl_ramp_prop
 
     elif param_widget == 'floatramp':
+        from ..rman_properties.rman_properties_misc import RendermanBlFloatRamp
+
         renderman_type = 'floatramp'
         prop = StringProperty(name=param_label, default='')
         rman_ramps = node.__annotations__.get('__FLOAT_RAMPS__', [])
         rman_ramps.append(param_name)
-        node.__annotations__['__FLOAT_RAMPS__'] = rman_ramps               
+        node.__annotations__['__FLOAT_RAMPS__'] = rman_ramps    
+
+        bl_ramp_name = '%s_bl_ramp' % param_name
+        bl_ramp_prop = CollectionProperty(name=bl_ramp_name, type=RendermanBlFloatRamp)
+        node.__annotations__[bl_ramp_name] = bl_ramp_prop                   
 
     elif param_type == 'float':
         if sp.is_array():
