@@ -806,8 +806,5 @@ def portal_inherit_dome_params(portal_node, dome, dome_node, rixparams):
     # lightColor = lightColor * tint
     lightColor = getattr(dome_node, 'lightColor')
     tint = getattr(portal_node, 'tint')
-    lightColor[0] = lightColor[0] * tint[0]
-    lightColor[1] = lightColor[1] * tint[1]
-    lightColor[2] = lightColor[2] * tint[2] 
-
-    rixparams.SetColor('lightColor', string_utils.convert_val(lightColor, type_hint='color') ) 
+    portal_color = [lightColor[0] * tint[0], lightColor[1] * tint[1], lightColor[2] * tint[2]]
+    rixparams.SetColor('lightColor', portal_color ) 

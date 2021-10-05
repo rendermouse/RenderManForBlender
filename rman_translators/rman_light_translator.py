@@ -120,6 +120,7 @@ class RmanLightTranslator(RmanTranslator):
                 # if this portal light is attached to a dome light, 
                 # inherit the dome light's parameters
                 if portal_parent:
+                    portal_parent = portal_parent.original
                     parent_node = portal_parent.data.renderman.get_light_node()
 
                     rixparams.SetString('portalName', rman_sg_light.db_name)
