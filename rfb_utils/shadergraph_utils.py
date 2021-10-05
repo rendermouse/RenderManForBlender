@@ -427,12 +427,14 @@ def save_bl_ramps(bl_scene):
     '''
 
     for node in get_all_shading_nodes():
+        if not hasattr(node, 'rman_fake_node_group'):
+            continue        
         for prop_name, meta in node.prop_meta.items():
             param_widget = meta.get('widget', 'default')
             param_type = meta['renderman_type']
             prop = getattr(node, prop_name)            
             if param_type == 'colorramp':
-                nt = bpy.data.node_groups[node.rman_fake_node_group]
+                nt = bpy.data.node_groups.get(node.rman_fake_node_group, None)
                 if nt:
                     ramp_name =  prop
                     color_ramp_node = nt.nodes[ramp_name]                            
@@ -447,7 +449,7 @@ def save_bl_ramps(bl_scene):
                         r.rman_value = e.color
        
             elif param_type == 'floatramp':
-                nt = bpy.data.node_groups[node.rman_fake_node_group]
+                nt = bpy.data.node_groups.get(node.rman_fake_node_group, None)
                 if nt:
                     ramp_name =  prop
                     float_ramp_node = nt.nodes[ramp_name]                            

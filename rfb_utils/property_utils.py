@@ -634,9 +634,9 @@ def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group
                             set_rix_param(params, param_type, param_name, val_array, is_reference=False, is_array=True, array_len=len(val_array))
                         continue
                     elif param_type == 'colorramp':
-                        nt = bpy.data.node_groups[node.rman_fake_node_group]
+                        nt = bpy.data.node_groups.get(node.rman_fake_node_group, None)
+                        ramp_name =  prop
                         if nt:
-                            ramp_name =  prop
                             color_ramp_node = nt.nodes[ramp_name]                            
                             colors = []
                             positions = []
@@ -656,12 +656,38 @@ def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group
 
                             rman_interp_map = { 'B_SPLINE': 'bspline', 'LINEAR': 'linear', 'CONSTANT': 'constant'}
                             interp = rman_interp_map.get(color_ramp_node.color_ramp.interpolation,'catmull-rom')
-                            params.SetString("%s_Interpolation" % prop_name, interp )         
-                        continue               
+                            params.SetString("%s_Interpolation" % prop_name, interp )  
+                        else:         
+                            # this might be from a linked file
+                            bl_ramp_prop = getattr(node, '%s_bl_ramp' % prop_name)
+                            if len(bl_ramp_prop) < 1:
+                                continue          
+
+                            colors = []
+                            positions = []    
+                            r = bl_ramp_prop[0]         
+                            colors.append(r.rman_value[:3])
+                            positions.append(r.position)
+
+                            for i in range(0, len(bl_ramp_prop)):
+                                r = bl_ramp_prop[i]
+                                colors.append(r.rman_value[:3])
+                                positions.append(r.position)
+                            colors.append(bl_ramp_prop[-1].rman_value[:3])
+                            positions.append(bl_ramp_prop[-1].position)
+
+                            params.SetInteger('%s' % prop_name, len(positions))
+                            params.SetFloatArray("%s_Knots" % prop_name, positions, len(positions))
+                            params.SetColorArray("%s_Colors" % prop_name, colors, len(positions))
+
+                            interp = 'catmull-rom'
+                            params.SetString("%s_Interpolation" % prop_name, interp )                                 
+                        
+                        continue
                     elif param_type == 'floatramp':
-                        nt = bpy.data.node_groups[node.rman_fake_node_group]
+                        nt = bpy.data.node_groups.get(node.rman_fake_node_group, None)
+                        ramp_name =  prop
                         if nt:
-                            ramp_name =  prop
                             float_ramp_node = nt.nodes[ramp_name]                            
 
                             curve = float_ramp_node.mapping.curves[0]
@@ -682,7 +708,33 @@ def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group
                             
                             # Blender doesn't have an interpolation selection for float ramps. Default to catmull-rom
                             interp = 'catmull-rom'
-                            params.SetString("%s_Interpolation" % prop_name, interp )                          
+                            params.SetString("%s_Interpolation" % prop_name, interp )         
+                        else:
+                            # this might be from a linked file
+                            bl_ramp_prop = getattr(node, '%s_bl_ramp' % prop_name)
+                            if len(bl_ramp_prop) < 1:
+                                continue          
+
+                            vals = []
+                            knots = []    
+                            r = bl_ramp_prop[0]         
+                            vals.append(r.rman_value[:3])
+                            knots.append(r.position)
+
+                            for i in range(0, len(bl_ramp_prop)):
+                                r = bl_ramp_prop[i]
+                                vals.append(r.rman_value[:3])
+                                knots.append(r.position)
+                            vals.append(bl_ramp_prop[-1].rman_value)
+                            knots.append(bl_ramp_prop[-1].position)
+
+                            params.SetInteger('%s' % prop_name, len(knots))
+                            params.SetFloatArray('%s_Knots' % prop_name, knots, len(knots))
+                            params.SetFloatArray('%s_Floats' % prop_name, vals, len(vals))   
+
+                            interp = 'catmull-rom'
+                            params.SetString("%s_Interpolation" % prop_name, interp )                        
+
                         continue
                     else:
 

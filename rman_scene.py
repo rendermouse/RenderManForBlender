@@ -586,6 +586,8 @@ class RmanScene(object):
         obj = bpy.data.objects.get(db_ob.name, None)
         if not obj and self.is_swatch_render:
             obj = db_ob
+        elif obj.type != db_ob.type:
+            obj = db_ob
 
         if obj and obj.type not in ('ARMATURE', 'CAMERA'):
             ob = obj.evaluated_get(self.depsgraph)            
