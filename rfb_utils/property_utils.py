@@ -764,7 +764,7 @@ def portal_inherit_dome_params(portal_node, dome, dome_node, rixparams):
         "string shadowSubset": "",
         "string shadowExcludeSubset": "",
         "vector colorMapGamma": (1.0,1.0,1.0),
-        "float colorMapSaturation", 1.0,
+        "float colorMapSaturation": 1.0,
     }
     
     for param, dflt in inheritAttrs.items():
