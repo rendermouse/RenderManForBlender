@@ -431,11 +431,11 @@ def save_bl_ramps(bl_scene):
             continue        
         for prop_name, meta in node.prop_meta.items():
             param_widget = meta.get('widget', 'default')
-            param_type = meta['renderman_type']
-            prop = getattr(node, prop_name)            
+            param_type = meta['renderman_type']           
             if param_type == 'colorramp':
                 nt = bpy.data.node_groups.get(node.rman_fake_node_group, None)
                 if nt:
+                    prop = getattr(node, prop_name) 
                     ramp_name =  prop
                     color_ramp_node = nt.nodes[ramp_name]                            
                     colors = []
@@ -451,6 +451,7 @@ def save_bl_ramps(bl_scene):
             elif param_type == 'floatramp':
                 nt = bpy.data.node_groups.get(node.rman_fake_node_group, None)
                 if nt:
+                    prop = getattr(node, prop_name) 
                     ramp_name =  prop
                     float_ramp_node = nt.nodes[ramp_name]                            
 
