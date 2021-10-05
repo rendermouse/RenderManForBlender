@@ -941,6 +941,18 @@
         },
         {
             "panel": "RENDER_PT_renderman_advanced_settings",
+            "page": "Cache Sizes",
+            "name": "limits_ptexturememory",
+            "riopt": "limits:ptexturememory",
+            "label": "Ptex",
+            "type": "int",
+            "default": 32768,
+            "min": "0",
+            "widget": false,
+            "help": "PTex cache size in kB"
+        },
+        {
+            "panel": "RENDER_PT_renderman_advanced_settings",
             "page": "",
             "name": "use_metadata",
             "label": "Use Metadata",

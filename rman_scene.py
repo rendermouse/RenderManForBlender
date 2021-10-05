@@ -1167,11 +1167,6 @@ class RmanScene(object):
         if not self.external_render:
             options.SetInteger(self.rman.Tokens.Rix.k_limits_threads, rm.threads)
 
-        # cache sizes
-        options.SetInteger(self.rman.Tokens.Rix.k_limits_geocachememory, rm.limits_geocachememory)
-        options.SetInteger(self.rman.Tokens.Rix.k_limits_opacitycachememory, rm.limits_opacitycachememory)
-        options.SetInteger(self.rman.Tokens.Rix.k_limits_texturememory, rm.limits_texturememory)
-
         # pixelfilter
         options.SetString(self.rman.Tokens.Rix.k_Ri_PixelFilterName, rm.ri_displayFilter)
         options.SetFloatArray(self.rman.Tokens.Rix.k_Ri_PixelFilterWidth, (rm.ri_displayFilterSize[0], rm.ri_displayFilterSize[1]), 2)
