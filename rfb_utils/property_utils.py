@@ -1,4 +1,3 @@
-from threading import current_thread
 from . import texture_utils
 from . import string_utils
 from . import shadergraph_utils
@@ -7,9 +6,7 @@ from ..rman_constants import RFB_ARRAYS_MAX_LEN, __RMAN_EMPTY_STRING__, __RESERV
 from ..rfb_logger import rfb_log
 from collections import OrderedDict
 from bpy.props import *
-from copy import deepcopy
 import bpy
-import sys
 import os
 import shutil
 import re
@@ -756,48 +753,53 @@ def portal_inherit_dome_params(portal_node, dome, dome_node, rixparams):
     '''   
 
     inheritAttrs = {
-        "specular": "float",
-        "diffuse": "float",
-        "visibleInRefractionPath": "int",
-        "shadowDistance": "float",
-        "shadowFalloff": "float",
-        "shadowFalloffGamma": "float",
-        "shadowColor": "color",
-        "enableShadows": "int",
-        "shadowSubset": "string",
-        "shadowExcludeSubset": "string",
+        "float specular": 1.0,
+        "float diffuse": 1.0,
+        "int visibleInRefractionPath": True,
+        "float shadowDistance": -1.0,
+        "float shadowFalloff": -1.0,
+        "float shadowFalloffGamma": 1.0,
+        "color shadowColor": (0.0,0.0,0.0),
+        "int enableShadows": True,
+        "string shadowSubset": "",
+        "string shadowExcludeSubset": "",
+        "vector colorMapGamma": (1.0,1.0,1.0),
+        "float colorMapSaturation", 1.0,
     }
     
-    for param_name, param_type in inheritAttrs.items():
-        val = getattr(dome_node, param_name, None)
-        if val:
-            set_rix_param(rixparams, param_type, param_name, val, is_reference=False)
+    for param, dflt in inheritAttrs.items():
+        param_type, param_name = param.split(' ')
+        dome_val = getattr(dome_node, param_name)
+        portal_val = getattr(portal_node, param_name)
+        if portal_val != dflt:
+            set_rix_param(rixparams, param_type, param_name, portal_val, is_reference=False)
+        else:
+            set_rix_param(rixparams, param_type, param_name, dome_val, is_reference=False)
 
+    # for color temperature, only inherit if enableTemperature is not True
+    # on the portal light
+    prop = getattr(portal_node, 'enableTemperature')
+    if string_utils.convert_val(prop):
+        rixparams.SetInteger('enableTemperature', string_utils.convert_val(prop, type_hint='int'))        
+        prop = getattr(portal_node, 'temperature')
+        rixparams.SetFloat('temperature', string_utils.convert_val(prop, type_hint='float'))   
+    else:
+        prop = getattr(dome_node, 'enableTemperature')
+        rixparams.SetInteger('enableTemperature', string_utils.convert_val(prop, type_hint='int'))        
+        prop = getattr(dome_node, 'temperature')
+        rixparams.SetFloat('temperature', string_utils.convert_val(prop, type_hint='float'))         
+
+    # inherit lightColorMap directly from the dome
     tx_node_id = texture_utils.generate_node_id(dome_node, 'lightColorMap', ob=dome)
     tx_val = texture_utils.get_txmanager().get_output_tex_from_id(tx_node_id)
     rixparams.SetString('domeColorMap', tx_val) 
 
-    prop = getattr(portal_node, 'colorMapGamma')
-    if string_utils.convert_val(prop) == (1.0, 1.0, 1.0):
-        prop = getattr(dome_node, 'colorMapGamma')
-        rixparams.SetVector('colorMapGamma', string_utils.convert_val(prop, type_hint='vector'))
-
-    prop = getattr(portal_node, 'colorMapSaturation')
-    if string_utils.convert_val(prop) == 1.0:
-        prop = getattr(dome_node, 'colorMapSaturation')
-        rixparams.SetFloat('colorMapSaturation', string_utils.convert_val(prop, type_hint='float'))
-
-    prop = getattr(portal_node, 'enableTemperature')
-    if string_utils.convert_val(prop):
-        prop = getattr(dome_node, 'enableTemperature')
-        rixparams.SetInteger('enableTemperature', string_utils.convert_val(prop, type_hint='int'))        
-        prop = getattr(dome_node, 'temperature')
-        rixparams.SetFloat('temperature', string_utils.convert_val(prop, type_hint='float'))   
-     
+    # inherit exposure directly from dome 
     prop = getattr(dome_node, 'exposure')
     rixparams.SetFloat('exposure', string_utils.convert_val(prop, type_hint='float')) 
 
-    # intensity
+    # for intensity, inherit from the dome
+    # and scale it by intensityMult
     prop = getattr(dome_node, 'intensity')
     intensityMult = getattr(portal_node, 'intensityMult')
     intensity = intensityMult * prop
