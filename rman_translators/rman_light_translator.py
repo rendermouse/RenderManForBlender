@@ -127,8 +127,8 @@ class RmanLightTranslator(RmanTranslator):
                     property_utils.portal_inherit_dome_params(light_shader, portal_parent, parent_node, rixparams)
 
                     orient_mtx = transform_utils.convert_to_blmatrix(s_orientPxrLight)
-                    portal_mtx = orient_mtx @ Matrix(ob.matrix_world)                   
-                    dome_mtx = Matrix(portal_parent.matrix_world)
+                    portal_mtx = orient_mtx @ Matrix(ob.matrix_world) 
+                    dome_mtx = Matrix.Rotation(math.radians(90.0), 4, 'Y') @ Matrix(portal_parent.matrix_world)
                     dome_mtx.invert()
                     mtx = portal_mtx @ dome_mtx  
                     
