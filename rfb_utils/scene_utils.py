@@ -152,6 +152,34 @@ def set_render_variant_spool(bl_scene, args, is_tractor=False):
             device_list = ','.join(device_list)
             args.append('-xpudevices:%s' % device_list)  
 
+def get_all_portals(light_ob):
+    """Return a list of portals
+
+    Args:
+    light_ob (bpy.types.Object) - light object
+
+    Returns:
+    (list) - list of portals attached to this light
+    """    
+
+    portals = list()
+    if light_ob.type != 'LIGHT':
+        return portals
+
+    light = light_ob.data
+    rm = light.renderman  
+    light_shader = rm.get_light_node()
+
+    if light_shader:
+        light_shader_name = rm.get_light_node_name()
+
+        if light_shader_name == 'PxrDomeLight':
+            for portal_pointer in rm.portal_lights:
+                if portal_pointer.linked_portal_ob:
+                    portals.append(portal_pointer.linked_portal_ob)
+                 
+    return portals
+
 def get_all_volume_objects(scene):
     """Return a list of volume objects in the scene
 

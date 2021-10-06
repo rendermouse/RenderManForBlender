@@ -588,6 +588,15 @@ class RmanSceneSync(object):
                         rfb_log().debug("Geometry Node Tree updated: %s" % modifier.node_group.name)
                         update_geo_instances(modifier.node_group.nodes)
 
+    def update_portals(self, ob):
+        with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
+            translator = self.rman_scene.rman_translators['LIGHT']
+            for portal in scene_utils.get_all_portals(ob):
+                rman_sg_node = self.rman_scene.rman_objects.get(portal.original, None)
+                if rman_sg_node:
+                    translator.update(portal, rman_sg_node)
+
+
     def update_scene(self, context, depsgraph):
         ## FIXME: this function is waaayyy too big and is doing too much stuff
 
@@ -793,6 +802,9 @@ class RmanSceneSync(object):
                         self.update_instances.add(obj.id.original)
                         self.update_geometry_node_instances(obj.id)
                         self.do_delete = False
+                        if rman_type == 'LIGHT':
+                            # check if portals are attached
+                            self.update_portals(obj.id.original)
 
                     # Check if this object is the focus object the camera. If it is
                     # we need to update the camera
