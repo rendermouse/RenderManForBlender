@@ -1,6 +1,7 @@
 from . import string_utils
 from . import filepath_utils
 from . import scene_utils
+from . import shadergraph_utils
 #from . import object_utils
 from .prefs_utils import get_pref
 from ..rfb_logger import rfb_log
@@ -148,6 +149,12 @@ class RfBTxManager(object):
             return (txfile.state != txmanager.STATE_INPUT_MISSING)  
         return True
 
+    def does_nodeid_exists(self, nodeID):
+        txfile = self.txmanager.get_txfile_from_id(nodeID)
+        if txfile:
+            return True
+        return False
+
 def get_txmanager():
     global __RFB_TXMANAGER__
     if __RFB_TXMANAGER__ is None:
@@ -214,23 +221,6 @@ def get_textures(id):
     for node in nt.nodes:
         update_texture(node, ob=id)
 
-def recursive_texture_set(ob):
-    mat_set = []
-    SUPPORTED_MATERIAL_TYPES = ['MESH', 'CURVE', 'FONT', 'SURFACE']
-    if ob.type in SUPPORTED_MATERIAL_TYPES:
-        for mat in ob.data.materials:
-            if mat:
-                mat_set.append(mat)
-
-    for child in ob.children:
-        mat_set += recursive_texture_set(child)
-
-    if ob.instance_collection:
-        for child in ob.instance_collection.objects:
-            mat_set += recursive_texture_set(child)
-
-    return mat_set    
-
 def get_blender_image_path(bl_image):
     if bl_image.packed_file:
         bl_image.unpack()
@@ -251,23 +241,37 @@ def add_images_from_image_editor():
             if txfile:
                 get_txmanager().done_callback(nodeID, txfile)  
 
-def parse_scene_for_textures(bl_scene):
+def parse_scene_for_textures(bl_scene=None):
 
     #add_images_from_image_editor()
 
     mats_to_scan = []
-    for o in scene_utils.renderable_objects(bl_scene):
-        if o.type == 'CAMERA' or o.type == 'EMPTY':
-            continue
-        elif o.type == 'LIGHT':
-            if o.data.renderman.get_light_node():
-                update_texture(o.data.renderman.get_light_node(), ob=o)
-        else:
-            mats_to_scan += recursive_texture_set(o)
+    if bl_scene:
+        for o in scene_utils.renderable_objects(bl_scene):
+            if o.type == 'EMPTY':
+                continue
+            elif o.type == 'CAMERA':
+                node = shadergraph_utils.find_projection_node(o) 
+                if node:
+                    update_texture(node, ob=o)
+            elif o.type == 'LIGHT':
+                node = o.data.renderman.get_light_node()
+                if node:
+                    update_texture(node, ob=o)
 
-    # cull duplicates by only doing mats once
-    for mat in set(mats_to_scan):
-        get_textures(mat)    
+    for world in bpy.data.worlds:
+        if not world.use_nodes:
+            continue
+        node = shadergraph_utils.find_integrator_node(world)
+        if node:
+            update_texture(node, ob=world)
+        for node in shadergraph_utils.find_displayfilter_nodes(world):
+            update_texture(node, ob=world)
+        for node in shadergraph_utils.find_samplefilter_nodes(world):
+            update_texture(node, ob=world)            
+ 
+    for mat in bpy.data.materials:
+        get_textures(mat)
             
 def parse_for_textures(bl_scene):    
     rfb_log().debug("Parsing scene for textures.")                                   

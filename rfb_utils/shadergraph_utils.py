@@ -554,6 +554,19 @@ def reload_bl_ramps(bl_scene, check_library=True):
                 last_elem.location[1] = prev_elem.location[1]   
                 points.remove(prev_elem)                                 
 
+def is_texture_property(prop_name, meta):
+    param_type = meta['renderman_type']
+    if param_type != 'string':
+        return False
+    options = meta['options']
+    param_widget = meta.get('widget', 'default')
+    if param_widget in ['fileinput', 'assetidinput']:
+        if 'ies' in options:
+            return False
+        elif ('texture' in options) or ('env' in options) or ('imageplane' in options):    
+            return True
+    return False
+
 def get_rerouted_node(node):
     '''Find and return the rerouted node and socket, given
     a NodeReroute node

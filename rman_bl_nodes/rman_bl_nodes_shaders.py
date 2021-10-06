@@ -309,6 +309,18 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                         draw_utils.draw_sticky_toggle(col, self, prop_name, output_node)
 
     def copy(self, node):
+        # Look for textures
+        from ..rfb_utils import texture_utils
+        prop_meta = getattr(self, 'prop_meta', dict())
+        for prop_name, meta in prop_meta.items():
+            if shadergraph_utils.is_texture_property(prop_name, meta):
+                # This is a bit weird. Unfortunately, we can't seem to find the owner
+                # of this node from here (ex: which material owns this node).
+                # For now, we just parse the whole scene for textures.
+                texture_utils.parse_for_textures(bpy.context.scene)
+                break
+
+        # Copy ramps
         color_rman_ramps = node.__annotations__.get('__COLOR_RAMPS__', [])
         float_rman_ramps = node.__annotations__.get('__FLOAT_RAMPS__', [])
 
@@ -357,9 +369,6 @@ class RendermanShadingNode(bpy.types.ShaderNode):
 
                 self_ramp_name = self_float_rman_ramps[i]
                 setattr(self, self_ramp_name, n.name)
-
-    #    self.inputs.clear()
-    #    self.outputs.clear()
 
     def RefreshNodes(self, context, nodeOR=None, materialOverride=None):
 

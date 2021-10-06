@@ -279,9 +279,9 @@ def find_node_owner(node, context=None):
             continue
         if mat.node_tree == nt:
             return mat
-        for node in mat.node_tree.nodes:
+        for n in mat.node_tree.nodes:
             # check if the node belongs to a group node
-            node_tree = getattr(node, 'node_tree', None)
+            node_tree = getattr(n, 'node_tree', None)
             if node_tree is None:
                 continue            
             if node_tree == nt:
@@ -299,7 +299,6 @@ def find_node_owner(node, context=None):
         elif ob.type == 'CAMERA':
             if shadergraph_utils.find_projection_node(ob) == node:
                 return ob
-
     return None
 
 def find_node_by_name(node_name, ob_name):
