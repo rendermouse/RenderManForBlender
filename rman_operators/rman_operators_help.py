@@ -41,7 +41,7 @@ class PRMAN_OT_Renderman_Package(Operator):
             self.report({"ERROR"}, "Directory is not writable")
             return {'FINISHED'}
 
-        if nor bpy.data.is_saved:            
+        if not bpy.data.is_saved:            
             self.report({"ERROR"}, "Scene not saved yet.")
             return {'FINISHED'}
 
