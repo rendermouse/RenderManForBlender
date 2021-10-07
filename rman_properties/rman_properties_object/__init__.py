@@ -113,6 +113,15 @@ class RendermanObjectSettings(RmanBasePropertyGroup, bpy.types.PropertyGroup):
 
     user_attributes_index: IntProperty(min=-1, default=-1)
 
+    def get_object_type(self):
+        if bpy.context.object:
+            return bpy.context.object.type
+        return ""        
+
+    bl_object_type: StringProperty(
+        get=get_object_type
+    )
+
 rman_config_classes = [
     RendermanObjectSettings
 ]

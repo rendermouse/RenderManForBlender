@@ -642,8 +642,31 @@
             "inheritable": true,
             "inherit_true_value": -1.0,
             "page": "Dicing",
-            "help": "Micropolygon distance in raster space for 'instanceprojection' dicing. Values are expressed in pixel size."
+            "help": "Micropolygon distance in raster space for 'instanceprojection' dicing. Values are expressed in pixel size.",
+            "conditionalVisOps": {
+                "conditionalVisOp": "notEqualTo",
+                "conditionalVisPath": "bl_object_type",
+                "conditionalVisValue": "VOLUME"
+            }            
         },
+        {
+            "panel": "OBJECT_PT_renderman_object_geometry_attributes",
+            "name": "rman_micropolygonlength_volume",
+            "primvar": "dice:micropolygonlength",
+            "label": "MicroPolygon Length",
+            "type": "float",
+            "default": 10.0,
+            "editable": true,
+            "inheritable": true,
+            "inherit_true_value": -1.0,
+            "page": "Dicing",
+            "help": "Micropolygon distance in raster space for 'instanceprojection' dicing. Values are expressed in pixel size.",
+            "conditionalVisOps": {
+                "conditionalVisOp": "equalTo",
+                "conditionalVisPath": "bl_object_type",
+                "conditionalVisValue": "VOLUME"
+            }            
+        },        
         {
             "panel": "OBJECT_PT_renderman_object_geometry_attributes",
             "page": "Dicing",
