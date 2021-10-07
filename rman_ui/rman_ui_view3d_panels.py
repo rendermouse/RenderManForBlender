@@ -247,6 +247,7 @@ class PRMAN_PT_Renderman_UI_Panel(bpy.types.Panel, _RManPanelHeader):
         layout.separator()
         # RenderMan Doc
         layout.label(text="Help:")
+        layout.operator("renderman.scene_package")
         rman_help = rfb_icons.get_icon("rman_help")
         layout.operator("wm.url_open", text="RenderMan Docs",
                         icon_value=rman_help.icon_id).url = "https://rmanwiki.pixar.com/display/RFB24"

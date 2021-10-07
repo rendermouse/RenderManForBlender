@@ -417,7 +417,8 @@ def get_all_shading_nodes():
             rman_type = getattr(n, 'renderman_node_type', None)
             if not rman_type:
                 continue
-            nodes.append(n)
+            if hasattr(n, 'prop_meta'):
+                nodes.append(n)
 
     return nodes
 
