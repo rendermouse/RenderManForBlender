@@ -3,7 +3,7 @@ from bpy.props import StringProperty, BoolProperty, EnumProperty
 from .. import rman_cycles_convert
 from ..rfb_utils import shadergraph_utils
 from .. import rman_bl_nodes
-from .rman_operators_utils import get_bxdf_items, get_projection_items
+from ..rfb_utils.operator_utils import get_bxdf_items, get_projection_items
 from ..rman_render import RmanRender
 from mathutils import Matrix
 import math

@@ -8,7 +8,7 @@ from . import rman_operators_editors
 from . import rman_operators_stylized
 from . import rman_operators_mesh
 from . import rman_operators_vol_aggregates
-from . import rman_operators_help
+from . import rman_operators_utils
 
 def register():
     rman_operators_printer.register()
@@ -21,7 +21,7 @@ def register():
     rman_operators_stylized.register()
     rman_operators_mesh.register()
     rman_operators_vol_aggregates.register()
-    rman_operators_help.register()
+    rman_operators_utils.register()
 
 def unregister():
     rman_operators_printer.unregister()
@@ -34,4 +34,4 @@ def unregister():
     rman_operators_stylized.unregister()
     rman_operators_mesh.unregister()
     rman_operators_vol_aggregates.unregister()
-    rman_operators_help.unregister()
+    rman_operators_utils.unregister()

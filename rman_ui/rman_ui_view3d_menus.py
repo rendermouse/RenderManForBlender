@@ -1,6 +1,6 @@
 from .. import rfb_icons
 from .. import rman_bl_nodes
-from ..rman_operators.rman_operators_utils import get_bxdf_items, get_light_items, get_lightfilter_items
+from ..rfb_utils.operator_utils import get_bxdf_items, get_light_items, get_lightfilter_items
 from ..rfb_utils.scene_utils import RMAN_VOL_TYPES
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import object_utils

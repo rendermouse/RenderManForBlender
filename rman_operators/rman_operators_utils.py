@@ -1,83 +1,151 @@
-from .. import rman_bl_nodes
-from ..rfb_icons import get_bxdf_icon, get_light_icon, get_lightfilter_icon, get_projection_icon
-from ..rman_constants import RMAN_BL_NODE_DESCRIPTIONS
+from ..rfb_logger import rfb_log
+from ..rfb_utils import shadergraph_utils
+from ..rfb_utils import string_utils
+from ..rfb_utils import texture_utils
+from ..rfb_utils import filepath_utils
+from bpy.types import Operator
+from bpy.props import StringProperty
+import os
+import zipfile
+import bpy
+import shutil
 
-def get_description(category, node_name):
-    description = None
-    for n in rman_bl_nodes.__RMAN_NODES__.get(category, list()):
-        if n.name == node_name:
-            if n.help:
-                description = n.help
-            break
-    if not description:
-        description = RMAN_BL_NODE_DESCRIPTIONS.get(node_name, node_name)
-    return description
+class PRMAN_OT_Renderman_Package(Operator):
+    """An operator to create a zip archive of the current scene."""
 
+    bl_idname = "renderman.scene_package"
+    bl_label = "Package Scene"
+    bl_description = "Package your scene including textures into a zip file."
+    bl_options = {'INTERNAL'}
 
-def get_bxdf_items():
- 
-    items = []
-    i = 1
-    for bxdf_cat, bxdfs in rman_bl_nodes.__RMAN_NODE_CATEGORIES__['bxdf'].items():
-        if not bxdfs[1]:
-            continue
-        tokens = bxdf_cat.split('_')
-        bxdf_category = ' '.join(tokens[1:])      
-        items.append(('', bxdf_category.capitalize(), '', 0, 0))
-        for n in bxdfs[1]:
-            rman_bxdf_icon = get_bxdf_icon(n.name)
-            items.append( (n.name, n.name, '', rman_bxdf_icon.icon_id, i))       
-            i += 1
+    directory: bpy.props.StringProperty(subtype='FILE_PATH')
+    filepath: bpy.props.StringProperty(
+        subtype="FILE_PATH")
 
-    return items     
+    filename: bpy.props.StringProperty(
+        subtype="FILE_NAME",
+        default="")
 
-def get_light_items():
-    rman_light_icon = get_light_icon("PxrRectLight")
-    items = []
-    i = 0
-    dflt = 'PxrRectLight'
-    items.append((dflt, dflt, '', rman_light_icon.icon_id, i))
-    for n in rman_bl_nodes.__RMAN_LIGHT_NODES__:
-        if n.name == 'PxrMeshLight':
-            continue
-        if n.name != dflt:
-            i += 1
-            light_icon = get_light_icon(n.name)
-            description = get_description('light', n.name)
-            description = RMAN_BL_NODE_DESCRIPTIONS.get(n.name, n.name)
-            if n.help:
-                description = n.help            
-            items.append( (n.name, n.name, description, light_icon.icon_id, i))
-    return items    
+    filter_glob: bpy.props.StringProperty(
+        default="*.zip",
+        options={'HIDDEN'},
+        )           
 
-def get_lightfilter_items():
-    items = []
-    i = 0
-    rman_light_icon = get_lightfilter_icon("PxrBlockerLightFilter")
-    dflt = 'PxrBlockerLightFilter'
-    items.append((dflt, dflt, '', rman_light_icon.icon_id, i))
-    for n in rman_bl_nodes.__RMAN_LIGHTFILTER_NODES__:
-        if n.name != dflt:
-            i += 1
-            light_icon = get_lightfilter_icon(n.name)
-            description = RMAN_BL_NODE_DESCRIPTIONS.get(n.name, n.name)
-            if n.help:
-                description = n.help
-            items.append( (n.name, n.name, description, light_icon.icon_id, i))
-    return items    
+    @classmethod
+    def poll(cls, context):
+        return context.engine == "PRMAN_RENDER"
 
-def get_projection_items():
-    items = []
-    i = 0
-    proj_icon = get_projection_icon("PxrCamera")
-    dflt = 'PxrCamera'
-    items.append((dflt, dflt, '', proj_icon.icon_id, i))
-    for n in rman_bl_nodes.__RMAN_PROJECTION_NODES__:
-        if n.name != dflt:
-            i += 1
-            proj_icon = get_projection_icon(n.name)
-            description = RMAN_BL_NODE_DESCRIPTIONS.get(n.name, n.name)
-            if n.help:
-                description = n.help            
-            items.append( (n.name, n.name, description, proj_icon.icon_id, i))
-    return items        
+    def execute(self, context):
+
+        if not os.access(self.directory, os.W_OK):
+            self.report({"ERROR"}, "Directory is not writable")
+            return {'FINISHED'}
+
+        if not bpy.data.is_saved:            
+            self.report({"ERROR"}, "Scene not saved yet.")
+            return {'FINISHED'}
+
+        z = zipfile.ZipFile(self.filepath, mode='w')
+
+        bl_scene_file = bpy.data.filepath
+
+        remove_files = list()
+        remove_dirs = list()
+
+        # textures
+        texture_dir = os.path.join(self.directory, 'textures')
+        os.mkdir(os.path.join(texture_dir))
+        remove_dirs.append(texture_dir)
+
+        # assets
+        assets_dir = os.path.join(self.directory, 'assets')
+        os.mkdir(os.path.join(assets_dir))
+        remove_dirs.append(assets_dir)
+
+        for item in context.scene.rman_txmgr_list:
+            txfile = texture_utils.get_txmanager().txmanager.get_txfile_from_id(item.nodeID)
+            if not txfile:
+                continue
+            for fpath, txitem in txfile.tex_dict.items():
+                bfile = os.path.basename(fpath)
+                shutil.copyfile(fpath, os.path.join(texture_dir, bfile))
+                bfile = os.path.basename(txitem.outfile)
+                diskpath = os.path.join(texture_dir, bfile)
+                shutil.copyfile(txitem.outfile, diskpath)
+                z.write(diskpath, arcname=os.path.join('textures', bfile))
+                remove_files.append(diskpath)
+
+        for node in shadergraph_utils.get_all_shading_nodes():
+            for prop_name, meta in node.prop_meta.items():
+                param_type = meta['renderman_type']
+                if param_type != 'string':
+                    continue
+                if shadergraph_utils.is_texture_property(prop_name, meta):
+                    prop = getattr(node, prop_name)
+                    if prop != '':
+                        prop = os.path.basename(prop)
+                        setattr(node, prop_name, os.path.join('<blend_dir>', 'textures', prop))
+                        
+                else:
+                    prop = getattr(node, prop_name)
+                    val = string_utils.expand_string(prop)
+                    if os.path.exists(val):
+                        bfile = os.path.basename(val)
+                        diskpath = os.path.join(assets_dir, bfile)
+                        shutil.copyfile(val, diskpath)
+                        setattr(node, prop_name, os.path.join('<blend_dir>', 'assets', bfile))
+                        z.write(diskpath, arcname=os.path.join('assets', bfile))
+                        remove_files.append(diskpath)
+
+        # volumes
+        for db in bpy.data.volumes:
+            openvdb_file = filepath_utils.get_real_path(db.filepath)
+            bfile = os.path.basename(openvdb_file)
+            diskpath = os.path.join(assets_dir, bfile)
+            shutil.copyfile(openvdb_file, diskpath)      
+            setattr(db, 'filepath', '//./assets/%s' % bfile)   
+            z.write(diskpath, arcname=os.path.join('assets', bfile))               
+            remove_files.append(diskpath)
+                            
+        bl_filepath = os.path.dirname(bl_scene_file)
+        bl_filename = os.path.basename(bl_scene_file)
+        bl_filepath = os.path.join(self.directory, bl_filename)
+        bpy.ops.wm.save_as_mainfile(filepath=bl_filepath, copy=True)
+        remove_files.append(bl_filepath)       
+
+        z.write(bl_filepath, arcname=bl_filename)
+        z.close()
+
+        for f in remove_files:
+            os.remove(f)
+
+        for d in remove_dirs:
+            os.removedirs(d)        
+
+        bpy.ops.wm.revert_mainfile()
+
+        return {'FINISHED'}
+
+    def invoke(self, context, event=None):
+        bl_scene_file = bpy.data.filepath
+        bl_filename = os.path.splitext(os.path.basename(bl_scene_file))[0]
+        self.properties.filename = '%s.zip' % bl_filename
+        context.window_manager.fileselect_add(self)
+        return{'RUNNING_MODAL'} 
+
+classes = [
+   PRMAN_OT_Renderman_Package 
+]
+
+def register():
+    for cls in classes:
+        bpy.utils.register_class(cls)
+
+def unregister():
+
+    for cls in classes:
+        try:
+            bpy.utils.unregister_class(cls)
+        except RuntimeError:
+            rfb_log().debug('Could not unregister class: %s' % str(cls))
+            pass

@@ -242,12 +242,15 @@ class PRMAN_PT_Renderman_UI_Panel(bpy.types.Panel, _RManPanelHeader):
         if selected_objects or selected_light_objects:
             box.operator("renderman.open_selected_rib", text='View Selected RIB', icon_value=rman_rib.icon_id)
 
-
+        # Utilities
+        layout.separator()
+        layout.label(text='Utilities:')
+        box = layout.box()
+        box.operator("renderman.scene_package")
 
         layout.separator()
         # RenderMan Doc
         layout.label(text="Help:")
-        layout.operator("renderman.scene_package")
         rman_help = rfb_icons.get_icon("rman_help")
         layout.operator("wm.url_open", text="RenderMan Docs",
                         icon_value=rman_help.icon_id).url = "https://rmanwiki.pixar.com/display/RFB24"

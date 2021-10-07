@@ -9,7 +9,7 @@ from ..rfb_utils import object_utils
 from ..rfb_utils import string_utils
 from .. import rfb_icons
 from ..rman_constants import RFB_ADDON_PATH, RMAN_BL_NODE_DESCRIPTIONS
-from .rman_operators_utils import get_bxdf_items, get_light_items, get_lightfilter_items, get_description
+from ..rfb_utils.operator_utils import get_bxdf_items, get_light_items, get_lightfilter_items, get_description
 from bpy.props import EnumProperty, StringProperty, BoolProperty
 from bpy_extras.io_utils import ImportHelper
 import mathutils
