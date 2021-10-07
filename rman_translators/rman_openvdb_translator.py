@@ -4,6 +4,7 @@ from ..rfb_utils import filepath_utils
 from ..rfb_utils import transform_utils
 from ..rfb_utils import string_utils
 from ..rfb_utils import scenegraph_utils
+from ..rfb_utils.envconfig_utils import envconfig
 from ..rfb_logger import rfb_log
 import json
 
@@ -66,11 +67,12 @@ class RmanOpenVDBTranslator(RmanTranslator):
         string_args = []
         string_args.append(openvdb_file)
         string_args.append("%s:fogvolume" % active_grid.name)
-        if rm.openvdb_velocity_grid_name == '__NONE__':
-            string_args.append('')
-        else:
-            string_args.append(rm.openvdb_velocity_grid_name)
-        string_args.append(json_attrs)
+        if envconfig().build_info.version() >= "24.2":
+            if rm.openvdb_velocity_grid_name == '__NONE__':
+                string_args.append('')
+            else:
+                string_args.append(rm.openvdb_velocity_grid_name)
+            string_args.append(json_attrs)
         primvar.SetStringArray(self.rman_scene.rman.Tokens.Rix.k_blobbydso_stringargs, string_args, len(string_args))
 
         for i, grid in enumerate(grids):
