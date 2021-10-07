@@ -421,6 +421,7 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                 ok = node.compile_osl(osl_file.name, compile_path, script.name)
                 export_path = os.path.join(compile_path, FileNameOSO)
                 os.remove(osl_file.name)
+                setattr(node, 'shadercode', export_path)
             else:
                 ok = node.compile_osl(osl_path, compile_path)
                 FileName = os.path.basename(osl_path)
@@ -429,6 +430,7 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                 FileNameOSO = FileNameNoEXT
                 FileNameOSO += ".oso"
                 export_path = os.path.join(compile_path, FileNameOSO)
+                setattr(node, 'shadercode', export_path)
         else:
             ok = False
             rfb_log().error("OSL: Shader cannot be compiled. Shader name not specified")

@@ -62,6 +62,11 @@ class PRMAN_OT_Renderman_Package(Operator):
         os.mkdir(os.path.join(assets_dir))
         remove_dirs.append(assets_dir)
 
+        # osl shaders
+        shaders_dir = os.path.join(self.directory, 'shaders')
+        os.mkdir(os.path.join(shaders_dir))
+        remove_dirs.append(shaders_dir)
+
         for item in context.scene.rman_txmgr_list:
             txfile = texture_utils.get_txmanager().txmanager.get_txfile_from_id(item.nodeID)
             if not txfile:
@@ -76,6 +81,18 @@ class PRMAN_OT_Renderman_Package(Operator):
                 remove_files.append(diskpath)
 
         for node in shadergraph_utils.get_all_shading_nodes():
+            if node.bl_label == 'PxrOSL' and getattr(node, "codetypeswitch") == "EXT":
+                osl_path = string_utils.expand_string(getattr(node, 'shadercode'))
+                osl_path = filepath_utils.get_real_path(osl_path)
+                FileName = os.path.basename(osl_path)
+                FileNameNoEXT = os.path.splitext(FileName)[0] 
+
+                diskpath = os.path.join(shaders_dir, FileName)
+                shutil.copyfile(osl_path, diskpath)
+                setattr(node, 'shadercode', os.path.join('<blend_dir>', 'shaders', FileName))
+                z.write(diskpath, arcname=os.path.join('shaders', FileName))
+                remove_files.append(diskpath)                
+
             for prop_name, meta in node.prop_meta.items():
                 param_type = meta['renderman_type']
                 if param_type != 'string':

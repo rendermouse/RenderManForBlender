@@ -5,6 +5,7 @@ from ..rfb_utils import property_utils
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import color_utils
 from ..rfb_utils import gpmaterial_utils
+from ..rfb_utils import filepath_utils
 from ..rfb_utils.shadergraph_utils import RmanConvertNode
 
 from ..rfb_logger import rfb_log
@@ -417,7 +418,9 @@ class RmanMaterialTranslator(RmanTranslator):
             if node.bl_label == 'PxrOSL':
                 shader = node.shadercode 
                 if shader:
-                    sg_node = self.rman_scene.rman.SGManager.RixSGShader("Pattern", shader, instance)
+                    osl_path = string_utils.expand_string(shader)
+                    osl_path = filepath_utils.get_real_path(osl_path)
+                    sg_node = self.rman_scene.rman.SGManager.RixSGShader("Pattern", osl_path, instance)
                     
             else:
                 shader = node.bl_label

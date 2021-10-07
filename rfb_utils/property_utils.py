@@ -392,47 +392,36 @@ def set_dspymeta_params(node, prop_name, params):
         elif meta_type == 'm44f':
             params.SetFloatArray(nm, val, 16)
 
+def set_pxrosl_params(node, rman_sg_node, params, ob=None, mat_name=None):
+
+    for input_name, input in node.inputs.items():
+        prop_type = input.renderman_type
+        if input.is_linked:
+            to_socket = input
+            from_socket = input.links[0].from_socket
+
+            param_type = prop_type
+            param_name = input_name
+
+            val = get_output_param_str(from_socket.node, mat_name, from_socket, to_socket, param_type)
+            if val:
+                set_rix_param(params, param_type, param_name, val, is_reference=True)    
+
+        elif type(input).__name__ != 'RendermanNodeSocketStruct':
+
+            param_type = prop_type
+            param_name = input_name
+            val = string_utils.convert_val(input.default_value, type_hint=prop_type)
+            set_rix_param(params, param_type, param_name, val, is_reference=False)    
+
+
 def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group_node=None):
     # If node is OSL node get properties from dynamic location.
-    if node.bl_idname == "PxrOSLPatternNode":
-
-        if getattr(node, "codetypeswitch") == "EXT":
-            prefs = prefs_utils.get_addon_prefs()
-            osl_path = string_utils.expand_string(getattr(node, 'shadercode'))
-            FileName = os.path.basename(osl_path)
-            FileNameNoEXT,ext = os.path.splitext(FileName)
-            shaders_path = os.path.join(string_utils.expand_string('<OUT>'), "shaders")
-            out_file = os.path.join(shaders_path, FileName)
-            if ext == ".oso":
-                if not os.path.exists(out_file) or not os.path.samefile(osl_path, out_file):
-                    if not os.path.exists(shaders_path):
-                        os.mkdir(shaders_path)
-                    shutil.copy(osl_path, out_file)
-        for input_name, input in node.inputs.items():
-            prop_type = input.renderman_type
-            if input.is_linked:
-                to_socket = input
-                from_socket = input.links[0].from_socket
-
-                param_type = prop_type
-                param_name = input_name
-
-                val = get_output_param_str(from_socket.node, mat_name, from_socket, to_socket, param_type)
-                if val:
-                    set_rix_param(params, param_type, param_name, val, is_reference=True)    
-
-            elif type(input).__name__ != 'RendermanNodeSocketStruct':
-
-                param_type = prop_type
-                param_name = input_name
-                val = string_utils.convert_val(input.default_value, type_hint=prop_type)
-                set_rix_param(params, param_type, param_name, val, is_reference=False)
+    if node.bl_label == "PxrOSL":
+        set_pxrosl_params(node, rman_sg_node, params, ob=ob, mat_name=mat_name)
     else:
         node_inputs = getattr(node, 'inputs', list())
         for prop_name, meta in node.prop_meta.items():
-            if node.plugin_name == 'PxrRamp' and prop_name in ['colors', 'positions']:
-                continue
-
             param_widget = meta.get('widget', 'default')
             param_type = meta['renderman_type']
             param_name = meta['renderman_name']     
