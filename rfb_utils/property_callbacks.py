@@ -169,6 +169,16 @@ def update_array_size_func(self, context):
 
     # now re-add all sockets/inputs
     node_add_inputs(node, node.name, node.prop_names)
+
+    # update the conditional_vis_ops
+    update_conditional_visops(node)          
+
+    # set any inputs that are visible and param is hidden to hidden
+    prop_meta = getattr(node, 'prop_meta')
+    if hasattr(node, 'inputs'):
+        for input_name, socket in node.inputs.items():
+            if 'hidden' in prop_meta[input_name]:
+                socket.hide = prop_meta[input_name]['hidden']    
            
 
 def update_func(self, context):
