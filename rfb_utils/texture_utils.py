@@ -161,7 +161,7 @@ def get_txmanager():
         __RFB_TXMANAGER__ = RfBTxManager()
     return __RFB_TXMANAGER__    
 
-def update_texture(node, ob=None):
+def update_texture(node, ob=None, check_exits=False):
     if hasattr(node, 'bl_idname'):
         if node.bl_idname == "PxrPtexturePatternNode":
             return
@@ -198,6 +198,11 @@ def update_texture(node, ob=None):
                         else:
                             node_type = node.bl_label
 
+                        if ob and check_exits:
+                            nodeID = generate_node_id(node, prop_name, ob=ob)
+                            if get_txmanager().does_nodeid_exists(nodeID):
+                                continue
+
                         category = getattr(node, 'renderman_node_type', 'pattern') 
                         get_txmanager().add_texture(node, ob, prop_name, prop, node_type=node_type, category=category)
 
@@ -213,13 +218,13 @@ def generate_node_id(node, prop_name, ob=None):
         nodeID = '%s|%s|%s' % (node.name, prop_name, real_file)
     return nodeID
 
-def get_textures(id):
+def get_textures(id, check_exists=False):
     if id is None or not id.node_tree:
         return
 
     nt = id.node_tree
     for node in nt.nodes:
-        update_texture(node, ob=id)
+        update_texture(node, ob=id, check_exits=check_exists)
 
 def get_blender_image_path(bl_image):
     if bl_image.packed_file:
@@ -312,6 +317,26 @@ def txmanager_pre_save_cb(bl_scene):
     if bpy.context.engine != 'PRMAN_RENDER':
         return    
     get_txmanager().txmanager.save_state()  
+
+@persistent
+def link_file_handler(bl_scene):
+    for update in bpy.context.evaluated_depsgraph_get().updates:
+        id = update.id
+        if id.library:
+            # only look at objects coming from a library
+            if isinstance(id, bpy.types.Material):
+                get_textures(id, check_exists=True)
+
+            elif isinstance(id, bpy.types.Object):
+                if id.type == 'CAMERA':
+                    node = shadergraph_utils.find_projection_node(o) 
+                    if node:
+                        update_texture(node, ob=o, check_exists=True)
+
+                elif id.type == 'LIGHT':
+                    node = o.data.renderman.get_light_node()
+                    if node:
+                        update_texture(node, ob=o, check_exists=True)           
 
 def txmake_all(blocking=True):
     get_txmanager().txmake_all(blocking=blocking)        

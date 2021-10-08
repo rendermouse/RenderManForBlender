@@ -21,6 +21,10 @@ def rman_save_pre(bl_scene):
 def rman_save_post(bl_scene):
     texture_utils.txmanager_pre_save_cb(bl_scene)
 
+@persistent
+def depsgraph_update_post(bl_scene):
+    texture_utils.link_file_handler(bl_scene)             
+
 def register():
 
     # load_post handler
@@ -35,6 +39,10 @@ def register():
     if rman_save_post not in bpy.app.handlers.save_post:
         bpy.app.handlers.save_post.append(rman_save_post)      
 
+    # depsgraph_update_post handler
+    if depsgraph_update_post not in bpy.app.handlers.depsgraph_update_post:
+        bpy.app.handlers.depsgraph_update_post.append(depsgraph_update_post)
+
 def unregister():
 
     if rman_load_post in bpy.app.handlers.load_post:
@@ -44,4 +52,7 @@ def unregister():
         bpy.app.handlers.save_pre.remove(rman_save_pre)
 
     if rman_save_post in bpy.app.handlers.save_post:
-        bpy.app.handlers.save_post.remove(rman_save_post)      
+        bpy.app.handlers.save_post.remove(rman_save_post)
+
+    if depsgraph_update_post in bpy.app.handlers.depsgraph_update_post:
+        bpy.app.handlers.depsgraph_update_post.remove(depsgraph_update_post)              
