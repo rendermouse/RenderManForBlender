@@ -22,7 +22,12 @@
             "type": "int",
             "default": 0,
             "page": "",
-            "widget": "checkbox"
+            "widget": "checkbox",
+            "conditionalVisOps": {
+                "conditionalVisOp": "notEqualTo",
+                "conditionalVisPath": "bl_object_type",
+                "conditionalVisValue": "EMPTY"
+            }             
         },  
         {
             "panel": "OBJECT_PT_renderman_object_geometry",
@@ -38,7 +43,20 @@
                 "conditionalVisPath": "motion_segments_override",
                 "conditionalVisValue": "1"
             }            
-        },          
+        },  
+        {
+            "panel": "OBJECT_PT_renderman_object_geometry",
+            "name": "export_as_coordsys",
+            "label": "Export As CoordSys",
+            "type": "int",
+            "default": 0,
+            "widget": "checkbox",
+            "conditionalVisOps": {
+                "conditionalVisOp": "equalTo",
+                "conditionalVisPath": "bl_object_type",
+                "conditionalVisValue": "EMPTY"
+            }           
+        },                
         {
             "panel": "",
             "name": "rman_quadric_type",
@@ -646,7 +664,7 @@
             "conditionalVisOps": {
                 "conditionalVisOp": "notEqualTo",
                 "conditionalVisPath": "bl_object_type",
-                "conditionalVisValue": "VOLUME"
+                "conditionalVisValue": "OPENVDB"
             }            
         },
         {
@@ -664,7 +682,7 @@
             "conditionalVisOps": {
                 "conditionalVisOp": "equalTo",
                 "conditionalVisPath": "bl_object_type",
-                "conditionalVisValue": "VOLUME"
+                "conditionalVisValue": "OPENVDB"
             }            
         },        
         {

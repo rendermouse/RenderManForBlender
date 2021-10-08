@@ -7,6 +7,7 @@ from ...rman_config import RmanBasePropertyGroup
 from ..rman_properties_misc import RendermanAnimSequenceSettings 
 from ..rman_properties_misc import RendermanLightPointer
 from ...rfb_utils import shadergraph_utils
+from ...rfb_utils import object_utils
 from ...rfb_logger import rfb_log
 
 import bpy
@@ -67,10 +68,6 @@ class RendermanObjectSettings(RmanBasePropertyGroup, bpy.types.PropertyGroup):
         type=RendermanLightPointer
     )
 
-    export_archive: BoolProperty(
-        name="Export as Archive",
-        description="At render export time, store this object as a RIB archive",
-        default=False)
     export_archive_path: StringProperty(
         name="Archive Export Path",
         description="Path to automatically save this object as a RIB archive",
@@ -115,7 +112,7 @@ class RendermanObjectSettings(RmanBasePropertyGroup, bpy.types.PropertyGroup):
 
     def get_object_type(self):
         if bpy.context.object:
-            return bpy.context.object.type
+            return object_utils._detect_primitive_(bpy.context.object)
         return ""        
 
     bl_object_type: StringProperty(

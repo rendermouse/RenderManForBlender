@@ -110,15 +110,12 @@ class OBJECT_PT_renderman_object_geometry(Panel, CollectionPanel):
         col = layout.column()
         col.enabled = not rman_interactive_running          
 
-        if rman_type == 'EMPTY':
-            col.prop(rm, 'export_as_coordsys') 
-            return
+        _draw_ui_from_rman_config('rman_properties_object', 'OBJECT_PT_renderman_object_geometry', context, layout, rm)
 
-        _draw_ui_from_rman_config('rman_properties_object', 'OBJECT_PT_renderman_object_geometry', context, layout, rm)                       
-
-        col = layout.column()
-        col.enabled = not rman_interactive_running
-        col.menu('VIEW3D_MT_RM_Add_Export_Menu', icon_value=bpy.types.VIEW3D_MT_RM_Add_Export_Menu.get_icon_id())
+        if rm.bl_object_type != 'EMPTY':
+            col = layout.column()
+            col.enabled = not rman_interactive_running
+            col.menu('VIEW3D_MT_RM_Add_Export_Menu', icon_value=bpy.types.VIEW3D_MT_RM_Add_Export_Menu.get_icon_id())
 
         col = layout.column()
 
