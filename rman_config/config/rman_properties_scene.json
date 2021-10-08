@@ -649,8 +649,24 @@
                 "conditionalVisPath": "motion_blur",
                 "conditionalVisValue": "1"
             },            
-            "help": "Enable motion blur"
+            "help": "Number of transform samples"
         },
+        {
+            "panel": "RENDER_PT_renderman_motion_blur",
+            "name": "deform_motion_segments",
+            "label": "Deform Samples",
+            "type": "int",
+            "default": 2,
+            "min": 2,
+            "max":6,
+            "widget": false,
+            "conditionalVisOps": {
+                "conditionalVisOp": "equalTo",
+                "conditionalVisPath": "motion_blur",
+                "conditionalVisValue": "1"
+            },            
+            "help": "Number of deform samples"
+        },        
         {
             "panel": "RENDER_PT_renderman_motion_blur",
             "name": "shutter_angle",

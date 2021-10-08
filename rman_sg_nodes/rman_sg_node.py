@@ -8,6 +8,7 @@ class RmanSgNode(object):
         db_name (str) - unique datablock name for this node
         instances (dict) - instances that uses this sg_node
         motion_steps (list) - the full list of motion time samples that are required for this Blender object
+        motion_steps (list) - the full list of deformation time samples that are required for this Blender object        
         is_transforming (bool) - if this object is moving
         is_deforming (bool) - if this object is deforming
         rman_type (str) - the renderman type for this object
@@ -23,6 +24,7 @@ class RmanSgNode(object):
         self.db_name = db_name
         self.instances = dict()
         self.motion_steps = []
+        self.deform_motion_steps = []
         self.is_transforming = False
         self.is_deforming = False
         self.rman_type = ''

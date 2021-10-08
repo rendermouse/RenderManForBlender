@@ -38,12 +38,29 @@
             "min": 1,
             "max": 16,
             "page": "",
+            "help": "Number of samples for transformation blur",            
             "conditionalVisOps": {
                 "conditionalVisOp": "equalTo",
                 "conditionalVisPath": "motion_segments_override",
                 "conditionalVisValue": "1"
             }            
-        },  
+        }, 
+        {
+            "panel": "OBJECT_PT_renderman_object_geometry",
+            "name": "deform_motion_segments",
+            "label": "Deform Samples",
+            "type": "int",
+            "default": 2,
+            "min": 1,
+            "max": 6,
+            "page": "",
+            "help": "Number of samples for deformation blur",
+            "conditionalVisOps": {
+                "conditionalVisOp": "equalTo",
+                "conditionalVisPath": "motion_segments_override",
+                "conditionalVisValue": "1"
+            }            
+        },           
         {
             "panel": "OBJECT_PT_renderman_object_geometry",
             "name": "export_as_coordsys",

@@ -356,8 +356,8 @@ class RmanMeshTranslator(RmanTranslator):
         primvar = sg_node.GetPrimVars()
         primvar.Clear()
 
-        if rman_sg_mesh.is_deforming:
-            super().set_primvar_times(rman_sg_mesh.motion_steps, primvar)
+        if rman_sg_mesh.is_deforming and len(rman_sg_mesh.deform_motion_steps) > 1:
+            super().set_primvar_times(rman_sg_mesh.deform_motion_steps, primvar)
         
         primvar.SetPointDetail(self.rman_scene.rman.Tokens.Rix.k_P, P, "vertex")
         _get_primvars_(ob, rman_sg_mesh, mesh, primvar)   
@@ -403,8 +403,8 @@ class RmanMeshTranslator(RmanTranslator):
                     if rman_sg_mesh.is_subdiv:
                         sg_sub_mesh.SetScheme(self.rman_scene.rman.Tokens.Rix.k_catmullclark)
                     pvars = sg_sub_mesh.GetPrimVars()  
-                    if rman_sg_mesh.is_deforming:
-                        super().set_primvar_times(rman_sg_mesh.motion_steps, pvars)
+                    if rman_sg_mesh.is_deforming and len(rman_sg_mesh.deform_motion_steps) > 1:
+                        super().set_primvar_times(rman_sg_mesh.deform_motion_steps, pvars)
                     pvars.Inherit(primvar)
                     pvars.SetIntegerArray(self.rman_scene.rman.Tokens.Rix.k_shade_faceset, faces, len(faces))                    
                     sg_sub_mesh.SetPrimVars(pvars)

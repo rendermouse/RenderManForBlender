@@ -656,19 +656,33 @@ class RmanScene(object):
             # motion blur
             # we set motion steps for this object, even if it's not moving
             # it could be moving as part of a particle system
-            mb_segs = self.bl_scene.renderman.motion_segments
-            if mb_segs > 1:
+            mb_segs = -1
+            mb_deform_segs = -1
+            if self.do_motion_blur:
+                mb_segs = self.bl_scene.renderman.motion_segments
+                mb_deform_segs = self.bl_scene.renderman.deform_motion_segments
                 if ob.renderman.motion_segments_override:
                     mb_segs = ob.renderman.motion_segments
-                subframes = scene_utils._get_subframes_(mb_segs, self.bl_scene)
-                rman_sg_node.motion_steps = subframes
-                self.motion_steps.update(subframes)
+                if mb_segs > 1:                    
+                    subframes = scene_utils._get_subframes_(mb_segs, self.bl_scene)
+                    rman_sg_node.motion_steps = subframes
+                    self.motion_steps.update(subframes)
+
+                if ob.renderman.motion_segments_override:
+                    mb_deform_segs = ob.renderman.deform_motion_segments                    
+
+                if mb_deform_segs > 1:                       
+                    subframes = scene_utils._get_subframes_(mb_deform_segs, self.bl_scene)
+                    rman_sg_node.deform_motion_steps = subframes
+                    self.motion_steps.update(subframes)                         
 
             if rman_sg_node.is_transforming or rman_sg_node.is_deforming:
-                if mb_segs > 1:
+                if mb_segs > 1 or mb_deform_segs > 1:
                     self.moving_objects[ob.name_full] = ob
-                else:
+                
+                if mb_segs < 1:
                     rman_sg_node.is_transforming = False
+                if mb_deform_segs < 1:
                     rman_sg_node.is_deforming = False                
 
     def export_defaultlight(self):
@@ -1012,14 +1026,24 @@ class RmanScene(object):
                     if rman_sg_particles:
                         if not seg in rman_sg_particles.motion_steps:
                             continue
-                        psys_translator.export_deform_sample(rman_sg_particles, ob, psys, samp)                                    
+                        idx = 0
+                        for i, s in enumerate(rman_sg_node.motion_steps):
+                            if s == seg:
+                                idx = i
+                                break                           
+                        psys_translator.export_deform_sample(rman_sg_particles, ob, psys, idx)                                    
 
-                if rman_sg_node.is_deforming:
+                if rman_sg_node.is_deforming and seg in rman_sg_node.deform_motion_steps:
                     rman_type = rman_sg_node.rman_type
                     if rman_type in ['MESH', 'FLUID']:
                         translator = self.rman_translators.get(rman_type, None)
                         if translator:
-                            translator.export_deform_sample(rman_sg_node, ob, samp)                     
+                            idx = 0
+                            for i, s in enumerate(rman_sg_node.deform_motion_steps):
+                                if s == seg:
+                                    idx = i
+                                    break                            
+                            translator.export_deform_sample(rman_sg_node, ob, idx)                     
 
         self.rman_render.bl_engine.frame_set(origframe, subframe=0)  
 
