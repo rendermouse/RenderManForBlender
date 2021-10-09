@@ -10,8 +10,13 @@ from . import rman_properties_camera
 from . import rman_properties_particles
 from . import rman_properties_volume
 
+def pre_register():
+    # These properties have to be registered before
+    # we start parsing our shading nodes
+    rman_properties_misc.register() 
+
 def register():
-    rman_properties_misc.register()    
+  
     rman_properties_renderlayers.register()    
     rman_properties_scene.register()
     rman_properties_object.register()
