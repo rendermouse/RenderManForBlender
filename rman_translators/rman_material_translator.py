@@ -409,7 +409,12 @@ class RmanMaterialTranslator(RmanTranslator):
 
         instance = string_utils.sanitize_node_name(mat_name + '_' + node.name)
         if group_node:
-            instance = string_utils.sanitize_node_name(mat_name + '_' + group_node.name + '_' + node.name)
+            group_node_name = group_node.name
+            for k,v in bpy.data.node_groups.items():
+                if group_node.id_data == v:
+                    group_node_name = k
+                    break
+            instance = string_utils.sanitize_node_name(mat_name + '_' + group_node_name + '_' + node.name)
 
         if not hasattr(node, 'renderman_node_type'):
             return list()
