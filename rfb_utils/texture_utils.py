@@ -161,7 +161,7 @@ def get_txmanager():
         __RFB_TXMANAGER__ = RfBTxManager()
     return __RFB_TXMANAGER__    
 
-def update_texture(node, ob=None, check_exits=False):
+def update_texture(node, ob=None, check_exists=False):
     if hasattr(node, 'bl_idname'):
         if node.bl_idname == "PxrPtexturePatternNode":
             return
@@ -198,7 +198,7 @@ def update_texture(node, ob=None, check_exits=False):
                         else:
                             node_type = node.bl_label
 
-                        if ob and check_exits:
+                        if ob and check_exists:
                             nodeID = generate_node_id(node, prop_name, ob=ob)
                             if get_txmanager().does_nodeid_exists(nodeID):
                                 continue
@@ -224,7 +224,7 @@ def get_textures(id, check_exists=False):
 
     nt = id.node_tree
     for node in nt.nodes:
-        update_texture(node, ob=id, check_exits=check_exists)
+        update_texture(node, ob=id, check_exists=check_exists)
 
 def get_blender_image_path(bl_image):
     if bl_image.packed_file:
@@ -329,14 +329,14 @@ def link_file_handler(bl_scene):
 
             elif isinstance(id, bpy.types.Object):
                 if id.type == 'CAMERA':
-                    node = shadergraph_utils.find_projection_node(o) 
+                    node = shadergraph_utils.find_projection_node(id) 
                     if node:
-                        update_texture(node, ob=o, check_exists=True)
+                        update_texture(node, ob=id, check_exists=True)
 
                 elif id.type == 'LIGHT':
-                    node = o.data.renderman.get_light_node()
+                    node = id.data.renderman.get_light_node()
                     if node:
-                        update_texture(node, ob=o, check_exists=True)           
+                        update_texture(node, ob=id, check_exists=True)           
 
 def txmake_all(blocking=True):
     get_txmanager().txmake_all(blocking=blocking)        
