@@ -181,11 +181,19 @@ class RmanMaterialTranslator(RmanTranslator):
         bxdfList = []
         rman_sg_material.nodes_to_blnodeinfo.clear()  
 
+        for sub_node in shadergraph_utils.gather_nodes(solo_node):
+            shader_sg_nodes = self.shader_node_sg(mat, sub_node, rman_sg_material, mat_name=mat_handle)
+            for s in shader_sg_nodes:
+                bxdfList.append(s) 
+
+        for node, bl_node_info in rman_sg_material.nodes_to_blnodeinfo.items():
+            property_utils.property_group_to_rixparams(node, rman_sg_material, bl_node_info.sg_node, ob=mat, group_node=bl_node_info.group_node)        
+        
         # export all the nodes in the graph, except for the terminals
         # this seems silly to do, but this should take care of weird edge cases where
         # we have node groups within node groups, and we can't easily get the correct
         # links from the solo node
-        
+
         socket = out.inputs['Bxdf']
         if socket.is_linked and len(socket.links) > 0:
             linked_node = get_root_node(socket.links[0].from_node, type='bxdf')
