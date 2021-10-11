@@ -378,6 +378,14 @@ def gather_nodes(node):
 
     return nodes    
 
+def gather_all_nodes_for_material(mat, nodes_list):   
+    for node in mat.node_tree.nodes:
+        if node not in nodes_list:
+            nodes_list.append(node)
+        if node.bl_idname == 'ShaderNodeGroup':
+            for n in node.node_tree.nodes:
+                nodes_list.insert(0, n)
+
 def get_group_node(node):
     '''
     Find the group node that this NodeGroupOutput or

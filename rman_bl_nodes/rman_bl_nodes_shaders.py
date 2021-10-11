@@ -125,7 +125,7 @@ class RendermanShadingNode(bpy.types.ShaderNode):
             op.solo_node_name = self.name           
         else:
             rman_icon = rfb_icons.get_icon('rman_solo_on')
-            if self.name == rman_output_node.solo_node_name:
+            if rman_output_node.solo_nodetree == self.id_data and  self.name == rman_output_node.solo_node_name:
                 col = layout.column(align=True)
                 op = col.operator('node.rman_set_node_solo', text='', icon_value=rman_icon.icon_id, emboss=False)
                 op.refresh_solo = True

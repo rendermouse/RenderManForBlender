@@ -186,7 +186,15 @@ def get_output_param_str(rman_sg_node, node, mat_name, socket, to_socket=None, p
         if group_output is None:
             return None
 
-        in_sock = group_output.inputs[socket.name]
+        # find the index of the socket
+        # we can't use the socket name as the NodeGroupOutput can have
+        # sockets with the same name
+        idx = -1
+        for i, output in enumerate(node.outputs):
+            if output == socket:
+                idx = i
+
+        in_sock = group_output.inputs[idx] 
         if len(in_sock.links):
             link = in_sock.links[0]
             rerouted_node = link.from_node

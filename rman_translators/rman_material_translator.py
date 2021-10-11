@@ -187,70 +187,36 @@ class RmanMaterialTranslator(RmanTranslator):
         # we have node groups within node groups, and we can't easily get the correct
         # links from the solo node
 
-        socket = out.inputs['Bxdf']
-        if socket.is_linked and len(socket.links) > 0:
-            linked_node = get_root_node(socket.links[0].from_node, type='bxdf')
-            if linked_node:
-                rman_sg_material.nodes_to_blnodeinfo.clear()
-                for sub_node in shadergraph_utils.gather_nodes(linked_node):
-                    renderman_type = getattr(sub_node, 'renderman_node_type', '')
-                    if renderman_type == 'bxdf':
-                        continue
-                    if not is_solo_connected and sub_node == solo_node:
-                        is_solo_connected = True                    
-                    shader_sg_nodes = self.shader_node_sg(mat, sub_node, rman_sg_material, mat_name=mat_handle)
-                    for s in shader_sg_nodes:
-                        bxdfList.append(s) 
+        nodes_list = list()
+        seen_nodes = list()
+        shadergraph_utils.gather_all_nodes_for_material(mat, nodes_list)
+        rman_sg_material.nodes_to_blnodeinfo.clear()
+        rman_solo_sg_node = None
+        for sub_node in nodes_list:
+            if sub_node.bl_idname != 'ShaderNodeGroup':
+                rman_type = getattr(sub_node, 'renderman_node_type', None)
+                if not rman_type:
+                    continue
+                if rman_type in ['bxdf', 'displace', 'light']:
+                    continue
+                if out == sub_node:
+                    continue
+            if sub_node in seen_nodes:
+                continue
 
-                for node, bl_node_info in rman_sg_material.nodes_to_blnodeinfo.items():
-                    property_utils.property_group_to_rixparams(node, rman_sg_material, bl_node_info.sg_node, ob=mat, group_node=bl_node_info.group_node)
-
-        # light
-        socket = out.inputs['Light']
-        if socket.is_linked and len(socket.links) > 0:
-            linked_node = get_root_node(socket.links[0].from_node, type='light')
-            if linked_node:
-                rman_sg_material.nodes_to_blnodeinfo.clear()
-                for sub_node in shadergraph_utils.gather_nodes(socket.links[0].from_node):
-                    renderman_type = getattr(sub_node, 'renderman_node_type', '')
-                    if renderman_type == 'light':
-                        continue     
-                    if not is_solo_connected and sub_node == solo_node:
-                        is_solo_connected = True                                   
-                    shader_sg_nodes = self.shader_node_sg(mat, sub_node, rman_sg_material, mat_name=mat_handle)
-                    for s in shader_sg_nodes:
-                        bxdfList.append(s) 
-                for node, bl_node_info in rman_sg_material.nodes_to_blnodeinfo.items():
-                    property_utils.property_group_to_rixparams(node, rman_sg_material, bl_node_info.sg_node, ob=mat, group_node=bl_node_info.group_node)
-                                                
-        # displacement
-        socket = out.inputs['Displacement']
-        if socket.is_linked and len(socket.links) > 0:
-            linked_node = get_root_node(socket.links[0].from_node, type='displace')
-            if linked_node:                    
-                dispList = []
-                rman_sg_material.nodes_to_blnodeinfo.clear()
-                for sub_node in shadergraph_utils.gather_nodes(linked_node):
-                    renderman_type = getattr(sub_node, 'renderman_node_type', '')
-                    if renderman_type == 'displace':
-                        continue        
-                    if not is_solo_connected and sub_node == solo_node:
-                        is_solo_connected = True                                    
-                    shader_sg_nodes = self.shader_node_sg(mat, sub_node, rman_sg_material, mat_name=mat_handle)
-                    for s in shader_sg_nodes:
-                        bxdfList.append(s) 
-                for node, bl_node_info in rman_sg_material.nodes_to_blnodeinfo.items():
-                    property_utils.property_group_to_rixparams(node, rman_sg_material, bl_node_info.sg_node, ob=mat, group_node=bl_node_info.group_node)     
-
-        if not is_solo_connected:
-            # Solo node is not connected. Try to export the subgraph from the solo node
-            for sub_node in shadergraph_utils.gather_nodes(solo_node):
-                shader_sg_nodes = self.shader_node_sg(mat, sub_node, rman_sg_material, mat_name=mat_handle)
-                for s in shader_sg_nodes:
-                    bxdfList.append(s) 
+            seen_nodes.append(sub_node)
+            
+            shader_sg_nodes = self.shader_node_sg(mat, sub_node, rman_sg_material, mat_name=mat_handle)
+            for s in shader_sg_nodes:
+                if sub_node == solo_node:
+                    rman_solo_sg_node = s
+                else:
+                    bxdfList.append(s)             
 
             for node, bl_node_info in rman_sg_material.nodes_to_blnodeinfo.items():
-                property_utils.property_group_to_rixparams(node, rman_sg_material, bl_node_info.sg_node, ob=mat, group_node=bl_node_info.group_node)        
+                property_utils.property_group_to_rixparams(node, rman_sg_material, bl_node_info.sg_node, ob=mat, group_node=bl_node_info.group_node)
+
+        bxdfList.append(rman_solo_sg_node)
 
         node_type = getattr(solo_node, 'renderman_node_type', '')
         if bxdfList:
