@@ -378,6 +378,29 @@ def gather_nodes(node):
 
     return nodes    
 
+def get_group_node(node):
+    '''
+    Find the group node that this NodeGroupOutput or
+    NodeGroupInput belongs to
+
+    Returns
+        (bpy.types.NodeGroup)
+    '''
+
+    current_group_node = None
+    users = bpy.context.blend_data.user_map(subset={node.id_data})
+    for group_nt in users[node.id_data]:
+        if isinstance(group_nt, bpy.types.Material):
+            continue
+        for n in group_nt.nodes:
+            if n.bl_idname == 'ShaderNodeGroup':
+                for n2 in n.node_tree.nodes:
+                    if n2 == node:
+                        current_group_node = n
+                        break        
+
+    return current_group_node
+
 def get_all_shading_nodes():
 
     '''Find all shading nodes in the scene

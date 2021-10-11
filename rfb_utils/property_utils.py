@@ -177,7 +177,7 @@ def build_output_param_str(rman_sg_node, mat_name, from_node, from_socket, conve
     else:
         return "%s:%s" % (from_node_name, from_sock_name)
 
-def get_output_param_str(rman_sg_node, node, mat_name, socket, to_socket=None, param_type=''):
+def get_output_param_str(rman_sg_node, node, mat_name, socket, to_socket=None, param_type='', check_do_convert=True):
     # if this is a node group, hook it up to the input node inside!
     if node.bl_idname == 'ShaderNodeGroup':
         ng = node.node_tree
@@ -195,12 +195,8 @@ def get_output_param_str(rman_sg_node, node, mat_name, socket, to_socket=None, p
         else:
             return None
     if node.bl_idname == 'NodeGroupInput':
-        current_group_node = None
-        for ng in bpy.data.node_groups:
-            if ng == node.id_data:
-                current_group_node = ng
-                break
-
+        current_group_node = shadergraph_utils.get_group_node(node)
+        
         if current_group_node is None:
             return None
 
@@ -224,7 +220,11 @@ def get_output_param_str(rman_sg_node, node, mat_name, socket, to_socket=None, p
         else:
             return get_output_param_str(rman_sg_node, rerouted_node, mat_name, rerouted_socket, to_socket=to_socket, param_type=param_type)
         
-    return build_output_param_str(rman_sg_node, mat_name, node, socket, shadergraph_utils.do_convert_socket(socket, to_socket), param_type)    
+    do_convert_socket = False
+    if check_do_convert:
+        do_convert_socket = shadergraph_utils.do_convert_socket(socket, to_socket)
+
+    return build_output_param_str(rman_sg_node, mat_name, node, socket, do_convert_socket, param_type)    
 
 
 def is_vstruct_or_linked(node, param):

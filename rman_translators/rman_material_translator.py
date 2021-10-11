@@ -180,14 +180,60 @@ class RmanMaterialTranslator(RmanTranslator):
     def export_solo_shader(self, mat, out, solo_node, rman_sg_material, mat_handle=''):
         bxdfList = []
         rman_sg_material.nodes_to_blnodeinfo.clear()  
-        for sub_node in shadergraph_utils.gather_nodes(solo_node):
-            shader_sg_nodes = self.shader_node_sg(mat, sub_node, rman_sg_material, mat_name=mat_handle)
-            for s in shader_sg_nodes:
-                bxdfList.append(s) 
-                   
-        for node, bl_node_info in rman_sg_material.nodes_to_blnodeinfo.items():
-            property_utils.property_group_to_rixparams(node, rman_sg_material, bl_node_info.sg_node, ob=mat, group_node=bl_node_info.group_node)
-                                                              
+
+        # export all the nodes in the graph, except for the terminals
+        # this seems silly to do, but this should take care of weird edge cases where
+        # we have node groups within node groups, and we can't easily get the correct
+        # links from the solo node
+        
+        socket = out.inputs['Bxdf']
+        if socket.is_linked and len(socket.links) > 0:
+            linked_node = get_root_node(socket.links[0].from_node, type='bxdf')
+            if linked_node:
+                rman_sg_material.nodes_to_blnodeinfo.clear()
+                for sub_node in shadergraph_utils.gather_nodes(linked_node):
+                    renderman_type = getattr(sub_node, 'renderman_node_type', '')
+                    if renderman_type == 'bxdf':
+                        continue
+                    shader_sg_nodes = self.shader_node_sg(mat, sub_node, rman_sg_material, mat_name=mat_handle)
+                    for s in shader_sg_nodes:
+                        bxdfList.append(s) 
+
+                for node, bl_node_info in rman_sg_material.nodes_to_blnodeinfo.items():
+                    property_utils.property_group_to_rixparams(node, rman_sg_material, bl_node_info.sg_node, ob=mat, group_node=bl_node_info.group_node)
+
+        # light
+        socket = out.inputs['Light']
+        if socket.is_linked and len(socket.links) > 0:
+            linked_node = get_root_node(socket.links[0].from_node, type='light')
+            if linked_node:
+                rman_sg_material.nodes_to_blnodeinfo.clear()
+                for sub_node in shadergraph_utils.gather_nodes(socket.links[0].from_node):
+                    renderman_type = getattr(sub_node, 'renderman_node_type', '')
+                    if renderman_type == 'light':
+                        continue                    
+                    shader_sg_nodes = self.shader_node_sg(mat, sub_node, rman_sg_material, mat_name=mat_handle)
+                    for s in shader_sg_nodes:
+                        bxdfList.append(s) 
+                for node, bl_node_info in rman_sg_material.nodes_to_blnodeinfo.items():
+                    property_utils.property_group_to_rixparams(node, rman_sg_material, bl_node_info.sg_node, ob=mat, group_node=bl_node_info.group_node)
+                                                
+        # displacement
+        socket = out.inputs['Displacement']
+        if socket.is_linked and len(socket.links) > 0:
+            linked_node = get_root_node(socket.links[0].from_node, type='displace')
+            if linked_node:                    
+                dispList = []
+                rman_sg_material.nodes_to_blnodeinfo.clear()
+                for sub_node in shadergraph_utils.gather_nodes(linked_node):
+                    renderman_type = getattr(sub_node, 'renderman_node_type', '')
+                    if renderman_type == 'displace':
+                        continue                        
+                    shader_sg_nodes = self.shader_node_sg(mat, sub_node, rman_sg_material, mat_name=mat_handle)
+                    for s in shader_sg_nodes:
+                        bxdfList.append(s) 
+                for node, bl_node_info in rman_sg_material.nodes_to_blnodeinfo.items():
+                    property_utils.property_group_to_rixparams(node, rman_sg_material, bl_node_info.sg_node, ob=mat, group_node=bl_node_info.group_node)     
 
         node_type = getattr(solo_node, 'renderman_node_type', '')
         if bxdfList:
@@ -196,8 +242,8 @@ class RmanMaterialTranslator(RmanTranslator):
                 params = sg_node.params
                 from_socket = solo_node.outputs[0]
                 if out.solo_node_output:
-                    from_socket = solo_node.outputs.get(out.solo_node_output)
-                val = property_utils.build_output_param_str(rman_sg_material, mat_handle, solo_node, from_socket, convert_socket=False, param_type='')                
+                    from_socket = solo_node.outputs.get(out.solo_node_output)       
+                val = property_utils.get_output_param_str(rman_sg_material, solo_node, mat_handle, from_socket, check_do_convert=False)
 
                 # check the output type
                 if from_socket.renderman_type in ['color', 'normal', 'vector', 'point']:               

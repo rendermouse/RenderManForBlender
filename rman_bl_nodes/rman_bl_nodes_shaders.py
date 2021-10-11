@@ -72,11 +72,12 @@ class RendermanShadingNode(bpy.types.ShaderNode):
         nm = self.name
         if self.label:
             nm = self.label
-        if shadergraph_utils.is_soloable_node(self):
-            nt = self.id_data
-            out_node = shadergraph_utils.find_rman_output_node(nt) 
-            if self.name == out_node.solo_node_name:
-                nm = "%s (SOLO)" % nm
+        if bpy.context.material:
+            mat = bpy.context.material
+            if shadergraph_utils.is_soloable_node(self):
+                out_node = shadergraph_utils.find_node(mat, 'RendermanOutputNode')
+                if out_node.solo_nodetree == self.id_data and self.name == out_node.solo_node_name:
+                    nm = "%s (SOLO)" % nm
         return nm
 
     # all the properties of a shader will go here, also inputs/outputs
@@ -84,16 +85,16 @@ class RendermanShadingNode(bpy.types.ShaderNode):
     # node_props = None
     def draw_buttons(self, context, layout):
         nt = self.id_data
-        #layout.enabled = (nt.library is None)
-        out_node = shadergraph_utils.find_rman_output_node(nt)
+        mat = context.material
+        out_node = shadergraph_utils.find_node(mat, 'RendermanOutputNode')
         self.draw_nonconnectable_props(context, layout, self.prop_names, output_node=out_node)
         if self.bl_idname == "PxrOSLPatternNode":
             layout.operator("node.rman_refresh_osl_shader")
 
     def draw_buttons_ext(self, context, layout):
         nt = self.id_data
-        #layout.enabled = (nt.library is None)
-        out_node = shadergraph_utils.find_rman_output_node(nt)        
+        mat = bpy.context.material
+        out_node = shadergraph_utils.find_node(mat, 'RendermanOutputNode')   
         rman_icon = rfb_icons.get_node_icon(self.bl_label)
         split = layout.split(factor=0.75)
         col = split.column(align=True)
