@@ -467,10 +467,13 @@ def generate_property(node, sp, update_function=None):
                                         items=items,
                                         update=update_function)
                 else:
-                    prop = StringProperty(name=param_label,
-                                        default=str(param_default),
-                                        description=param_help, 
-                                        update=update_function)                                        
+                    # for strings, assume the first item is the default
+                    k = items[0][1]
+                    items[0] = (param_default, k, '' )
+                    prop = EnumProperty(name=param_label,
+                                        default=param_default, description=param_help,
+                                        items=items,
+                                        update=update_function)                    
 
         elif param_widget == 'bl_scenegraphlocation':
             reference_type = eval(sp.options['nodeType'])
