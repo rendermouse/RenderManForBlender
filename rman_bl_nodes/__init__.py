@@ -90,7 +90,9 @@ __RMAN_NODES_NO_REGISTER__ = [
     'PxrShadowDisplayFilter.args',
     'PxrShadowFilter.args',
     'PxrDisplace.oso',
-    'PxrSeExpr.args'
+    'PxrSeExpr.args',
+    'PxrDebugShadingContext.args',
+    'PxrValidateBxdf.args'
 ]
 
 # map RenderMan name to Blender node name
