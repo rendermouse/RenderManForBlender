@@ -284,6 +284,10 @@ class RendermanSocketInterface:
     def from_socket(self, node, socket):
         if hasattr(self, 'default_value'):
             self.default_value = socket.get_value(node)
+        if hasattr(self, 'struct_name'):
+            self.struct_name = socket.struct_name         
+        if hasattr(self, 'is_texture'):
+            self.is_texture = socket.is_texture
         self.name = socket.name
 
     def init_socket(self, node, socket, data_path):
@@ -291,6 +295,10 @@ class RendermanSocketInterface:
         socket.name = self.name
         if hasattr(self, 'default_value'):
             socket.default_value = self.default_value
+        if hasattr(self, 'struct_name'):
+            socket.struct_name = self.struct_name   
+        if hasattr(self, 'is_texture'):
+            socket.is_texture = self.is_texture                     
 
 classes = []
 
