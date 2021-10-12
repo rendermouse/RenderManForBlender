@@ -47,8 +47,31 @@ class RmanFluidTranslator(RmanTranslator):
 
         return rman_sg_fluid
 
-    def export_object_primvars(self, ob, rman_sg_node):
-        pass
+    def export_object_primvars(self, ob, rman_sg_node, sg_node=None): 
+        if rman_sg_node.rman_sg_liquid_node:
+            sg_node = rman_sg_node.rman_sg_liquid_node  
+            super().export_object_primvars(ob, rman_sg_node, sg_node=sg_node)             
+            return 
+
+        sg_node = rman_sg_node.rman_sg_volume_node
+        super().export_object_primvars(ob, rman_sg_node, sg_node=sg_node)  
+        prop_name = 'rman_micropolygonlength_volume'
+        rm = ob.renderman
+        rm_scene = self.rman_scene.bl_scene.renderman
+        meta = rm.prop_meta[prop_name]
+        val = getattr(rm, prop_name)
+        inherit_true_value = meta['inherit_true_value']
+        if float(val) == inherit_true_value:
+            if hasattr(rm_scene, 'rman_micropolygonlength'):
+                val = getattr(rm_scene, 'rman_micropolygonlength')
+
+        try:
+            primvars = sg_node.GetPrimVars()
+            primvars.SetFloat('dice:micropolygonlength', val)
+            sg_node.SetPrimVars(primvars)
+        except AttributeError:
+            rfb_log().debug("Cannot get RtPrimVar for this node")
+
 
     def export_deform_sample(self, rman_sg_fluid, ob, time_sample):
         return

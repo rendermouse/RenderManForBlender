@@ -687,7 +687,6 @@
         {
             "panel": "OBJECT_PT_renderman_object_geometry_attributes",
             "name": "rman_micropolygonlength_volume",
-            "primvar": "dice:micropolygonlength",
             "label": "MicroPolygon Length",
             "type": "float",
             "default": 10.0,
