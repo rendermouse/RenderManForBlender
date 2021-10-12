@@ -316,6 +316,19 @@ def find_node_owner(node, context=None):
     """    
     nt = node.id_data
 
+    def check_group(group_node, nt):
+        node_tree = getattr(group_node, 'node_tree', None)
+        if node_tree is None:
+            return False          
+        if node_tree == nt:
+            return node_tree
+
+        for n in group_node.node_tree.nodes:
+            if n.bl_idname == 'ShaderNodeGroup':
+                if check_group(n, nt):
+                    return True
+        return False
+            
     for mat in bpy.data.materials:
         if mat.node_tree is None:
             continue
@@ -326,8 +339,8 @@ def find_node_owner(node, context=None):
             node_tree = getattr(n, 'node_tree', None)
             if node_tree is None:
                 continue            
-            if node_tree == nt:
-                return node_tree
+            if check_group(n, nt):
+                return mat
 
     for world in bpy.data.worlds:
         if world.node_tree == nt:

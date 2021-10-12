@@ -440,11 +440,25 @@ def get_all_shading_nodes():
         if n:
             nodes.append(n)
 
+    def get_group_nodes(group_node, nodes):
+        for n in group_node.node_tree.nodes:
+            if n.bl_idname == 'ShaderNodeGroup':
+                get_group_nodes(n, nodes)
+            else:
+                rman_type = getattr(n, 'renderman_node_type', None)
+                if not rman_type:
+                    continue
+                if hasattr(n, 'prop_meta'):
+                    nodes.append(n)                
+
     for mat in bpy.data.materials:
         if not mat.use_nodes:
             continue
 
         for n in mat.node_tree.nodes:
+            if n.bl_idname == 'ShaderNodeGroup':
+                get_group_nodes(n, nodes)
+                continue
             rman_type = getattr(n, 'renderman_node_type', None)
             if not rman_type:
                 continue
