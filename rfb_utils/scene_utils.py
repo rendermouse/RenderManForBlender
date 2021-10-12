@@ -45,6 +45,20 @@ def get_renderman_layer(context):
 
     return rm_rl    
 
+def any_areas_shading():           
+    '''
+    Loop through all of the windows/areas and return True if any of
+    the view_3d areas have their shading set to RENDERED. Otherwise,
+    return False.
+    '''    
+    for window in bpy.context.window_manager.windows:
+        for area in window.screen.areas:
+            if area.type == 'VIEW_3D':
+                for space in area.spaces:
+                    if space.type == 'VIEW_3D' and space.shading.type == 'RENDERED':
+                        return True
+    return False           
+
 def get_render_variant(bl_scene):
     #if bl_scene.renderman.is_ncr_license and bl_scene.renderman.renderVariant != 'prman':
     if not bl_scene.renderman.has_xpu_license and bl_scene.renderman.renderVariant != 'prman':

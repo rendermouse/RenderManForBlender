@@ -57,6 +57,7 @@ class PRManRender(bpy.types.RenderEngine):
     def __init__(self):
         from . import rman_render
         self.rman_render = rman_render.RmanRender.get_rman_render()
+        self.export_failed = None
         if self.is_preview and self.rman_render.rman_swatch_render_running:
             # if a preview render is requested and a swatch render is 
             # already in progress, ignore this render request
@@ -97,11 +98,17 @@ class PRManRender(bpy.types.RenderEngine):
         if self.rman_render.is_regular_rendering():
             return
 
+        if self.export_failed:
+            return            
+
         # if interactive rendering has not started, start it
         if not self.rman_render.rman_interactive_running and self.rman_render.sg_scene is None:
             self.rman_render.bl_engine = self
-            self.rman_render.start_interactive_render(context, depsgraph)
-
+            if not self.rman_render.start_interactive_render(context, depsgraph):
+                self.export_failed = True
+                return
+            self.export_failed = False
+                
         if self.rman_render.rman_interactive_running and not self.rman_render.rman_license_failed:
             self.rman_render.update_scene(context, depsgraph)   
 
@@ -111,6 +118,8 @@ class PRManRender(bpy.types.RenderEngine):
         This is where we check for camera moves and draw pxiels from our
         Blender display driver.
         '''
+        if self.export_failed:
+            return
         if self.rman_render.rman_interactive_running and not self.rman_render.rman_license_failed:               
             self.rman_render.update_view(context, depsgraph)
 

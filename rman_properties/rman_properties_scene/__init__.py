@@ -112,8 +112,10 @@ class RendermanSceneSettings(RmanBasePropertyGroup, bpy.types.PropertyGroup):
 
     def get_is_rman_interactive_running(self):
         from ...rman_render import RmanRender
+        from ...rfb_utils import scene_utils       
         rman_render = RmanRender.get_rman_render()
-        return rman_render.rman_interactive_running      
+        is_shading = scene_utils.any_areas_shading()
+        return (rman_render.rman_interactive_running or is_shading)
 
     def get_is_rman_swatch_render_running(self):
         from ...rman_render import RmanRender
@@ -122,8 +124,10 @@ class RendermanSceneSettings(RmanBasePropertyGroup, bpy.types.PropertyGroup):
 
     def get_is_rman_viewport_rendering(self):
         from ...rman_render import RmanRender
+        from ...rfb_utils import scene_utils      
         rman_render = RmanRender.get_rman_render()
-        return rman_render.rman_is_viewport_rendering
+        is_shading = scene_utils.any_areas_shading()
+        return (rman_render.rman_is_viewport_rendering or is_shading)        
 
     def get_light_linking_inverted(self):
         return get_pref('rman_invert_light_linking')
