@@ -242,6 +242,9 @@ class DrawCropWindowHelper(object):
         space = bpy.context.space_data
         region_data = bpy.context.region_data
         region = bpy.context.region
+        scene = bpy.context.scene
+        rm = scene.renderman
+        r = scene.render
         height = region.height
         width = region.width        
         use_render_border = False
@@ -259,7 +262,6 @@ class DrawCropWindowHelper(object):
                 self.reset()
         else:
             use_render_border = False
-            r = bpy.context.scene.render
             if r.use_border:
                 use_render_border = True
                 ob = bpy.context.space_data.camera     
@@ -275,7 +277,16 @@ class DrawCropWindowHelper(object):
             self.use_render_border = use_render_border
             update = True 
 
-        current_crop = self.get_crop_window(width, height)
+        if rm.render_ipr_into == 'it':
+            current_crop = [0.0, 1.0, 0.0, 1.0]
+            if self.use_render_border and not r.use_crop_to_border:
+                min_x = r.border_min_x
+                max_x = r.border_max_x
+                min_y = 1.0 - r.border_min_y
+                max_y = 1.0 - r.border_max_y     
+                current_crop = [min_x, max_x, min_y, max_y]       
+        else:
+            current_crop = self.get_crop_window(width, height)
         if prev_crop != current_crop:
             update = True
 
