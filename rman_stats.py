@@ -115,6 +115,11 @@ class RfBStatsManager(object):
             if os.path.exists(os.path.join(rman_stats_config_path, 'stats.ini')):
                 self.rman_stats_session_config.LoadConfigFile(rman_stats_config_path, 'stats.ini')
                           
+        # do this once at startup
+        self.web_socket_server_id = 'rfb_statsserver_'+str(os.getpid())
+        self.rman_stats_session_config.SetServerId(self.web_socket_server_id)
+
+        # initialize session config with prefs, then add session
         self.update_session_config()     
         self.rman_stats_session = rman.Stats.AddSession(self.rman_stats_session_config)  
 
@@ -133,6 +138,10 @@ class RfBStatsManager(object):
         self.rman_stats_session_config.Update(config_str)
         if self.rman_stats_session:
             self.rman_stats_session.Update(self.rman_stats_session_config)   
+
+        # update stats manager config for connecting client to server
+        self.mgr.config["webSocketPort"] = self.web_socket_port
+        self.mgr.serverId = self.web_socket_server_id
 
         if self.web_socket_enabled:
             #self.attach()
@@ -156,17 +165,14 @@ class RfBStatsManager(object):
                 return       
         
     def attach(self):
-        host = self.mgr.config["webSocketHost"]
-        port = self.web_socket_port
 
         if not self.mgr:
             return 
         if (self.mgr.clientConnected()):
             return
 
-        # The connectToServer call is a set of asynchronous calls so we set
-        # a thread to check the connection and then enable the metrics
-        self.mgr.connectToServer(host, port)
+        # Manager will connect based on given configuration & serverId
+        self.mgr.connectToServer(0, 0)  # TODO params ignored, to be removed
 
         # if the bootstrap thread is still running, kill it
         if self.boot_strap_thread:
