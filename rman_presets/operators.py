@@ -207,6 +207,15 @@ class PRMAN_OT_save_asset_to_lib(bpy.types.Operator):
     meta_data: CollectionProperty(type=RendermanPresetMetaData,
                                       name="Meta Data")
     meta_data_index: IntProperty(default=-1)
+    preview_render: EnumProperty(name="Preview",
+        items=[
+            ('std', 'Standard', 'Standard scene'),
+            ('fur', 'Fur', 'Fur scene'),
+            ('none', 'None', 'No preview render')
+        ],
+        default='std',
+        description='Select which preview render scene to use.'
+    )
 
     @classmethod
     def poll(cls, context):
@@ -228,6 +237,7 @@ class PRMAN_OT_save_asset_to_lib(bpy.types.Operator):
         col.prop(self, 'material_label')
         col.prop(self, 'material_author')
         col.prop(self, 'material_version')
+        col.prop(self, 'preview_render')
         col.prop(self, 'include_display_filters')
 
         col.separator()
@@ -257,7 +267,7 @@ class PRMAN_OT_save_asset_to_lib(bpy.types.Operator):
             for md in self.meta_data:
                 infodict[md.key] = md.value
             category = hostPrefs.getSelectedCategory()   
-            hostPrefs.exportMaterial(category, infodict, None)
+            hostPrefs.exportMaterial(category, infodict, self.preview_render)
 
 
         if self.op:

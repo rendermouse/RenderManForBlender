@@ -277,7 +277,7 @@ class BlenderHostPrefs(ral.HostPrefs):
 
     def exportMaterial(self, categorypath, infodict, previewtype): # pylint: disable=unused-argument
         return export_asset(self._nodesToExport, 'nodeGraph', infodict, categorypath,
-                            self.cfg)
+                            self.cfg, previewtype)
 
     def exportLightRig(self, categorypath, infodict): # pylint: disable=unused-argument
         return export_asset(self._nodesToExport, 'nodeGraph', infodict, categorypath,
