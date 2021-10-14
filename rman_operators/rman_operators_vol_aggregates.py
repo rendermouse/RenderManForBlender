@@ -105,7 +105,7 @@ class PRMAN_OT_add_to_vol_aggregate(bpy.types.Operator):
             op = getattr(context, 'op_ptr')
             if op:
                 op.selected_obj_name = '0'             
-            ob.update_tag(refresh={'OBJECT'})    
+            ob.update_tag(refresh={'DATA'})    
 
     def add_scene_selected(self, context):
         scene = context.scene
@@ -128,7 +128,7 @@ class PRMAN_OT_add_to_vol_aggregate(bpy.types.Operator):
                 ob_in_group = vol_aggregate.members.add()
                 ob_in_group.name = ob.name
                 ob_in_group.ob_pointer = ob    
-                ob.update_tag(refresh={'OBJECT'})          
+                ob.update_tag(refresh={'DATA'})          
 
     def execute(self, context):
         if self.properties.do_scene_selected:

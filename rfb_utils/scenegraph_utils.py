@@ -28,7 +28,7 @@ def update_sg_root_node(context):
     rr = rman_render.RmanRender.get_rman_render()
     rr.rman_scene_sync.update_root_node_func(context)    
 
-def export_vol_aggregate(bl_scene, attrs, ob):
+def export_vol_aggregate(bl_scene, primvar, ob):
     vol_aggregate_group = []
     for v in bl_scene.renderman.vol_aggregates:
         for member in v.members:
@@ -37,4 +37,4 @@ def export_vol_aggregate(bl_scene, attrs, ob):
                 break
 
     if vol_aggregate_group:
-        attrs.SetString("volume:aggregate", ','.join(vol_aggregate_group))     
+        primvar.SetString("volume:aggregate", ','.join(vol_aggregate_group))     

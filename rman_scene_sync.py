@@ -815,7 +815,7 @@ class RmanSceneSync(object):
                             cam_object = translator.find_scene_camera()
                             translator.update(cam_object, rman_sg_camera)
 
-                elif obj.is_updated_geometry:
+                if obj.is_updated_geometry:
                     if is_hidden:
                         # don't update if this is hidden
                         continue

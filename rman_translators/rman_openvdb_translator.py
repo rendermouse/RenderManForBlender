@@ -115,9 +115,7 @@ class RmanOpenVDBTranslator(RmanTranslator):
             elif grid.data_type == 'STRING':
                 primvar.SetStringDetail(grid.name, [], "uniform")
 
-        rman_sg_openvdb.sg_node.SetPrimVars(primvar)  
-        attrs = rman_sg_openvdb.sg_node.GetAttributes() 
-        scenegraph_utils.export_vol_aggregate(self.rman_scene.bl_scene, attrs, ob)      
+        scenegraph_utils.export_vol_aggregate(self.rman_scene.bl_scene, primvar, ob)     
 
-        attrs.SetInteger("volume:dsominmax", rm.volume_dsominmax)
-        rman_sg_openvdb.sg_node.SetAttributes(attrs)           
+        primvar.SetInteger("volume:dsominmax", rm.volume_dsominmax)
+        rman_sg_openvdb.sg_node.SetPrimVars(primvar)
