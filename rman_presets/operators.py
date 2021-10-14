@@ -28,6 +28,7 @@ from ..rfb_utils.envconfig_utils import envconfig
 from ..rfb_utils import object_utils
 from ..rfb_utils.shadergraph_utils import is_renderman_nodetree
 from ..rfb_logger import rfb_log
+from ..rfb_icons import get_icon
 import os
 import bpy
 from bpy.props import StringProperty, EnumProperty, BoolProperty, CollectionProperty, IntProperty
@@ -207,13 +208,18 @@ class PRMAN_OT_save_asset_to_lib(bpy.types.Operator):
     meta_data: CollectionProperty(type=RendermanPresetMetaData,
                                       name="Meta Data")
     meta_data_index: IntProperty(default=-1)
-    preview_render: EnumProperty(name="Preview",
+
+    def preview_render_items(self, context):
         items=[
             ('std', 'Standard', 'Standard scene'),
             ('fur', 'Fur', 'Fur scene'),
             ('none', 'None', 'No preview render')
-        ],
-        default='std',
+        ]
+        return items
+
+    preview_render: EnumProperty(name="Preview",
+        items=preview_render_items,
+        default=0,
         description='Select which preview render scene to use.'
     )
 
@@ -237,8 +243,12 @@ class PRMAN_OT_save_asset_to_lib(bpy.types.Operator):
         col.prop(self, 'material_label')
         col.prop(self, 'material_author')
         col.prop(self, 'material_version')
-        col.prop(self, 'preview_render')
         col.prop(self, 'include_display_filters')
+        row = col.row()
+        col2 = row.column()
+        col2.prop(self, 'preview_render')
+        icon = get_icon(name='rman_preview_%s' % self.properties.preview_render)
+        col2.template_icon(icon.icon_id, scale=5.0)         
 
         col.separator()
         col.label(text="Meta Data:")
