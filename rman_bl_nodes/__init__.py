@@ -10,6 +10,7 @@ from ..rfb_logger import rfb_log
 from ..rfb_utils.envconfig_utils import envconfig
 from .. import rfb_icons
 from .. import rman_config
+from ..rman_config import __RFB_CONFIG_DICT__ as rfb_config
 from ..rman_properties import rman_properties_renderlayers
 from ..rman_properties import rman_properties_world
 from ..rman_properties import rman_properties_camera
@@ -83,17 +84,6 @@ __RMAN_PLUGIN_MAPPING__ = {
     'projection': rman_properties_camera.RendermanCameraSettings
 }
 
-__RMAN_NODES_NO_REGISTER__ = [
-    'PxrCombinerLightFilter.args', 
-    'PxrSampleFilterCombiner.args', 
-    'PxrDisplayFilterCombiner.args', 
-    'PxrShadowDisplayFilter.args',
-    'PxrShadowFilter.args',
-    'PxrDisplace.oso',
-    'PxrSeExpr.args',
-    'PxrDebugShadingContext.args',
-    'PxrValidateBxdf.args'
-]
 
 # map RenderMan name to Blender node name
 # ex: PxrStylizedControl -> PxrStylizedControlPatternNode
@@ -615,6 +605,8 @@ class RendermanNodeItem(NodeItem):
 def register_rman_nodes():
     global __RMAN_NODE_CATEGORIES__
 
+    rman_disabled_nodes = rfb_config['disabled_nodes']
+
     rfb_log().debug("Registering RenderMan Plugin Nodes:")
     path_list = envconfig().get_shader_registration_paths()
     visited = set()
@@ -631,7 +623,7 @@ def register_rman_nodes():
             for filename in sorted(filenames):        
                 if filename.endswith(('.args', '.oso')):
                     # skip registering these nodes
-                    if filename in __RMAN_NODES_NO_REGISTER__:
+                    if filename in rman_disabled_nodes:
                         continue       
                     is_oso = False 
                     is_args = True 

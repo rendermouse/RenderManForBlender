@@ -98,6 +98,13 @@
                 "type": "string"
             }
         },
+        "disabled_nodes": {
+            "type": "array",
+            "description": "A list of nodes that will not be registered.",
+            "items": {
+                "type": "string"
+            }
+        },          
         "user tokens": {
             "type": "array",
             "description": "A list of dicts containing a token name and a value.",
@@ -144,7 +151,7 @@
                     "$ref": "#/definitions/preference"
                 }
             }
-        },
+        },      
         "tractor_cfg": {"$ref": "#/definitions/tractor_cfg" }       
     },
     "additionalProperties": false

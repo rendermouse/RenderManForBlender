@@ -84,5 +84,16 @@
             "diffuse_color": ["color"]
         }                   
     },
+    "disabled_nodes": [
+        "PxrCombinerLightFilter.args", 
+        "PxrSampleFilterCombiner.args", 
+        "PxrDisplayFilterCombiner.args", 
+        "PxrShadowDisplayFilter.args",
+        "PxrShadowFilter.args",
+        "PxrDisplace.oso",
+        "PxrSeExpr.args",
+        "PxrDebugShadingContext.args",
+        "PxrValidateBxdf.args"
+    ],
     "user tokens": []  
 }
