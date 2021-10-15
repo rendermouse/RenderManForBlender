@@ -4,7 +4,7 @@ from ..rfb_utils import string_utils
 from ..rfb_utils import texture_utils
 from ..rfb_utils import filepath_utils
 from bpy.types import Operator
-from bpy.props import StringProperty
+from bpy.props import StringProperty, FloatProperty
 import os
 import zipfile
 import bpy
@@ -158,21 +158,30 @@ class PRMAN_OT_Renderman_Start_Debug_Server(bpy.types.Operator):
 
     max_timeout: FloatProperty(default=120.0)
     num_seconds: FloatProperty(default=0.0)
+    debugpy = None
+
+    @classmethod
+    def poll(cls, context):
+        if context.engine != "PRMAN_RENDER":
+            return False
+        
+        if cls.debugpy and cls.debugpy.is_client_connected():
+            return False
+            
+        return True
 
     # call check_done
     def modal(self, context, event):
         if event.type == "TIMER":
-            if not self.debugpy.is_client_connected():
+            if not self.__class__.debugpy.is_client_connected():
                 if self.properties.num_seconds >= self.properties.max_timeout:
                     self.report({'INFO'}, 'Max timeout reached. Aborting...')
                     return {'FINISHED'}
                 self.report({'INFO'}, 'Still waiting...')
-                self.properties.s = 'Still waiting...'
                 self.properties.num_seconds += 0.1
                 return {'RUNNING_MODAL'}
             else:
                 self.report({'INFO'}, 'Debugger attached.')
-                self.properties.s = 'Debugger attached.'
                 return {'FINISHED'}
         
         return {'RUNNING_MODAL'}
@@ -182,19 +191,21 @@ class PRMAN_OT_Renderman_Start_Debug_Server(bpy.types.Operator):
         return {"FINISHED"}       
 
     def invoke(self, context, event):
+        cls = self.__class__
+        if not cls.debugpy:
+            try:
+                import debugpy
 
-        try:
-            import debugpy
-        except ModuleNotFoundError:
-            self.report({'ERROR'}, 'Cannot import debugpy module.')
-            return {'FINISHED'}
+            except ModuleNotFoundError:
+                self.report({'ERROR'}, 'Cannot import debugpy module.')
+                return {'FINISHED'}
 
-        try:
-            debugpy.listen(("localhost", 5678))
-            self.report({'INFO'}, 'debugpy started!')
-        except:
-            self.report({'ERROR'}, 'debugpy already running!')
-        self.debugpy = debugpy
+            try:
+                debugpy.listen(("localhost", 5678))
+                cls.debugpy = debugpy
+                self.report({'INFO'}, 'debugpy started!')
+            except:
+                self.report({'ERROR'}, 'debugpy already running!')
         wm = context.window_manager
         self._timer = wm.event_timer_add(0.1, window=context.window)        
         context.window_manager.modal_handler_add(self)
