@@ -150,8 +150,60 @@ class PRMAN_OT_Renderman_Package(Operator):
         context.window_manager.fileselect_add(self)
         return{'RUNNING_MODAL'} 
 
+class PRMAN_OT_Renderman_Start_Debug_Server(bpy.types.Operator):
+    bl_idname = "renderman.start_debug_server"
+    bl_label = "Start Debug Server"
+    bl_description = "Start the debug server. This requires the debugpy module."
+    bl_options = {'INTERNAL'}
+
+    max_timeout: FloatProperty(default=120.0)
+    num_seconds: FloatProperty(default=0.0)
+
+    # call check_done
+    def modal(self, context, event):
+        if event.type == "TIMER":
+            if not self.debugpy.is_client_connected():
+                if self.properties.num_seconds >= self.properties.max_timeout:
+                    self.report({'INFO'}, 'Max timeout reached. Aborting...')
+                    return {'FINISHED'}
+                self.report({'INFO'}, 'Still waiting...')
+                self.properties.s = 'Still waiting...'
+                self.properties.num_seconds += 0.1
+                return {'RUNNING_MODAL'}
+            else:
+                self.report({'INFO'}, 'Debugger attached.')
+                self.properties.s = 'Debugger attached.'
+                return {'FINISHED'}
+        
+        return {'RUNNING_MODAL'}
+
+    def execute(self, context):
+        self.report({'INFO'}, 'Debugger attached.')
+        return {"FINISHED"}       
+
+    def invoke(self, context, event):
+
+        try:
+            import debugpy
+        except ModuleNotFoundError:
+            self.report({'ERROR'}, 'Cannot import debugpy module.')
+            return {'FINISHED'}
+
+        try:
+            debugpy.listen(("localhost", 5678))
+            self.report({'INFO'}, 'debugpy started!')
+        except:
+            self.report({'ERROR'}, 'debugpy already running!')
+        self.debugpy = debugpy
+        wm = context.window_manager
+        self._timer = wm.event_timer_add(0.1, window=context.window)        
+        context.window_manager.modal_handler_add(self)
+        
+        return {'RUNNING_MODAL'}
+
 classes = [
-   PRMAN_OT_Renderman_Package 
+   PRMAN_OT_Renderman_Package,
+   PRMAN_OT_Renderman_Start_Debug_Server 
 ]
 
 def register():
