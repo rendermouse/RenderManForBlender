@@ -292,13 +292,13 @@ class BlenderHostPrefs(ral.HostPrefs):
         return export_asset(self._nodesToExport, 'nodeGraph', infodict, categorypath,
                             self.cfg, previewtype)
 
-    def exportLightRig(self, categorypath, infodict): # pylint: disable=unused-argument
+    def exportLightRig(self, categorypath, infodict, previewtype): # pylint: disable=unused-argument
         return export_asset(self._nodesToExport, 'nodeGraph', infodict, categorypath,
-                            self.cfg)
+                            self.cfg, previewtype)
 
-    def exportEnvMap(self, categorypath, infodict): # pylint: disable=unused-argument
+    def exportEnvMap(self, categorypath, infodict, previewtype): # pylint: disable=unused-argument
         return export_asset(self._nodesToExport, 'envMap', infodict, categorypath,
-                            self.cfg)
+                            self.cfg, previewtype)
 
     def importAsset(self, asset, assignToSelected=False): # pylint: disable=unused-argument
         # IMPLEMENT ME
