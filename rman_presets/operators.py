@@ -310,7 +310,7 @@ class PRMAN_OT_save_asset_base(bpy.types.Operator):
             col2 = split.column()
             split = col2.split(factor=0.85)
             split.prop(self, 'storage_path', text='')
-            #split.operator('renderman.preset_add_storage_path', text='', icon='ADD')            
+            split.operator('renderman.preset_add_storage_path', text='', icon='ADD')            
 
         col.prop(self, 'convert_to_tex')
 
@@ -394,7 +394,7 @@ class PRMAN_OT_save_asset_to_lib(PRMAN_OT_save_asset_base):
             self.storage_key = hostPrefs.rpbStorageKey
         self.storage_path = hostPrefs.rpbStoragePath
         self.op = getattr(context, 'op_ptr', None) 
-        return wm.invoke_props_dialog(self) 
+        return wm.invoke_props_dialog(self, width=500) 
 
 class PRMAN_OT_add_storage_key(bpy.types.Operator):
     bl_idname = "renderman.preset_add_storage_key"
@@ -430,7 +430,18 @@ class PRMAN_OT_add_storage_path(bpy.types.Operator):
     bl_label = "Add Storage Path"
     bl_description = "Add a storage path to the library"
 
-    directory: bpy.props.StringProperty(name='Path', subtype='FILE_PATH')
+    directory: bpy.props.StringProperty(subtype='FILE_PATH')
+    filepath: bpy.props.StringProperty(
+        subtype="FILE_PATH")
+
+    filename: bpy.props.StringProperty(
+        subtype="FILE_NAME",
+        default="")
+
+    filter_glob: bpy.props.StringProperty(
+        default="*.hdr;*.tex",
+        options={'HIDDEN'},
+        )         
 
     def draw(self, context):
         layout = self.layout
@@ -443,15 +454,16 @@ class PRMAN_OT_add_storage_path(bpy.types.Operator):
             return {'FINISHED'}
         
         hostPrefs = rab.get_host_prefs()        
-        safe_mkdir(storage_path)
+        safe_mkdir(FilePath(storage_path))
         hostPrefs.rpbStoragePath = storage_path  
+        hostPrefs.rpbStorageMode = Storage.k_external
         hostPrefs.saveAllPrefs()    
 
         return {'FINISHED'}
 
-    def invoke(self, context, event):
-        wm = context.window_manager
-        return wm.invoke_props_dialog(self)  
+    def invoke(self, context, event):        
+        context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
 
 class PRMAN_OT_save_lightrig_to_lib(PRMAN_OT_save_asset_base):
     bl_idname = "renderman.save_lightrig_to_library"
