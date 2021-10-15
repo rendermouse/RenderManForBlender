@@ -86,7 +86,6 @@ class RmanOpenVDBTranslator(RmanTranslator):
 
         openvdb_attrs = dict()
         openvdb_attrs['filterWidth'] = getattr(rm, 'openvdb_filterwidth')
-        openvdb_attrs['velocityScale'] = getattr(rm, 'openvdb_velocityscale')
         openvdb_attrs['densityMult'] = getattr(rm, 'openvdb_densitymult')
         openvdb_attrs['densityRolloff'] = getattr(rm, 'openvdb_densityrolloff')
 
@@ -97,10 +96,7 @@ class RmanOpenVDBTranslator(RmanTranslator):
         string_args = []
         string_args.append(openvdb_file)
         string_args.append("%s:fogvolume" % active_grid.name)
-        if rm.openvdb_velocity_grid_name == '__NONE__':
-            string_args.append('')
-        else:
-            string_args.append(rm.openvdb_velocity_grid_name)
+        string_args.append('')
         string_args.append(json_attrs)
         primvar.SetStringArray(self.rman_scene.rman.Tokens.Rix.k_blobbydso_stringargs, string_args, len(string_args))
 

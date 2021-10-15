@@ -22,7 +22,6 @@ class VOLUME_PT_renderman_openvdb_attributes(CollectionPanel, Panel):
         volume = context.volume
         rm = volume.renderman
 
-        layout.prop(rm, 'openvdb_velocity_grid_name')
         _draw_ui_from_rman_config('rman_properties_volume', 'VOLUME_PT_renderman_openvdb_attributes', context, layout, rm)             
 
 
