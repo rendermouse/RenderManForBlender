@@ -31,12 +31,22 @@ from ..rfb_logger import rfb_log
 from ..rfb_icons import get_icon
 import os
 import bpy
+import glob
 from bpy.props import StringProperty, EnumProperty, BoolProperty, CollectionProperty, IntProperty
 from . import rmanAssetsBlender as rab
 from .properties import RendermanPresetMetaData
 from rman_utils.rman_assets import lib as ral
 from rman_utils.filepath import FilePath
+from rman_utils.rman_assets.common.external_files import Storage
 import getpass
+
+def safe_mkdir(filepath):
+    if not filepath.exists():
+        try:
+            os.mkdir(filepath.os_path())
+        except BaseException as err:
+                rfb_log().error('Failed to create: %s', filepath.os_path())
+                rfb_log().error('  |_ %s', err)        
 
 # if the library isn't present copy it from rmantree to the path in addon prefs
 class PRMAN_OT_init_preset_library(bpy.types.Operator):
@@ -223,6 +233,35 @@ class PRMAN_OT_save_asset_to_lib(bpy.types.Operator):
         description='Select which preview render scene to use.'
     )
 
+    storage_mode: EnumProperty(name="Storage",
+        items=[
+            ('0', 'Asset', 'Save dependencies with the asset'),
+            ('1', 'Library', 'Save depedencies in the global library storage'),
+            ('2', 'External', 'A path external to the library')
+        ],
+        default='0',
+        description='Select where to save the dependencies for this preset'
+    )
+
+    storage_path: StringProperty(name="Path", default="")
+
+    def get_storage_keys(self, context):
+        items = []
+        hostPrefs = rab.get_host_prefs()  
+        lib_root = FilePath(hostPrefs.cfg.getCurrentLibraryPath())
+        gs_path = lib_root.join('global_storage', '*')
+        for f in glob.glob(gs_path.os_path()):
+            items.append((f, f, ''))          
+        return items
+
+    storage_key: EnumProperty(name="Storage Key",
+        items=get_storage_keys
+    )
+
+    convert_to_tex: BoolProperty(name="Convert to Tex",
+        default=True
+    )
+
     @classmethod
     def poll(cls, context):
         ob = context.active_object
@@ -236,6 +275,35 @@ class PRMAN_OT_save_asset_to_lib(bpy.types.Operator):
     def get_current_material(self, context):
         ob = context.active_object
         return ob.active_material
+        
+    def getStorage(self):
+        hostPrefs = rab.get_host_prefs()
+        lib_path = FilePath(hostPrefs.cfg.getCurrentLibraryPath())
+        category = hostPrefs.getSelectedCategory()
+        label = rab.asset_name_from_label(self.material_label)
+        storage_path = filepath_utils.get_real_path(self.storage_path)
+        storage_mode = int(self.storage_mode)
+
+        key = None
+        path = None
+        asset_path = lib_path.join(category, label)
+        if storage_mode == 1:
+            key = self.storage_key
+        if storage_mode == 2:
+            if storage_path != '':
+                path = FilePath(storage_path)
+            else:
+                storage_mode = 0
+
+        storage = Storage(
+            storage_mode,
+            asset_path=asset_path,
+            lib_path=lib_path,
+            key=key,
+            path=path
+        )      
+
+        return storage  
 
     def draw(self, context):
         layout = self.layout
@@ -244,6 +312,22 @@ class PRMAN_OT_save_asset_to_lib(bpy.types.Operator):
         col.prop(self, 'material_author')
         col.prop(self, 'material_version')
         col.prop(self, 'include_display_filters')
+
+        row = col.row()
+        split = row.split(factor=0.55)
+        col2 = split.column()
+        col2.prop(self, 'storage_mode', text='Storage')
+        if int(self.storage_mode) == 1:
+            col2 = split.column()
+            split = col2.split(factor=0.85)
+            split.prop(self, 'storage_key', text='')
+            split.operator('renderman.preset_add_storage_key', text='', icon='ADD')
+        if int(self.storage_mode) == 2:
+            col2 = split.column()
+            col2.prop(self, 'storage_path', text='')
+
+        col.prop(self, 'convert_to_tex')
+
         row = col.row()
         col2 = row.column()
         col2.prop(self, 'preview_render')
@@ -271,27 +355,62 @@ class PRMAN_OT_save_asset_to_lib(bpy.types.Operator):
     def execute(self, context):
         hostPrefs = rab.get_host_prefs()
         if hostPrefs.preExportCheck('material', hdr=None, context=context, include_display_filters=self.include_display_filters):
-            infodict = {'label': self.material_label,
+            label = rab.asset_name_from_label(self.material_label)
+            infodict = dict()
+            infodict['metadict'] = {'label': label,
                         'author': self.material_author,
                         'version': self.material_version}     
             for md in self.meta_data:
-                infodict[md.key] = md.value
+                infodict['metadict'][md.key] = md.value
+            infodict['storage'] = self.getStorage()
+            infodict['convert_to_tex'] = self.convert_to_tex                
             category = hostPrefs.getSelectedCategory()   
             hostPrefs.exportMaterial(category, infodict, self.preview_render)
-
 
         if self.op:
             self.op.preset_categories_index = 0 
         return {'FINISHED'}
 
     def invoke(self, context, event):
+        hostPrefs = rab.get_host_prefs()
         wm = context.window_manager
         mat = self.get_current_material(context)        
         self.material_label = mat.name
         self.material_author = getpass.getuser()
         self.material_version = '1.0'
+        self.storage_mode = str(hostPrefs.rpbStorageMode)
+        #self.storage_key = hostPrefs.rpbStorageKey
+        #self.storage_path = hostPrefs.rpbStoragePath
         self.op = getattr(context, 'op_ptr', None) 
         return wm.invoke_props_dialog(self) 
+
+class PRMAN_OT_add_storage_key(bpy.types.Operator):
+    bl_idname = "renderman.preset_add_storage_key"
+    bl_label = "Add Storage Key"
+    bl_description = "Add a storage key to the library"
+
+    storage_key: StringProperty(name="Key", default='')
+
+    def draw(self, context):
+        layout = self.layout
+        col = layout.column()
+        col.prop(self, 'storage_key')     
+
+    def execute(self, context):
+        if self.storage_key == '':
+            return {'FINISHED'}
+
+        hostPrefs = rab.get_host_prefs()
+        lib_root = FilePath(hostPrefs.cfg.getCurrentLibraryPath())
+        storage_path = lib_root.join('global_storage')
+        safe_mkdir(storage_path)
+        safe_mkdir(storage_path.join(self.storage_key))        
+
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self)         
 
 class PRMAN_OT_save_lightrig_to_lib(bpy.types.Operator):
     bl_idname = "renderman.save_lightrig_to_library"
@@ -348,11 +467,13 @@ class PRMAN_OT_save_lightrig_to_lib(bpy.types.Operator):
     def execute(self, context):
         hostPrefs = rab.get_host_prefs()
         if hostPrefs.preExportCheck('lightrigs', hdr=None, context=context):
-            infodict =  {'label': self.label,
+            label = rab.asset_name_from_label(self.label)
+            infodict = dict()
+            infodict['metadict'] =  {'label': label,
                         'author': self.author,
                         'version': self.version}    
             for md in self.meta_data:
-                infodict[md.key] = md.value                        
+                infodict['metadict'][md.key] = md.value
             category = hostPrefs.getSelectedCategory()   
             hostPrefs.exportMaterial(category, infodict, None)        
         if self.op:
@@ -433,11 +554,13 @@ class PRMAN_OT_save_envmap_to_lib(bpy.types.Operator):
         if self.label == '':
             self.label = os.path.splitext(os.path.basename(self.properties.filepath))[0]
         if hostPrefs.preExportCheck('envmap', hdr=hdr):
-            infodict = {'label': self.label,
+            label = rab.asset_name_from_label(self.label)
+            infodict = dict()
+            infodict['metadict'] = {'label': label,
                         'author': self.author,
                         'version': self.version}     
             for md in self.meta_data:
-                infodict[md.key] = md.value                        
+                infodict['metadict'][md.key] = md.value
             category = hostPrefs.getSelectedCategory()   
             hostPrefs.exportEnvMap(category, infodict)
 
@@ -703,7 +826,8 @@ classes = [
     PRMAN_OT_view_preset_json,
     PRMAN_OT_forget_preset_library,
     PRMAN_OT_select_preset_library,
-    PRMAN_OT_edit_library_info
+    PRMAN_OT_edit_library_info,
+    PRMAN_OT_add_storage_key
 ]
 
 def register():

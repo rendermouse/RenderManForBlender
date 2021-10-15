@@ -406,6 +406,10 @@ class RendermanPreferences(AddonPreferences):
     rpbSelectedLibrary: StringProperty(default='')
     rpbSelectedCategory: StringProperty(default='')
     rpbSelectedPreset: StringProperty(default='')
+    rpbStorageMode: IntProperty(default=0)
+    rpbStorageKey: StringProperty(default='')
+    rpbStoragePath: StringProperty(default='')
+    rpbConvertToTex: IntProperty(default=1)    
 
     def update_stats_config(self, context):
         bpy.ops.renderman.update_stats_config('INVOKE_DEFAULT')

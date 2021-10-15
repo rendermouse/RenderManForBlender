@@ -121,6 +121,15 @@ class BlenderHostPrefs(ral.HostPrefs):
         self.rpbSelectedLibrary = FilePath(self.getHostPref(
             'rpbSelectedLibrary', u''))
     
+        storagePrefs = (
+            ('rpbStorageMode', 0), 
+            ('rpbStorageKey', ''), 
+            ('rpbStoragePath', ''),
+            ('rpbConvertToTex', 1))
+
+        for name, default in storagePrefs:
+            setattr(self, name, self.getHostPref(name, default))
+
         # store these to make sure we render the previews with the same version.
         self.hostTree = os.environ.get('RFMTREE', '')
         self.rmanTree = os.environ.get('RMANTREE', '')
@@ -198,6 +207,10 @@ class BlenderHostPrefs(ral.HostPrefs):
         self.setHostPref('rpbSelectedLibrary', self.rpbSelectedLibrary)
         self.setHostPref('rpbSelectedCategory', self.rpbSelectedCategory)
         self.setHostPref('rpbSelectedPreset', self.rpbSelectedPreset)
+        self.setHostPref('rpbStorageMode', self.rpbStorageMode)
+        self.setHostPref('rpbStorageKey', self.rpbStorageKey)
+        self.setHostPref('rpbStoragePath', self.rpbStoragePath)
+        self.setHostPref('rpbConvertToTex', self.rpbConvertToTex)        
 
     def updateLibraryConfig(self):
         self.cfg.buildLibraryList(updateFromPrefs=True)
@@ -856,8 +869,11 @@ def export_asset(nodes, atype, infodict, category, cfg, renderPreview='std',
         alwaysOverwrite {bool) -- Will ask the user if the asset already \
                         exists when not in batch mode. (default: {False})
     """
-    label = infodict['label']
-    Asset = RmanAsset(assetType=atype, label=label, previewType=renderPreview)
+    label = infodict['metadict']['label']
+    Asset = RmanAsset(assetType=atype, label=label, previewType=renderPreview,
+                              storage=infodict.get('storage', None),
+                              convert_to_tex=infodict.get('convert_to_tex', True)
+    )
 
     asset_type = ''
     hostPrefs = get_host_prefs()    
@@ -870,7 +886,7 @@ def export_asset(nodes, atype, infodict, category, cfg, renderPreview='std',
 
     # Add user metadata
     #
-    for k, v in infodict.items():
+    for k, v in infodict['metadict'].items():
         if k == 'label':
             continue
         Asset.addMetadata(k, v)
@@ -903,8 +919,7 @@ def export_asset(nodes, atype, infodict, category, cfg, renderPreview='std',
 
     #  Create our directory
     #
-    assetDir = asset_name_from_label(label)
-    dirPath = assetPath.join(assetDir)
+    dirPath = assetPath.join(label)
     if not dirPath.exists():
         os.mkdir(dirPath)
 
