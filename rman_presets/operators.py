@@ -204,6 +204,30 @@ class PRMAN_OT_preset_delete_metadata(bpy.types.Operator):
 
 
 class PRMAN_OT_save_asset_base(bpy.types.Operator):
+
+    open_filebrowser: BoolProperty(default=False)
+    op_string: StringProperty(default="")
+    directory: bpy.props.StringProperty(subtype='FILE_PATH')
+    filepath: bpy.props.StringProperty(
+        subtype="FILE_PATH")
+
+    filename: bpy.props.StringProperty(
+        subtype="FILE_NAME",
+        default="")
+
+    filter_glob: bpy.props.StringProperty(
+        default="*.hdr;*.tex",
+        options={'HIDDEN'},
+        )    
+
+    asset_type: EnumProperty(
+        items=[
+            ('ENV', 'ENV', ''),
+            ('LIGHRIG', 'LIGHTRIG', ''),
+            ('MATERIAL', 'MATERIAL', '')
+        ]
+    )   
+
     category_path: StringProperty(default='')
     label: StringProperty(name='Asset Name', default='')
     author: StringProperty(name='Author', default='')
@@ -260,6 +284,12 @@ class PRMAN_OT_save_asset_base(bpy.types.Operator):
         default=True
     )
 
+    @classmethod
+    def description(cls, context, properties):
+        if properties.open_filebrowser:
+            return "Select a folder for external storage"
+        return cls.bl_description
+
     def getStorage(self):
         hostPrefs = rab.get_host_prefs()
         lib_path = FilePath(hostPrefs.cfg.getCurrentLibraryPath())
@@ -289,6 +319,18 @@ class PRMAN_OT_save_asset_base(bpy.types.Operator):
 
         return storage  
 
+    def set_storage_path(self, context):
+        if self.open_filebrowser:
+            storage_path = filepath_utils.get_real_path(self.directory)
+            if not os.path.exists(storage_path):
+                return
+            
+            hostPrefs = rab.get_host_prefs()        
+            safe_mkdir(FilePath(storage_path))
+            hostPrefs.rpbStoragePath = storage_path  
+            hostPrefs.saveAllPrefs()               
+            self.storage_path = storage_path
+
     def draw(self, context):
         layout = self.layout
         col = layout.column()
@@ -297,20 +339,23 @@ class PRMAN_OT_save_asset_base(bpy.types.Operator):
         col.prop(self, 'version')
         col.prop(self, 'include_display_filters')
 
-        row = col.row()
-        split = row.split(factor=0.55)
-        col2 = split.column()
-        col2.prop(self, 'storage_mode', text='Storage')
-        if int(self.storage_mode) == 1:
+        if not self.open_filebrowser:
+            row = col.row()
+            split = row.split(factor=0.45)
             col2 = split.column()
-            split = col2.split(factor=0.85)
-            split.prop(self, 'storage_key', text='')
-            split.operator('renderman.preset_add_storage_key', text='', icon='ADD')
-        if int(self.storage_mode) == 2:
-            col2 = split.column()
-            split = col2.split(factor=0.85)
-            split.prop(self, 'storage_path', text='')
-            split.operator('renderman.preset_add_storage_path', text='', icon='ADD')            
+            col2.prop(self, 'storage_mode', text='Storage')
+            if int(self.storage_mode) == 1:
+                col2 = split.column()
+                split = col2.split(factor=0.90)
+                split.prop(self, 'storage_key', text='')
+                split.operator('renderman.preset_add_storage_key', text='', icon='ADD')
+            if int(self.storage_mode) == 2:
+                col2 = split.column()
+                split = col2.split(factor=0.90)
+                split.prop(self, 'storage_path', text='')      
+                if self.asset_type != 'ENV':     
+                    op = split.operator(self.op_string, text='', icon='FILEBROWSER')
+                    op.open_filebrowser = True
 
         col.prop(self, 'convert_to_tex')
 
@@ -363,6 +408,7 @@ class PRMAN_OT_save_asset_to_lib(PRMAN_OT_save_asset_base):
     def execute(self, context):
         hostPrefs = rab.get_host_prefs()
         if hostPrefs.preExportCheck('material', hdr=None, context=context, include_display_filters=self.include_display_filters):
+            self.set_storage_path(context)
             label = rab.asset_name_from_label(self.label)
             infodict = dict()
             infodict['metadict'] = {'label': label,
@@ -385,7 +431,9 @@ class PRMAN_OT_save_asset_to_lib(PRMAN_OT_save_asset_base):
     def invoke(self, context, event):
         hostPrefs = rab.get_host_prefs()
         wm = context.window_manager
-        mat = self.get_current_material(context)        
+        mat = self.get_current_material(context) 
+        self.op_string = "renderman.save_asset_to_library"     
+        self.asset_type = 'MATERIAL'  
         self.label = mat.name
         self.author = getpass.getuser()
         self.version = '1.0'
@@ -394,6 +442,9 @@ class PRMAN_OT_save_asset_to_lib(PRMAN_OT_save_asset_base):
             self.storage_key = hostPrefs.rpbStorageKey
         self.storage_path = hostPrefs.rpbStoragePath
         self.op = getattr(context, 'op_ptr', None) 
+        if self.open_filebrowser:
+            context.window_manager.fileselect_add(self)
+            return {'RUNNING_MODAL'}
         return wm.invoke_props_dialog(self, width=500) 
 
 class PRMAN_OT_add_storage_key(bpy.types.Operator):
@@ -424,47 +475,6 @@ class PRMAN_OT_add_storage_key(bpy.types.Operator):
     def invoke(self, context, event):
         wm = context.window_manager
         return wm.invoke_props_dialog(self)        
-
-class PRMAN_OT_add_storage_path(bpy.types.Operator):
-    bl_idname = "renderman.preset_add_storage_path"
-    bl_label = "Add Storage Path"
-    bl_description = "Add a storage path to the library"
-
-    directory: bpy.props.StringProperty(subtype='FILE_PATH')
-    filepath: bpy.props.StringProperty(
-        subtype="FILE_PATH")
-
-    filename: bpy.props.StringProperty(
-        subtype="FILE_NAME",
-        default="")
-
-    filter_glob: bpy.props.StringProperty(
-        default="*.hdr;*.tex",
-        options={'HIDDEN'},
-        )         
-
-    def draw(self, context):
-        layout = self.layout
-        col = layout.column()
-        col.prop(self, 'directory')    
-
-    def execute(self, context):
-        storage_path = filepath_utils.get_real_path(self.directory)
-        if not os.path.exists(storage_path):
-            return {'FINISHED'}
-        
-        hostPrefs = rab.get_host_prefs()        
-        safe_mkdir(FilePath(storage_path))
-        hostPrefs.rpbStoragePath = storage_path  
-        hostPrefs.rpbStorageMode = Storage.k_external
-        hostPrefs.saveAllPrefs()    
-
-        return {'FINISHED'}
-
-    def invoke(self, context, event):        
-        context.window_manager.fileselect_add(self)
-        return {'RUNNING_MODAL'}
-
 class PRMAN_OT_save_lightrig_to_lib(PRMAN_OT_save_asset_base):
     bl_idname = "renderman.save_lightrig_to_library"
     bl_label = "Save LightRig to Library"
@@ -494,6 +504,8 @@ class PRMAN_OT_save_lightrig_to_lib(PRMAN_OT_save_asset_base):
 
     def invoke(self, context, event):
         hostPrefs = rab.get_host_prefs()
+        self.op_string = "renderman.save_lightrig_to_library"  
+        self.asset_type = 'LIGHTRIG'  
         wm = context.window_manager
         ob = context.active_object    
         if ob:
@@ -506,9 +518,12 @@ class PRMAN_OT_save_lightrig_to_lib(PRMAN_OT_save_asset_base):
         self.storage_path = hostPrefs.rpbStoragePath        
         
         self.op = getattr(context, 'op_ptr', None) 
+        if self.open_filebrowser:
+            context.window_manager.fileselect_add(self)
+            return {'RUNNING_MODAL'}        
         return wm.invoke_props_dialog(self) 
 
-class PRMAN_OT_save_envmap_to_lib(bpy.types.Operator):
+class PRMAN_OT_save_envmap_to_lib(PRMAN_OT_save_asset_base):
     bl_idname = "renderman.save_envmap_to_library"
     bl_label = "Save EnvMap to Library"
     bl_description = "Save EnvMap to Library"
@@ -560,6 +575,8 @@ class PRMAN_OT_save_envmap_to_lib(bpy.types.Operator):
 
     def invoke(self, context, event=None):
         hostPrefs = rab.get_host_prefs()
+        self.op_string = "renderman.save_envmap_to_library"   
+        self.asset_type = 'ENV' 
         context.window_manager.fileselect_add(self)
         self.storage_mode = str(hostPrefs.rpbStorageMode)
         if hostPrefs.rpbStorageKey != '':
@@ -822,8 +839,7 @@ classes = [
     PRMAN_OT_forget_preset_library,
     PRMAN_OT_select_preset_library,
     PRMAN_OT_edit_library_info,
-    PRMAN_OT_add_storage_key,
-    PRMAN_OT_add_storage_path
+    PRMAN_OT_add_storage_key
 ]
 
 def register():
