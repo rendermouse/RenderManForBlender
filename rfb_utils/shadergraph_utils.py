@@ -8,9 +8,10 @@ import math
 import bpy
 
 class BlNodeInfo:
-    def __init__(self, sg_node, group_node=None):
+    def __init__(self, sg_node, group_node=None, is_cycles_node=False):
         self.sg_node = sg_node
         self.group_node = group_node
+        self.is_cycles_node = is_cycles_node
 
 
 class RmanConvertNode:
