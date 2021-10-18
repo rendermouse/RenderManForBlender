@@ -126,6 +126,8 @@ class RmanMaterialTranslator(RmanTranslator):
                                 bxdfList.append(s) 
 
                         for node, bl_node_info in rman_sg_material.nodes_to_blnodeinfo.items():
+                            if bl_node_info.is_cycles_node:
+                                continue
                             property_utils.property_group_to_rixparams(node, rman_sg_material, bl_node_info.sg_node, ob=material, group_node=bl_node_info.group_node)
                         
                         if bxdfList:
@@ -147,6 +149,8 @@ class RmanMaterialTranslator(RmanTranslator):
                             for s in shader_sg_nodes:
                                 lightNodesList.append(s) 
                         for node, bl_node_info in rman_sg_material.nodes_to_blnodeinfo.items():
+                            if bl_node_info.is_cycles_node:
+                                continue                            
                             property_utils.property_group_to_rixparams(node, rman_sg_material, bl_node_info.sg_node, ob=material, group_node=bl_node_info.group_node)
                                                      
                         if lightNodesList:
@@ -164,6 +168,8 @@ class RmanMaterialTranslator(RmanTranslator):
                             for s in shader_sg_nodes:
                                 dispList.append(s) 
                         for node, bl_node_info in rman_sg_material.nodes_to_blnodeinfo.items():
+                            if bl_node_info.is_cycles_node:
+                                continue
                             property_utils.property_group_to_rixparams(node, rman_sg_material, bl_node_info.sg_node, ob=material, group_node=bl_node_info.group_node)
                                                                               
                         if dispList:
@@ -277,7 +283,7 @@ class RmanMaterialTranslator(RmanTranslator):
             sg_nodes += self.shader_node_sg(mat, node, rman_sg_material, mat_name=mat_name, group_node=group_node)
         return sg_nodes       
 
-    def translate_cycles_math_node(self, mat, rman_sg_material, node, mat_name):
+    def translate_cycles_math_node(self, mat, rman_sg_material, node, mat_name, group_node=None):
         instance_name = shadergraph_utils.get_node_name(node, mat_name)
         sg_node = self.rman_scene.rman.SGManager.RixSGShader("Pattern", 'node_math', instance_name)
         params = sg_node.params   
@@ -298,15 +304,16 @@ class RmanMaterialTranslator(RmanTranslator):
                 val = input.default_value
                 property_utils.set_rix_param(params, param_type, param_name, val, is_reference=False)
 
+        rman_sg_material.nodes_to_blnodeinfo[node] = shadergraph_utils.BlNodeInfo(sg_node, group_node=group_node, is_cycles_node=True)
         return [sg_node]
 
-    def translate_cycles_node(self, mat, rman_sg_material, node, mat_name):
+    def translate_cycles_node(self, mat, rman_sg_material, node, mat_name, group_node=None):
         from .. import rman_bl_nodes        
 
         if node.bl_idname == 'ShaderNodeGroup':
             return self.translate_node_group(mat, rman_sg_material, node, mat_name)
         elif node.bl_idname == 'ShaderNodeMath':
-            return self.translate_cycles_math_node(mat, rman_sg_material, node, mat_name)            
+            return self.translate_cycles_math_node(mat, rman_sg_material, node, mat_name, group_node=group_node)            
 
         mapping, node_desc = rman_bl_nodes.get_cycles_node_desc(node)
 
@@ -318,13 +325,14 @@ class RmanMaterialTranslator(RmanTranslator):
         instance_name = shadergraph_utils.get_node_name(node, mat_name)
         sg_node = self.rman_scene.rman.SGManager.RixSGShader("Pattern", mapping, instance_name)
         params = sg_node.params      
+        rman_sg_material.nodes_to_blnodeinfo[node] = shadergraph_utils.BlNodeInfo(sg_node, group_node=group_node, is_cycles_node=True)
         
         for in_name, input in node.inputs.items():
             param_name = "%s" % shadergraph_utils.get_socket_name(node, input)
             param_type = "%s" % shadergraph_utils.get_socket_type(node, input)
             if input.is_linked:
                 link = input.links[0]
-                val = property_utils.get_output_param_str(
+                val = property_utils.get_output_param_str(rman_sg_material,
                     link.from_node, mat_name, link.from_socket, input)
 
                 property_utils.set_rix_param(params, param_type, param_name, val, is_reference=True)                
@@ -434,7 +442,7 @@ class RmanMaterialTranslator(RmanTranslator):
             # the connection string
             return list()
         elif not hasattr(node, 'renderman_node_type'):
-            return self.translate_cycles_node(mat, rman_sg_material, node, mat_name)
+            return self.translate_cycles_node(mat, rman_sg_material, node, mat_name, group_node=group_node)
 
         instance = string_utils.sanitize_node_name(mat_name + '_' + node.name)
         if group_node:
