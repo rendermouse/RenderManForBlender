@@ -190,6 +190,8 @@ class PRMAN_PT_Renderman_UI_Panel(bpy.types.Panel, _RManPanelHeader):
         box.operator('scene.rman_open_light_mixer_editor', text='Light Mixer')
         box.operator('scene.rman_open_light_linking', text='Light Linking')
         box.operator('scene.rman_open_groups_editor', text='Trace Sets')
+        rman_vol_agg = rfb_icons.get_icon("rman_vol_aggregates")
+        box.operator('scene.rman_open_vol_aggregates_editor', text='Volume Aggregates', icon_value=rman_vol_agg.icon_id)
 
         layout.separator()
         layout.label(text="Apps:")

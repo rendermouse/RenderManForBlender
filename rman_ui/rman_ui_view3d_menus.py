@@ -333,7 +333,8 @@ class VIEW3D_MT_RM_Volume_Aggregates_Menu(bpy.types.Menu):
     def draw(self, context):
         rm = context.scene.renderman
         layout = self.layout
-        layout.operator("scene.rman_open_vol_aggregates_editor", text="Volume Aggregates Editor")
+        rman_vol_agg = rfb_icons.get_icon("rman_vol_aggregates")   
+        layout.operator("scene.rman_open_vol_aggregates_editor", text="Volume Aggregates Editor", icon_value=rman_vol_agg.icon_id)
         layout.separator()
         op = layout.operator("renderman.add_remove_volume_aggregates", text="Create New Group")
         op.context="scene.renderman"
