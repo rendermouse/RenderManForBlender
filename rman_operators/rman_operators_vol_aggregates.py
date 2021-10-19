@@ -3,9 +3,13 @@ from ..rfb_utils import string_utils
 from ..rfb_logger import rfb_log
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import scenegraph_utils
+from ..rfb_utils import filepath_utils
+from ..rfb_utils.envconfig_utils import envconfig
 from ..rfb_utils import object_utils
 from ..rfb_utils.scene_utils import RMAN_VOL_TYPES
 import bpy
+import subprocess
+import os
 
 class COLLECTION_OT_volume_aggregates_add_remove(bpy.types.Operator):
     bl_label = "Add or Remove Volume Aggregates"
@@ -163,10 +167,47 @@ class PRMAN_OT_remove_from_vol_aggregate(bpy.types.Operator):
 
         return {'FINISHED'}        
 
+class PRMAN_OT_call_vdbmake(bpy.types.Operator):
+    bl_idname = 'renderman.call_vdbmake'
+    bl_label = 'VDBMake'
+    bl_description = 'Take the current openvdb, and create a new openvdb file with auxiliary mipmapped grids and prebaked acceleration information for those grids. This can help decrease time to first pixel, and may decrease RAM significantly/compute time as well if the volume is overly detailed.'
+     
+    @classmethod
+    def poll(cls, context):
+        if not context.volume:
+            return False
+        rm = context.volume.renderman
+        return rm.has_openvdb
+
+    def execute(self, context):
+        vol = context.volume
+        rm = vol.renderman
+
+        openvdb_file = filepath_utils.get_real_path(vol.filepath)
+        if vol.is_sequence:
+            # if we have a sequence, get the current frame filepath from the grids
+            openvdb_file = filepath_utils.get_real_path(vol.frame_filepath)     
+
+        directory = os.path.dirname(openvdb_file)
+
+        if not os.access(directory, os.W_OK):
+            self.report({'ERROR'}, 'Directory is not writable: %s' % directory)
+            return {'FINISHED'}    
+
+        output_file = '%s_mipmap.vdb' % os.path.splitext(openvdb_file)[0]
+        args = []
+        args.append('%s/bin/vdbmake' % envconfig().rmantree)
+        args.append(openvdb_file)
+        args.append(output_file)
+        subprocess.run(args)   
+
+        return {'FINISHED'}                            
+
 classes = [
     COLLECTION_OT_volume_aggregates_add_remove,
     PRMAN_OT_add_to_vol_aggregate,
-    PRMAN_OT_remove_from_vol_aggregate
+    PRMAN_OT_remove_from_vol_aggregate,
+    PRMAN_OT_call_vdbmake
 ]
 
 def register():

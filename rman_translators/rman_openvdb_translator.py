@@ -7,7 +7,7 @@ from ..rfb_utils import scenegraph_utils
 from ..rfb_utils.envconfig_utils import envconfig
 from ..rfb_logger import rfb_log
 import json
-
+import os
 class RmanOpenVDBTranslator(RmanTranslator):
 
     def __init__(self, rman_scene):
@@ -83,6 +83,10 @@ class RmanOpenVDBTranslator(RmanTranslator):
         if db.is_sequence:
             # if we have a sequence, get the current frame filepath from the grids
             openvdb_file = filepath_utils.get_real_path(grids.frame_filepath)     
+
+        mipmap_filepath = '%s_mipmap.vdb' % os.path.splitext(openvdb_file)[0]
+        if os.path.exists(mipmap_filepath):
+            openvdb_file = mipmap_filepath
 
         openvdb_attrs = dict()
         openvdb_attrs['filterWidth'] = getattr(rm, 'openvdb_filterwidth')
