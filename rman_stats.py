@@ -172,7 +172,7 @@ class RfBStatsManager(object):
             return
 
         # Manager will connect based on given configuration & serverId
-        self.mgr.connectToServer(0, 0)  # TODO params ignored, to be removed
+        self.mgr.connectToServer()
 
         # if the bootstrap thread is still running, kill it
         if self.boot_strap_thread:
