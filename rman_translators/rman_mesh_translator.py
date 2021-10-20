@@ -175,6 +175,22 @@ def _get_primvars_(ob, rman_sg_mesh, geo, rixparams):
             detail = "facevarying" if facevarying_detail == len(uvs) else "vertex"
             rixparams.SetFloatArrayDetail("st", uvs, 2, detail)
 
+            # also export the tangent and bitangent vectors
+            geo.calc_tangents(uvmap=geo.uv_layers.active.name)         
+            loops = len(geo.loops)
+            fasttangent = np.zeros(loops*3, dtype=np.float32)
+            geo.loops.foreach_get('tangent', fasttangent)
+            fasttangent = np.reshape(fasttangent, (loops, 3))
+            tangents = fasttangent.tolist()    
+
+            fastbitangent = np.zeros(loops*3, dtype=np.float32)
+            geo.loops.foreach_get('bitangent', fastbitangent)
+            bitangent = fastbitangent.tolist()      
+            geo.free_tangents()    
+
+            rixparams.SetVectorDetail('Tn', tangents, 'facevarying')
+            rixparams.SetVectorDetail('Bn', bitangent, 'facevarying')              
+
     if rm.export_default_vcol:
         vcols = _get_mesh_vcol_(geo)
         if vcols and len(vcols) > 0:
@@ -363,7 +379,7 @@ class RmanMeshTranslator(RmanTranslator):
         _get_primvars_(ob, rman_sg_mesh, mesh, primvar)   
 
         primvar.SetIntegerDetail(self.rman_scene.rman.Tokens.Rix.k_Ri_nvertices, nverts, "uniform")
-        primvar.SetIntegerDetail(self.rman_scene.rman.Tokens.Rix.k_Ri_vertices, verts, "facevarying")            
+        primvar.SetIntegerDetail(self.rman_scene.rman.Tokens.Rix.k_Ri_vertices, verts, "facevarying")                  
 
         if rman_sg_mesh.is_subdiv:
             creases = self._get_subd_tags_(ob, mesh, primvar)
