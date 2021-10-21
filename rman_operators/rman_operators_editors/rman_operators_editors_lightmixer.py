@@ -29,16 +29,24 @@ class RENDERMAN_UL_LightMixer_Group_Members_List(bpy.types.UIList):
         layout.label(text=light.name, icon_value=icon.icon_id)
 
         light_rm = shadergraph_utils.get_rman_light_properties_group(light)
-        if light_shader.bl_label == 'PxrEnvDayLight':
-            layout.prop(light_shader, 'skyTint', text='')
-        else:
+        if light_shader.bl_label == 'PxrPortalLight':
             layout.prop(light_shader, 'enableTemperature', text='Temp')
             if light_shader.enableTemperature:
                 layout.prop(light_shader, 'temperature', text='', slider=True)
             else:
-                layout.prop(light_shader, 'lightColor', text='')
-        layout.prop(light_shader, 'intensity', slider=True)
-        layout.prop(light_shader, 'exposure', slider=True)        
+                layout.prop(light_shader, 'tint', text='')        
+            layout.prop(light_shader, 'intensityMult', slider=True)                
+        else:
+            if light_shader.bl_label == 'PxrEnvDayLight':
+                layout.prop(light_shader, 'skyTint', text='')
+            else:
+                layout.prop(light_shader, 'enableTemperature', text='Temp')
+                if light_shader.enableTemperature:
+                    layout.prop(light_shader, 'temperature', text='', slider=True)
+                else:
+                    layout.prop(light_shader, 'lightColor', text='')
+            layout.prop(light_shader, 'intensity', slider=True)
+            layout.prop(light_shader, 'exposure', slider=True)        
         solo_icon = 'LIGHT'        
         if light.renderman.solo:
             solo_icon = 'OUTLINER_OB_LIGHT'
