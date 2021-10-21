@@ -54,10 +54,13 @@ class BlPropInfo:
         self.param_type = self.renderman_type
         self.arraySize = prop_meta.get('arraySize', None)
         self.renderman_array_name = prop_meta.get('renderman_array_name', None)
+        self.renderman_array_type = prop_meta.get('renderman_array_type', '')
+        self.type = prop_meta.get('type', '')
 
         inputs = getattr(node, 'inputs', dict())
         self.has_input = (prop_name in inputs)
         self.is_linked = False
+        self.is_vstruct_linked = False
         self.link = None
         self.socket = None
         self.from_socket = None
@@ -70,7 +73,35 @@ class BlPropInfo:
                 self.from_socket = self.link.from_socket
                 self.from_node = self.link.from_node
 
-        self.is_texture = (self.widget in ['fileinput','assetidinput'])
+        self.is_vstruct_and_linked = False
+        if not self.is_linked:
+            self.is_vstruct_and_linked = is_vstruct_and_linked(node, prop_name)
+
+        self.is_texture = shadergraph_utils.is_texture_property(prop_name, prop_meta)
+        self.do_export = self.is_exportable()
+
+    def is_exportable(self):
+        # check if this param needs to be exported.
+
+        if self.widget == 'null' and not self.vstructmember:
+            # if widget is marked null, don't export parameter and rely on default
+            # unless it has a vstructmember
+            return False
+        if self.param_type == 'page':
+            return False
+
+        if not self.is_linked and self.param_type in ['struct', 'enum']:
+            return False
+
+        if self.renderman_array_name:
+            return False
+
+        if self.prop_name == 'inputMaterial' or \
+            (self.vstruct is True) or (self.type == 'vstruct'):
+            return False
+
+        return True
+
 
 def get_property_default(node, prop_name):
     bl_prop_name = __RESERVED_BLENDER_NAMES__.get(prop_name, prop_name)
@@ -563,7 +594,40 @@ def set_ramp_rixparams(node, prop_name, prop, param_type, params):
             params.SetFloatArray('%s_Floats' % prop_name, vals, len(vals))   
 
             interp = 'catmull-rom'
-            params.SetString("%s_Interpolation" % prop_name, interp )                        
+            params.SetString("%s_Interpolation" % prop_name, interp )          
+
+def set_array_rixparams(node, rman_sg_node, mat_name, bl_prop_info, prop_name, prop, params):      
+    array_len = getattr(node, '%s_arraylen' % prop_name)
+    sub_prop_names = getattr(node, prop_name)
+    sub_prop_names = sub_prop_names[:array_len]
+    val_array = []
+    val_ref_array = []
+    param_type = bl_prop_info.renderman_array_type
+    param_name = bl_prop_info.renderman_name 
+    
+    for nm in sub_prop_names:
+        if hasattr(node, 'inputs')  and nm in node.inputs and \
+            node.inputs[nm].is_linked:
+
+            to_socket = node.inputs[nm]
+            from_socket = to_socket.links[0].from_socket
+            from_node = to_socket.links[0].from_node
+
+            val = get_output_param_str(rman_sg_node,
+                from_node, mat_name, from_socket, to_socket, param_type)
+            if val:
+                val_ref_array.append(val)
+        else:
+            prop = getattr(node, nm)
+            val = string_utils.convert_val(prop, type_hint=param_type)
+            if param_type in RFB_FLOAT3:
+                val_array.extend(val)
+            else:
+                val_array.append(val)
+    if val_ref_array:
+        set_rix_param(params, param_type, param_name, val_ref_array, is_reference=True, is_array=True, array_len=len(val_ref_array))
+    else:
+        set_rix_param(params, param_type, param_name, val_array, is_reference=False, is_array=True, array_len=len(val_array))                        
 
 def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group_node=None):
     # If node is OSL node get properties from dynamic location.
@@ -581,61 +645,31 @@ def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group
         from_socket = bl_prop_info.from_socket
         from_node = bl_prop_info.from_node
         prop = bl_prop_info.prop
-                
-        if param_widget == 'null' and 'vstructmember' not in meta:
-            # if widget is marked null, don't export parameter and rely on default
-            # unless it has a vstructmember
-            continue
 
-        elif param_widget == 'displaymetadata':
+        if not bl_prop_info.do_export:
+            continue
+                
+        if param_widget == 'displaymetadata':
             set_dspymeta_params(node, prop_name, params)
             continue
+       
+        if is_linked:
+            if group_node and from_node.bl_idname == 'NodeGroupInput':
+                group_socket = group_node.inputs[from_socket.name]
+                if not group_socket.is_linked:
+                    val = string_utils.convert_val(group_socket.default_value, type_hint=param_type)
+                    set_rix_param(params, param_type, param_name, val, is_reference=False)
+                else:
+                    to_socket = group_socket
+                    from_socket = to_socket.links[0].from_socket
+                    from_node = to_socket.links[0].from_node                                
 
-        # if property group recurse
-        if param_type == 'page':
-            continue
-        elif prop_name == 'inputMaterial' or \
-                ('vstruct' in meta and meta['vstruct'] is True) or \
-                ('type' in meta and meta['type'] == 'vstruct'):
-            continue
-
-        if group_node:
-            # This node is part of a group node
-            if is_linked: 
-                if from_node.bl_idname != 'NodeGroupInput':
                     val = get_output_param_str(rman_sg_node,
                             from_node, mat_name, from_socket, to_socket, param_type)
                     if val:
-                        set_rix_param(params, param_type, param_name, val, is_reference=True)
+                        set_rix_param(params, param_type, param_name, val, is_reference=True)                                
                     else:
                         rfb_log().debug("Could not find connection for: %s.%s" % (node.name, param_name))
-                else:
-                    # The connection is from a NodeGroupInput node. Check what the group node
-                    # connection is.
-                    group_socket = group_node.inputs[from_socket.name]
-                    if not group_socket.is_linked:
-                        val = string_utils.convert_val(group_socket.default_value, type_hint=param_type)
-                        set_rix_param(params, param_type, param_name, val, is_reference=False)
-                    else:
-                        to_socket = group_socket
-                        from_socket = to_socket.links[0].from_socket
-                        from_node = to_socket.links[0].from_node                                
-
-                        val = get_output_param_str(rman_sg_node,
-                                from_node, mat_name, from_socket, to_socket, param_type)
-                        if val:
-                            set_rix_param(params, param_type, param_name, val, is_reference=True)                                
-                        else:
-                            rfb_log().debug("Could not find connection for: %s.%s" % (node.name, param_name))
-                continue
-                        
-        # if input socket is linked reference that
-        if is_linked:
-
-            if 'arraySize' in meta:
-                pass
-            elif 'renderman_array_name' in meta:
-                continue                    
             else:
                 val = get_output_param_str(rman_sg_node,
                         from_node, mat_name, from_socket, to_socket, param_type)
@@ -645,13 +679,10 @@ def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group
                     rfb_log().debug("Could not find connection for: %s.%s" % (node.name, param_name))                  
 
         # see if vstruct linked
-        elif is_vstruct_and_linked(node, prop_name):
-            vstruct_name, vstruct_member = meta[
-                'vstructmember'].split('.')
+        elif bl_prop_info.is_vstruct_and_linked:
+            vstruct_name, vstruct_member = bl_prop_info.vstructmember.split('.')
             from_socket = node.inputs[
                 vstruct_name].links[0].from_socket
-
-            temp_mat_name = mat_name
 
             if from_socket.node.bl_idname == 'ShaderNodeGroup':
                 ng = from_socket.node.node_tree
@@ -663,8 +694,6 @@ def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group
                 in_sock = group_output.inputs[from_socket.name]
                 if len(in_sock.links):
                     from_socket = in_sock.links[0].from_socket
-                    #temp_mat_name = mat_name + '.' + from_socket.node.name
-                    temp_mat_name = mat_name
                     
             vstruct_from_param = "%s_%s" % (
                 from_socket.identifier, vstruct_member)
@@ -677,7 +706,7 @@ def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group
                 node_meta = node_meta.get(vstruct_from_param)
                 is_reference = True
                 val = get_output_param_str(rman_sg_node,
-                        from_socket.node, temp_mat_name, actual_socket, to_socket=None, param_type=param_type)
+                        from_socket.node, mat_name, actual_socket, to_socket=None, param_type=param_type)
                 if node_meta:
                     expr = node_meta.get('vstructConditionalExpr')
                     # check if we should connect or just set a value
@@ -692,12 +721,8 @@ def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group
                 rfb_log().warning('Warning! %s not found on %s' %
                         (vstruct_from_param, from_socket.node.name))
 
-        # else output rib
+        # else export just the property's value
         else:
-            # if struct is not linked continue
-            if param_type in ['struct', 'enum']:
-                continue
-
             val = None
 
             # if this is a gain on PxrSurface and the lobe isn't
@@ -713,54 +738,20 @@ def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group
 
                 val = string_utils.expand_string(prop)
                 options = meta['options']
-                if param_widget in ['fileinput', 'assetidinput']:
-                    # ies profiles don't need txmanager for converting                       
-                    if 'ies' in options:
-                        val = string_utils.expand_string(prop, display='ies', asFilePath=True)
-                    # this is a texture
-                    elif ('texture' in options) or ('env' in options) or ('imageplane' in options):
-                        tx_node_id = texture_utils.generate_node_id(node, param_name, ob=ob)
-                        tx_val = texture_utils.get_txmanager().get_output_tex_from_id(tx_node_id)
-                        val = tx_val if tx_val != '' else val
+                if bl_prop_info.is_texture:
+                    tx_node_id = texture_utils.generate_node_id(node, param_name, ob=ob)
+                    tx_val = texture_utils.get_txmanager().get_output_tex_from_id(tx_node_id)
+                    val = tx_val if tx_val != '' else val
+                elif 'ies' in options:
+                    val = string_utils.expand_string(prop, display='ies', asFilePath=True)
                 elif param_widget == 'assetidoutput':
                     display = 'openexr'
                     if 'texture' in options:
                         display = 'texture'
                     val = string_utils.expand_string(prop, display=display, asFilePath=True)
 
-            elif 'renderman_array_name' in meta:
-                continue
             elif param_type == 'array':
-                array_len = getattr(node, '%s_arraylen' % prop_name)
-                sub_prop_names = getattr(node, prop_name)
-                sub_prop_names = sub_prop_names[:array_len]
-                val_array = []
-                val_ref_array = []
-                param_type = meta['renderman_array_type']
-                
-                for nm in sub_prop_names:
-                    if hasattr(node, 'inputs')  and nm in node.inputs and \
-                        node.inputs[nm].is_linked:
-
-                        to_socket = node.inputs[nm]
-                        from_socket = to_socket.links[0].from_socket
-                        from_node = to_socket.links[0].from_node
-
-                        val = get_output_param_str(rman_sg_node,
-                            from_node, mat_name, from_socket, to_socket, param_type)
-                        if val:
-                            val_ref_array.append(val)
-                    else:
-                        prop = getattr(node, nm)
-                        val = string_utils.convert_val(prop, type_hint=param_type)
-                        if param_type in RFB_FLOAT3:
-                            val_array.extend(val)
-                        else:
-                            val_array.append(val)
-                if val_ref_array:
-                    set_rix_param(params, param_type, param_name, val_ref_array, is_reference=True, is_array=True, array_len=len(val_ref_array))
-                else:
-                    set_rix_param(params, param_type, param_name, val_array, is_reference=False, is_array=True, array_len=len(val_array))
+                set_array_rixparams(node, rman_sg_node, mat_name, bl_prop_info, prop_name, prop, params)
                 continue
             elif param_type in ['colorramp', 'floatramp']:
                 set_ramp_rixparams(node, prop_name, prop, param_type, params)                       

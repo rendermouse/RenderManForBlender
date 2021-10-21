@@ -411,14 +411,21 @@ def generate_property(node, sp, update_function=None):
             param_name = param_name[2:]
 
         if (param_widget in ['fileinput','assetidinput','assetidoutput']):
-            prop = StringProperty(name=param_label,
-                                  default=param_default, subtype="FILE_PATH",
-                                  description=param_help, update=lambda s,c: assetid_update_func(s,c, param_name))
+            is_ies =  ('ies' in prop_meta['options'])
+
+            if is_ies:
+                prop = StringProperty(name=param_label,
+                                    default=param_default, subtype="FILE_PATH",
+                                    description=param_help, update=update_function)
+            else:
+                prop = StringProperty(name=param_label,
+                                    default=param_default, subtype="FILE_PATH",
+                                    description=param_help, update=lambda s,c: assetid_update_func(s,c, param_name))                
 
             if (param_widget in ['fileinput','assetidinput']):
                 # FIXME: Need a better way to figure out what parameters
                 # need the colorspace dropdown
-                if 'ies' not in prop_meta['options']:
+                if not is_ies:
                     generate_colorspace_menu(node, param_name)
         
         elif param_widget == 'dirinput':
