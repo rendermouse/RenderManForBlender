@@ -652,6 +652,14 @@ def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group
         if param_widget == 'displaymetadata':
             set_dspymeta_params(node, prop_name, params)
             continue
+        # array
+        elif param_type == 'array':
+            set_array_rixparams(node, rman_sg_node, mat_name, bl_prop_info, prop_name, prop, params)
+            continue
+        # ramps
+        elif param_type in ['colorramp', 'floatramp']:
+            set_ramp_rixparams(node, prop_name, prop, param_type, params)        
+            continue
        
         if is_linked:
             if group_node and from_node.bl_idname == 'NodeGroupInput':
@@ -719,7 +727,7 @@ def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group
 
             else:
                 rfb_log().warning('Warning! %s not found on %s' %
-                        (vstruct_from_param, from_socket.node.name))
+                        (vstruct_from_param, from_socket.node.name))                                           
 
         # else export just the property's value
         else:
@@ -742,20 +750,11 @@ def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group
                     tx_node_id = texture_utils.generate_node_id(node, param_name, ob=ob)
                     tx_val = texture_utils.get_txmanager().get_output_tex_from_id(tx_node_id)
                     val = tx_val if tx_val != '' else val
-                elif 'ies' in options:
-                    val = string_utils.expand_string(prop, display='ies', asFilePath=True)
                 elif param_widget == 'assetidoutput':
                     display = 'openexr'
                     if 'texture' in options:
                         display = 'texture'
                     val = string_utils.expand_string(prop, display=display, asFilePath=True)
-
-            elif param_type == 'array':
-                set_array_rixparams(node, rman_sg_node, mat_name, bl_prop_info, prop_name, prop, params)
-                continue
-            elif param_type in ['colorramp', 'floatramp']:
-                set_ramp_rixparams(node, prop_name, prop, param_type, params)                       
-                continue
             else:
                 val = string_utils.convert_val(prop, type_hint=param_type)
 
