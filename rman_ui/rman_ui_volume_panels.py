@@ -22,10 +22,7 @@ class VOLUME_PT_renderman_openvdb_attributes(CollectionPanel, Panel):
         volume = context.volume
         rm = volume.renderman
 
-        text='Bake OpenVDB'
-        if os.path.exists(rm.rman_mipmap_vdb_path):
-            text='Re-Bake OpenVDB'
-        layout.operator('renderman.call_vdbmake', text=text)
+        layout.operator('renderman.add_openvdb_to_txmanager')
         _draw_ui_from_rman_config('rman_properties_volume', 'VOLUME_PT_renderman_openvdb_attributes', context, layout, rm)             
 
 

@@ -23,7 +23,7 @@ def rman_save_post(bl_scene):
 
 @persistent
 def depsgraph_update_post(bl_scene):
-    texture_utils.link_file_handler(bl_scene)             
+    texture_utils.depsgraph_handler(bl_scene)             
 
 def register():
 

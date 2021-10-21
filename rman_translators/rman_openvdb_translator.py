@@ -4,6 +4,7 @@ from ..rfb_utils import filepath_utils
 from ..rfb_utils import transform_utils
 from ..rfb_utils import string_utils
 from ..rfb_utils import scenegraph_utils
+from ..rfb_utils import texture_utils
 from ..rfb_utils.envconfig_utils import envconfig
 from ..rfb_logger import rfb_log
 import json
@@ -79,14 +80,20 @@ class RmanOpenVDBTranslator(RmanTranslator):
             rman_sg_openvdb.sg_node.SetPrimVars(primvar)   
             return                      
 
+        '''
         openvdb_file = filepath_utils.get_real_path(db.filepath)
         if db.is_sequence:
             # if we have a sequence, get the current frame filepath from the grids
-            openvdb_file = filepath_utils.get_real_path(grids.frame_filepath)     
+            #openvdb_file = filepath_utils.get_real_path(grids.frame_filepath)     
+            openvdb_file = string_utils.get_tokenized_openvdb_file(grids.frame_filepath, grids.frame)
+     
+        nodeID = texture_utils.generate_node_id(openvdb_file, 'filepath', ob=ob)
+        txmanager = texture_utils.get_txmanager()
+        if txmanager.does_nodeid_exists(nodeID):
+            openvdb_file = txmanager.get_output_tex_from_id(nodeID)
+        '''
 
-        mipmap_filepath = '%s_mipmap.vdb' % os.path.splitext(openvdb_file)[0]
-        if os.path.exists(mipmap_filepath):
-            openvdb_file = mipmap_filepath
+        openvdb_file = texture_utils.get_txmanager().get_output_vdb(ob)
 
         openvdb_attrs = dict()
         openvdb_attrs['filterWidth'] = getattr(rm, 'openvdb_filterwidth')

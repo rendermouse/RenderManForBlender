@@ -4,6 +4,7 @@ from ..rfb_logger import rfb_log
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import scenegraph_utils
 from ..rfb_utils import filepath_utils
+from ..rfb_utils import texture_utils
 from ..rfb_utils.envconfig_utils import envconfig
 from ..rfb_utils import object_utils
 from ..rfb_utils.scene_utils import RMAN_VOL_TYPES
@@ -167,39 +168,30 @@ class PRMAN_OT_remove_from_vol_aggregate(bpy.types.Operator):
 
         return {'FINISHED'}        
 
-class PRMAN_OT_call_vdbmake(bpy.types.Operator):
-    bl_idname = 'renderman.call_vdbmake'
-    bl_label = 'VDBMake'
-    bl_description = 'Take the current openvdb, and create a new openvdb file with auxiliary mipmapped grids and prebaked acceleration information for those grids. This can help decrease time to first pixel, and may decrease RAM significantly/compute time as well if the volume is overly detailed.'
+class PRMAN_OT_add_vdb_to_txmanager(bpy.types.Operator):
+    bl_idname = 'renderman.add_openvdb_to_txmanager'
+    bl_label = 'Add to Texture Manager'
+    bl_description = 'Add the current OpenVDB to the texture manager to be mipmapped.'
      
     @classmethod
     def poll(cls, context):
         if not context.volume:
             return False
         rm = context.volume.renderman
-        return rm.has_openvdb
+        vol = context.volume
+        ob = context.object
+        txfile = texture_utils.get_txmanager().get_txfile_for_vdb(ob)
+        if txfile:
+            grids = vol.grids
+            grids.load()
+            openvdb_file = string_utils.get_tokenized_openvdb_file(grids.frame_filepath, grids.frame)
+            if txfile.input_image != openvdb_file:
+                return True
+        return False
 
     def execute(self, context):
-        vol = context.volume
-        rm = vol.renderman
-
-        openvdb_file = filepath_utils.get_real_path(vol.filepath)
-        if vol.is_sequence:
-            # if we have a sequence, get the current frame filepath from the grids
-            openvdb_file = filepath_utils.get_real_path(vol.frame_filepath)     
-
-        directory = os.path.dirname(openvdb_file)
-
-        if not os.access(directory, os.W_OK):
-            self.report({'ERROR'}, 'Directory is not writable: %s' % directory)
-            return {'FINISHED'}    
-
-        output_file = '%s_mipmap.vdb' % os.path.splitext(openvdb_file)[0]
-        args = []
-        args.append('%s/bin/vdbmake' % envconfig().rmantree)
-        args.append(openvdb_file)
-        args.append(output_file)
-        subprocess.run(args)   
+        ob = context.object
+        texture_utils.add_openvdb(ob)
 
         return {'FINISHED'}                            
 
@@ -207,7 +199,7 @@ classes = [
     COLLECTION_OT_volume_aggregates_add_remove,
     PRMAN_OT_add_to_vol_aggregate,
     PRMAN_OT_remove_from_vol_aggregate,
-    PRMAN_OT_call_vdbmake
+    PRMAN_OT_add_vdb_to_txmanager
 ]
 
 def register():

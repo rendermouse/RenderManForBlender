@@ -18,21 +18,6 @@ class RendermanVolumeGeometrySettings(RmanBasePropertyGroup, bpy.types.PropertyG
 
     has_openvdb: BoolProperty(name='', get=check_openvdb)
 
-    def get_mipmap_vdb_path(self):
-        ob = bpy.context.object
-        if ob.type != 'VOLUME':
-            return False        
-        volume = bpy.context.volume        
-        openvdb_file = filepath_utils.get_real_path(volume.filepath)
-        if not os.path.exists(openvdb_file):
-            return ''
-        mipmap_filepath = '%s_mipmap.vdb' % os.path.splitext(openvdb_file)[0]
-        if os.path.exists(mipmap_filepath):
-            return mipmap_filepath
-        return ''
-
-    rman_mipmap_vdb_path: StringProperty(name='', get=get_mipmap_vdb_path)
-
 classes = [         
     RendermanVolumeGeometrySettings
 ]           

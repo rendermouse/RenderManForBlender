@@ -161,6 +161,20 @@ def get_var(nm):
     converter_validity_check()
     return __SCENE_STRING_CONVERTER__.get_token(nm)
 
+def get_tokenized_openvdb_file(frame_filepath, grids_frame):
+    openvdb_file = filepath_utils.get_real_path(frame_filepath)
+    f = os.path.basename(frame_filepath)
+    frame = '%d' % grids_frame
+    expr = re.compile(r'(\d+)%s' % frame)
+    m = expr.search(f)
+    if m and m.groups():
+        s = m.groups()[0]
+        strlen = len(s) + len(frame)
+        if strlen < 5:
+            openvdb_file = frame_filepath.replace(s+frame, '<f%d>' % strlen)    
+
+    return openvdb_file
+
 @persistent
 def update_blender_tokens_cb(bl_scene):
     from ..rman_config import __RFB_CONFIG_DICT__ as rfb_config

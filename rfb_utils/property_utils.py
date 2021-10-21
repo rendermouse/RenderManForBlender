@@ -31,6 +31,47 @@ __GAINS_TO_ENABLE__ = {
     'glowGain': 'enableGlow',
 }
 
+class BlPropInfo:
+
+    def __init__(self, node, prop_name, prop_meta):
+        self.prop_meta = prop_meta
+        self.prop_name = prop_name
+        self.prop = getattr(node, prop_name, None)
+        self.renderman_name = prop_meta.get('renderman_name', prop_name)
+        self.param_name = self.renderman_name
+        self.vstructmember = prop_meta.get('vstructmember', None)
+        self.vstruct = prop_meta.get('vstruct', False)
+        self.label = prop_meta.get('label', prop_name)
+        self.read_only = prop_meta.get('readOnly', False)
+        self.not_connectable = prop_meta.get('__noconnection', True)
+        self.widget = prop_meta.get('widget', 'default')
+        self.prop_hidden = getattr(node, '%s_hidden' % prop_name, False)
+        self.prop_disabled = getattr(node, '%s_disabled' % prop_name, False)
+        self.conditionalVisOps = prop_meta.get('conditionalVisOps', dict())
+        self.cond_expr = self.conditionalVisOps.get('expr', None)
+        self.conditionalLockOps = prop_meta.get('conditionalLockOps', None)
+        self.renderman_type = prop_meta.get('renderman_type', '')
+        self.param_type = self.renderman_type
+        self.arraySize = prop_meta.get('arraySize', None)
+        self.renderman_array_name = prop_meta.get('renderman_array_name', None)
+
+        inputs = getattr(node, 'inputs', dict())
+        self.has_input = (prop_name in inputs)
+        self.is_linked = False
+        self.link = None
+        self.socket = None
+        self.from_socket = None
+        self.from_node = None
+        if self.has_input:
+            self.socket = inputs.get(prop_name)
+            self.is_linked = self.socket.is_linked
+            if self.is_linked:
+                self.link = self.socket.links[0]
+                self.from_socket = self.link.from_socket
+                self.from_node = self.link.from_node
+
+        self.is_texture = (self.widget in ['fileinput','assetidinput'])
+
 def get_property_default(node, prop_name):
     bl_prop_name = __RESERVED_BLENDER_NAMES__.get(prop_name, prop_name)
     prop = node.bl_rna.properties.get(bl_prop_name, None)
@@ -422,320 +463,313 @@ def set_pxrosl_params(node, rman_sg_node, params, ob=None, mat_name=None):
             val = string_utils.convert_val(input.default_value, type_hint=prop_type)
             set_rix_param(params, param_type, param_name, val, is_reference=False)    
 
+def set_ramp_rixparams(node, prop_name, prop, param_type, params):
+    if param_type == 'colorramp':
+        nt = bpy.data.node_groups.get(node.rman_fake_node_group, None)
+        ramp_name =  prop
+        if nt:
+            color_ramp_node = nt.nodes[ramp_name]                            
+            colors = []
+            positions = []
+            # double the start and end points
+            positions.append(float(color_ramp_node.color_ramp.elements[0].position))
+            colors.append(color_ramp_node.color_ramp.elements[0].color[:3])
+            for e in color_ramp_node.color_ramp.elements:
+                positions.append(float(e.position))
+                colors.append(e.color[:3])
+            positions.append(
+                float(color_ramp_node.color_ramp.elements[-1].position))
+            colors.append(color_ramp_node.color_ramp.elements[-1].color[:3])
+
+            params.SetInteger('%s' % prop_name, len(positions))
+            params.SetFloatArray("%s_Knots" % prop_name, positions, len(positions))
+            params.SetColorArray("%s_Colors" % prop_name, colors, len(positions))
+
+            rman_interp_map = { 'B_SPLINE': 'bspline', 'LINEAR': 'linear', 'CONSTANT': 'constant'}
+            interp = rman_interp_map.get(color_ramp_node.color_ramp.interpolation,'catmull-rom')
+            params.SetString("%s_Interpolation" % prop_name, interp )  
+        else:         
+            # this might be from a linked file
+            bl_ramp_prop = getattr(node, '%s_bl_ramp' % prop_name)
+            if len(bl_ramp_prop) < 1:
+                return          
+
+            colors = []
+            positions = []    
+            r = bl_ramp_prop[0]         
+            colors.append(r.rman_value[:3])
+            positions.append(r.position)
+
+            for i in range(0, len(bl_ramp_prop)):
+                r = bl_ramp_prop[i]
+                colors.append(r.rman_value[:3])
+                positions.append(r.position)
+            colors.append(bl_ramp_prop[-1].rman_value[:3])
+            positions.append(bl_ramp_prop[-1].position)
+
+            params.SetInteger('%s' % prop_name, len(positions))
+            params.SetFloatArray("%s_Knots" % prop_name, positions, len(positions))
+            params.SetColorArray("%s_Colors" % prop_name, colors, len(positions))
+
+            interp = 'catmull-rom'
+            params.SetString("%s_Interpolation" % prop_name, interp )                                 
+
+    elif param_type == 'floatramp':
+        nt = bpy.data.node_groups.get(node.rman_fake_node_group, None)
+        ramp_name =  prop
+        if nt:
+            float_ramp_node = nt.nodes[ramp_name]                            
+
+            curve = float_ramp_node.mapping.curves[0]
+            knots = []
+            vals = []
+            # double the start and end points
+            knots.append(curve.points[0].location[0])
+            vals.append(curve.points[0].location[1])
+            for p in curve.points:
+                knots.append(p.location[0])
+                vals.append(p.location[1])
+            knots.append(curve.points[-1].location[0])
+            vals.append(curve.points[-1].location[1])
+
+            params.SetInteger('%s' % prop_name, len(knots))
+            params.SetFloatArray('%s_Knots' % prop_name, knots, len(knots))
+            params.SetFloatArray('%s_Floats' % prop_name, vals, len(vals))    
+            
+            # Blender doesn't have an interpolation selection for float ramps. Default to catmull-rom
+            interp = 'catmull-rom'
+            params.SetString("%s_Interpolation" % prop_name, interp )         
+        else:
+            # this might be from a linked file
+            bl_ramp_prop = getattr(node, '%s_bl_ramp' % prop_name)
+            if len(bl_ramp_prop) < 1:
+                return          
+
+            vals = []
+            knots = []    
+            r = bl_ramp_prop[0]         
+            vals.append(r.rman_value[:3])
+            knots.append(r.position)
+
+            for i in range(0, len(bl_ramp_prop)):
+                r = bl_ramp_prop[i]
+                vals.append(r.rman_value[:3])
+                knots.append(r.position)
+            vals.append(bl_ramp_prop[-1].rman_value)
+            knots.append(bl_ramp_prop[-1].position)
+
+            params.SetInteger('%s' % prop_name, len(knots))
+            params.SetFloatArray('%s_Knots' % prop_name, knots, len(knots))
+            params.SetFloatArray('%s_Floats' % prop_name, vals, len(vals))   
+
+            interp = 'catmull-rom'
+            params.SetString("%s_Interpolation" % prop_name, interp )                        
 
 def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group_node=None):
     # If node is OSL node get properties from dynamic location.
     if node.bl_label == "PxrOSL":
         set_pxrosl_params(node, rman_sg_node, params, ob=ob, mat_name=mat_name)
-    else:
-        node_inputs = getattr(node, 'inputs', list())
-        for prop_name, meta in node.prop_meta.items():
-            param_widget = meta.get('widget', 'default')
-            param_type = meta['renderman_type']
-            param_name = meta['renderman_name']     
-            is_linked = False
-            link = None
-            to_socket = None
-            from_socket = None
-            from_node = None
-            # check if linked
-            if prop_name in node_inputs and node_inputs[prop_name].is_linked:
-                is_linked = True
-                link = node_inputs[prop_name].links[0]
-                to_socket = node_inputs[prop_name]
-                from_socket = link.from_socket
-                from_node = link.from_node
-                   
-            if param_widget == 'null' and 'vstructmember' not in meta:
-                # if widget is marked null, don't export parameter and rely on default
-                # unless it has a vstructmember
-                continue
+        return params
 
-            elif param_widget == 'displaymetadata':
-                set_dspymeta_params(node, prop_name, params)
-                continue
-            else:
-                prop = getattr(node, prop_name)
-                # if property group recurse
-                if param_type == 'page':
-                    continue
-                elif prop_name == 'inputMaterial' or \
-                        ('vstruct' in meta and meta['vstruct'] is True) or \
-                        ('type' in meta and meta['type'] == 'vstruct'):
-                    continue
+    for prop_name, meta in node.prop_meta.items():
+        bl_prop_info = BlPropInfo(node, prop_name, meta)
+        param_widget = bl_prop_info.widget 
+        param_type = bl_prop_info.renderman_type 
+        param_name = bl_prop_info.renderman_name      
+        is_linked = bl_prop_info.is_linked
+        to_socket = bl_prop_info.socket
+        from_socket = bl_prop_info.from_socket
+        from_node = bl_prop_info.from_node
+        prop = bl_prop_info.prop
+                
+        if param_widget == 'null' and 'vstructmember' not in meta:
+            # if widget is marked null, don't export parameter and rely on default
+            # unless it has a vstructmember
+            continue
 
-                if group_node:
-                    # This node is part of a group node
-                    if is_linked: 
-                        if from_node.bl_idname != 'NodeGroupInput':
-                            val = get_output_param_str(rman_sg_node,
-                                    from_node, mat_name, from_socket, to_socket, param_type)
-                            if val:
-                                set_rix_param(params, param_type, param_name, val, is_reference=True)
-                            else:
-                                rfb_log().debug("Could not find connection for: %s.%s" % (node.name, param_name))
-                        else:
-                            # The connection is from a NodeGroupInput node. Check what the group node
-                            # connection is.
-                            group_socket = group_node.inputs[from_socket.name]
-                            if not group_socket.is_linked:
-                                val = string_utils.convert_val(group_socket.default_value, type_hint=param_type)
-                                set_rix_param(params, param_type, param_name, val, is_reference=False)
-                            else:
-                                to_socket = group_socket
-                                from_socket = to_socket.links[0].from_socket
-                                from_node = to_socket.links[0].from_node                                
+        elif param_widget == 'displaymetadata':
+            set_dspymeta_params(node, prop_name, params)
+            continue
 
-                                val = get_output_param_str(rman_sg_node,
-                                        from_node, mat_name, from_socket, to_socket, param_type)
-                                if val:
-                                    set_rix_param(params, param_type, param_name, val, is_reference=True)                                
-                                else:
-                                    rfb_log().debug("Could not find connection for: %s.%s" % (node.name, param_name))
-                        continue
-                                
-                # if input socket is linked reference that
-                if is_linked:
+        # if property group recurse
+        if param_type == 'page':
+            continue
+        elif prop_name == 'inputMaterial' or \
+                ('vstruct' in meta and meta['vstruct'] is True) or \
+                ('type' in meta and meta['type'] == 'vstruct'):
+            continue
 
-                    if 'arraySize' in meta:
-                        pass
-                    elif 'renderman_array_name' in meta:
-                        continue                    
+        if group_node:
+            # This node is part of a group node
+            if is_linked: 
+                if from_node.bl_idname != 'NodeGroupInput':
+                    val = get_output_param_str(rman_sg_node,
+                            from_node, mat_name, from_socket, to_socket, param_type)
+                    if val:
+                        set_rix_param(params, param_type, param_name, val, is_reference=True)
                     else:
+                        rfb_log().debug("Could not find connection for: %s.%s" % (node.name, param_name))
+                else:
+                    # The connection is from a NodeGroupInput node. Check what the group node
+                    # connection is.
+                    group_socket = group_node.inputs[from_socket.name]
+                    if not group_socket.is_linked:
+                        val = string_utils.convert_val(group_socket.default_value, type_hint=param_type)
+                        set_rix_param(params, param_type, param_name, val, is_reference=False)
+                    else:
+                        to_socket = group_socket
+                        from_socket = to_socket.links[0].from_socket
+                        from_node = to_socket.links[0].from_node                                
+
                         val = get_output_param_str(rman_sg_node,
                                 from_node, mat_name, from_socket, to_socket, param_type)
                         if val:
-                            set_rix_param(params, param_type, param_name, val, is_reference=True)
+                            set_rix_param(params, param_type, param_name, val, is_reference=True)                                
                         else:
-                            rfb_log().debug("Could not find connection for: %s.%s" % (node.name, param_name))                  
+                            rfb_log().debug("Could not find connection for: %s.%s" % (node.name, param_name))
+                continue
+                        
+        # if input socket is linked reference that
+        if is_linked:
 
-                # see if vstruct linked
-                elif is_vstruct_and_linked(node, prop_name):
-                    vstruct_name, vstruct_member = meta[
-                        'vstructmember'].split('.')
-                    from_socket = node.inputs[
-                        vstruct_name].links[0].from_socket
-
-                    temp_mat_name = mat_name
-
-                    if from_socket.node.bl_idname == 'ShaderNodeGroup':
-                        ng = from_socket.node.node_tree
-                        group_output = next((n for n in ng.nodes if n.bl_idname == 'NodeGroupOutput'),
-                                            None)
-                        if group_output is None:
-                            return False
-
-                        in_sock = group_output.inputs[from_socket.name]
-                        if len(in_sock.links):
-                            from_socket = in_sock.links[0].from_socket
-                            #temp_mat_name = mat_name + '.' + from_socket.node.name
-                            temp_mat_name = mat_name
-                            
-                    vstruct_from_param = "%s_%s" % (
-                        from_socket.identifier, vstruct_member)
-                    if vstruct_from_param in from_socket.node.output_meta:
-                        actual_socket = from_socket.node.output_meta[
-                            vstruct_from_param]
-
-                        node_meta = getattr(
-                            node, 'shader_meta') if node.bl_idname == "PxrOSLPatternNode" else node.output_meta                        
-                        node_meta = node_meta.get(vstruct_from_param)
-                        is_reference = True
-                        val = get_output_param_str(rman_sg_node,
-                               from_socket.node, temp_mat_name, actual_socket, to_socket=None, param_type=param_type)
-                        if node_meta:
-                            expr = node_meta.get('vstructConditionalExpr')
-                            # check if we should connect or just set a value
-                            if expr:
-                                if expr.split(' ')[0] == 'set':
-                                    val = 1
-                                    is_reference = False      
-                        if val:                  
-                            set_rix_param(params, param_type, param_name, val, is_reference=is_reference)
-
-                    else:
-                        rfb_log().warning('Warning! %s not found on %s' %
-                              (vstruct_from_param, from_socket.node.name))
-
-                # else output rib
+            if 'arraySize' in meta:
+                pass
+            elif 'renderman_array_name' in meta:
+                continue                    
+            else:
+                val = get_output_param_str(rman_sg_node,
+                        from_node, mat_name, from_socket, to_socket, param_type)
+                if val:
+                    set_rix_param(params, param_type, param_name, val, is_reference=True)
                 else:
-                    # if struct is not linked continue
-                    if param_type in ['struct', 'enum']:
-                        continue
+                    rfb_log().debug("Could not find connection for: %s.%s" % (node.name, param_name))                  
 
-                    val = None
+        # see if vstruct linked
+        elif is_vstruct_and_linked(node, prop_name):
+            vstruct_name, vstruct_member = meta[
+                'vstructmember'].split('.')
+            from_socket = node.inputs[
+                vstruct_name].links[0].from_socket
 
-                    # if this is a gain on PxrSurface and the lobe isn't
-                    # enabled                    
-                    if node.bl_idname == 'PxrSurfaceBxdfNode' and \
-                            prop_name in __GAINS_TO_ENABLE__ and \
-                            not getattr(node, __GAINS_TO_ENABLE__[prop_name]):
-                        val = [0, 0, 0] if param_type == 'color' else 0
+            temp_mat_name = mat_name
 
-                    elif param_type == 'string':
-                        if rman_sg_node:
-                            set_frame_sensitive(rman_sg_node, prop)
+            if from_socket.node.bl_idname == 'ShaderNodeGroup':
+                ng = from_socket.node.node_tree
+                group_output = next((n for n in ng.nodes if n.bl_idname == 'NodeGroupOutput'),
+                                    None)
+                if group_output is None:
+                    return False
 
-                        val = string_utils.expand_string(prop)
-                        options = meta['options']
-                        if param_widget in ['fileinput', 'assetidinput']:
-                            # ies profiles don't need txmanager for converting                       
-                            if 'ies' in options:
-                                val = string_utils.expand_string(prop, display='ies', asFilePath=True)
-                            # this is a texture
-                            elif ('texture' in options) or ('env' in options) or ('imageplane' in options):
-                                tx_node_id = texture_utils.generate_node_id(node, param_name, ob=ob)
-                                tx_val = texture_utils.get_txmanager().get_output_tex_from_id(tx_node_id)
-                                val = tx_val if tx_val != '' else val
-                        elif param_widget == 'assetidoutput':
-                            display = 'openexr'
-                            if 'texture' in options:
-                                display = 'texture'
-                            val = string_utils.expand_string(prop, display=display, asFilePath=True)
+                in_sock = group_output.inputs[from_socket.name]
+                if len(in_sock.links):
+                    from_socket = in_sock.links[0].from_socket
+                    #temp_mat_name = mat_name + '.' + from_socket.node.name
+                    temp_mat_name = mat_name
+                    
+            vstruct_from_param = "%s_%s" % (
+                from_socket.identifier, vstruct_member)
+            if vstruct_from_param in from_socket.node.output_meta:
+                actual_socket = from_socket.node.output_meta[
+                    vstruct_from_param]
 
-                    elif 'renderman_array_name' in meta:
-                        continue
-                    elif param_type == 'array':
-                        array_len = getattr(node, '%s_arraylen' % prop_name)
-                        sub_prop_names = getattr(node, prop_name)
-                        sub_prop_names = sub_prop_names[:array_len]
-                        val_array = []
-                        val_ref_array = []
-                        param_type = meta['renderman_array_type']
-                        
-                        for nm in sub_prop_names:
-                            if hasattr(node, 'inputs')  and nm in node.inputs and \
-                                node.inputs[nm].is_linked:
+                node_meta = getattr(
+                    node, 'shader_meta') if node.bl_idname == "PxrOSLPatternNode" else node.output_meta                        
+                node_meta = node_meta.get(vstruct_from_param)
+                is_reference = True
+                val = get_output_param_str(rman_sg_node,
+                        from_socket.node, temp_mat_name, actual_socket, to_socket=None, param_type=param_type)
+                if node_meta:
+                    expr = node_meta.get('vstructConditionalExpr')
+                    # check if we should connect or just set a value
+                    if expr:
+                        if expr.split(' ')[0] == 'set':
+                            val = 1
+                            is_reference = False      
+                if val:                  
+                    set_rix_param(params, param_type, param_name, val, is_reference=is_reference)
 
-                                to_socket = node.inputs[nm]
-                                from_socket = to_socket.links[0].from_socket
-                                from_node = to_socket.links[0].from_node
+            else:
+                rfb_log().warning('Warning! %s not found on %s' %
+                        (vstruct_from_param, from_socket.node.name))
 
-                                val = get_output_param_str(rman_sg_node,
-                                    from_node, mat_name, from_socket, to_socket, param_type)
-                                if val:
-                                    val_ref_array.append(val)
-                            else:
-                                prop = getattr(node, nm)
-                                val = string_utils.convert_val(prop, type_hint=param_type)
-                                if param_type in RFB_FLOAT3:
-                                    val_array.extend(val)
-                                else:
-                                    val_array.append(val)
-                        if val_ref_array:
-                            set_rix_param(params, param_type, param_name, val_ref_array, is_reference=True, is_array=True, array_len=len(val_ref_array))
-                        else:
-                            set_rix_param(params, param_type, param_name, val_array, is_reference=False, is_array=True, array_len=len(val_array))
-                        continue
-                    elif param_type == 'colorramp':
-                        nt = bpy.data.node_groups.get(node.rman_fake_node_group, None)
-                        ramp_name =  prop
-                        if nt:
-                            color_ramp_node = nt.nodes[ramp_name]                            
-                            colors = []
-                            positions = []
-                            # double the start and end points
-                            positions.append(float(color_ramp_node.color_ramp.elements[0].position))
-                            colors.append(color_ramp_node.color_ramp.elements[0].color[:3])
-                            for e in color_ramp_node.color_ramp.elements:
-                                positions.append(float(e.position))
-                                colors.append(e.color[:3])
-                            positions.append(
-                                float(color_ramp_node.color_ramp.elements[-1].position))
-                            colors.append(color_ramp_node.color_ramp.elements[-1].color[:3])
+        # else output rib
+        else:
+            # if struct is not linked continue
+            if param_type in ['struct', 'enum']:
+                continue
 
-                            params.SetInteger('%s' % prop_name, len(positions))
-                            params.SetFloatArray("%s_Knots" % prop_name, positions, len(positions))
-                            params.SetColorArray("%s_Colors" % prop_name, colors, len(positions))
+            val = None
 
-                            rman_interp_map = { 'B_SPLINE': 'bspline', 'LINEAR': 'linear', 'CONSTANT': 'constant'}
-                            interp = rman_interp_map.get(color_ramp_node.color_ramp.interpolation,'catmull-rom')
-                            params.SetString("%s_Interpolation" % prop_name, interp )  
-                        else:         
-                            # this might be from a linked file
-                            bl_ramp_prop = getattr(node, '%s_bl_ramp' % prop_name)
-                            if len(bl_ramp_prop) < 1:
-                                continue          
+            # if this is a gain on PxrSurface and the lobe isn't
+            # enabled                    
+            if node.bl_idname == 'PxrSurfaceBxdfNode' and \
+                    prop_name in __GAINS_TO_ENABLE__ and \
+                    not getattr(node, __GAINS_TO_ENABLE__[prop_name]):
+                val = [0, 0, 0] if param_type == 'color' else 0
 
-                            colors = []
-                            positions = []    
-                            r = bl_ramp_prop[0]         
-                            colors.append(r.rman_value[:3])
-                            positions.append(r.position)
+            elif param_type == 'string':
+                if rman_sg_node:
+                    set_frame_sensitive(rman_sg_node, prop)
 
-                            for i in range(0, len(bl_ramp_prop)):
-                                r = bl_ramp_prop[i]
-                                colors.append(r.rman_value[:3])
-                                positions.append(r.position)
-                            colors.append(bl_ramp_prop[-1].rman_value[:3])
-                            positions.append(bl_ramp_prop[-1].position)
+                val = string_utils.expand_string(prop)
+                options = meta['options']
+                if param_widget in ['fileinput', 'assetidinput']:
+                    # ies profiles don't need txmanager for converting                       
+                    if 'ies' in options:
+                        val = string_utils.expand_string(prop, display='ies', asFilePath=True)
+                    # this is a texture
+                    elif ('texture' in options) or ('env' in options) or ('imageplane' in options):
+                        tx_node_id = texture_utils.generate_node_id(node, param_name, ob=ob)
+                        tx_val = texture_utils.get_txmanager().get_output_tex_from_id(tx_node_id)
+                        val = tx_val if tx_val != '' else val
+                elif param_widget == 'assetidoutput':
+                    display = 'openexr'
+                    if 'texture' in options:
+                        display = 'texture'
+                    val = string_utils.expand_string(prop, display=display, asFilePath=True)
 
-                            params.SetInteger('%s' % prop_name, len(positions))
-                            params.SetFloatArray("%s_Knots" % prop_name, positions, len(positions))
-                            params.SetColorArray("%s_Colors" % prop_name, colors, len(positions))
+            elif 'renderman_array_name' in meta:
+                continue
+            elif param_type == 'array':
+                array_len = getattr(node, '%s_arraylen' % prop_name)
+                sub_prop_names = getattr(node, prop_name)
+                sub_prop_names = sub_prop_names[:array_len]
+                val_array = []
+                val_ref_array = []
+                param_type = meta['renderman_array_type']
+                
+                for nm in sub_prop_names:
+                    if hasattr(node, 'inputs')  and nm in node.inputs and \
+                        node.inputs[nm].is_linked:
 
-                            interp = 'catmull-rom'
-                            params.SetString("%s_Interpolation" % prop_name, interp )                                 
-                        
-                        continue
-                    elif param_type == 'floatramp':
-                        nt = bpy.data.node_groups.get(node.rman_fake_node_group, None)
-                        ramp_name =  prop
-                        if nt:
-                            float_ramp_node = nt.nodes[ramp_name]                            
+                        to_socket = node.inputs[nm]
+                        from_socket = to_socket.links[0].from_socket
+                        from_node = to_socket.links[0].from_node
 
-                            curve = float_ramp_node.mapping.curves[0]
-                            knots = []
-                            vals = []
-                            # double the start and end points
-                            knots.append(curve.points[0].location[0])
-                            vals.append(curve.points[0].location[1])
-                            for p in curve.points:
-                                knots.append(p.location[0])
-                                vals.append(p.location[1])
-                            knots.append(curve.points[-1].location[0])
-                            vals.append(curve.points[-1].location[1])
-
-                            params.SetInteger('%s' % prop_name, len(knots))
-                            params.SetFloatArray('%s_Knots' % prop_name, knots, len(knots))
-                            params.SetFloatArray('%s_Floats' % prop_name, vals, len(vals))    
-                            
-                            # Blender doesn't have an interpolation selection for float ramps. Default to catmull-rom
-                            interp = 'catmull-rom'
-                            params.SetString("%s_Interpolation" % prop_name, interp )         
-                        else:
-                            # this might be from a linked file
-                            bl_ramp_prop = getattr(node, '%s_bl_ramp' % prop_name)
-                            if len(bl_ramp_prop) < 1:
-                                continue          
-
-                            vals = []
-                            knots = []    
-                            r = bl_ramp_prop[0]         
-                            vals.append(r.rman_value[:3])
-                            knots.append(r.position)
-
-                            for i in range(0, len(bl_ramp_prop)):
-                                r = bl_ramp_prop[i]
-                                vals.append(r.rman_value[:3])
-                                knots.append(r.position)
-                            vals.append(bl_ramp_prop[-1].rman_value)
-                            knots.append(bl_ramp_prop[-1].position)
-
-                            params.SetInteger('%s' % prop_name, len(knots))
-                            params.SetFloatArray('%s_Knots' % prop_name, knots, len(knots))
-                            params.SetFloatArray('%s_Floats' % prop_name, vals, len(vals))   
-
-                            interp = 'catmull-rom'
-                            params.SetString("%s_Interpolation" % prop_name, interp )                        
-
-                        continue
+                        val = get_output_param_str(rman_sg_node,
+                            from_node, mat_name, from_socket, to_socket, param_type)
+                        if val:
+                            val_ref_array.append(val)
                     else:
-
+                        prop = getattr(node, nm)
                         val = string_utils.convert_val(prop, type_hint=param_type)
+                        if param_type in RFB_FLOAT3:
+                            val_array.extend(val)
+                        else:
+                            val_array.append(val)
+                if val_ref_array:
+                    set_rix_param(params, param_type, param_name, val_ref_array, is_reference=True, is_array=True, array_len=len(val_ref_array))
+                else:
+                    set_rix_param(params, param_type, param_name, val_array, is_reference=False, is_array=True, array_len=len(val_array))
+                continue
+            elif param_type in ['colorramp', 'floatramp']:
+                set_ramp_rixparams(node, prop_name, prop, param_type, params)                       
+                continue
+            else:
+                val = string_utils.convert_val(prop, type_hint=param_type)
 
-                    set_rix_param(params, param_type, param_name, val, is_reference=False, node=node)
-                        
+            set_rix_param(params, param_type, param_name, val, is_reference=False, node=node)
+                    
     return params      
 
 def property_group_to_rixparams(node, rman_sg_node, sg_node, ob=None, mat_name=None, group_node=None):

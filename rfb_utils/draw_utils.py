@@ -1,37 +1,11 @@
 from ..rfb_logger import rfb_log
 from . import shadergraph_utils
+from .property_utils import BlPropInfo
 from ..rman_constants import NODE_LAYOUT_SPLIT
 from .. import rman_config
 from .. import rfb_icons
 import bpy
 import re
-
-class BlPropInfo:
-
-    def __init__(self, node, prop_name, prop_meta):
-        self.prop_meta = prop_meta
-        self.prop_name = prop_name
-        self.prop = getattr(node, prop_name, None)
-        if self.prop is None:
-            return
-        self.label = prop_meta.get('label', prop_name)
-        self.read_only = prop_meta.get('readOnly', False)
-        self.not_connectable = prop_meta.get('__noconnection', True)
-        self.widget = prop_meta.get('widget', 'default')
-        self.prop_hidden = getattr(node, '%s_hidden' % prop_name, False)
-        self.prop_disabled = getattr(node, '%s_disabled' % prop_name, False)
-        self.conditionalVisOps = prop_meta.get('conditionalVisOps', dict())
-        self.cond_expr = self.conditionalVisOps.get('expr', None)
-        self.conditionalLockOps = prop_meta.get('conditionalLockOps', None)
-        self.renderman_type = prop_meta.get('renderman_type', '')
-
-        inputs = getattr(node, 'inputs', dict())
-        self.has_input = (prop_name in inputs)
-        self.is_linked = False
-        self.socket = None
-        if self.has_input:
-            self.socket = inputs.get(prop_name)
-            self.is_linked = self.socket.is_linked
 
 def draw_indented_label(layout, label, level):
     for i in range(level):
@@ -411,7 +385,7 @@ def draw_prop(node, prop_name, layout, level=0, nt=None, context=None, sticky=Fa
         rman_icon = rfb_icons.get_icon('rman_connection_menu')
         row.menu('NODE_MT_renderman_connection_menu', text='', icon_value=rman_icon.icon_id)
 
-    if bl_prop_info.widget in ['fileinput','assetidinput']:                            
+    if bl_prop_info.is_texture:
         prop_val = getattr(node, prop_name)
         if prop_val != '':
             from . import texture_utils

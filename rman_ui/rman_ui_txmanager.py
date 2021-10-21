@@ -46,6 +46,11 @@ class TxFileItem(PropertyGroup):
             default=True
             )
 
+    is_vdb: BoolProperty(
+            name="is_vdb",
+            default=False
+    )
+
     def colorspace_names(self, context):
         items = []
         items.append(('0', '', ''))
@@ -413,8 +418,10 @@ class PRMAN_OT_Renderman_txmanager_add_texture(Operator):
         if params.data_type is not None:
             item.data_type = params.data_type
         item.resize = params.resize 
-        item.state = txfile.state    
-        if txfile.state == txmngr.STATE_IS_TEX:
+        item.state = txfile.state   
+        if txfile.is_vdb: 
+            item.enable = False  
+        elif txfile.state == txmngr.STATE_IS_TEX:
             item.enable = False  
         else:
             item.enable = True
@@ -432,7 +439,7 @@ class PRMAN_OT_Renderman_txmanager_add_texture(Operator):
         else:
             params.bumpRough = "-1"
 
-  
+        item.is_vdb = txfile.is_vdb
         item.tooltip = '\nNode ID: ' + item.nodeID + "\n" + str(txfile)
         # FIXME: should also add the nodes that this texture is referenced in     
 
@@ -584,7 +591,7 @@ class PRMAN_PT_Renderman_txmanager_list(_RManPanelHeader, Panel):
                     row.prop(item, "bumpRough_refit")
 
                 row = layout.row()   
-                row.enabled = item.enable      
+                row.enabled = item.enable or item.is_vdb      
                 row.alignment = 'RIGHT'          
                 row.operator('rman_txmgr_list.reconvert_selected', text='Reconvert')
                 row.operator('rman_txmgr_list.apply_preset', text='Apply')
@@ -669,7 +676,9 @@ def index_updated(self, context):
         if params.data_type is not None:
             item.data_type = params.data_type
         item.resize = params.resize 
-        if txfile.state == txmngr.STATE_IS_TEX:
+        if txfile.is_vdb:
+            item.enable = False
+        elif txfile.state == txmngr.STATE_IS_TEX:
             item.enable = False
         else:
             item.enable = True
@@ -687,6 +696,7 @@ def index_updated(self, context):
         else:
             params.bumpRough = "-1"  
 
+        item.is_vdb = txfile.is_vdb
         item.tooltip = '\nNode ID: ' + item.nodeID + "\n" + str(txfile)                      
 
 classes = [

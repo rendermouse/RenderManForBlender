@@ -4,7 +4,7 @@ from ..rfb_utils import rman_socket_utils
 from ..rfb_utils import string_utils
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import draw_utils
-from ..rfb_utils.draw_utils import BlPropInfo
+from ..rfb_utils.property_utils import BlPropInfo
 from ..rfb_utils import filepath_utils
 from ..rman_config import __RFB_CONFIG_DICT__
 from ..rman_constants import RFB_FLOAT3
@@ -280,7 +280,7 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                 row.prop(node, prop_name, slider=True)           
                 draw_utils.draw_sticky_toggle(row, node, prop_name, output_node)                       
             
-            if bl_prop_info.widget in ['fileinput','assetidinput']:
+            if bl_prop_info.is_texture:
                 prop_val = getattr(node, prop_name)
                 if prop_val != '':
                     from ..rfb_utils import texture_utils
