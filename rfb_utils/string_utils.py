@@ -175,6 +175,15 @@ def get_tokenized_openvdb_file(frame_filepath, grids_frame):
 
     return openvdb_file
 
+def get_unique_group_name(group_node):
+    group_node_name = group_node.name
+
+    for k,v in bpy.data.node_groups.items():
+        if group_node.id_data == v:
+            group_node_name = k
+            break    
+    return group_node_name
+
 @persistent
 def update_blender_tokens_cb(bl_scene):
     from ..rman_config import __RFB_CONFIG_DICT__ as rfb_config

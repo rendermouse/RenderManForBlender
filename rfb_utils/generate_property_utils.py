@@ -11,6 +11,7 @@ import os
 
 def update_colorspace_name(self, context, param_name):
     from . import texture_utils
+    from . import scene_utils
 
     node = self.node if hasattr(self, 'node') else self
 
@@ -18,8 +19,9 @@ def update_colorspace_name(self, context, param_name):
     ociconvert = getattr(node, param_colorspace)
     if ociconvert != '0':
         # tell txmanager the new colorspace requested by the user
-        file_path = getattr(node, param_name)
-        txfile = texture_utils.get_txmanager().txmanager.get_txfile_from_path(file_path)
+        ob = scene_utils.find_node_owner(node, context=context)
+        txfile = texture_utils.get_txmanager().get_txfile(node, param_name, ob=ob)
+
         if txfile:
             params = txfile.params.as_dict()     
             if params['ocioconvert'] != ociconvert:

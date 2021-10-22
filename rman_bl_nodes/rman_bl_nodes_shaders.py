@@ -285,7 +285,7 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                 if prop_val != '':
                     from ..rfb_utils import texture_utils
                     from ..rfb_utils import scene_utils
-                    if texture_utils.get_txmanager().is_file_src_tex(prop_val):
+                    if texture_utils.get_txmanager().is_file_src_tex(node, prop_name):
                         return
                     colorspace_prop_name = '%s_colorspace' % prop_name
                     if not hasattr(node, colorspace_prop_name):

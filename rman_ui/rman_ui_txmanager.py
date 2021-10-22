@@ -178,8 +178,7 @@ class PRMAN_UL_Renderman_txmanager_list(UIList):
         txfile = None
         if item.nodeID != "":
             txfile = texture_utils.get_txmanager().txmanager.get_txfile_from_id(item.nodeID)
-        else:
-            txfile = texture_utils.get_txmanager().txmanager.get_txfile_from_path(item.name)
+
         if txfile:
             custom_icon = icons_map[txfile.state]
         else:
@@ -221,6 +220,41 @@ class PRMAN_OT_Renderman_txmanager_reset_state(Operator):
         texture_utils.parse_for_textures(context.scene)
         texture_utils.get_txmanager().txmake_all(blocking=False)
         texture_utils.get_txmanager().txmanager.reset_state()
+        return{'FINISHED'}
+
+class PRMAN_OT_Renderman_txmanager_clear_unused(Operator):
+    """Clear Unused"""
+
+    bl_idname = "rman_txmgr_list.clear_unused"
+    bl_label = "Clear Unused"
+    bl_description = "Clear unused textures"
+
+    def execute(self, context):
+        rman_txmgr_list = context.scene.rman_txmgr_list
+        nodeIDs = list()
+        for item in rman_txmgr_list:
+            nodeID = item.nodeID
+            if item.nodeID != "":
+                txfile = texture_utils.get_txmanager().txmanager.get_txfile_from_id(item.nodeID)
+            if not txfile:
+                nodeIDs.append(nodeID)
+                continue
+
+            tokens = nodeID.split('|')
+            if len(tokens) < 3:
+                continue
+            if len(tokens) == 3:
+                node_name,param,ob_name = tokens
+            elif len(tokens) == 4:
+                node_name,param,nodetree_name,ob_name = tokens
+
+            node, ob = scene_utils.find_node_by_name(node_name, ob_name)   
+            if getattr(node, param) != item.name:
+                nodeIDs.append(nodeID)
+
+        for nodeID in nodeIDs:
+            bpy.ops.rman_txmgr_list.remove_texture('EXEC_DEFAULT', nodeID=nodeID)
+
         return{'FINISHED'}
 
 class PRMAN_OT_Renderman_txmanager_pick_images(Operator, ImportHelper):
@@ -297,10 +331,7 @@ class PRMAN_OT_Renderman_txmanager_reconvert_selected(Operator):
         item = context.scene.rman_txmgr_list[idx]
 
         txfile = None
-        if item.nodeID != "":
-            txfile = texture_utils.get_txmanager().txmanager.get_txfile_from_id(item.nodeID)
-        else:
-            txfile = texture_utils.get_txmanager().txmanager.get_txfile_from_path(item.name)
+        txfile = texture_utils.get_txmanager().txmanager.get_txfile_from_id(item.nodeID)
 
         if txfile:
             rr = rman_render.RmanRender.get_rman_render()
@@ -345,10 +376,7 @@ class PRMAN_OT_Renderman_txmanager_apply_preset(Operator):
 
         if txsettings:
             txfile = None
-            if item.nodeID != "":
-                txfile = texture_utils.get_txmanager().txmanager.get_txfile_from_id(item.nodeID)
-            else:
-                txfile = texture_utils.get_txmanager().txmanager.get_txfile_from_path(item.name)
+            txfile = texture_utils.get_txmanager().txmanager.get_txfile_from_id(item.nodeID)
 
             if txfile:
                 txfile.params.from_dict(txsettings)
@@ -362,8 +390,12 @@ class PRMAN_OT_Renderman_txmanager_apply_preset(Operator):
         tokens = item.nodeID.split('|')
         if len(tokens) < 3:
             return {'FINISHED'}
-        node_name,prop_name,ob_name = tokens            
-        prop_colorspace_name = '%s_colorspace' % prop_name
+        if len(tokens) == 3:
+            node_name,param,ob_name = tokens
+        elif len(tokens) == 4:
+            node_name,param,nodetree_name,ob_name = tokens            
+        
+        prop_colorspace_name = '%s_colorspace' % param
 
         try:
             mdict = texture_utils.get_txmanager().txmanager.color_manager.colorspace_names()
@@ -391,7 +423,10 @@ class PRMAN_OT_Renderman_txmanager_add_texture(Operator):
     nodeID: StringProperty()
 
     def execute(self, context):
-        txfile = texture_utils.get_txmanager().txmanager.get_txfile_from_path(self.filepath)
+        if self.nodeID == "":
+            return {'FINISHED'}
+
+        txfile = texture_utils.get_txmanager().txmanager.get_txfile_from_id(self.nodeID)
         if not txfile:
             return{'FINISHED'}
 
@@ -529,6 +564,7 @@ class PRMAN_PT_Renderman_txmanager_list(_RManPanelHeader, Panel):
         row = layout.row()
         txmanager = texture_utils.get_txmanager().txmanager
         row.operator('rman_txmgr_list.parse_scene', text='Parse Scene')
+        row.operator("rman_txmgr_list.clear_unused", icon='GPBRUSH_ERASE_HARD')
         row.operator('rman_txmgr_list.reset_state', text='Reset', icon='FILE_REFRESH')         
         row.operator('rman_txmgr_list.pick_images', text='Pick Images', icon='FILE_FOLDER')        
         row.operator('rman_txmgr_list.reconvert_all', text='Reconvert All')         
@@ -654,10 +690,8 @@ def index_updated(self, context):
         return
     item = context.scene.rman_txmgr_list[idx]
     txfile = None
-    if item.nodeID != "":
-        txfile = texture_utils.get_txmanager().txmanager.get_txfile_from_id(item.nodeID)
-    else:
-        txfile = texture_utils.get_txmanager().txmanager.get_txfile_from_path(item.name)
+    txfile = texture_utils.get_txmanager().txmanager.get_txfile_from_id(item.nodeID)
+
     if txfile:
         params = txfile.params
         item.texture_type = params.texture_type
@@ -693,6 +727,7 @@ classes = [
     PRMAN_UL_Renderman_txmanager_list,
     PRMAN_OT_Renderman_txmanager_parse_scene,
     PRMAN_OT_Renderman_txmanager_reset_state,
+    PRMAN_OT_Renderman_txmanager_clear_unused,
     PRMAN_OT_Renderman_txmanager_pick_images,
     PRMAN_OT_Renderman_txmanager_clear_all_cache,
     PRMAN_OT_Renderman_txmanager_reconvert_all,

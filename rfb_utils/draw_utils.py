@@ -390,7 +390,7 @@ def draw_prop(node, prop_name, layout, level=0, nt=None, context=None, sticky=Fa
         if prop_val != '':
             from . import texture_utils
             from . import scene_utils
-            if texture_utils.get_txmanager().is_file_src_tex(prop_val):
+            if texture_utils.get_txmanager().is_file_src_tex(node, prop_name):
                 return            
             colorspace_prop_name = '%s_colorspace' % prop_name
             if not hasattr(node, colorspace_prop_name):

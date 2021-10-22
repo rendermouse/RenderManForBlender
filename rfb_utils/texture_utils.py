@@ -141,9 +141,10 @@ class RfBTxManager(object):
         '''
         txfile = self.txmanager.get_txfile_from_id(nodeID)
         return txfile       
-            
-    def get_txfile_from_path(self, filepath):
-        return self.txmanager.get_txfile_from_path(filepath)                
+                
+    def get_txfile(self, node, param_name, ob=None):
+        nodeID = generate_node_id(node, param_name, ob=ob)
+        return self.get_txfile_from_id(nodeID)
 
     def txmake_all(self, blocking=True):
         self.txmanager.txmake_all(start_queue=True, blocking=blocking)   
@@ -163,17 +164,20 @@ class RfBTxManager(object):
             if txfile:
                 self.done_callback(nodeID, txfile)      
 
-    def is_file_src_tex(self, file_path):
-        txfile = self.txmanager.get_txfile_from_path(file_path)
+    def is_file_src_tex(self, node, prop_name):
+        id = scene_utils.find_node_owner(node)
+        nodeID = generate_node_id(node, prop_name, ob=id)
+        txfile = self.get_txfile_from_id(nodeID)
         if txfile:
             return (txfile.state == txmanager.STATE_IS_TEX)  
         return False
 
     def does_file_exist(self, file_path):
-        txfile = self.txmanager.get_txfile_from_path(file_path)
-        if txfile:
-            return (txfile.state != txmanager.STATE_INPUT_MISSING)  
-        return True
+        if self.rman_scene:
+            outpath = string_utils.expand_string(file_path, frame=self.rman_scene.bl_frame_current, asFilePath=True)
+        else:
+            outpath = string_utils.expand_string(file_path, asFilePath=True)
+        return os.path.exists(outpath)
 
     def does_nodeid_exists(self, nodeID):
         txfile = self.txmanager.get_txfile_from_id(nodeID)
@@ -230,11 +234,15 @@ def update_texture(node, ob=None, check_exists=False):
             get_txmanager().add_texture(node, ob, prop_name, bl_prop_info.prop, node_type=node_type, category=category)
 
 def generate_node_id(node, prop_name, ob=None):
-    if ob:
-        if node is None:
-            nodeID = '%s|%s' % (prop_name, ob.name)
-        else:
-            nodeID = '%s|%s|%s' % (node.name, prop_name, ob.name)    
+    if node is None:
+        nodeID = '%s|%s' % (prop_name, ob.name)
+        return nodeID
+    
+    nm = shadergraph_utils.get_nodetree_name(node)
+    if nm:
+        nodeID = '%s|%s|%s|%s' % (node.name, prop_name, nm, ob.name)
+    elif ob:
+        nodeID = '%s|%s|%s|%s' % (node.name, prop_name, ob.name, ob.name)
     else:
         prop = ''
         real_file = ''
@@ -244,13 +252,19 @@ def generate_node_id(node, prop_name, ob=None):
         nodeID = '%s|%s|%s' % (node.name, prop_name, real_file)
     return nodeID
 
-def get_textures(id, check_exists=False):
+def get_textures(id, check_exists=False, mat=None):
     if id is None or not id.node_tree:
         return
 
     nt = id.node_tree
+    ob = id
+    if mat:
+        ob = mat
     for node in nt.nodes:
-        update_texture(node, ob=id, check_exists=check_exists)
+        if node.bl_idname == 'ShaderNodeGroup':
+            get_textures(node, check_exists=check_exists, mat=ob)
+        else:            
+            update_texture(node, ob=ob, check_exists=check_exists)
 
 def get_blender_image_path(bl_image):
     if bl_image.packed_file:
@@ -355,6 +369,7 @@ def txmanager_load_cb(bl_scene):
         return    
     get_txmanager().txmanager.load_state()
     bpy.ops.rman_txmgr_list.parse_scene('EXEC_DEFAULT')
+    bpy.ops.rman_txmgr_list.clear_unused('EXEC_DEFAULT')
 
 @persistent
 def txmanager_pre_save_cb(bl_scene):

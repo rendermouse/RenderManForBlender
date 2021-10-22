@@ -387,6 +387,34 @@ def gather_all_nodes_for_material(mat, nodes_list):
             for n in node.node_tree.nodes:
                 nodes_list.insert(0, n)
 
+def get_nodetree_name(node):
+    nt = node.id_data
+
+    for nm, ng in bpy.data.node_groups.items():
+        if nt == ng:
+            return nm
+            
+    for mat in bpy.data.materials:
+        if mat.node_tree is None:
+            continue
+        if mat.node_tree == nt:
+            return mat.name
+
+    for world in bpy.data.worlds:
+        if world.node_tree == nt:
+            return world.name         
+
+    for ob in bpy.data.objects:
+        if ob.type == 'LIGHT':
+            light = ob.data
+            if light.node_tree == nt:
+                return ob.name           
+        elif ob.type == 'CAMERA':
+            if find_projection_node(ob) == node:
+                return ob.name
+    return None
+
+
 def get_group_node(node):
     '''
     Find the group node that this NodeGroupOutput or
