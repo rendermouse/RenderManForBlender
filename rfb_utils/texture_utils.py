@@ -371,6 +371,8 @@ def depsgraph_handler(bl_scene):
             continue
         if isinstance(id, bpy.types.Object):
             if id.type == 'VOLUME':
+                continue
+                '''
                 vol = id.data
                 ob = id
                 txfile = get_txmanager().get_txfile_for_vdb(ob)
@@ -380,6 +382,7 @@ def depsgraph_handler(bl_scene):
                     openvdb_file = string_utils.get_tokenized_openvdb_file(grids.frame_filepath, grids.frame)
                     if txfile.input_image != openvdb_file:
                         add_openvdb(ob)
+                '''
         
 def link_file_handler(id):
     if isinstance(id, bpy.types.Material):

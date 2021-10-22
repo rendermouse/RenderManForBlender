@@ -22,7 +22,7 @@ class VOLUME_PT_renderman_openvdb_attributes(CollectionPanel, Panel):
         volume = context.volume
         rm = volume.renderman
 
-        layout.operator('renderman.add_openvdb_to_txmanager')
+        #layout.operator('renderman.add_openvdb_to_txmanager')
         _draw_ui_from_rman_config('rman_properties_volume', 'VOLUME_PT_renderman_openvdb_attributes', context, layout, rm)             
 
 
