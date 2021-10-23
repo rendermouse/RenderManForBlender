@@ -65,9 +65,8 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                     if isinstance(roughness, str):
                         roughness = getattr(self, roughness)
                     mat.roughness = roughness   
-        else:
-            rr = rman_render.RmanRender.get_rman_render()             
-            rr.rman_scene_sync.update_material(mat) 
+        elif isinstance(mat, bpy.types.Material):
+            mat.node_tree.update_tag()
 
     def draw_label(self):
         nm = self.name
