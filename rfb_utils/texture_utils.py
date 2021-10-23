@@ -240,9 +240,8 @@ def generate_node_id(node, prop_name, ob=None):
     
     nm = shadergraph_utils.get_nodetree_name(node)
     if nm:
-        nodeID = '%s|%s|%s|%s' % (node.name, prop_name, nm, ob.name)
-    elif ob:
-        nodeID = '%s|%s|%s|%s' % (node.name, prop_name, ob.name, ob.name)
+        nodeID = '%s|%s|%s' % (node.name, prop_name, nm)
+
     else:
         prop = ''
         real_file = ''

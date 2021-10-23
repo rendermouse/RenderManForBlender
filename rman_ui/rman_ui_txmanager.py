@@ -243,10 +243,7 @@ class PRMAN_OT_Renderman_txmanager_clear_unused(Operator):
             tokens = nodeID.split('|')
             if len(tokens) < 3:
                 continue
-            if len(tokens) == 3:
-                node_name,param,ob_name = tokens
-            elif len(tokens) == 4:
-                node_name,param,nodetree_name,ob_name = tokens
+            node_name,param,ob_name = tokens
 
             node, ob = scene_utils.find_node_by_name(node_name, ob_name)   
             if getattr(node, param) != item.name:
@@ -390,11 +387,8 @@ class PRMAN_OT_Renderman_txmanager_apply_preset(Operator):
         tokens = item.nodeID.split('|')
         if len(tokens) < 3:
             return {'FINISHED'}
-        if len(tokens) == 3:
-            node_name,param,ob_name = tokens
-        elif len(tokens) == 4:
-            node_name,param,nodetree_name,ob_name = tokens            
-        
+
+        node_name,param,ob_name = tokens                              
         prop_colorspace_name = '%s_colorspace' % param
 
         try:

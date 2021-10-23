@@ -1094,20 +1094,18 @@ class RmanSceneSync(object):
         tokens = nodeID.split('|')
         if len(tokens) < 3:
             return
-        if len(tokens) == 3:
-            node_name,param,ob_name = tokens
-        elif len(tokens) == 4:
-            node_name,param,nodetree_name,ob_name = tokens
-
+            
+        node_name,param,ob_name = tokens
         node, ob = scene_utils.find_node_by_name(node_name, ob_name)
         if ob == None:
             return
 
         ob_type = type(ob)
 
-        if ob_type == bpy.types.Material:
-            self.update_material(ob)
-            return
+        if isinstance(ob, bpy.types.Material):
+            ob.node_tree.update_tag()
+        elif isinstance(ob, bpy.types.NodeTree):
+            ob.update_tag()
         elif ob_type == bpy.types.World:
             ob.update_tag()   
         else:
