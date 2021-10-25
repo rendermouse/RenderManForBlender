@@ -685,13 +685,16 @@ class PRMAN_OT_Fix_Ramp(bpy.types.Operator):
     def execute(self, context):
         node = context.node
 
-        node_group = bpy.data.node_groups.new(
-            node.rman_fake_node_group, 'ShaderNodeTree') 
-        node_group.use_fake_user = True                 
+        node_group = bpy.data.node_groups.get(node.rman_fake_node_group, None)
+        if not node_group:
+            node_group = bpy.data.node_groups.new(
+                node.rman_fake_node_group, 'ShaderNodeTree') 
+            node_group.use_fake_user = True                 
 
+        node.rman_fake_node_group_ptr = node_group
         color_rman_ramps = node.__annotations__.get('__COLOR_RAMPS__', [])
         float_rman_ramps = node.__annotations__.get('__FLOAT_RAMPS__', [])
-
+        
         for prop_name in color_rman_ramps:             
             n = node_group.nodes.new('ShaderNodeValToRGB')
             bl_ramp_prop = getattr(node, '%s_bl_ramp' % prop_name)

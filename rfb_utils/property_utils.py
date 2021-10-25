@@ -496,7 +496,7 @@ def set_pxrosl_params(node, rman_sg_node, params, ob=None, mat_name=None):
 
 def set_ramp_rixparams(node, prop_name, prop, param_type, params):
     if param_type == 'colorramp':
-        nt = bpy.data.node_groups.get(node.rman_fake_node_group, None)
+        nt = node.rman_fake_node_group_ptr
         ramp_name =  prop
         if nt:
             color_ramp_node = nt.nodes[ramp_name]                            
@@ -546,7 +546,7 @@ def set_ramp_rixparams(node, prop_name, prop, param_type, params):
             params.SetString("%s_Interpolation" % prop_name, interp )                                 
 
     elif param_type == 'floatramp':
-        nt = bpy.data.node_groups.get(node.rman_fake_node_group, None)
+        nt = node.rman_fake_node_group_ptr
         ramp_name =  prop
         if nt:
             float_ramp_node = nt.nodes[ramp_name]                            

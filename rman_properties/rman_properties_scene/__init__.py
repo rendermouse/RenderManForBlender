@@ -161,6 +161,8 @@ class RendermanSceneSettings(RmanBasePropertyGroup, bpy.types.PropertyGroup):
     roz_stats_progress: IntProperty(name='Progress', subtype='PERCENTAGE', min=0, max=100, get=get_roz_stats_progress)
     roz_stats_iterations: IntProperty(name='Iterations', subtype='PERCENTAGE', min=0, max=100, get=get_roz_stats_iterations)
 
+    renderman_version: StringProperty(name="RenderMan Version", default='')
+
 classes = [         
     RendermanSceneSettings
 ]           

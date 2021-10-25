@@ -563,6 +563,7 @@ def reload_bl_ramps(bl_scene, check_library=True):
                 node.rman_fake_node_group, 'ShaderNodeTree') 
             node_group.use_fake_user = True
 
+        node.rman_fake_node_group_ptr = node_group
         for prop_name in color_rman_ramps:  
             prop = getattr(node, prop_name)       
             ramp_name =  prop               

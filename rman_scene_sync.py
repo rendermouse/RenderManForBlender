@@ -694,7 +694,19 @@ class RmanSceneSync(object):
                 # Save this particle settings node, so we can check for it later 
                 # when we process object changes
                 particle_settings_node = obj.id.original
-                                         
+
+            elif isinstance(obj.id, bpy.types.ShaderNodeTree):
+                if obj.id.name in bpy.data.node_groups:
+                    # this is probably one of our fake node groups with ramps
+                    # update all of the users of this node tree
+                    rfb_log().debug("ShaderNodeTree updated: %s" % obj.id.name)
+                    users = context.blend_data.user_map(subset={obj.id.original})
+                    for o in users[obj.id.original]:
+                        if hasattr(o, 'rman_nodetree'):
+                            o.rman_nodetree.update_tag()
+                        elif hasattr(o, 'node_tree'):
+                            o.node_tree.update_tag()                
+                                            
             elif isinstance(obj.id, bpy.types.Object):
                 particle_systems = getattr(obj.id, 'particle_systems', list())
                 has_particle_systems = len(particle_systems) > 0
@@ -1094,7 +1106,7 @@ class RmanSceneSync(object):
         tokens = nodeID.split('|')
         if len(tokens) < 3:
             return
-            
+
         node_name,param,ob_name = tokens
         node, ob = scene_utils.find_node_by_name(node_name, ob_name)
         if ob == None:

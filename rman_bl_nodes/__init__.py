@@ -360,7 +360,8 @@ def generate_node_type(node_desc, is_oso=False):
         if color_rman_ramps or float_rman_ramps:
             node_group = bpy.data.node_groups.new(
                 '.__RMAN_FAKE_NODEGROUP__', 'ShaderNodeTree') 
-            node_group.use_fake_user = True                 
+            node_group.use_fake_user = True             
+            self.rman_fake_node_group_ptr = node_group    
             self.rman_fake_node_group = node_group.name    
 
             for ramp_name in color_rman_ramps:
@@ -431,7 +432,9 @@ def generate_node_type(node_desc, is_oso=False):
 
 
     def free(self):
-        if self.rman_fake_node_group in bpy.data.node_groups:
+        if self.rman_fake_node_group_ptr:
+            bpy.data.node_groups.remove(self.rman_fake_node_group_ptr)
+        elif self.rman_fake_node_group in bpy.data.node_groups:
             bpy.data.node_groups.remove(bpy.data.node_groups[self.rman_fake_node_group])
 
     ntype.init = init
@@ -442,6 +445,7 @@ def generate_node_type(node_desc, is_oso=False):
 
     # the name of our fake node group to hold all of our ramp nodes
     ntype.__annotations__['rman_fake_node_group'] = StringProperty('__rman_ramps__', default='')
+    ntype.__annotations__['rman_fake_node_group_ptr']  = PointerProperty(type=bpy.types.NodeTree)
 
     ntype.__annotations__['plugin_name'] = StringProperty(name='Plugin Name',
                                        default=name, options={'HIDDEN'})

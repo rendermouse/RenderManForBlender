@@ -321,7 +321,7 @@ def draw_prop(node, prop_name, layout, level=0, nt=None, context=None, sticky=Fa
         return        
 
     elif bl_prop_info.widget == 'colorramp':
-        node_group = bpy.data.node_groups.get(node.rman_fake_node_group, None)
+        node_group = node.rman_fake_node_group_ptr 
         if not node_group:
             row = layout.row(align=True)
             row.context_pointer_set("node", node)
@@ -336,7 +336,7 @@ def draw_prop(node, prop_name, layout, level=0, nt=None, context=None, sticky=Fa
                 ramp_node, 'color_ramp')  
         return       
     elif bl_prop_info.widget == 'floatramp':
-        node_group = bpy.data.node_groups.get(node.rman_fake_node_group, None)
+        node_group = node.rman_fake_node_group_ptr 
         if not node_group:
             row = layout.row(align=True)
             row.context_pointer_set("node", node)
