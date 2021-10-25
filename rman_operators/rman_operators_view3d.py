@@ -8,7 +8,7 @@ from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import object_utils
 from ..rfb_utils import string_utils
 from .. import rfb_icons
-from ..rman_constants import RFB_ADDON_PATH, RMAN_BL_NODE_DESCRIPTIONS
+from ..rman_constants import RFB_ADDON_PATH, RMAN_BL_NODE_DESCRIPTIONS, RFB_ADDON_VERSION_STRING
 from ..rfb_utils.operator_utils import get_bxdf_items, get_light_items, get_lightfilter_items, get_description
 from bpy.props import EnumProperty, StringProperty, BoolProperty
 from bpy_extras.io_utils import ImportHelper
@@ -561,6 +561,8 @@ class PRMAN_OT_Renderman_Open_About_Renderman(bpy.types.Operator):
         box.label(text='Linked: %s %s' % (envconfig().build_info.date(),
                                        envconfig().build_info.id()))
         box.label(text='Build: %s' % envconfig().build_info.name())
+        box.label(text='Blender Addon Version: %s' % RFB_ADDON_VERSION_STRING)
+        box.label(text='Scene Version: %s' % context.scene.renderman.renderman_version)
         
         timedata = time.localtime()
         thisyear = time.strftime("%Y", timedata)
