@@ -12,7 +12,6 @@ def rman_load_post(bl_scene):
     rman_ui_light_handlers.clear_gl_tex_cache(bl_scene)
     texture_utils.txmanager_load_cb(bl_scene)
     upgrade_utils.upgrade_scene(bl_scene)
-    #shadergraph_utils.reload_bl_ramps(bl_scene)
 
 @persistent
 def rman_save_pre(bl_scene):
