@@ -1262,8 +1262,9 @@ class RmanRender(object):
         if not self.rman_is_viewport_rendering:
             return
 
-        width = self.viewport_res_x
-        height = self.viewport_res_y
+        res_mult = self.rman_scene.viewport_render_res_mult
+        width = int(self.viewport_res_x * res_mult)
+        height = int(self.viewport_res_y * res_mult)
 
         pixels = self._get_buffer(width, height)
         if not pixels:
