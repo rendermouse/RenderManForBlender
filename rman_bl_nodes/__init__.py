@@ -492,6 +492,7 @@ def generate_node_type(node_desc, is_oso=False):
         if "__annotations__" not in osl_node_type.__dict__:
                 setattr(osl_node_type, "__annotations__", {})            
         osl_node_type.__annotations__['rman_fake_node_group'] = StringProperty('__rman_ramps__', default='')
+        osl_node_type.__annotations__['rman_fake_node_group_ptr']  = PointerProperty(type=bpy.types.NodeTree)
 
         osl_node_type.__annotations__['plugin_name'] = StringProperty(name='Plugin Name',
                                         default=name, options={'HIDDEN'})
