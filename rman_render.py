@@ -152,7 +152,7 @@ def draw_threading_func(db):
                 # calling tag_redraw has failed. This might mean
                 # that there are no more view_3d areas that are shading. Try to
                 # stop IPR.
-                #rfb_log().debug("Error calling tag_redraw (%s). Aborting..." % str(e))
+                rfb_log().debug("Error calling tag_redraw (%s). Aborting..." % str(e))
                 db.del_bl_engine()
                 return
         else:
@@ -1024,9 +1024,7 @@ class RmanRender(object):
         global __DRAW_THREAD__
         global __RMAN_STATS_THREAD__
 
-        is_main_thread = (threading.current_thread() == threading.main_thread())
-        if is_main_thread:
-            rfb_log().debug("Trying to acquire stop_render_mtx")
+        rfb_log().debug("Trying to acquire stop_render_mtx")
         if not self.stop_render_mtx.acquire(timeout=5.0):
             return
         
@@ -1040,8 +1038,7 @@ class RmanRender(object):
 
         # Remove callbacks
         ec = rman.EventCallbacks.Get()
-        if is_main_thread:
-            rfb_log().debug("Unregister any callbacks")
+        rfb_log().debug("Unregister any callbacks")
         for k,v in self.rman_callbacks.items():
             ec.UnregisterCallback(k, v, self)
         self.rman_callbacks.clear()          
@@ -1059,12 +1056,10 @@ class RmanRender(object):
             __RMAN_STATS_THREAD__.join()
             __RMAN_STATS_THREAD__ = None
 
-        if is_main_thread:
-            rfb_log().debug("Telling SceneGraph to stop.")    
+        rfb_log().debug("Telling SceneGraph to stop.")    
         if self.sg_scene:    
             self.sg_scene.Stop()
-            if is_main_thread:
-                rfb_log().debug("Delete Scenegraph scene")
+            rfb_log().debug("Delete Scenegraph scene")
             self.sgmngr.DeleteScene(self.sg_scene)
 
         self.sg_scene = None
@@ -1074,8 +1069,7 @@ class RmanRender(object):
         self._draw_viewport_buckets = False                
         __update_areas__()
         self.stop_render_mtx.release()
-        if is_main_thread:
-            rfb_log().debug("RenderMan has Stopped.")
+        rfb_log().debug("RenderMan has Stopped.")
 
     def get_blender_dspy_plugin(self):
         global __BLENDER_DSPY_PLUGIN__
