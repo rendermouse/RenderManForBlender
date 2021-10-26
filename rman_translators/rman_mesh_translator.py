@@ -21,9 +21,9 @@ def _get_mats_faces_(nverts, material_ids):
     return mats
 
 def _is_multi_material_(ob, mesh):
-    if type(mesh) != bpy.types.Mesh or len(ob.data.materials) < 2 \
-            or len(mesh.polygons) == 0:
+    if len(ob.data.materials) < 2 or len(mesh.polygons) == 0:
         return False
+
     first_mat = mesh.polygons[0].material_index
     for p in mesh.polygons:
         if p.material_index != first_mat:
@@ -105,9 +105,10 @@ def _get_mesh_vgroup_(ob, mesh, name=""):
 
     return weights
 
-def _get_material_ids(ob, geo):
-        
-    material_ids = string_utils.convert_val([p.material_index for p in geo.polygons])
+def _get_material_ids(ob, geo):        
+    fast_material_ids = np.zeros(len(geo.polygons), dtype=np.int)
+    geo.polygons.foreach_get("material_index", fast_material_ids)
+    material_ids = fast_material_ids.tolist()
     return material_ids
 
 def _export_reference_pose(ob, rm, rixparams, vertex_detail):
@@ -160,6 +161,33 @@ def _export_reference_pose(ob, rm, rixparams, vertex_detail):
         rixparams.SetNormalDetail('__WNref', rman__WNref, 'vertex')
     '''
 
+def export_tangents(ob, geo, rixparams, uvmap="", name=""):
+    # also export the tangent and bitangent vectors
+    try:
+        if uvmap == "":
+            geo.calc_tangents(uvmap=geo.uv_layers.active.name)         
+        else:
+            geo.calc_tangents(uvmap=uvmap)
+        loops = len(geo.loops)
+        fasttangent = np.zeros(loops*3, dtype=np.float32)
+        geo.loops.foreach_get('tangent', fasttangent)
+        fasttangent = np.reshape(fasttangent, (loops, 3))
+        tangents = fasttangent.tolist()    
+
+        fastbitangent = np.zeros(loops*3, dtype=np.float32)
+        geo.loops.foreach_get('bitangent', fastbitangent)
+        bitangent = fastbitangent.tolist()      
+        geo.free_tangents()    
+
+        if name == "":
+            rixparams.SetVectorDetail('Tn', tangents, 'facevarying')
+            rixparams.SetVectorDetail('Bn', bitangent, 'facevarying')    
+        else:
+            rixparams.SetVectorDetail('%s_Tn' % name, tangents, 'facevarying')
+            rixparams.SetVectorDetail('%s_Bn' % name, bitangent, 'facevarying')                
+    except RuntimeError as err:
+        rfb_log().debug("Can't export tangent vectors: %s" % str(err))       
+
 def _get_primvars_(ob, rman_sg_mesh, geo, rixparams):
     #rm = ob.data.renderman
     # Stange problem here : ob seems to not be in sync with the scene
@@ -174,25 +202,7 @@ def _get_primvars_(ob, rman_sg_mesh, geo, rixparams):
         if uvs and len(uvs) > 0:
             detail = "facevarying" if facevarying_detail == len(uvs) else "vertex"
             rixparams.SetFloatArrayDetail("st", uvs, 2, detail)
-
-            # also export the tangent and bitangent vectors
-            try:
-                geo.calc_tangents(uvmap=geo.uv_layers.active.name)         
-                loops = len(geo.loops)
-                fasttangent = np.zeros(loops*3, dtype=np.float32)
-                geo.loops.foreach_get('tangent', fasttangent)
-                fasttangent = np.reshape(fasttangent, (loops, 3))
-                tangents = fasttangent.tolist()    
-
-                fastbitangent = np.zeros(loops*3, dtype=np.float32)
-                geo.loops.foreach_get('bitangent', fastbitangent)
-                bitangent = fastbitangent.tolist()      
-                geo.free_tangents()    
-
-                rixparams.SetVectorDetail('Tn', tangents, 'facevarying')
-                rixparams.SetVectorDetail('Bn', bitangent, 'facevarying')    
-            except RuntimeError as err:
-                rfb_log().debug("Can't export tangent vectors: %s" % str(err))          
+            export_tangents(ob, geo, rixparams)    
 
     if rm.export_default_vcol:
         vcols = _get_mesh_vcol_(geo)
@@ -218,6 +228,8 @@ def _get_primvars_(ob, rman_sg_mesh, geo, rixparams):
             if uvs and len(uvs) > 0:
                 detail = "facevarying" if facevarying_detail == len(uvs) else "vertex"
                 rixparams.SetFloatArrayDetail(p.name, uvs, 2, detail)
+                if p.export_tangents:
+                    export_tangents(ob, geo, rixparams, uvmap=p.data_name, name=p.name) 
 
         elif p.data_source == 'VERTEX_GROUP':
             weights = _get_mesh_vgroup_(ob, geo, p.data_name)
@@ -410,7 +422,6 @@ class RmanMeshTranslator(RmanTranslator):
                 mat = ob.data.materials[mat_id]
                 if not mat:
                     continue
-                mat_handle = object_utils.get_db_name(mat) 
                 sg_material = self.rman_scene.rman_materials.get(mat.original, None)
 
                 if mat_id == 0:
