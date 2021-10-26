@@ -318,8 +318,8 @@ def parse_scene_for_textures(bl_scene=None):
                 node = o.data.renderman.get_light_node()
                 if node:
                     update_texture(node, ob=o)
-            elif o.type == 'VOLUME':
-                add_openvdb(o)
+            #elif o.type == 'VOLUME':
+            #    add_openvdb(o)
    
     for world in bpy.data.worlds:
         if not world.use_nodes:
