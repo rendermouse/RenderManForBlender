@@ -1138,7 +1138,9 @@ class RmanSceneSync(object):
         if rman_sg_camera.projection_shader.name.CStr() != 'PxrCamera':
             return
 
-        with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):              
+        with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):     
+            res_x = int(self.rman_scene.viewport_render_res_mult * x)
+            res_y = int(self.rman_scene.viewport_render_res_mult * y)
             projparams = rman_sg_camera.projection_shader.params         
-            projparams.SetVector("enhance", [x, y, zoom])
+            projparams.SetVector("enhance", [res_x, res_y, zoom])
             rman_sg_camera.sg_camera_node.SetProjection(rman_sg_camera.projection_shader)
