@@ -1,5 +1,6 @@
+from ..rfb_logger import rfb_log
 from bpy.types import Operator
-from bpy.props import StringProperty, IntProperty, CollectionProperty, EnumProperty, BoolProperty
+from bpy.props import StringProperty, EnumProperty
 import bpy
 
 class PRMAN_OT_Renderman_printer(Operator):

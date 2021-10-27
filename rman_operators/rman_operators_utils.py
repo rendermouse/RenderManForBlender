@@ -18,15 +18,15 @@ class PRMAN_OT_Renderman_Package(Operator):
     bl_description = "Package your scene including textures into a zip file."
     bl_options = {'INTERNAL'}
 
-    directory: bpy.props.StringProperty(subtype='FILE_PATH')
-    filepath: bpy.props.StringProperty(
+    directory: StringProperty(subtype='FILE_PATH')
+    filepath: StringProperty(
         subtype="FILE_PATH")
 
-    filename: bpy.props.StringProperty(
+    filename: StringProperty(
         subtype="FILE_NAME",
         default="")
 
-    filter_glob: bpy.props.StringProperty(
+    filter_glob: StringProperty(
         default="*.zip",
         options={'HIDDEN'},
         )           

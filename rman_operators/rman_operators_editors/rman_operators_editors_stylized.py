@@ -1,4 +1,4 @@
-from bpy.props import (StringProperty, BoolProperty, EnumProperty, IntProperty)
+from bpy.props import (StringProperty, BoolProperty, EnumProperty)
 
 from ...rfb_utils.draw_utils import draw_node_properties_recursive
 from ...rfb_utils import shadergraph_utils

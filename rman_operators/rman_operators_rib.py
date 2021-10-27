@@ -60,7 +60,6 @@ class PRMAN_OT_Open_Selected_RIB(bpy.types.Operator):
                 rman_render = RmanRender.get_rman_render()
                 rman_render.start_export_rib_selected(context, rib_output, export_materials=True, export_all_frames=False)
                 filepath_utils.view_file(rib_output)
-                rfb_log().error("Nothing selected for RIB export.")
             else:
                 self.report({"ERROR"}, "Viewport rendering is on.")
 

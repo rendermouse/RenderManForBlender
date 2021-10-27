@@ -1,5 +1,6 @@
 from ..rfb_utils import filepath_utils
 from ..rman_render import RmanRender
+from ..rfb_logger import rfb_log
 import bpy
 import os
 import time

@@ -1,4 +1,4 @@
-from bpy.props import (StringProperty, BoolProperty, EnumProperty, IntProperty)
+from bpy.props import (StringProperty, BoolProperty, EnumProperty)
 
 from ...rman_ui.rman_ui_base import CollectionPanel   
 from ...rfb_logger import rfb_log
