@@ -3,6 +3,7 @@ from .. import rman_bl_nodes
 import bpy
 import json
 import pprint
+import os
 
 def GetConfigurablePanels():
     '''Return the names of RenderForBlender panels that are configurable.
@@ -85,12 +86,15 @@ def GetPanelPropertyAsJson(panel, prop):
                 break
     return json_str
 
-def GetSkeletonLocaleJson():
+def GetSkeletonLocaleJson(jsonfile=None):
     '''Get a skeleton JSON locale file
 
     Example:
         import RenderManForBlender.rfb_api as rfb_api
         rfb_api.GetSkeletonLocaleJson()
+
+    Args:
+        jsonfile (str): path to a file to also write the JSON to
 
     '''
 
@@ -125,5 +129,10 @@ def GetSkeletonLocaleJson():
 
     jdata['translations'] = translations
     json_str = json.dumps(jdata, indent=2)
+
+    if jsonfile:
+        with open(jsonfile, 'w') as f:
+            json.dump(jdata, f, indent=2)
+
     return json_str    
                                
