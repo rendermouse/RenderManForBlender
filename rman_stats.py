@@ -18,12 +18,18 @@ __RFB_STATS_MANAGER__ = None
 
 __LIVE_METRICS__ = [
     ["/system.processMemory", "Memory"],
-    ["/rman/raytracing.numRays", "Rays/Sec"],
     ["/rman/renderer@progress", None],
     ['/rman@iterationComplete', None],
     ["/rman.timeToFirstRaytrace", "First Ray"],
     ["/rman.timeToFirstPixel", "First Pixel"],
     ["/rman.timeToFirstIteration", "First Iteration"],    
+    ["/rman/raytracing.numRays", "Rays/Sec"],    
+    [None, "Total Rays"],
+    ['/rman/raytracing/camera.numRays', "Camera Rays"],
+    ['/rman/raytracing/transmission.numRays', "Transmission Rays"],
+    ['/rman/raytracing/light.numRays', "Light Rays"],
+    ['/rman/raytracing/indirect.numRays', "Indirect Rays"],
+    ['/rman/raytracing/photon.numRays', "Photon Rays"]
 ]
 
 class RfBBaseMetric(object):
@@ -49,9 +55,10 @@ class RfBStatsManager(object):
         self._prevTotalRaysValid = True
 
         for name,label in __LIVE_METRICS__:
+            if name:
+                self.render_stats_names[name] = label
             if label:
-                self.render_live_stats[label] = '--'
-            self.render_stats_names[name] = label
+                self.render_live_stats[label] = '--'                
 
         self.export_stat_label = ''
         self.export_stat_progress = 0.0
@@ -161,7 +168,8 @@ class RfBStatsManager(object):
             if self.mgr.clientConnected():
                 for name,label in __LIVE_METRICS__:
                     # Declare interest
-                    self.mgr.enableMetric(name)
+                    if name:
+                        self.mgr.enableMetric(name)
                 return       
         
     def attach(self):
@@ -263,6 +271,7 @@ class RfBStatsManager(object):
                         else:
                             self.render_live_stats[label] = '{:.3f}'.format(raysPerSecond)
                         
+                    self.render_live_stats["Total Rays"] = currentTotalRays
                     self._prevTotalRaysValid = True
                     self._prevTotalRays = currentTotalRays    
                 elif name == "/rman@iterationComplete":
@@ -275,7 +284,15 @@ class RfBStatsManager(object):
                 elif name in ["/rman.timeToFirstRaytrace",
                               "/rman.timeToFirstPixel", 
                               "/rman.timeToFirstIteration"]:
-                    self.render_live_stats[label] = '%s secs' % str(dat['payload'])       
+                    self.render_live_stats[label] = '%s secs' % str(dat['payload'])   
+                elif name in ['/rman/raytracing/camera.numRays',
+                            '/rman/raytracing/transmission.numRays', 
+                            '/rman/raytracing/photon.numRays',
+                            '/rman/raytracing/light.numRays', 
+                            '/rman/raytracing/indirect.numRays']:    
+                    rays = int(dat['payload'])
+                    pct = int((rays / self._prevTotalRays) * 100)
+                    self.render_live_stats[label] = '%d (%d%%)' % (rays, pct)            
                 else:    
                     self.render_live_stats[label] = str(dat['payload'])
 
@@ -312,6 +329,7 @@ class RfBStatsManager(object):
         _stats_to_draw = [
             "Memory",
             "Rays/Sec",
+            "Total Rays"
         ]
 
         if self.rman_render.rman_interactive_running:
