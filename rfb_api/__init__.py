@@ -84,4 +84,46 @@ def GetPanelPropertyAsJson(panel, prop):
                 json_str = json.dumps(ndp.as_dict())
                 break
     return json_str
+
+def GetSkeletonLocaleJson():
+    '''Get a skeleton JSON locale file
+
+    Example:
+        import RenderManForBlender.rfb_api as rfb_api
+        rfb_api.GetSkeletonLocaleJson()
+
+    '''
+
+    from ..rman_bl_nodes import __RMAN_NODES__
+
+    json_str = ''
+    jdata = dict()
+    jdata['locale'] = '[name of your locale]'
+    translations = dict()
+    for config_name,cfg in rman_config.__RMAN_CONFIG__.items():
+        for param_name, ndp in cfg.params.items():
+            label = ndp.name
+            label = getattr(ndp, 'label', label)
+            translations[label] = {"context": "*", "translation": ""} 
+            help = getattr(ndp, 'help', None)
+            if help:
+                translations[help] = {"context": "*", "translation": ""} 
+
+    for nm, nodes in __RMAN_NODES__.items():
+        for node_desc in nodes:
+            description = getattr(node_desc, 'help', None)
+            if description:
+                translations[help] = {"context": "*", "translation": ""} 
+
+            for ndp in node_desc.params:
+                label = ndp.name
+                label = getattr(ndp, 'label', label)
+                translations[label] = {"context": "*", "translation": ""} 
+                help = getattr(ndp, 'help', None)
+                if help:
+                    translations[help] = {"context": "*", "translation": ""}                 
+
+    jdata['translations'] = translations
+    json_str = json.dumps(jdata, indent=2)
+    return json_str    
                                
