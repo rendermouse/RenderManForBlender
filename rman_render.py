@@ -170,12 +170,19 @@ def call_stats_update_payloads(db):
                         panel_region = region
                         break   
 
+    wait_before_redraw = 0.0
     while db.rman_running:
         if not db.bl_engine:
             break
         db.stats_mgr.update_payloads()
-        #panel_region.tag_redraw()
+        if wait_before_redraw >= 1.0:
+            # wait around 1.0 seconds before telling the panel
+            # to redraw. Telling the panel to redraw
+            # any faster seems to cause issues.
+            panel_region.tag_redraw()
+            wait_before_redraw = 0.0
         time.sleep(0.1)
+        wait_before_redraw += 0.1
 
 def progress_cb(e, d, db):
     if not db.stats_mgr.is_connected():
