@@ -385,6 +385,10 @@ class RmanScene(object):
         self.export_integrator()
         self.export_cameras([c for c in self.depsgraph.objects if isinstance(c.data, bpy.types.Camera)])
 
+        # export default light
+        self.export_defaultlight()
+        self.main_camera.sg_node.AddChild(self.default_light)        
+
         self.export_bake_displays()
         self.export_samplefilters()
         self.export_displayfilters()
@@ -431,6 +435,10 @@ class RmanScene(object):
         self.export_hider()
         self.export_integrator()
         self.export_cameras([c for c in self.depsgraph.objects if isinstance(c.data, bpy.types.Camera)])
+
+        # export default light
+        self.export_defaultlight()
+        self.main_camera.sg_node.AddChild(self.default_light)
 
         ob = self.context.active_object
         self.export_materials([m for m in self.depsgraph.ids if isinstance(m, bpy.types.Material)])
