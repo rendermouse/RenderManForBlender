@@ -291,7 +291,9 @@ class RfBStatsManager(object):
                             '/rman/raytracing/light.numRays', 
                             '/rman/raytracing/indirect.numRays']:    
                     rays = int(dat['payload'])
-                    pct = int((rays / self._prevTotalRays) * 100)
+                    pct = 0
+                    if self._prevTotalRays > 0:
+                        pct = int((rays / self._prevTotalRays) * 100)
                     self.render_live_stats[label] = '%d (%d%%)' % (rays, pct)            
                 else:    
                     self.render_live_stats[label] = str(dat['payload'])
