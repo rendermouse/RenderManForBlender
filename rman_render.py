@@ -160,29 +160,12 @@ def draw_threading_func(db):
             time.sleep(1.0)
 
 def call_stats_update_payloads(db):
-    panel_region = None
-    # find the region where the live stats panel is in
-    for window in bpy.context.window_manager.windows:
-        for area in window.screen.areas:
-            if area.type == 'VIEW_3D':
-                for region in area.regions:
-                    if region.type == 'UI':
-                        panel_region = region
-                        break   
 
-    wait_before_redraw = 0.0
     while db.rman_running:
         if not db.bl_engine:
             break
         db.stats_mgr.update_payloads()
-        if wait_before_redraw >= 2.0:
-            # wait around 2.0 seconds before telling the panel
-            # to redraw. Telling the panel to redraw
-            # too quickly seems to cause issues.
-            panel_region.tag_redraw()
-            wait_before_redraw = 0.0
         time.sleep(0.1)
-        wait_before_redraw += 0.1
 
 def progress_cb(e, d, db):
     if not db.stats_mgr.is_connected():
@@ -1075,7 +1058,7 @@ class RmanRender(object):
             self.sgmngr.DeleteScene(self.sg_scene)
 
         self.sg_scene = None
-        self.stats_mgr.reset()
+        #self.stats_mgr.reset()
         self.rman_scene.reset()
         self.viewport_buckets.clear()
         self._draw_viewport_buckets = False                

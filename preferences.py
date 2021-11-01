@@ -437,7 +437,20 @@ class RendermanPreferences(AddonPreferences):
     rman_roz_webSocketServer_Port: IntProperty(name="Port", default=0, 
                                         min=0,
                                         description="Port number of the live stats server to use. Setting to 0 will randomly select an open port.",
-                                        update=update_stats_config)                                        
+                                        update=update_stats_config)      
+
+    rman_roz_stats_print_level: EnumProperty(
+                    name="Stats Print Level",
+                    default = 1,
+                    items=[('0', 'None', ''),
+                            ('1', 'Basic', ''),
+                            ('2', 'Moderate', ''),
+                            ('3', 'Most', ''),
+                            ('4', 'All', ''),
+                        ],
+                    description="How much live stats to print",
+                    update=update_stats_config
+    )                                                                          
 
     def draw_xpu_devices(self, context, layout):
         if self.rman_xpu_device == 'CPU':

@@ -1,6 +1,7 @@
 from .. import rfb_icons
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import draw_utils
+from ..rfb_utils import prefs_utils
 from .rman_ui_base import _RManPanelHeader
 from ..rman_render import RmanRender
 import bpy
@@ -278,12 +279,16 @@ class RENDER_PT_renderman_live_stats(bpy.types.Panel, _RManPanelHeader):
         box = layout.box()
         if rr.stats_mgr.web_socket_enabled:
             if rr.stats_mgr.is_connected():
-                for label, data in rr.stats_mgr.render_live_stats.items():
-                    if label:
-                        box.label(text='%s: %s' % (label, data))
+                for label in rr.stats_mgr.stats_to_draw:
+                    data = rr.stats_mgr.render_live_stats[label]        
+                    box.label(text='%s: %s' % (label, data))        
                 if rr.rman_running:   
                     box.prop(rm, 'roz_stats_iterations', slider=True, text='Iterations (%d / %d)' % (rr.stats_mgr._iterations, rr.stats_mgr._maxSamples))
                     box.prop(rm, 'roz_stats_progress', slider=True)
+            
+                prefs = prefs_utils.get_addon_prefs()
+                layout.prop(prefs, 'rman_roz_stats_print_level')
+                layout.operator("renderman.disconnect_stats_render")
             else:
                 box.label(text='(not connected)')
                 layout.operator('renderman.attach_stats_render')

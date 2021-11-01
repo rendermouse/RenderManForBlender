@@ -25,6 +25,9 @@ __LIVE_METRICS__ = [
     ["/rman.timeToFirstIteration", "First Iteration"],    
     ["/rman/raytracing.numRays", "Rays/Sec"],    
     [None, "Total Rays"],
+    ['/rman/texturing/sampling:time.total', 'Texturing Time'],
+    ['/rman/shading/hit/bxdf:time.total', 'Shading Time'],
+    ['/rman/raytracing/intersection/allhits:time.total', 'Raytracing Time'],
     ['/rman/raytracing/camera.numRays', "Camera Rays"],
     ['/rman/raytracing/transmission.numRays', "Transmission Rays"],
     ['/rman/raytracing/light.numRays', "Light Rays"],
@@ -32,14 +35,67 @@ __LIVE_METRICS__ = [
     ['/rman/raytracing/photon.numRays', "Photon Rays"]
 ]
 
+__TIMER_STATS__ = [
+    '/rman/shading/hit/bxdf:time.total',
+    "/rman.timeToFirstRaytrace",
+    "/rman.timeToFirstPixel", 
+    "/rman.timeToFirstIteration",
+    '/rman/texturing/sampling:time.total',
+    '/rman/shading/hit/bxdf:time.total',    
+    '/rman/raytracing/intersection/allhits:time.total',
+]
+
+__BASIC_STATS__ = [
+    "Memory",
+    "Rays/Sec",
+    "Total Rays"
+]
+
+__MODERATE_STATS__ = [
+    "Memory",
+    "Rays/Sec",
+    "Total Rays",
+    "Shading Time",
+    "Texturing Time",
+    "Raytracing Time",
+    "Camera Rays",    
+]
+
+__MOST_STATS__ = [
+    "Memory",
+    "Rays/Sec",
+    "Total Rays",
+    "Shading Time",
+    "Texturing Time",
+    "Raytracing Time",
+    "Camera Rays",
+    "Transmission Rays",
+    "Light Rays",
+    "Indirect Rays",
+    "Photon Rays"    
+]
+
+__ALL_STATS__ = [
+    "Memory",
+    "First Ray",
+    "First Iteration",
+    "First Iteration",
+    "Rays/Sec",
+    "Total Rays",
+    "Shading Time",
+    "Texturing Time",
+    "Raytracing Time", 
+    "Camera Rays",
+    "Transmission Rays",
+    "Light Rays",
+    "Indirect Rays",
+    "Photon Rays"        
+]   
 class RfBBaseMetric(object):
 
     def __init__(self, key, label):
         self.key = key
         self.label = label
-
-
-
 class RfBStatsManager(object):
 
     def __init__(self, rman_render):
@@ -70,7 +126,8 @@ class RfBStatsManager(object):
         self._res_mult = 0.0
         self.web_socket_enabled = False
         self.boot_strap_thread = None
-        self.boot_strap_thread_kill = False        
+        self.boot_strap_thread_kill = False   
+        self.stats_to_draw = list()     
 
         # roz objects
         self.rman_stats_session_name = "RfB Stats Session"
@@ -149,6 +206,19 @@ class RfBStatsManager(object):
         # update stats manager config for connecting client to server
         self.mgr.config["webSocketPort"] = self.web_socket_port
         self.mgr.serverId = self.web_socket_server_id
+
+        # update what stats to draw
+        print_level = int(prefs_utils.get_pref('rman_roz_stats_print_level'))
+        if print_level == 1:
+            self.stats_to_draw = __BASIC_STATS__
+        elif print_level == 2:
+            self.stats_to_draw = __MODERATE_STATS__
+        elif print_level == 3:
+            self.stats_to_draw = __MOST_STATS__            
+        elif print_level == 4:
+            self.stats_to_draw = __ALL_STATS__
+        else:
+            self.stats_to_draw = list()        
 
         if self.web_socket_enabled:
             #self.attach()
@@ -281,10 +351,13 @@ class RfBStatsManager(object):
                 elif name == "/rman/renderer@progress":
                     progressVal = int(float(dat['payload']))
                     self._progress = progressVal                      
-                elif name in ["/rman.timeToFirstRaytrace",
-                              "/rman.timeToFirstPixel", 
-                              "/rman.timeToFirstIteration"]:
-                    self.render_live_stats[label] = '%s secs' % str(dat['payload'])   
+                elif name in __TIMER_STATS__:
+                    fval = float(dat['payload'])
+                    if fval >= 60.0:
+                        txt = '%d min %.04f sec' % divmod(fval, 60.0)
+                    else:
+                        txt = '%.04f sec' % fval                                                
+                    self.render_live_stats[label] = txt
                 elif name in ['/rman/raytracing/camera.numRays',
                             '/rman/raytracing/transmission.numRays', 
                             '/rman/raytracing/photon.numRays',
@@ -327,17 +400,11 @@ class RfBStatsManager(object):
     def draw_render_stats(self):
         if not self.rman_render.rman_running:
             return
-
-        _stats_to_draw = [
-            "Memory",
-            "Rays/Sec",
-            "Total Rays"
-        ]
-
+           
         if self.rman_render.rman_interactive_running:
             message = '\n%s, %d, %d%%' % (self._integrator, self._decidither, self._res_mult)
             if self.is_connected():
-                for label in _stats_to_draw:
+                for label in self.stats_to_draw:
                     data = self.render_live_stats[label]
                     message = message + '\n%s: %s' % (label, data)
                 # iterations
@@ -350,7 +417,7 @@ class RfBStatsManager(object):
         else:
             message = ''
             if self.is_connected():
-                for label in _stats_to_draw:
+                for label in self.__BASIC_STATS__:
                     data = self.render_live_stats[label]
                     message = message + '%s: %s ' % (label, data)       
                 # iterations                    
