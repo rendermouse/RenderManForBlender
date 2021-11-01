@@ -1,6 +1,7 @@
-v24.2 [insert date]
+v24.2 November 2, 2021
 New Features:
-* Add a new Volume Aggregates editor. For more information on volume aggregates, see the documentation.
+* Add a new Volume Aggregates editor. For more information on volume aggregates, see the documentation 
+(https://rmanwiki.pixar.com/display/RFB24/Aggregate+Volumes+in+Blender).
 * For PxrCamera projection, you can now select an object as tilt-shift focus object.
 * Add a new UI for adding user attributes.
 * Add a new preference that inverts the behavior of light linking. When enabled,
@@ -10,7 +11,6 @@ only objects that are linked to a light will be illuminated.
 and assets, so that it can be sent to support.
 * Tangent and bitangents are now exported as primitive variables for meshes.
 * Preset browser now has storage options for where assets such as textures for presets are saved.
-
 
 Changes:
 * Edits to ramps should now work with IPR. Using the "Force Refresh" button should no longer be required.
@@ -35,7 +35,6 @@ were enabled.
 
 Bug Fixes:
 * Fix issue with viewport rendering causing icons in the UI to corrupt.
-* Fix issue when stopping IPR causing Blender to crash.
 * Fix issues with redrawing the stats panel causing flickering
 * Fix a bug that cause importing of assets from the preset browser dropdown menu to fail
 * When converting a Blender point light, take the scale into account
