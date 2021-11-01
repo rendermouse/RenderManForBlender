@@ -175,10 +175,10 @@ def call_stats_update_payloads(db):
         if not db.bl_engine:
             break
         db.stats_mgr.update_payloads()
-        if wait_before_redraw >= 1.0:
-            # wait around 1.0 seconds before telling the panel
+        if wait_before_redraw >= 2.0:
+            # wait around 2.0 seconds before telling the panel
             # to redraw. Telling the panel to redraw
-            # any faster seems to cause issues.
+            # too quickly seems to cause issues.
             panel_region.tag_redraw()
             wait_before_redraw = 0.0
         time.sleep(0.1)
