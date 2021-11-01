@@ -1,3 +1,61 @@
+v24.2 [insert date]
+New Features:
+* Add a new Volume Aggregates editor. For more information on volume aggregates, see the documentation.
+* For PxrCamera projection, you can now select an object as tilt-shift focus object.
+* Add a new UI for adding user attributes.
+* Add a new preference that inverts the behavior of light linking. When enabled,
+only objects that are linked to a light will be illuminated.
+* Added a new preference to control collapsing of nodes when node soloing is turned on.
+* A new PackageScene operator has been added to the side N-panel. This will try to zip your scene
+and assets, so that it can be sent to support.
+* Tangent and bitangents are now exported as primitive variables for meshes.
+* Preset browser now has storage options for where assets such as textures for presets are saved.
+
+
+Changes:
+* Edits to ramps should now work with IPR. Using the "Force Refresh" button should no longer be required.
+* PxrDiffuse will be used as a fallback if we don't have a Bxdf node connected to the
+RenderMan output node.
+* Clipping planes now work in IPR
+* We now respond to render regions during IPR. The Crop Winodw operator will now also draw a render region
+if used.
+* The CropWindow and Enhance/Zoom operators now also responds to the numpad enter key.
+* Solo/Unsolo button is now available in the side N-panel.
+* Connection and preset menus are now available in the side N-panel.
+* Motion blur hair should now be working
+* For particle emitters, we now use velocity as the basis for motion blur.
+* Add a new button to revert to regular Blender view layers, when RenderMan displays
+were enabled.
+* You can now change the default size of RenderMan shading nodes, using a JSON override file.
+* We now have a separate micropolygonlength control for volumes.
+* There's now a separate motion samples control for deformation motion blur.
+* For OpenVDB, there are now new controls: Filter Width, Density Multiplier, Density Rolloff
+* Ray number stats have been added to the stats panel.
+* Add a new clear unused textures button to the texture manager.
+
+Bug Fixes:
+* Fix issue with viewport rendering causing icons in the UI to corrupt.
+* Fix issue when stopping IPR causing Blender to crash.
+* Fix issues with redrawing the stats panel causing flickering
+* Fix a bug that cause importing of assets from the preset browser dropdown menu to fail
+* When converting a Blender point light, take the scale into account
+* Multiple fixes for node groups in shading networks.
+* Fix issue where Depth of Field did not update correctly during IPR.
+* Fix issue with displacement not working with per-face materials.
+* Fix issue where OptiX denoiser was not working when RenderMan displays was used.
+* Multiple fixes for the PxrOSL node.
+* PxrToFloat3 and PxrToFloat nodes will be automatically inserted when connections between
+floats and float3 types are used.
+* Fixed a bug that caused issues when importing presets with ramp nodes in them.
+* Fixed issues with PxrPortalLight's not inheriting intensity and light color correctly
+from the connected dome light.
+* Fixed multiple issues with linking to materials and objects from another Blender file,
+that included ramps
+* Node soloing nodes that are within node groups should now work.
+* Fix issue with viewport snapshot not working correctly when using the resolution multiplier
+* Fix issue with zoom/enhance not working correctly when using the resolution multiplier
+
+
 v24.1 July 30, 2021
 New Features:
 * Added initial support for Liquid Fluids.
