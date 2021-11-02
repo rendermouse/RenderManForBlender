@@ -215,15 +215,13 @@ class PRMAN_OT_Renderman_Start_Debug_Server(bpy.types.Operator):
 class PRMAN_OT_Renderman_Open_Addon_Preferences(bpy.types.Operator):
     bl_idname = "renderman.open_addon_preferences"
     bl_label = "Addon Preferences"
-    bl_description = "Addon prferences"
+    bl_description = "Open the RenderMan for Blender addon prferences"
     bl_options = {'INTERNAL'}
 
 
     @classmethod
     def poll(cls, context):
-        if context.engine != "PRMAN_RENDER":
-            return False
-        return True
+        return context.engine == "PRMAN_RENDER"
 
     def execute(self, context):
         context.preferences.active_section = 'ADDONS'
