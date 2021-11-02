@@ -31,7 +31,8 @@ were enabled.
 * We now have a separate micropolygonlength control for volumes.
 * There's now a separate motion samples control for deformation motion blur.
 * For OpenVDB, there are now new controls: Filter Width, Density Multiplier, Density Rolloff
-* Ray number stats have been added to the stats panel.
+* Ray number stats have been added to the live stats panel.
+* There is now a preference to control the amount of stats that are printed in the live stats panel.
 * Add a new clear unused textures button to the texture manager.
 
 Bug Fixes:
