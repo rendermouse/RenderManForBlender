@@ -23,7 +23,7 @@ class RmanAlembicTranslator(RmanTranslator):
 
     def update(self, ob, rman_sg_alembic):
         rm = ob.renderman
-        abc_filepath = rm.abc_filepath 
+        abc_filepath = string_utils.expand_string(rm.abc_filepath)
         bounds = (-100000, 100000, -100000, 100000, -100000, 100000 )
 
         primvar = rman_sg_alembic.sg_node.GetPrimVars()

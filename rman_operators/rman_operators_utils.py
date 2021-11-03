@@ -3,6 +3,7 @@ from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import string_utils
 from ..rfb_utils import texture_utils
 from ..rfb_utils import filepath_utils
+from ..rfb_utils import object_utils
 from bpy.types import Operator
 from bpy.props import StringProperty, FloatProperty
 import os
@@ -123,6 +124,38 @@ class PRMAN_OT_Renderman_Package(Operator):
             setattr(db, 'filepath', '//./assets/%s' % bfile)   
             z.write(diskpath, arcname=os.path.join('assets', bfile))               
             remove_files.append(diskpath)
+
+        # archives etc.
+        for ob in bpy.data.objects:
+            rman_type = object_utils._detect_primitive_(ob)
+            if rman_type == 'DELAYED_LOAD_ARCHIVE':
+                rm = ob.renderman
+                rib_path = string_utils.expand_string(rm.path_archive)
+                bfile = os.path.basename(rib_path)
+                diskpath = os.path.join(assets_dir, bfile)
+                shutil.copyfile(rib_path, diskpath)  
+                setattr(rm, 'path_archive', os.path.join('<blend_dir>', 'assets', bfile))
+                z.write(diskpath, arcname=os.path.join('assets', bfile))
+                remove_files.append(diskpath)    
+            elif rman_type == 'ALEMBIC':
+                rm = ob.renderman
+                abc_filepath = string_utils.expand_string(rm.abc_filepath)
+                bfile = os.path.basename(abc_filepath)
+                diskpath = os.path.join(assets_dir, bfile)
+                shutil.copyfile(abc_filepath, diskpath)  
+                setattr(rm, 'abc_filepath', os.path.join('<blend_dir>', 'assets', bfile))
+                z.write(diskpath, arcname=os.path.join('assets', bfile))
+                remove_files.append(diskpath)   
+            elif rman_type == 'BRICKMAP':  
+                rm = ob.renderman
+                bkm_filepath = string_utils.expand_string(rm.bkm_filepath)
+                bfile = os.path.basename(bkm_filepath)
+                diskpath = os.path.join(assets_dir, bfile)
+                shutil.copyfile(bkm_filepath, diskpath)  
+                setattr(rm, 'bkm_filepath', os.path.join('<blend_dir>', 'assets', bfile))
+                z.write(diskpath, arcname=os.path.join('assets', bfile))
+                remove_files.append(diskpath)                                
+                                          
                             
         bl_filepath = os.path.dirname(bl_scene_file)
         bl_filename = os.path.basename(bl_scene_file)
