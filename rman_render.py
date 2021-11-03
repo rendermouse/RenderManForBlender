@@ -388,7 +388,12 @@ class RmanRender(object):
         return (self.rman_running and not self.rman_interactive_running)   
 
     def do_draw_buckets(self):
+        if self.stats_mgr.is_connected() and self.stats_mgr._progress > 99:
+            return False
         return get_pref('rman_viewport_draw_bucket', default=True)
+
+    def do_draw_progressbar(self):
+        return get_pref('rman_viewport_draw_progress') and self.stats_mgr.is_connected() and self.stats_mgr._progress < 100        
 
     def start_stats_thread(self): 
         # start a stats thread so we can periodically call update_payloads
@@ -1137,7 +1142,7 @@ class RmanRender(object):
                     batch.draw(shader)   
 
             # draw progress bar at the bottom of the viewport
-            if get_pref('rman_viewport_draw_progress') and self.stats_mgr.is_connected() and self.stats_mgr._progress < 100:
+            if self.do_draw_progressbar():
                 progress = self.stats_mgr._progress / 100.0 
                 progress_color = get_pref('rman_viewport_progress_color', default=RMAN_RENDERMAN_BLUE) 
                 shader = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
