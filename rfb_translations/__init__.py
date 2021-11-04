@@ -52,15 +52,18 @@ def register_locale_translations():
     rfb_log().debug("Loading factory translations:")
     cur_dir = os.path.dirname(os.path.realpath(__file__))
     locales_dir = os.path.join(cur_dir, 'locales')    
-    for f in os.listdir(locales_dir):
-        if not f.endswith('.json'):
-            continue  
-        jsonfile = os.path.join(locales_dir, f)
-        rfb_log().debug("\t%s" % f)
-        load_locale_file(jsonfile)
+    if os.path.exists(locales_dir):
+        for f in os.listdir(locales_dir):
+            if not f.endswith('.json'):
+                continue  
+            jsonfile = os.path.join(locales_dir, f)
+            rfb_log().debug("\t%s" % f)
+            load_locale_file(jsonfile)
 
     # load user translations
     for p in get_user_locales():
+        if not os.path.exists(p):        
+            continue
         rfb_log().debug("Loading user translations from: %s" % p)
         for f in os.listdir(p):
             if not f.endswith('.json'):
