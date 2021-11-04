@@ -124,6 +124,8 @@ class RmanCurveTranslator(RmanMeshTranslator):
             is_mesh = True            
         elif len(ob.data.splines) < 1:
             is_mesh = True
+        elif ob.data.dimensions == '2D' and ob.data.fill_mode != 'NONE':
+            is_mesh = True
         else:
             l = ob.data.extrude + ob.data.bevel_depth
             if l > 0:
