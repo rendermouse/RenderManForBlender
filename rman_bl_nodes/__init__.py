@@ -625,6 +625,7 @@ def register_rman_nodes():
                 continue
             visited.add(real)
 
+            rfb_log().debug("  Loading from: %s" % root)
             for filename in sorted(filenames):        
                 if filename.endswith(('.args', '.oso')):
                     # skip registering these nodes
@@ -636,13 +637,14 @@ def register_rman_nodes():
                         is_oso = True
                         is_args = False
 
+                    rfb_log().debug("\t    Parsing: %s" % filename)
                     node_desc = RfbNodeDesc(FilePath(root).join(FilePath(filename)))
 
                     # apply any overrides
                     rman_config.apply_args_overrides(filename, node_desc)
 
                     __RMAN_NODES__[node_desc.node_type].append(node_desc)
-                    rfb_log().debug("\t%s" % node_desc.name)
+                    rfb_log().debug("\t    %s Loaded" % node_desc.name)
 
                     # These plugin types are special. They are not actually shading
                     # nodes that can be used in Blender's shading editor, but 
