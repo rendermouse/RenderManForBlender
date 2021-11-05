@@ -4,7 +4,7 @@ from ..rfb_utils import rman_socket_utils
 from ..rfb_utils import string_utils
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import draw_utils
-from ..rfb_utils.property_utils import BlPropInfo
+from ..rfb_utils.property_utils import BlPropInfo, __LOBES_ENABLE_PARAMS__
 from ..rfb_utils import filepath_utils
 from ..rman_config import __RFB_CONFIG_DICT__
 from ..rman_constants import RFB_FLOAT3
@@ -202,18 +202,18 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                     
         if prop_name not in node.inputs:
             if bl_prop_info.renderman_type == 'page':
-                #prop = getattr(node, prop_name)
                 sub_prop_names = list(bl_prop_info.prop)
                 if shadergraph_utils.has_lobe_enable_props(node):
+                    # check if a lobe is enabled
+                    # if not, we don't draw the page
                     lobe_enabled = True
                     for pn in sub_prop_names:
-                        if pn.startswith('enable'):
+                        if pn in __LOBES_ENABLE_PARAMS__:
                             sub_prop_names.remove(pn)
                             if not getattr(node, pn):
                                 lobe_enabled = False
                             break                   
                     if not lobe_enabled:
-                        # lobe is not enabled
                         return     
                 has_any = False
                 for nm in sub_prop_names:
@@ -305,19 +305,13 @@ class RendermanShadingNode(bpy.types.ShaderNode):
 
     def draw_nonconnectable_props(self, context, layout, prop_names, output_node=None, level=0):        
         if level == 0 and shadergraph_utils.has_lobe_enable_props(self):
+            # We want to draw the enable lobe params at the top of the node
             col = layout.column(align=True)
-            for prop_name in prop_names:
-                if prop_name not in self.inputs:
+            for prop_name in __LOBES_ENABLE_PARAMS__:
+                if hasattr(self, prop_name):
                     prop_meta = self.prop_meta[prop_name]
-                    bl_prop_info = BlPropInfo(self, prop_name, prop_meta)
-                    hidden = getattr(self, '%s_hidden' % prop_name, False)
-                    if bl_prop_info.widget == 'null' or hidden:
-                        continue
-                    for name in getattr(self, prop_name):
-                        if name.startswith('enable'):
-                            page_label = 'Enable %s' % bl_prop_info.label
-                            col.prop(self, name, text=page_label )                            
-                            break
+                    page_label = 'Enable %s' % prop_meta['label']
+                    col.prop(self, prop_name, text=page_label )                      
 
         if self.bl_idname == "PxrOSLPatternNode":
             prop = getattr(self, "codetypeswitch")

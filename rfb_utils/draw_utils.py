@@ -1,6 +1,6 @@
 from ..rfb_logger import rfb_log
 from . import shadergraph_utils
-from .property_utils import BlPropInfo
+from .property_utils import BlPropInfo, __LOBES_ENABLE_PARAMS__
 from ..rman_constants import NODE_LAYOUT_SPLIT
 from .. import rman_config
 from .. import rfb_icons
@@ -252,10 +252,15 @@ def draw_prop(node, prop_name, layout, level=0, nt=None, context=None, sticky=Fa
         op = row.operator('node.rman_open_close_page', text='', icon=icon, emboss=False)            
         op.prop_name = ui_prop
 
+        # sub_prop_names are all of the property names
+        # that are under this page
         sub_prop_names = list(bl_prop_info.prop)
         if shadergraph_utils.has_lobe_enable_props(node):
+            # remove the enable lobe param from sub_prop_names
+            # we already draw these next to open/close page arrow below, just
+            # before we recursively call draw_props
             for pn in sub_prop_names:
-                if pn.startswith('enable'):
+                if pn in __LOBES_ENABLE_PARAMS__:
                     row.prop(node, pn, text='')
                     sub_prop_names.remove(pn)
                     break

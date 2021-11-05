@@ -1,5 +1,6 @@
 from ..rman_constants import RFB_ARRAYS_MAX_LEN, __RMAN_SOCKET_MAP__
 from .shadergraph_utils import has_lobe_enable_props
+from .property_utils import __LOBES_ENABLE_PARAMS__
 
 def update_inputs(node):
     if node.bl_idname == 'PxrMeshLightLightNode':
@@ -8,7 +9,7 @@ def update_inputs(node):
         page_name = prop_name
         if node.prop_meta[page_name]['renderman_type'] == 'page':
             for prop_name in getattr(node, page_name):
-                if prop_name.startswith('enable'):
+                if prop_name in __LOBES_ENABLE_PARAMS__:
                     recursive_enable_inputs(node, getattr(
                         node, page_name), getattr(node, prop_name))
                     break
@@ -24,7 +25,7 @@ def recursive_enable_inputs(node, prop_names, enable=True):
 
 def find_enable_param(params):
     for prop_name in params:
-        if prop_name.startswith('enable'):
+        if prop_name in __LOBES_ENABLE_PARAMS__:
             return prop_name
 
 
@@ -44,7 +45,7 @@ def node_add_inputs(node, node_name, prop_names, first_level=True, label_prefix=
             continue
 
         # if this is a page recursively add inputs
-        if 'renderman_type' in meta and meta['renderman_type'] == 'page':
+        if param_type == 'page':
             if first_level and has_lobe_enable_props(node) and name != 'Globals':
                 # add these
                 label = meta.get('label', name)
@@ -64,7 +65,7 @@ def node_add_inputs(node, node_name, prop_names, first_level=True, label_prefix=
                                 first_level=first_level,
                                 label_prefix=label_prefix, remove=remove)
                 continue
-        elif 'renderman_type' in meta and meta['renderman_type'] == 'array':
+        elif param_type == 'array':
             arraylen = getattr(node, '%s_arraylen' % name)
             sub_prop_names = getattr(node, name)
             sub_prop_names = sub_prop_names[:arraylen]

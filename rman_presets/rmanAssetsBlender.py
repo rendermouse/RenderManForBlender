@@ -46,7 +46,7 @@ from ..rfb_utils import object_utils
 from ..rfb_utils import transform_utils
 from ..rfb_utils import texture_utils
 from ..rfb_utils.prefs_utils import get_pref, get_addon_prefs
-from ..rfb_utils.property_utils import __GAINS_TO_ENABLE__, is_vstruct_and_linked
+from ..rfb_utils.property_utils import __GAINS_TO_ENABLE__, __LOBES_ENABLE_PARAMS__, is_vstruct_and_linked
 from ..rfb_logger import rfb_log
 from ..rman_bl_nodes import __BL_NODES_MAP__, __RMAN_NODE_TYPES__
 from ..rman_constants import RMAN_STYLIZED_FILTERS, RFB_FLOAT3, CYCLES_NODE_MAP
@@ -1142,7 +1142,7 @@ def setParams(Asset, node, paramsList):
                    setattr(node, pname, pval)
                 except:
                     rfb_log().error('setParams float3 FAILED: %s  ptype: %s  pval: %s' %
-                          (nattr, ptype, repr(pval)))
+                          (pname, ptype, repr(pval)))
             else:
                 try:
                     if type(getattr(node,pname)) == type(""):
@@ -1155,7 +1155,7 @@ def setParams(Asset, node, paramsList):
 
     # if this is a PxrSurface, turn on all of the enable gains.
     if hasattr(node, 'plugin_name') and node.plugin_name in ['PxrLayer', 'PxrSurface']:
-        for gain,enable in __GAINS_TO_ENABLE__.items():
+        for enable in __LOBES_ENABLE_PARAMS__:
             setattr(node, enable, True)
 
 def createNodes(Asset):

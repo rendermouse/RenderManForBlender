@@ -31,6 +31,21 @@ __GAINS_TO_ENABLE__ = {
     'glowGain': 'enableGlow',
 }
 
+# these are the names of the extra enable params
+# on PxrSurface etc. to enable/disable lobes
+__LOBES_ENABLE_PARAMS__ = {
+    'enableDiffuse',
+    'enablePrimarySpecular',
+    'enableRoughSpecular',
+    'enableClearCoat',
+    'enableIridescence',
+    'enableFuzz',
+    'enableSubsurface',
+    'enableSingleScatter',
+    'enableGlass',
+    'enableGlow',
+}
+
 class BlPropInfo:
 
     def __init__(self, node, prop_name, prop_meta):
