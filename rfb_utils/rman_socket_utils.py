@@ -47,14 +47,15 @@ def node_add_inputs(node, node_name, prop_names, first_level=True, label_prefix=
         if 'renderman_type' in meta and meta['renderman_type'] == 'page':
             if first_level and has_lobe_enable_props(node) and name != 'Globals':
                 # add these
+                label = meta.get('label', name)
                 enable_param = find_enable_param(getattr(node, name))
                 if enable_param and getattr(node, enable_param):
                     node_add_inputs(node, node_name, getattr(node, name),
-                                    label_prefix=name + ' ',
+                                    label_prefix=label + ' ',
                                     first_level=False)
                 else:
                     node_add_inputs(node, node_name, getattr(node, name),
-                                    label_prefix=name + ' ',
+                                    label_prefix=label + ' ',
                                     first_level=False, remove=True)
                 continue
 

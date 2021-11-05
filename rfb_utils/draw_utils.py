@@ -260,7 +260,8 @@ def draw_prop(node, prop_name, layout, level=0, nt=None, context=None, sticky=Fa
                     sub_prop_names.remove(pn)
                     break
 
-        row.label(text=prop_name.split('.')[-1] + ':')
+        page_label = bl_prop_info.label
+        row.label(text=page_label)
 
         if ui_open:
             draw_props(node, sub_prop_names, layout, level=level + 1, nt=nt, context=context)

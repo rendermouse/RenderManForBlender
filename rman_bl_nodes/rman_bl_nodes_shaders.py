@@ -238,7 +238,8 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                 row.context_pointer_set("node", node)               
                 op = row.operator('node.rman_open_close_page', text='', icon=icon, emboss=False)            
                 op.prop_name = ui_prop
-                row.label(text=prop_name.split('.')[-1] + ':')
+                page_label = bl_prop_info.label
+                row.label(text=page_label)                
                 if ui_open:                  
                     self.draw_nonconnectable_props(
                         context, layout, sub_prop_names, output_node, level=level+1)          
@@ -308,13 +309,14 @@ class RendermanShadingNode(bpy.types.ShaderNode):
             for prop_name in prop_names:
                 if prop_name not in self.inputs:
                     prop_meta = self.prop_meta[prop_name]
-                    widget = prop_meta.get('widget', 'default')
+                    bl_prop_info = BlPropInfo(self, prop_name, prop_meta)
                     hidden = getattr(self, '%s_hidden' % prop_name, False)
-                    if widget == 'null' or hidden:
+                    if bl_prop_info.widget == 'null' or hidden:
                         continue
                     for name in getattr(self, prop_name):
                         if name.startswith('enable'):
-                            col.prop(self, name, text=prop_name.split('.')[-1])
+                            page_label = 'Enable %s' % bl_prop_info.label
+                            col.prop(self, name, text=page_label )                            
                             break
 
         if self.bl_idname == "PxrOSLPatternNode":
