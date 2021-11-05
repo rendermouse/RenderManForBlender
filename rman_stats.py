@@ -417,7 +417,7 @@ class RfBStatsManager(object):
         else:
             message = ''
             if self.is_connected():
-                for label in self.__BASIC_STATS__:
+                for label in __BASIC_STATS__:
                     data = self.render_live_stats[label]
                     message = message + '%s: %s ' % (label, data)       
                 # iterations                    
