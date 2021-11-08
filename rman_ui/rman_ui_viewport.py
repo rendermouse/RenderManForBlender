@@ -277,22 +277,13 @@ class DrawCropWindowHelper(object):
             self.use_render_border = use_render_border
             update = True 
 
-        if rm.render_ipr_into == 'it':
-            current_crop = [0.0, 1.0, 0.0, 1.0]
-            if self.use_render_border and not r.use_crop_to_border:
-                min_x = r.border_min_x
-                max_x = r.border_max_x
-                min_y = 1.0 - r.border_min_y
-                max_y = 1.0 - r.border_max_y     
-                current_crop = [min_x, max_x, min_y, max_y]       
-        else:
-            current_crop = self.get_crop_window(width, height)
+        current_crop = self.get_crop_window(width, height)
         if prev_crop != current_crop:
             update = True
 
         if update:            
             rman_render = RmanRender.get_rman_render()
-            if rman_render.rman_interactive_running:
+            if rman_render.rman_is_viewport_rendering:
                 if self.use_render_border:
                     rman_render.rman_scene_sync.update_cropwindow(current_crop)                
                 else:                    
@@ -508,7 +499,7 @@ class PRMAN_OT_Viewport_CropWindow_Reset(bpy.types.Operator):
 
     def execute(self, context):
         rman_render = RmanRender.get_rman_render()
-        if rman_render.rman_interactive_running:
+        if rman_render.rman_is_viewport_rendering:
             get_crop_helper().reset()
             bpy.ops.view3d.clear_render_border()
             rman_render.rman_scene_sync.update_cropwindow([0.0, 1.0, 0.0, 1.0])
@@ -583,7 +574,7 @@ class PRMAN_OT_Viewport_Cropwindow(bpy.types.Operator):
 
     def execute(self, context):
         rman_render = RmanRender.get_rman_render()
-        if rman_render.rman_interactive_running:
+        if rman_render.rman_is_viewport_rendering:
 
             if not self.crop_handler.valid_crop_window():
                 return {'FINISHED'}

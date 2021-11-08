@@ -223,7 +223,7 @@ class RmanCameraTranslator(RmanTranslator):
                 
                 prop.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_ScreenWindow, sw, 4)  
 
-                if r.use_border:
+                if self.rman_scene.is_viewport_render and r.use_border:
 
                     x0, x1, y0, y1 = camera_utils.get_viewport_cam_borders(ob, r, region, region_data, self.rman_scene.bl_scene)
                     min_x = (x0) / width
@@ -234,7 +234,7 @@ class RmanCameraTranslator(RmanTranslator):
                     crop_window = [min_x, max_x, min_y, max_y]              
 
             elif region_data.view_perspective ==  'PERSP': 
-                if self.rman_scene.context.space_data.use_render_border:
+                if self.rman_scene.is_viewport_render and self.rman_scene.context.space_data.use_render_border:
                     space = self.rman_scene.context.space_data
                     min_x = space.render_border_min_x
                     max_x = space.render_border_max_x
@@ -550,8 +550,10 @@ class RmanCameraTranslator(RmanTranslator):
         xaspect, yaspect, aspectratio = camera_utils.render_get_aspect_(r, cam)
 
         options = self.rman_scene.sg_scene.GetOptions()
+        use_border = self.rman_scene.bl_scene.render.use_border
+        use_crop_to_border = self.rman_scene.bl_scene.render.use_crop_to_border
 
-        if self.rman_scene.bl_scene.render.use_border and not self.rman_scene.bl_scene.render.use_crop_to_border:
+        if not self.rman_scene.is_interactive and use_border and not use_crop_to_border:
             min_x = self.rman_scene.bl_scene.render.border_min_x
             max_x = self.rman_scene.bl_scene.render.border_max_x
             min_y = 1.0 - self.rman_scene.bl_scene.render.border_min_y
@@ -561,7 +563,7 @@ class RmanCameraTranslator(RmanTranslator):
 
         # convert the crop border to screen window, flip y
         resolution = camera_utils.render_get_resolution_(self.rman_scene.bl_scene.render)
-        if self.rman_scene.bl_scene.render.use_border and self.rman_scene.bl_scene.render.use_crop_to_border:
+        if not self.rman_scene.is_interactive and use_border and use_crop_to_border:
             res_x = resolution[0] * (self.rman_scene.bl_scene.render.border_max_x -
                                     self.rman_scene.bl_scene.render.border_min_x)
             res_y = resolution[1] * (self.rman_scene.bl_scene.render.border_max_y -
