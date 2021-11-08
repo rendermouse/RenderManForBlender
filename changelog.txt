@@ -1,4 +1,4 @@
-v24.2 November 3, 2021
+v24.2 November 9, 2021
 New Features:
 * Add a new Volume Aggregates editor. For more information on volume aggregates, see the documentation 
 (https://rmanwiki.pixar.com/display/RFB24/Aggregate+Volumes+in+Blender).
@@ -13,6 +13,8 @@ and assets, so that it can be sent to support.
 * Preset browser now has storage options for where assets such as textures for presets are saved.
 
 Changes:
+* We now ignore render regions if you're using "it" for IPR. If you need render region like behavior,
+use the crop window feature in "it".
 * Edits to ramps should now work with IPR. Using the "Force Refresh" button should no longer be required
 (requires your scene to be saved first).
 * PxrDiffuse will be used as a fallback if we don't have a Bxdf node connected to the

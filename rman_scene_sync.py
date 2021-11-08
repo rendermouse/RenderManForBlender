@@ -527,6 +527,9 @@ class RmanSceneSync(object):
                 if rsn.db_name == db_name:
                     self.rman_scene.rman_objects[ob.original] = rsn
                     del self.rman_scene.rman_objects[id]
+                    if id in self.rman_scene.rman_cameras:
+                        self.rman_scene.rman_cameras[ob.original] = rsn
+                        del self.rman_scene.rman_cameras[id]
                     rman_sg_node = rsn
                     break
         return rman_sg_node
