@@ -191,27 +191,29 @@ def class_generate_properties(node, parent_name, node_desc):
             page = node_desc_param.page
             tokens = page.split('|')
             sub_prop_names = prop_names
-            page_name = tokens[0]
+            page_name = 'page_%s' % tokens[0].replace(' ', '')
+            page_name_label = tokens[0]
                  
             if page_name not in prop_meta:
                 # For pages, add a BoolProperty called '[page_name].uio'
                 # This determines whether the page is opened or closed
                 sub_prop_names.append(page_name)
-                prop_meta[page_name] = {'renderman_type': 'page', 'renderman_name': page_name}
+                prop_meta[page_name] = {'renderman_type': 'page', 'renderman_name': page_name, 'label': page_name_label}
                 ui_label = "%s_uio" % page_name
                 dflt = getattr(node_desc_param, 'page_open', False)                
                 node.__annotations__[ui_label] = BoolProperty(name=ui_label, default=dflt)
                 setattr(node, page_name, [])   
 
                 # If this a PxrSurface node, add an extra BoolProperty to control
-                # enabling/disabling each lobe
+                # enabling/disabling each lobe. This is similar to the enable*
+                # parameters on PxrLayer
                 if parent_name == 'PxrSurface' and 'Globals' not in page_name:
-                    enable_param_name = 'enable' + page_name.replace(' ', '')
+                    enable_param_name = 'enable' + page_name_label.replace(' ', '')
                     if enable_param_name not in prop_meta:
                         prop_meta[enable_param_name] = {
-                            'renderman_type': 'enum', 'renderman_name': enable_param_name}
-                        default = page_name == 'Diffuse'
-                        enable_param_prop = BoolProperty(name="Enable " + page_name,
+                            'renderman_type': 'enum', 'renderman_name': enable_param_name, 'label': page_name_label}
+                        default = page_name_label == 'Diffuse'
+                        enable_param_prop = BoolProperty(name="Enable " + page_name_label,
                                             default=bool(default),
                                             update=update_func_with_inputs)
                         node.__annotations__[enable_param_name] = enable_param_prop        
@@ -224,9 +226,10 @@ def class_generate_properties(node, parent_name, node_desc):
 
                 for i in range(1, len(tokens)):
                     parent_page = page_name
-                    page_name += '.' + tokens[i]
+                    page_name += '.' + tokens[i].replace(' ', '')
+                    page_name_label = tokens[i]
                     if page_name not in prop_meta:
-                        prop_meta[page_name] = {'renderman_type': 'page', 'renderman_name': page_name}
+                        prop_meta[page_name] = {'renderman_type': 'page', 'renderman_name': page_name, 'label': page_name_label}
                         ui_label = "%s_uio" % page_name
                         dflt = getattr(node_desc_param, 'page_open', False) 
                         node.__annotations__[ui_label] = BoolProperty(name=ui_label, default=dflt)
@@ -360,7 +363,8 @@ def generate_node_type(node_desc, is_oso=False):
         if color_rman_ramps or float_rman_ramps:
             node_group = bpy.data.node_groups.new(
                 '.__RMAN_FAKE_NODEGROUP__', 'ShaderNodeTree') 
-            node_group.use_fake_user = True                 
+            node_group.use_fake_user = True             
+            self.rman_fake_node_group_ptr = node_group    
             self.rman_fake_node_group = node_group.name    
 
             for ramp_name in color_rman_ramps:
@@ -431,7 +435,9 @@ def generate_node_type(node_desc, is_oso=False):
 
 
     def free(self):
-        if self.rman_fake_node_group in bpy.data.node_groups:
+        if self.rman_fake_node_group_ptr:
+            bpy.data.node_groups.remove(self.rman_fake_node_group_ptr)
+        elif self.rman_fake_node_group in bpy.data.node_groups:
             bpy.data.node_groups.remove(bpy.data.node_groups[self.rman_fake_node_group])
 
     ntype.init = init
@@ -442,6 +448,7 @@ def generate_node_type(node_desc, is_oso=False):
 
     # the name of our fake node group to hold all of our ramp nodes
     ntype.__annotations__['rman_fake_node_group'] = StringProperty('__rman_ramps__', default='')
+    ntype.__annotations__['rman_fake_node_group_ptr']  = PointerProperty(type=bpy.types.NodeTree)
 
     ntype.__annotations__['plugin_name'] = StringProperty(name='Plugin Name',
                                        default=name, options={'HIDDEN'})
@@ -488,6 +495,7 @@ def generate_node_type(node_desc, is_oso=False):
         if "__annotations__" not in osl_node_type.__dict__:
                 setattr(osl_node_type, "__annotations__", {})            
         osl_node_type.__annotations__['rman_fake_node_group'] = StringProperty('__rman_ramps__', default='')
+        osl_node_type.__annotations__['rman_fake_node_group_ptr']  = PointerProperty(type=bpy.types.NodeTree)
 
         osl_node_type.__annotations__['plugin_name'] = StringProperty(name='Plugin Name',
                                         default=name, options={'HIDDEN'})

@@ -4,6 +4,7 @@ from ..rfb_utils import rman_socket_utils
 from ..rfb_utils import string_utils
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import draw_utils
+from ..rfb_utils.property_utils import BlPropInfo, __LOBES_ENABLE_PARAMS__
 from ..rfb_utils import filepath_utils
 from ..rman_config import __RFB_CONFIG_DICT__
 from ..rman_constants import RFB_FLOAT3
@@ -64,9 +65,8 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                     if isinstance(roughness, str):
                         roughness = getattr(self, roughness)
                     mat.roughness = roughness   
-        else:
-            rr = rman_render.RmanRender.get_rman_render()             
-            rr.rman_scene_sync.update_material(mat) 
+        elif isinstance(mat, bpy.types.Material):
+            mat.node_tree.update_tag()
 
     def draw_label(self):
         nm = self.name
@@ -140,21 +140,178 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                 op = col.operator('node.rman_set_node_solo', text='', icon='FILE_REFRESH', emboss=False)
                 op.refresh_solo = True                          
 
-    def draw_nonconnectable_props(self, context, layout, prop_names, output_node=None, level=0):
-        
+    def draw_nonconnectable_prop(self, context, layout, prop_name, output_node=None, level=0):
+        node = self
+        prop_meta = node.prop_meta[prop_name]
+        bl_prop_info = BlPropInfo(node, prop_name, prop_meta)
+        if bl_prop_info.prop is None:
+            return
+        if bl_prop_info.widget == 'null':
+            return
+
+        # evaluate the conditionalVisOps
+        if bl_prop_info.conditionalVisOps and bl_prop_info.cond_expr:
+            try:
+                hidden = not eval(bl_prop_info.cond_expr)
+                if bl_prop_info.conditionalLockOps:
+                    bl_prop_info.prop_disabled = hidden                     
+                else:
+                    if hidden:
+                        return
+            except Exception as err:                        
+                rfb_log().error("Error handling conditionalVisOp: %s" % str(err))
+                pass
+
+        if bl_prop_info.prop_hidden:
+            return
+
+        if bl_prop_info.widget == 'colorramp':
+            node_group = self.rman_fake_node_group_ptr
+            if not node_group:
+                row = layout.row(align=True)
+                row.context_pointer_set("node", node)
+                row.operator('node.rman_fix_ramp')
+                row.operator('node.rman_fix_all_ramps')
+                return                
+                            
+            ramp_name =  getattr(node, prop_name)
+            ramp_node = node_group.nodes[ramp_name]
+            nt = node.id_data
+            layout.enabled = (nt.library is None)
+            layout.template_color_ramp(
+                    ramp_node, 'color_ramp')   
+            return                            
+        elif bl_prop_info.widget == 'floatramp':
+            node_group = self.rman_fake_node_group_ptr 
+            if not node_group:
+                node_group = bpy.data.node_groups.get(node.rman_fake_node_group, None)            
+            if not node_group:
+                row = layout.row(align=True)
+                row.context_pointer_set("node", node)
+                row.operator('node.rman_fix_ramp')
+                row.operator('node.rman_fix_all_ramps')
+                return                       
+
+            ramp_name =  getattr(node, prop_name)
+            ramp_node = node_group.nodes[ramp_name]
+            nt = node.id_data
+            layout.enabled = (nt.library is None)
+            layout.template_curve_mapping(
+                    ramp_node, 'mapping')                   
+            return
+                    
+        if prop_name not in node.inputs:
+            if bl_prop_info.renderman_type == 'page':
+                sub_prop_names = list(bl_prop_info.prop)
+                if shadergraph_utils.has_lobe_enable_props(node):
+                    # check if a lobe is enabled
+                    # if not, we don't draw the page
+                    lobe_enabled = True
+                    for pn in sub_prop_names:
+                        if pn in __LOBES_ENABLE_PARAMS__:
+                            sub_prop_names.remove(pn)
+                            if not getattr(node, pn):
+                                lobe_enabled = False
+                            break                   
+                    if not lobe_enabled:
+                        return     
+                has_any = False
+                for nm in sub_prop_names:
+                    if nm not in node.inputs:
+                        has_any = True
+
+                if not has_any:
+                    # don't draw the page if all subprops are inputs/outputs
+                    return
+
+                prop_disabled = getattr(node, '%s_disabled' % prop_name, False)
+                
+                ui_prop = prop_name + "_uio"
+                ui_open = getattr(node, ui_prop)
+                icon = draw_utils.get_open_close_icon(ui_open)
+
+                split = layout.split(factor=NODE_LAYOUT_SPLIT)
+                row = split.row()
+                row.enabled = not prop_disabled
+                draw_utils.draw_indented_label(row, None, level)
+
+                row.context_pointer_set("node", node)               
+                op = row.operator('node.rman_open_close_page', text='', icon=icon, emboss=False)            
+                op.prop_name = ui_prop
+                page_label = bl_prop_info.label
+                row.label(text=page_label)                
+                if ui_open:                  
+                    self.draw_nonconnectable_props(
+                        context, layout, sub_prop_names, output_node, level=level+1)          
+                return
+
+            elif bl_prop_info.renderman_type == 'array':
+                row = layout.row(align=True)
+                col = row.column()
+                row = col.row()
+                arraylen = getattr(node, '%s_arraylen' % prop_name)             
+                row.label(text='%s Size' % prop_name)               
+                row.prop(node, '%s_arraylen' % prop_name, text='')
+                return
+
+            split = layout.split(factor=0.95)
+            row = split.row(align=True)
+            row.enabled = not bl_prop_info.prop_disabled
+            draw_utils.draw_indented_label(row, None, level)
+
+            if bl_prop_info.widget == 'propsearch':                 
+                # use a prop_search layout
+                options = prop_meta['options']
+                prop_search_parent = options.get('prop_parent')
+                prop_search_name = options.get('prop_name')
+                eval(f'row.prop_search(node, prop_name, {prop_search_parent}, "{prop_search_name}")') 
+                draw_utils.draw_sticky_toggle(row, node, prop_name, output_node)   
+
+            elif bl_prop_info.read_only:
+                if bl_prop_info.not_connectable:
+                    row2 = row.row()
+                    row2.prop(node, prop_name)
+                    row2.enabled=False
+                else:
+                    row.label(text=bl_prop_info.label)
+                    row2 = row.row()
+                    row2.prop(node, prop_name, text="", slider=True)
+                    row2.enabled=False    
+                draw_utils.draw_sticky_toggle(row2, node, prop_name, output_node)
+            else:
+                row.prop(node, prop_name, slider=True)           
+                draw_utils.draw_sticky_toggle(row, node, prop_name, output_node)                       
+            
+            if bl_prop_info.is_texture:
+                prop_val = getattr(node, prop_name)
+                if prop_val != '':
+                    from ..rfb_utils import texture_utils
+                    from ..rfb_utils import scene_utils
+                    if texture_utils.get_txmanager().is_file_src_tex(node, prop_name):
+                        return
+                    colorspace_prop_name = '%s_colorspace' % prop_name
+                    if not hasattr(node, colorspace_prop_name):
+                        return
+                    row = layout.row(align=True)
+                    if texture_utils.get_txmanager().does_file_exist(prop_val):
+                        row.prop(node, colorspace_prop_name, text='Color Space')
+                        rman_icon = rfb_icons.get_icon('rman_txmanager')  
+                        id = scene_utils.find_node_owner(node)
+                        nodeID = texture_utils.generate_node_id(node, prop_name, ob=id)                                      
+                        op = row.operator('rman_txmgr_list.open_txmanager', text='', icon_value=rman_icon.icon_id)   
+                        op.nodeID = nodeID     
+                    else:
+                        row.label(text="Input mage does not exists.", icon='ERROR')       
+
+    def draw_nonconnectable_props(self, context, layout, prop_names, output_node=None, level=0):        
         if level == 0 and shadergraph_utils.has_lobe_enable_props(self):
+            # We want to draw the enable lobe params at the top of the node
             col = layout.column(align=True)
-            for prop_name in prop_names:
-                if prop_name not in self.inputs:
+            for prop_name in __LOBES_ENABLE_PARAMS__:
+                if hasattr(self, prop_name):
                     prop_meta = self.prop_meta[prop_name]
-                    widget = prop_meta.get('widget', 'default')
-                    hidden = getattr(self, '%s_hidden' % prop_name, False)
-                    if widget == 'null' or hidden:
-                        continue
-                    for name in getattr(self, prop_name):
-                        if name.startswith('enable'):
-                            col.prop(self, name, text=prop_name.split('.')[-1])
-                            break
+                    page_label = 'Enable %s' % prop_meta['label']
+                    col.prop(self, prop_name, text=page_label )                      
 
         if self.bl_idname == "PxrOSLPatternNode":
             prop = getattr(self, "codetypeswitch")
@@ -168,146 +325,10 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                 layout.prop(self, "shadercode")
             elif getattr(self, "codetypeswitch") == 'NODE':
                 layout.prop(self, "expression")
-        else:
-            is_pxrramp = (self.plugin_name == 'PxrRamp')
+        else:            
             for prop_name in prop_names:
-                prop_meta = self.prop_meta[prop_name]
-                read_only = prop_meta.get('readOnly', False)
-                widget = prop_meta.get('widget', 'default')
-                hidden = getattr(self, '%s_hidden' % prop_name, False)
-                renderman_type = prop_meta.get('renderman_type', '')
-                if hidden:
-                    continue
+                self.draw_nonconnectable_prop(context, layout, prop_name, output_node=output_node, level=level)
 
-                if widget == 'null':
-                    continue
-                elif widget == 'colorramp':
-                    node_group = bpy.data.node_groups.get(self.rman_fake_node_group, None)
-                    if not node_group:
-                        row = layout.row(align=True)
-                        row.context_pointer_set("node", self)
-                        row.operator('node.rman_fix_ramp')
-                        row.operator('node.rman_fix_all_ramps')
-                        continue                
-                                  
-                    ramp_name =  getattr(self, prop_name)
-                    ramp_node = node_group.nodes[ramp_name]
-                    nt = self.id_data
-                    layout.enabled = (nt.library is None)
-                    layout.template_color_ramp(
-                            ramp_node, 'color_ramp') 
-                    #draw_utils.draw_sticky_toggle(layout, self, prop_name, output_node)   
-                    continue                            
-                elif widget == 'floatramp':
-                    if not node_group:
-                        row = layout.row(align=True)
-                        row.context_pointer_set("node", self)
-                        row.operator('node.rman_fix_ramp')
-                        row.operator('node.rman_fix_all_ramps')
-                        continue                       
-
-                    ramp_name =  getattr(self, prop_name)
-                    ramp_node = node_group.nodes[ramp_name]
-                    nt = self.id_data
-                    layout.enabled = (nt.library is None)
-                    layout.template_curve_mapping(
-                            ramp_node, 'mapping')                   
-                    #draw_utils.draw_sticky_toggle(layout, self, prop_name, output_node)
-                    continue
-                            
-                if prop_name not in self.inputs:
-                    if renderman_type == 'page':
-                        prop = getattr(self, prop_name)
-                        sub_prop_names = list(prop)                         
-                        if shadergraph_utils.has_lobe_enable_props(self):
-                            lobe_enabled = True
-                            for pn in sub_prop_names:
-                                if pn.startswith('enable'):
-                                    sub_prop_names.remove(pn)
-                                    if not getattr(self, pn):
-                                        lobe_enabled = False
-                                    break                   
-                            if not lobe_enabled:
-                                # lobe is not enabled
-                                continue     
-                        has_any = False
-                        for nm in sub_prop_names:
-                            if nm not in self.inputs:
-                                has_any = True
-
-                        if not has_any:
-                            # don't draw the page if all subprops are inputs/outputs
-                            continue
-
-                        prop_disabled = getattr(self, '%s_disabled' % prop_name, False)
-                        
-                        ui_prop = prop_name + "_uio"
-                        ui_open = getattr(self, ui_prop)
-                        icon = draw_utils.get_open_close_icon(ui_open)
-
-                        split = layout.split(factor=NODE_LAYOUT_SPLIT)
-                        row = split.row()
-                        row.enabled = not prop_disabled
-                        draw_utils.draw_indented_label(row, None, level)
-
-                        row.context_pointer_set("node", self)               
-                        op = row.operator('node.rman_open_close_page', text='', icon=icon, emboss=False)            
-                        op.prop_name = ui_prop
-                        row.label(text=prop_name.split('.')[-1] + ':')
-                        if ui_open:                  
-                            self.draw_nonconnectable_props(
-                                context, layout, sub_prop_names, output_node, level=level+1)          
-
-                    
-                    elif renderman_type == 'array':
-                        row = layout.row(align=True)
-                        col = row.column()
-                        row = col.row()
-                        arraylen = getattr(self, '%s_arraylen' % prop_name)             
-                        row.label(text='%s Size' % prop_name)               
-                        row.prop(self, '%s_arraylen' % prop_name, text='')
-
-                    elif widget == 'propsearch':                 
-                        # use a prop_search layout
-                        options = prop_meta['options']
-                        prop_search_parent = options.get('prop_parent')
-                        prop_search_name = options.get('prop_name')
-                        eval(f'layout.prop_search(self, prop_name, {prop_search_parent}, "{prop_search_name}")') 
-                        draw_utils.draw_sticky_toggle(layout, self, prop_name, output_node)                         
-                    elif widget in ['fileinput','assetidinput']:  
-                        row = layout.row(align=True)
-                        draw_utils.draw_indented_label(row, None, level)
-                        row.prop(self, prop_name)                                                  
-                        prop_val = getattr(self, prop_name)
-                        draw_utils.draw_sticky_toggle(row, self, prop_name, output_node)
-                        if prop_val != '':
-                            from ..rfb_utils import texture_utils
-                            from ..rfb_utils import scene_utils
-                            if texture_utils.get_txmanager().is_file_src_tex(prop_val):
-                                continue
-                            colorspace_prop_name = '%s_colorspace' % prop_name
-                            if not hasattr(self, colorspace_prop_name):
-                                continue
-                            row = layout.row(align=True)
-                            if texture_utils.get_txmanager().does_file_exist(prop_val):
-                                row.prop(self, colorspace_prop_name, text='Color Space')
-                                rman_icon = rfb_icons.get_icon('rman_txmanager')  
-                                id = scene_utils.find_node_owner(self)
-                                nodeID = texture_utils.generate_node_id(self, prop_name, ob=id)                                      
-                                op = row.operator('rman_txmgr_list.open_txmanager', text='', icon_value=rman_icon.icon_id)   
-                                op.nodeID = nodeID     
-                            else:
-                                row.label(text="Input mage does not exists.", icon='ERROR')
-                    else:
-                        split = layout.split(factor=0.95)
-                        row = split.row()
-                        draw_utils.draw_indented_label(row, None, level)
-                        col = row.column()
-                        if read_only:
-                            col.enabled = False
-                        col.prop(self, prop_name, slider=True)
-                        col = row.column()
-                        draw_utils.draw_sticky_toggle(col, self, prop_name, output_node)
 
     def copy(self, node):
         # Look for textures
@@ -331,10 +352,14 @@ class RendermanShadingNode(bpy.types.ShaderNode):
 
             node_group = bpy.data.node_groups.new(
                 '.__RMAN_FAKE_NODEGROUP__', 'ShaderNodeTree') 
-            node_group.use_fake_user = True                 
+            node_group.use_fake_user = True  
+            self.rman_fake_node_group_ptr = node_group
             self.rman_fake_node_group = node_group.name  
 
-            nt = bpy.data.node_groups[node.rman_fake_node_group]
+            nt = node.rman_fake_node_group_ptr
+            if not nt:
+                nt = bpy.data.node_groups[node.rman_fake_node_group]
+                node.rman_fake_ndoe_group_ptr = nt
 
             for i, prop_name in enumerate(color_rman_ramps):
                 ramp_name = getattr(node, prop_name)

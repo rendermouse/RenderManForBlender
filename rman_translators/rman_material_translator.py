@@ -41,6 +41,7 @@ class RmanMaterialTranslator(RmanTranslator):
 
     def update(self, mat, rman_sg_material, time_sample=0):
 
+        mat = mat.original
         rm = mat.renderman
         succeed = False
 
@@ -446,11 +447,7 @@ class RmanMaterialTranslator(RmanTranslator):
 
         instance = string_utils.sanitize_node_name(mat_name + '_' + node.name)
         if group_node:
-            group_node_name = group_node.name
-            for k,v in bpy.data.node_groups.items():
-                if group_node.id_data == v:
-                    group_node_name = k
-                    break
+            group_node_name = string_utils.get_unique_group_name(group_node)
             instance = string_utils.sanitize_node_name(mat_name + '_' + group_node_name + '_' + node.name)
 
         if not hasattr(node, 'renderman_node_type'):

@@ -46,7 +46,7 @@ from ..rfb_utils import object_utils
 from ..rfb_utils import transform_utils
 from ..rfb_utils import texture_utils
 from ..rfb_utils.prefs_utils import get_pref, get_addon_prefs
-from ..rfb_utils.property_utils import __GAINS_TO_ENABLE__, is_vstruct_and_linked
+from ..rfb_utils.property_utils import __GAINS_TO_ENABLE__, __LOBES_ENABLE_PARAMS__, is_vstruct_and_linked
 from ..rfb_logger import rfb_log
 from ..rman_bl_nodes import __BL_NODES_MAP__, __RMAN_NODE_TYPES__
 from ..rman_constants import RMAN_STYLIZED_FILTERS, RFB_FLOAT3, CYCLES_NODE_MAP
@@ -121,6 +121,15 @@ class BlenderHostPrefs(ral.HostPrefs):
         self.rpbSelectedLibrary = FilePath(self.getHostPref(
             'rpbSelectedLibrary', u''))
     
+        storagePrefs = (
+            ('rpbStorageMode', 0), 
+            ('rpbStorageKey', ''), 
+            ('rpbStoragePath', ''),
+            ('rpbConvertToTex', 1))
+
+        for name, default in storagePrefs:
+            setattr(self, name, self.getHostPref(name, default))
+
         # store these to make sure we render the previews with the same version.
         self.hostTree = os.environ.get('RFMTREE', '')
         self.rmanTree = os.environ.get('RMANTREE', '')
@@ -198,6 +207,10 @@ class BlenderHostPrefs(ral.HostPrefs):
         self.setHostPref('rpbSelectedLibrary', self.rpbSelectedLibrary)
         self.setHostPref('rpbSelectedCategory', self.rpbSelectedCategory)
         self.setHostPref('rpbSelectedPreset', self.rpbSelectedPreset)
+        self.setHostPref('rpbStorageMode', self.rpbStorageMode)
+        self.setHostPref('rpbStorageKey', self.rpbStorageKey)
+        self.setHostPref('rpbStoragePath', self.rpbStoragePath)
+        self.setHostPref('rpbConvertToTex', self.rpbConvertToTex)        
 
     def updateLibraryConfig(self):
         self.cfg.buildLibraryList(updateFromPrefs=True)
@@ -277,15 +290,15 @@ class BlenderHostPrefs(ral.HostPrefs):
 
     def exportMaterial(self, categorypath, infodict, previewtype): # pylint: disable=unused-argument
         return export_asset(self._nodesToExport, 'nodeGraph', infodict, categorypath,
-                            self.cfg)
+                            self.cfg, previewtype)
 
-    def exportLightRig(self, categorypath, infodict): # pylint: disable=unused-argument
+    def exportLightRig(self, categorypath, infodict, previewtype): # pylint: disable=unused-argument
         return export_asset(self._nodesToExport, 'nodeGraph', infodict, categorypath,
-                            self.cfg)
+                            self.cfg, previewtype)
 
-    def exportEnvMap(self, categorypath, infodict): # pylint: disable=unused-argument
+    def exportEnvMap(self, categorypath, infodict, previewtype): # pylint: disable=unused-argument
         return export_asset(self._nodesToExport, 'envMap', infodict, categorypath,
-                            self.cfg)
+                            self.cfg, previewtype)
 
     def importAsset(self, asset, assignToSelected=False): # pylint: disable=unused-argument
         # IMPLEMENT ME
@@ -856,8 +869,11 @@ def export_asset(nodes, atype, infodict, category, cfg, renderPreview='std',
         alwaysOverwrite {bool) -- Will ask the user if the asset already \
                         exists when not in batch mode. (default: {False})
     """
-    label = infodict['label']
-    Asset = RmanAsset(assetType=atype, label=label, previewType=renderPreview)
+    label = infodict['metadict']['label']
+    Asset = RmanAsset(assetType=atype, label=label, previewType=renderPreview,
+                              storage=infodict.get('storage', None),
+                              convert_to_tex=infodict.get('convert_to_tex', True)
+    )
 
     asset_type = ''
     hostPrefs = get_host_prefs()    
@@ -870,7 +886,7 @@ def export_asset(nodes, atype, infodict, category, cfg, renderPreview='std',
 
     # Add user metadata
     #
-    for k, v in infodict.items():
+    for k, v in infodict['metadict'].items():
         if k == 'label':
             continue
         Asset.addMetadata(k, v)
@@ -903,8 +919,7 @@ def export_asset(nodes, atype, infodict, category, cfg, renderPreview='std',
 
     #  Create our directory
     #
-    assetDir = asset_name_from_label(label)
-    dirPath = assetPath.join(assetDir)
+    dirPath = assetPath.join(label)
     if not dirPath.exists():
         os.mkdir(dirPath)
 
@@ -1127,7 +1142,7 @@ def setParams(Asset, node, paramsList):
                    setattr(node, pname, pval)
                 except:
                     rfb_log().error('setParams float3 FAILED: %s  ptype: %s  pval: %s' %
-                          (nattr, ptype, repr(pval)))
+                          (pname, ptype, repr(pval)))
             else:
                 try:
                     if type(getattr(node,pname)) == type(""):
@@ -1140,7 +1155,7 @@ def setParams(Asset, node, paramsList):
 
     # if this is a PxrSurface, turn on all of the enable gains.
     if hasattr(node, 'plugin_name') and node.plugin_name in ['PxrLayer', 'PxrSurface']:
-        for gain,enable in __GAINS_TO_ENABLE__.items():
+        for enable in __LOBES_ENABLE_PARAMS__:
             setattr(node, enable, True)
 
 def createNodes(Asset):

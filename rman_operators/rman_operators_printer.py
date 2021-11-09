@@ -1,5 +1,6 @@
+from ..rfb_logger import rfb_log
 from bpy.types import Operator
-from bpy.props import StringProperty, IntProperty, CollectionProperty, EnumProperty, BoolProperty
+from bpy.props import StringProperty, EnumProperty
 import bpy
 
 class PRMAN_OT_Renderman_printer(Operator):
@@ -43,7 +44,8 @@ class PRMAN_OT_Renderman_printer(Operator):
 
     def invoke(self, context, event):
         wm = context.window_manager
-        return wm.invoke_props_dialog(self)   
+        width = len(self.properties.message) * 10
+        return wm.invoke_props_dialog(self, width=width)
 
 classes = [
    PRMAN_OT_Renderman_printer 

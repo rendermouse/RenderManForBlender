@@ -3,6 +3,7 @@ from bpy.props import StringProperty, BoolProperty, EnumProperty
 from .. import rman_cycles_convert
 from ..rfb_utils import shadergraph_utils
 from .. import rman_bl_nodes
+from ..rfb_logger import rfb_log
 from ..rfb_utils.operator_utils import get_bxdf_items, get_projection_items
 from ..rman_render import RmanRender
 from mathutils import Matrix
@@ -685,13 +686,16 @@ class PRMAN_OT_Fix_Ramp(bpy.types.Operator):
     def execute(self, context):
         node = context.node
 
-        node_group = bpy.data.node_groups.new(
-            node.rman_fake_node_group, 'ShaderNodeTree') 
-        node_group.use_fake_user = True                 
+        node_group = bpy.data.node_groups.get(node.rman_fake_node_group, None)
+        if not node_group:
+            node_group = bpy.data.node_groups.new(
+                node.rman_fake_node_group, 'ShaderNodeTree') 
+            node_group.use_fake_user = True                 
 
+        node.rman_fake_node_group_ptr = node_group
         color_rman_ramps = node.__annotations__.get('__COLOR_RAMPS__', [])
         float_rman_ramps = node.__annotations__.get('__FLOAT_RAMPS__', [])
-
+        
         for prop_name in color_rman_ramps:             
             n = node_group.nodes.new('ShaderNodeValToRGB')
             bl_ramp_prop = getattr(node, '%s_bl_ramp' % prop_name)

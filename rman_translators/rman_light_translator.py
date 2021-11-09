@@ -78,7 +78,7 @@ class RmanLightTranslator(RmanTranslator):
 
     def update(self, ob, rman_sg_light):
 
-        light = ob.data
+        light = ob.original.data
         rm = light.renderman  
 
         # light filters

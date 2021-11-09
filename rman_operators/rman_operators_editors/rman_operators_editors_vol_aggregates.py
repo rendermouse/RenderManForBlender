@@ -1,10 +1,9 @@
-from bpy.props import (StringProperty, BoolProperty, EnumProperty, IntProperty)
+from bpy.props import (StringProperty, BoolProperty, EnumProperty)
 
 from ...rman_ui.rman_ui_base import CollectionPanel   
 from ...rfb_logger import rfb_log
 from ...rman_operators.rman_operators_collections import return_empty_list   
 from ...rman_config import __RFB_CONFIG_DICT__ as rfb_config
-from ...rfb_utils import object_utils
 from ...rfb_utils import scene_utils
 import bpy
 import re

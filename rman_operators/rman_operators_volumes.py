@@ -1,8 +1,7 @@
-from bpy.props import StringProperty, BoolProperty, EnumProperty, IntProperty,  CollectionProperty, PointerProperty
+from bpy.props import StringProperty, BoolProperty, EnumProperty, IntProperty
 from ..rfb_utils import string_utils
 from ..rfb_logger import rfb_log
-from ..rfb_utils import shadergraph_utils
-from ..rfb_utils import scenegraph_utils
+from ..rfb_utils import texture_utils
 from ..rfb_utils import object_utils
 from ..rfb_utils.scene_utils import RMAN_VOL_TYPES
 import bpy
@@ -163,10 +162,38 @@ class PRMAN_OT_remove_from_vol_aggregate(bpy.types.Operator):
 
         return {'FINISHED'}        
 
+class PRMAN_OT_add_vdb_to_txmanager(bpy.types.Operator):
+    bl_idname = 'renderman.add_openvdb_to_txmanager'
+    bl_label = 'Add to Texture Manager'
+    bl_description = 'Add the current OpenVDB to the texture manager to be mipmapped.'
+     
+    @classmethod
+    def poll(cls, context):
+        if not context.volume:
+            return False
+        rm = context.volume.renderman
+        vol = context.volume
+        ob = context.object
+        txfile = texture_utils.get_txmanager().get_txfile_for_vdb(ob)
+        if txfile:
+            grids = vol.grids
+            grids.load()
+            openvdb_file = string_utils.get_tokenized_openvdb_file(grids.frame_filepath, grids.frame)
+            if txfile.input_image != openvdb_file:
+                return True
+        return False
+
+    def execute(self, context):
+        ob = context.object
+        texture_utils.add_openvdb(ob)
+
+        return {'FINISHED'}                            
+
 classes = [
     COLLECTION_OT_volume_aggregates_add_remove,
     PRMAN_OT_add_to_vol_aggregate,
-    PRMAN_OT_remove_from_vol_aggregate
+    PRMAN_OT_remove_from_vol_aggregate,
+    PRMAN_OT_add_vdb_to_txmanager
 ]
 
 def register():

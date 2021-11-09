@@ -18,22 +18,84 @@ __RFB_STATS_MANAGER__ = None
 
 __LIVE_METRICS__ = [
     ["/system.processMemory", "Memory"],
-    ["/rman/raytracing.numRays", "Rays/Sec"],
     ["/rman/renderer@progress", None],
     ['/rman@iterationComplete', None],
     ["/rman.timeToFirstRaytrace", "First Ray"],
     ["/rman.timeToFirstPixel", "First Pixel"],
     ["/rman.timeToFirstIteration", "First Iteration"],    
+    ["/rman/raytracing.numRays", "Rays/Sec"],    
+    [None, "Total Rays"],
+    ['/rman/texturing/sampling:time.total', 'Texturing Time'],
+    ['/rman/shading/hit/bxdf:time.total', 'Shading Time'],
+    ['/rman/raytracing/intersection/allhits:time.total', 'Raytracing Time'],
+    ['/rman/raytracing/camera.numRays', "Camera Rays"],
+    ['/rman/raytracing/transmission.numRays', "Transmission Rays"],
+    ['/rman/raytracing/light.numRays', "Light Rays"],
+    ['/rman/raytracing/indirect.numRays', "Indirect Rays"],
+    ['/rman/raytracing/photon.numRays', "Photon Rays"]
 ]
 
+__TIMER_STATS__ = [
+    '/rman/shading/hit/bxdf:time.total',
+    "/rman.timeToFirstRaytrace",
+    "/rman.timeToFirstPixel", 
+    "/rman.timeToFirstIteration",
+    '/rman/texturing/sampling:time.total',
+    '/rman/shading/hit/bxdf:time.total',    
+    '/rman/raytracing/intersection/allhits:time.total',
+]
+
+__BASIC_STATS__ = [
+    "Memory",
+    "Rays/Sec",
+    "Total Rays"
+]
+
+__MODERATE_STATS__ = [
+    "Memory",
+    "Rays/Sec",
+    "Total Rays",
+    "Shading Time",
+    "Texturing Time",
+    "Raytracing Time",
+    "Camera Rays",    
+]
+
+__MOST_STATS__ = [
+    "Memory",
+    "Rays/Sec",
+    "Total Rays",
+    "Shading Time",
+    "Texturing Time",
+    "Raytracing Time",
+    "Camera Rays",
+    "Transmission Rays",
+    "Light Rays",
+    "Indirect Rays",
+    "Photon Rays"    
+]
+
+__ALL_STATS__ = [
+    "Memory",
+    "First Ray",
+    "First Iteration",
+    "First Iteration",
+    "Rays/Sec",
+    "Total Rays",
+    "Shading Time",
+    "Texturing Time",
+    "Raytracing Time", 
+    "Camera Rays",
+    "Transmission Rays",
+    "Light Rays",
+    "Indirect Rays",
+    "Photon Rays"        
+]   
 class RfBBaseMetric(object):
 
     def __init__(self, key, label):
         self.key = key
         self.label = label
-
-
-
 class RfBStatsManager(object):
 
     def __init__(self, rman_render):
@@ -49,9 +111,10 @@ class RfBStatsManager(object):
         self._prevTotalRaysValid = True
 
         for name,label in __LIVE_METRICS__:
+            if name:
+                self.render_stats_names[name] = label
             if label:
-                self.render_live_stats[label] = '--'
-            self.render_stats_names[name] = label
+                self.render_live_stats[label] = '--'                
 
         self.export_stat_label = ''
         self.export_stat_progress = 0.0
@@ -63,7 +126,8 @@ class RfBStatsManager(object):
         self._res_mult = 0.0
         self.web_socket_enabled = False
         self.boot_strap_thread = None
-        self.boot_strap_thread_kill = False        
+        self.boot_strap_thread_kill = False   
+        self.stats_to_draw = list()     
 
         # roz objects
         self.rman_stats_session_name = "RfB Stats Session"
@@ -115,13 +179,18 @@ class RfBStatsManager(object):
             if os.path.exists(os.path.join(rman_stats_config_path, 'stats.ini')):
                 self.rman_stats_session_config.LoadConfigFile(rman_stats_config_path, 'stats.ini')
                           
+        # do this once at startup
+        self.web_socket_server_id = 'rfb_statsserver_'+str(os.getpid())
+        self.rman_stats_session_config.SetServerId(self.web_socket_server_id)
+
+        # initialize session config with prefs, then add session
         self.update_session_config()     
         self.rman_stats_session = rman.Stats.AddSession(self.rman_stats_session_config)  
 
     def update_session_config(self):
 
         self.web_socket_enabled = prefs_utils.get_pref('rman_roz_webSocketServer', default=False)
-        self.web_socket_port = prefs_utils.get_pref('rman_roz_webSocketServer_Port', default=9723)
+        self.web_socket_port = prefs_utils.get_pref('rman_roz_webSocketServer_Port', default=0)
 
         config_dict = dict()
         config_dict["logLevel"] = int(prefs_utils.get_pref('rman_roz_logLevel', default='3'))
@@ -133,6 +202,23 @@ class RfBStatsManager(object):
         self.rman_stats_session_config.Update(config_str)
         if self.rman_stats_session:
             self.rman_stats_session.Update(self.rman_stats_session_config)   
+
+        # update stats manager config for connecting client to server
+        self.mgr.config["webSocketPort"] = self.web_socket_port
+        self.mgr.serverId = self.web_socket_server_id
+
+        # update what stats to draw
+        print_level = int(prefs_utils.get_pref('rman_roz_stats_print_level'))
+        if print_level == 1:
+            self.stats_to_draw = __BASIC_STATS__
+        elif print_level == 2:
+            self.stats_to_draw = __MODERATE_STATS__
+        elif print_level == 3:
+            self.stats_to_draw = __MOST_STATS__            
+        elif print_level == 4:
+            self.stats_to_draw = __ALL_STATS__
+        else:
+            self.stats_to_draw = list()        
 
         if self.web_socket_enabled:
             #self.attach()
@@ -152,21 +238,19 @@ class RfBStatsManager(object):
             if self.mgr.clientConnected():
                 for name,label in __LIVE_METRICS__:
                     # Declare interest
-                    self.mgr.enableMetric(name)
+                    if name:
+                        self.mgr.enableMetric(name)
                 return       
         
     def attach(self):
-        host = self.mgr.config["webSocketHost"]
-        port = self.web_socket_port
 
         if not self.mgr:
             return 
         if (self.mgr.clientConnected()):
             return
 
-        # The connectToServer call is a set of asynchronous calls so we set
-        # a thread to check the connection and then enable the metrics
-        self.mgr.connectToServer(host, port)
+        # Manager will connect based on given configuration & serverId
+        self.mgr.connectToServer()
 
         # if the bootstrap thread is still running, kill it
         if self.boot_strap_thread:
@@ -257,6 +341,7 @@ class RfBStatsManager(object):
                         else:
                             self.render_live_stats[label] = '{:.3f}'.format(raysPerSecond)
                         
+                    self.render_live_stats["Total Rays"] = currentTotalRays
                     self._prevTotalRaysValid = True
                     self._prevTotalRays = currentTotalRays    
                 elif name == "/rman@iterationComplete":
@@ -266,10 +351,23 @@ class RfBStatsManager(object):
                 elif name == "/rman/renderer@progress":
                     progressVal = int(float(dat['payload']))
                     self._progress = progressVal                      
-                elif name in ["/rman.timeToFirstRaytrace",
-                              "/rman.timeToFirstPixel", 
-                              "/rman.timeToFirstIteration"]:
-                    self.render_live_stats[label] = '%s secs' % str(dat['payload'])       
+                elif name in __TIMER_STATS__:
+                    fval = float(dat['payload'])
+                    if fval >= 60.0:
+                        txt = '%d min %.04f sec' % divmod(fval, 60.0)
+                    else:
+                        txt = '%.04f sec' % fval                                                
+                    self.render_live_stats[label] = txt
+                elif name in ['/rman/raytracing/camera.numRays',
+                            '/rman/raytracing/transmission.numRays', 
+                            '/rman/raytracing/photon.numRays',
+                            '/rman/raytracing/light.numRays', 
+                            '/rman/raytracing/indirect.numRays']:    
+                    rays = int(dat['payload'])
+                    pct = 0
+                    if self._prevTotalRays > 0:
+                        pct = int((rays / self._prevTotalRays) * 100)
+                    self.render_live_stats[label] = '%d (%d%%)' % (rays, pct)            
                 else:    
                     self.render_live_stats[label] = str(dat['payload'])
 
@@ -302,16 +400,11 @@ class RfBStatsManager(object):
     def draw_render_stats(self):
         if not self.rman_render.rman_running:
             return
-
-        _stats_to_draw = [
-            "Memory",
-            "Rays/Sec",
-        ]
-
+           
         if self.rman_render.rman_interactive_running:
             message = '\n%s, %d, %d%%' % (self._integrator, self._decidither, self._res_mult)
             if self.is_connected():
-                for label in _stats_to_draw:
+                for label in self.stats_to_draw:
                     data = self.render_live_stats[label]
                     message = message + '\n%s: %s' % (label, data)
                 # iterations
@@ -324,7 +417,7 @@ class RfBStatsManager(object):
         else:
             message = ''
             if self.is_connected():
-                for label in _stats_to_draw:
+                for label in __BASIC_STATS__:
                     data = self.render_live_stats[label]
                     message = message + '%s: %s ' % (label, data)       
                 # iterations                    

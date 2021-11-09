@@ -527,6 +527,9 @@ class RmanSceneSync(object):
                 if rsn.db_name == db_name:
                     self.rman_scene.rman_objects[ob.original] = rsn
                     del self.rman_scene.rman_objects[id]
+                    if id in self.rman_scene.rman_cameras:
+                        self.rman_scene.rman_cameras[ob.original] = rsn
+                        del self.rman_scene.rman_cameras[id]
                     rman_sg_node = rsn
                     break
         return rman_sg_node
@@ -694,7 +697,19 @@ class RmanSceneSync(object):
                 # Save this particle settings node, so we can check for it later 
                 # when we process object changes
                 particle_settings_node = obj.id.original
-                                         
+
+            elif isinstance(obj.id, bpy.types.ShaderNodeTree):
+                if obj.id.name in bpy.data.node_groups:
+                    # this is probably one of our fake node groups with ramps
+                    # update all of the users of this node tree
+                    rfb_log().debug("ShaderNodeTree updated: %s" % obj.id.name)
+                    users = context.blend_data.user_map(subset={obj.id.original})
+                    for o in users[obj.id.original]:
+                        if hasattr(o, 'rman_nodetree'):
+                            o.rman_nodetree.update_tag()
+                        elif hasattr(o, 'node_tree'):
+                            o.node_tree.update_tag()                
+                                            
             elif isinstance(obj.id, bpy.types.Object):
                 particle_systems = getattr(obj.id, 'particle_systems', list())
                 has_particle_systems = len(particle_systems) > 0
@@ -1094,17 +1109,18 @@ class RmanSceneSync(object):
         tokens = nodeID.split('|')
         if len(tokens) < 3:
             return
-        node_name,param,ob_name = tokens
 
+        node_name,param,ob_name = tokens
         node, ob = scene_utils.find_node_by_name(node_name, ob_name)
-        if node == None or ob == None:
+        if ob == None:
             return
 
         ob_type = type(ob)
 
-        if ob_type == bpy.types.Material:
-            self.update_material(ob)
-            return
+        if isinstance(ob, bpy.types.Material):
+            ob.node_tree.update_tag()
+        elif isinstance(ob, bpy.types.NodeTree):
+            ob.update_tag()
         elif ob_type == bpy.types.World:
             ob.update_tag()   
         else:

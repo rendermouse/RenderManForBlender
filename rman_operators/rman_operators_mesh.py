@@ -1,3 +1,4 @@
+from ..rfb_logger import rfb_log
 import bpy
 from bpy.props import BoolProperty
 from mathutils import Vector, Matrix

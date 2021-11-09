@@ -3,8 +3,9 @@ from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import string_utils
 from ..rfb_utils import texture_utils
 from ..rfb_utils import filepath_utils
+from ..rfb_utils import object_utils
 from bpy.types import Operator
-from bpy.props import StringProperty
+from bpy.props import StringProperty, FloatProperty
 import os
 import zipfile
 import bpy
@@ -18,15 +19,15 @@ class PRMAN_OT_Renderman_Package(Operator):
     bl_description = "Package your scene including textures into a zip file."
     bl_options = {'INTERNAL'}
 
-    directory: bpy.props.StringProperty(subtype='FILE_PATH')
-    filepath: bpy.props.StringProperty(
+    directory: StringProperty(subtype='FILE_PATH')
+    filepath: StringProperty(
         subtype="FILE_PATH")
 
-    filename: bpy.props.StringProperty(
+    filename: StringProperty(
         subtype="FILE_NAME",
         default="")
 
-    filter_glob: bpy.props.StringProperty(
+    filter_glob: StringProperty(
         default="*.zip",
         options={'HIDDEN'},
         )           
@@ -123,6 +124,38 @@ class PRMAN_OT_Renderman_Package(Operator):
             setattr(db, 'filepath', '//./assets/%s' % bfile)   
             z.write(diskpath, arcname=os.path.join('assets', bfile))               
             remove_files.append(diskpath)
+
+        # archives etc.
+        for ob in bpy.data.objects:
+            rman_type = object_utils._detect_primitive_(ob)
+            if rman_type == 'DELAYED_LOAD_ARCHIVE':
+                rm = ob.renderman
+                rib_path = string_utils.expand_string(rm.path_archive)
+                bfile = os.path.basename(rib_path)
+                diskpath = os.path.join(assets_dir, bfile)
+                shutil.copyfile(rib_path, diskpath)  
+                setattr(rm, 'path_archive', os.path.join('<blend_dir>', 'assets', bfile))
+                z.write(diskpath, arcname=os.path.join('assets', bfile))
+                remove_files.append(diskpath)    
+            elif rman_type == 'ALEMBIC':
+                rm = ob.renderman
+                abc_filepath = string_utils.expand_string(rm.abc_filepath)
+                bfile = os.path.basename(abc_filepath)
+                diskpath = os.path.join(assets_dir, bfile)
+                shutil.copyfile(abc_filepath, diskpath)  
+                setattr(rm, 'abc_filepath', os.path.join('<blend_dir>', 'assets', bfile))
+                z.write(diskpath, arcname=os.path.join('assets', bfile))
+                remove_files.append(diskpath)   
+            elif rman_type == 'BRICKMAP':  
+                rm = ob.renderman
+                bkm_filepath = string_utils.expand_string(rm.bkm_filepath)
+                bfile = os.path.basename(bkm_filepath)
+                diskpath = os.path.join(assets_dir, bfile)
+                shutil.copyfile(bkm_filepath, diskpath)  
+                setattr(rm, 'bkm_filepath', os.path.join('<blend_dir>', 'assets', bfile))
+                z.write(diskpath, arcname=os.path.join('assets', bfile))
+                remove_files.append(diskpath)                                
+                                          
                             
         bl_filepath = os.path.dirname(bl_scene_file)
         bl_filename = os.path.basename(bl_scene_file)
@@ -150,8 +183,89 @@ class PRMAN_OT_Renderman_Package(Operator):
         context.window_manager.fileselect_add(self)
         return{'RUNNING_MODAL'} 
 
+class PRMAN_OT_Renderman_Start_Debug_Server(bpy.types.Operator):
+    bl_idname = "renderman.start_debug_server"
+    bl_label = "Start Debug Server"
+    bl_description = "Start the debug server. This requires the debugpy module."
+    bl_options = {'INTERNAL'}
+
+    max_timeout: FloatProperty(default=120.0)
+    num_seconds: FloatProperty(default=0.0)
+    debugpy = None
+
+    @classmethod
+    def poll(cls, context):
+        if context.engine != "PRMAN_RENDER":
+            return False
+        
+        if cls.debugpy and cls.debugpy.is_client_connected():
+            return False
+            
+        return True
+
+    # call check_done
+    def modal(self, context, event):
+        if event.type == "TIMER":
+            if not self.__class__.debugpy.is_client_connected():
+                if self.properties.num_seconds >= self.properties.max_timeout:
+                    self.report({'INFO'}, 'Max timeout reached. Aborting...')
+                    return {'FINISHED'}
+                self.report({'INFO'}, 'Still waiting...')
+                self.properties.num_seconds += 0.1
+                return {'RUNNING_MODAL'}
+            else:
+                self.report({'INFO'}, 'Debugger attached.')
+                return {'FINISHED'}
+        
+        return {'RUNNING_MODAL'}
+
+    def execute(self, context):
+        self.report({'INFO'}, 'Debugger attached.')
+        return {"FINISHED"}       
+
+    def invoke(self, context, event):
+        cls = self.__class__
+        if not cls.debugpy:
+            try:
+                import debugpy
+
+            except ModuleNotFoundError:
+                self.report({'ERROR'}, 'Cannot import debugpy module.')
+                return {'FINISHED'}
+
+            try:
+                debugpy.listen(("localhost", 5678))
+                cls.debugpy = debugpy
+                self.report({'INFO'}, 'debugpy started!')
+            except:
+                self.report({'ERROR'}, 'debugpy already running!')
+        wm = context.window_manager
+        self._timer = wm.event_timer_add(0.1, window=context.window)        
+        context.window_manager.modal_handler_add(self)
+        
+        return {'RUNNING_MODAL'}
+
+class PRMAN_OT_Renderman_Open_Addon_Preferences(bpy.types.Operator):
+    bl_idname = "renderman.open_addon_preferences"
+    bl_label = "Addon Preferences"
+    bl_description = "Open the RenderMan for Blender addon prferences"
+    bl_options = {'INTERNAL'}
+
+
+    @classmethod
+    def poll(cls, context):
+        return context.engine == "PRMAN_RENDER"
+
+    def execute(self, context):
+        context.preferences.active_section = 'ADDONS'
+        context.window_manager.addon_search = 'RenderMan For Blender'
+        bpy.ops.screen.userpref_show()
+        return {"FINISHED"}       
+
 classes = [
-   PRMAN_OT_Renderman_Package 
+   PRMAN_OT_Renderman_Package,
+   PRMAN_OT_Renderman_Start_Debug_Server,
+   PRMAN_OT_Renderman_Open_Addon_Preferences
 ]
 
 def register():

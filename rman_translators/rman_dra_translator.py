@@ -1,5 +1,6 @@
 from .rman_translator import RmanTranslator
 from ..rman_sg_nodes.rman_sg_dra import RmanSgDra
+from ..rfb_utils import string_utils
 
 class RmanDraTranslator(RmanTranslator):
 
@@ -21,7 +22,7 @@ class RmanDraTranslator(RmanTranslator):
 
     def update(self, ob, rman_sg_dra):
         rm = ob.renderman
-        path_archive = rm.path_archive
+        path_archive = string_utils.expand_string(rm.path_archive)
         bounds = (-100000, 100000, -100000, 100000, -100000, 100000 )
 
         primvar = rman_sg_dra.sg_node.GetPrimVars()

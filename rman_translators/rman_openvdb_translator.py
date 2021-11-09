@@ -4,10 +4,11 @@ from ..rfb_utils import filepath_utils
 from ..rfb_utils import transform_utils
 from ..rfb_utils import string_utils
 from ..rfb_utils import scenegraph_utils
+from ..rfb_utils import texture_utils
 from ..rfb_utils.envconfig_utils import envconfig
 from ..rfb_logger import rfb_log
 import json
-
+import os
 class RmanOpenVDBTranslator(RmanTranslator):
 
     def __init__(self, rman_scene):
@@ -79,14 +80,16 @@ class RmanOpenVDBTranslator(RmanTranslator):
             rman_sg_openvdb.sg_node.SetPrimVars(primvar)   
             return                      
 
+        
         openvdb_file = filepath_utils.get_real_path(db.filepath)
         if db.is_sequence:
             # if we have a sequence, get the current frame filepath from the grids
             openvdb_file = filepath_utils.get_real_path(grids.frame_filepath)     
 
+        #openvdb_file = texture_utils.get_txmanager().get_output_vdb(ob)
+
         openvdb_attrs = dict()
         openvdb_attrs['filterWidth'] = getattr(rm, 'openvdb_filterwidth')
-        openvdb_attrs['velocityScale'] = getattr(rm, 'openvdb_velocityscale')
         openvdb_attrs['densityMult'] = getattr(rm, 'openvdb_densitymult')
         openvdb_attrs['densityRolloff'] = getattr(rm, 'openvdb_densityrolloff')
 
@@ -97,12 +100,8 @@ class RmanOpenVDBTranslator(RmanTranslator):
         string_args = []
         string_args.append(openvdb_file)
         string_args.append("%s:fogvolume" % active_grid.name)
-        if envconfig().build_info.version() >= "24.2":
-            if rm.openvdb_velocity_grid_name == '__NONE__':
-                string_args.append('')
-            else:
-                string_args.append(rm.openvdb_velocity_grid_name)
-            string_args.append(json_attrs)
+        string_args.append('')
+        string_args.append(json_attrs)
         primvar.SetStringArray(self.rman_scene.rman.Tokens.Rix.k_blobbydso_stringargs, string_args, len(string_args))
 
         for i, grid in enumerate(grids):

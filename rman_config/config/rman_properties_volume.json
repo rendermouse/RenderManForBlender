@@ -10,17 +10,7 @@
             "default": 0.0,
             "page": "",
             "help": "If set to 0, disables mipmapping. If greater than 0, values less than 1 bias towards finer levels of the mipmap and values larger than one bias towards coarser levels."
-        },                   
-        {
-            "panel": "VOLUME_PT_renderman_openvdb_attributes",
-            "name": "openvdb_velocityscale",
-            "label": "Velocity Scale",
-            "type": "float",
-            "editable": true,
-            "default": 1.0,
-            "page": "",
-            "help": "Scales the values in the velocity field of the volume."
-        }, 
+        },                    
         {
             "panel": "VOLUME_PT_renderman_openvdb_attributes",
             "name": "openvdb_densitymult",

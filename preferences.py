@@ -406,6 +406,10 @@ class RendermanPreferences(AddonPreferences):
     rpbSelectedLibrary: StringProperty(default='')
     rpbSelectedCategory: StringProperty(default='')
     rpbSelectedPreset: StringProperty(default='')
+    rpbStorageMode: IntProperty(default=0)
+    rpbStorageKey: StringProperty(default='')
+    rpbStoragePath: StringProperty(default='')
+    rpbConvertToTex: IntProperty(default=1)    
 
     def update_stats_config(self, context):
         bpy.ops.renderman.update_stats_config('INVOKE_DEFAULT')
@@ -430,10 +434,23 @@ class RendermanPreferences(AddonPreferences):
     rman_roz_webSocketServer: BoolProperty(name="Enable Live Stats", default=False, 
                                         description="Turning this off will disable the live statistics system in RfB.",
                                         update=update_stats_config)
-    rman_roz_webSocketServer_Port: IntProperty(name="Port", default=9723, 
+    rman_roz_webSocketServer_Port: IntProperty(name="Port", default=0, 
                                         min=0,
-                                        description="Port number of the live stats server to use.",
-                                        update=update_stats_config)                                        
+                                        description="Port number of the live stats server to use. Setting to 0 will randomly select an open port.",
+                                        update=update_stats_config)      
+
+    rman_roz_stats_print_level: EnumProperty(
+                    name="Stats Print Level",
+                    default = 1,
+                    items=[('0', 'None', ''),
+                            ('1', 'Basic', ''),
+                            ('2', 'Moderate', ''),
+                            ('3', 'Most', ''),
+                            ('4', 'All', ''),
+                        ],
+                    description="How much live stats to print",
+                    update=update_stats_config
+    )                                                                          
 
     def draw_xpu_devices(self, context, layout):
         if self.rman_xpu_device == 'CPU':

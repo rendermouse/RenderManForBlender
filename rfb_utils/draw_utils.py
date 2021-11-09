@@ -1,4 +1,6 @@
+from ..rfb_logger import rfb_log
 from . import shadergraph_utils
+from .property_utils import BlPropInfo, __LOBES_ENABLE_PARAMS__
 from ..rman_constants import NODE_LAYOUT_SPLIT
 from .. import rman_config
 from .. import rfb_icons
@@ -183,245 +185,235 @@ def _draw_ui_from_rman_config(config_name, panel, context, layout, parent):
                 row.enabled = is_enabled
 
 def draw_prop(node, prop_name, layout, level=0, nt=None, context=None, sticky=False):
-    if prop_name == "codetypeswitch":
-        row = layout.row()
-        if node.codetypeswitch == 'INT':
-            row.prop_search(node, "internalSearch",
-                            bpy.data, "texts", text="")
-        elif node.codetypeswitch == 'EXT':
-            row.prop(node, "shadercode")
-    elif prop_name == "internalSearch" or prop_name == "shadercode" or prop_name == "expression":
+    prop_meta = node.prop_meta[prop_name]
+    bl_prop_info = BlPropInfo(node, prop_name, prop_meta)
+    if bl_prop_info.prop is None:
         return
-    else:
-        prop_meta = node.prop_meta[prop_name]
-        prop = getattr(node, prop_name, None)
-        if prop is None:
+    if bl_prop_info.widget == 'null':
+        return
+
+    # evaluate the conditionalVisOps
+    if bl_prop_info.conditionalVisOps and bl_prop_info.cond_expr:
+        try:
+            hidden = not eval(bl_prop_info.cond_expr)
+            if bl_prop_info.conditionalLockOps:
+                bl_prop_info.prop_disabled = hidden                     
+            else:
+                if hidden:
+                    return
+        except Exception as err:                        
+            rfb_log().error("Error handling conditionalVisOp: %s" % str(err))
+            pass
+
+    if bl_prop_info.prop_hidden:
+        return
+
+    # links
+    layout.context_pointer_set("socket", bl_prop_info.socket)
+    if bl_prop_info.is_linked:
+        input_node = shadergraph_utils.socket_node_input(nt, bl_prop_info.socket)
+        icon = get_open_close_icon(bl_prop_info.socket.ui_open)
+
+        split = layout.split()
+        row = split.row()
+        draw_indented_label(row, None, level)
+        row.context_pointer_set("socket", bl_prop_info.socket)               
+        row.operator('node.rman_open_close_link', text='', icon=icon, emboss=False)
+        label = prop_meta.get('label', prop_name)
+        
+        rman_icon = rfb_icons.get_node_icon(input_node.bl_label)               
+        row.label(text=label + ' (%s):' % input_node.name)
+        if sticky:
             return
 
-        read_only = prop_meta.get('readOnly', False)
-        not_connectable = prop_meta.get('__noconnection', True)
-        widget = prop_meta.get('widget', 'default')
-        prop_hidden = getattr(node, '%s_hidden' % prop_name, False)
-        prop_disabled = getattr(node, '%s_disabled' % prop_name, False)
+        row.context_pointer_set("socket", bl_prop_info.socket)
+        row.context_pointer_set("node", node)
+        row.context_pointer_set("nodetree", nt)
+        row.menu('NODE_MT_renderman_connection_menu', text='', icon_value=rman_icon.icon_id)
+                                
+        if bl_prop_info.socket.ui_open:
+            draw_node_properties_recursive(layout, context, nt,
+                                            input_node, level=level + 1)
+        return
 
-        if widget == 'null' or prop_hidden:
-            return
-        elif widget == 'colorramp':
-            node_group = bpy.data.node_groups.get(node.rman_fake_node_group, None)
-            if not node_group:
-                row = layout.row(align=True)
-                row.context_pointer_set("node", node)
-                row.operator('node.rman_fix_ramp') 
-                row.operator('node.rman_fix_all_ramps')
-                return
+    elif bl_prop_info.renderman_type == 'page':
+        row = layout.row(align=True)
+        row.enabled = not bl_prop_info.prop_disabled
+        ui_prop = prop_name + "_uio"
+        ui_open = getattr(node, ui_prop)
+        icon = get_open_close_icon(ui_open)
 
-            ramp_name =  prop
-            ramp_node = node_group.nodes[ramp_name]
-            layout.enabled = (nt.library is None)
-            layout.template_color_ramp(
-                    ramp_node, 'color_ramp')  
-            return       
-        elif widget == 'floatramp':
-            node_group = bpy.data.node_groups.get(node.rman_fake_node_group, None)
-            if not node_group:
-                row = layout.row(align=True)
-                row.context_pointer_set("node", node)
-                row.operator('node.rman_fix_ramp')
-                
-            ramp_name =  prop
-            ramp_node = node_group.nodes[ramp_name]
-            layout.enabled = (nt.library is None)
-            layout.template_curve_mapping(
-                    ramp_node, 'mapping')  
-            return     
+        split = layout.split(factor=NODE_LAYOUT_SPLIT)
+        row = split.row()
+        row.enabled = not bl_prop_info.prop_disabled
+        draw_indented_label(row, None, level)
 
-        elif widget == 'displaymetadata':
-            draw_dsypmeta_item(layout, node, prop_name)                             
+        row.context_pointer_set("node", node)               
+        op = row.operator('node.rman_open_close_page', text='', icon=icon, emboss=False)            
+        op.prop_name = ui_prop
 
-        # double check the conditionalVisOps
-        # this might be our first time drawing, i.e.: scene was just opened.
-        conditionalVisOps = prop_meta.get('conditionalVisOps', None)
-        if conditionalVisOps:
-            cond_expr = conditionalVisOps.get('expr', None)
-            if cond_expr:
-                try:
-                    hidden = not eval(cond_expr)
-                    if prop_meta.get('conditionalLockOps', None):
-                        setattr(node, '%s_disabled' % prop_name, hidden)
-                        prop_disabled = hidden
-                        if hasattr(node, 'inputs') and prop_name in node.inputs:
-                            node.inputs[prop_name].hide = hidden                        
-                    else:
-                        setattr(node, '%s_hidden' % prop_name, hidden)
-                        if hasattr(node, 'inputs') and prop_name in node.inputs:
-                            node.inputs[prop_name].hide = hidden
-                        if hidden:
-                            return
-                except:                        
-                    pass
+        # sub_prop_names are all of the property names
+        # that are under this page
+        sub_prop_names = list(bl_prop_info.prop)
+        if shadergraph_utils.has_lobe_enable_props(node):
+            # remove the enable lobe param from sub_prop_names
+            # we already draw these next to open/close page arrow below, just
+            # before we recursively call draw_props
+            for pn in sub_prop_names:
+                if pn in __LOBES_ENABLE_PARAMS__:
+                    row.prop(node, pn, text='')
+                    sub_prop_names.remove(pn)
+                    break
 
-        # else check if the socket with this name is connected
-        inputs = getattr(node, 'inputs', dict())
-        socket =  inputs.get(prop_name, None)
-        layout.context_pointer_set("socket", socket)
+        page_label = bl_prop_info.label
+        row.label(text=page_label)
 
-        if socket and socket.is_linked:
-            input_node = shadergraph_utils.socket_node_input(nt, socket)
-            icon = get_open_close_icon(socket.ui_open)
+        if ui_open:
+            draw_props(node, sub_prop_names, layout, level=level + 1, nt=nt, context=context)
+        return
 
-            split = layout.split()
-            row = split.row()
-            draw_indented_label(row, None, level)
-            row.context_pointer_set("socket", socket)               
-            row.operator('node.rman_open_close_link', text='', icon=icon, emboss=False)
-            label = prop_meta.get('label', prop_name)
-            
-            rman_icon = rfb_icons.get_node_icon(input_node.bl_label)               
-            row.label(text=label + ' (%s):' % input_node.name)
-            if sticky:
-                return
+    elif bl_prop_info.renderman_type == 'array':
+        row = layout.row(align=True)
+        row.enabled = not bl_prop_info.prop_disabled
 
-            row.context_pointer_set("socket", socket)
-            row.context_pointer_set("node", node)
-            row.context_pointer_set("nodetree", nt)
-            row.menu('NODE_MT_renderman_connection_menu', text='', icon_value=rman_icon.icon_id)
-                                    
-            if socket.ui_open:
-                draw_node_properties_recursive(layout, context, nt,
-                                                input_node, level=level + 1)
+        ui_prop = prop_name + "_uio"
+        ui_open = getattr(node, ui_prop)
+        icon = get_open_close_icon(ui_open)
 
-        else:                    
+        split = layout.split(factor=NODE_LAYOUT_SPLIT)
+        row = split.row()
+        row.enabled = not bl_prop_info.prop_disabled
+        draw_indented_label(row, None, level)
+
+        row.context_pointer_set("node", node)               
+        op = row.operator('node.rman_open_close_page', text='', icon=icon, emboss=False)            
+        op.prop_name = ui_prop
+
+        sub_prop_names = list(bl_prop_info.prop)
+        arraylen = getattr(node, '%s_arraylen' % prop_name)
+        prop_label = bl_prop_info.label
+        row.label(text=prop_label + ' [%d]:' % arraylen)
+
+        if ui_open:
+            level += 1
             row = layout.row(align=True)
-            row.enabled = not prop_disabled
-            if prop_meta['renderman_type'] == 'page':
-                ui_prop = prop_name + "_uio"
-                ui_open = getattr(node, ui_prop)
-                icon = get_open_close_icon(ui_open)
-
-                split = layout.split(factor=NODE_LAYOUT_SPLIT)
-                row = split.row()
-                row.enabled = not prop_disabled
+            col = row.column()
+            row = col.row()
+            draw_indented_label(row, None, level)                     
+            row.prop(node, '%s_arraylen' % prop_name, text='Size')
+            for i in range(0, arraylen):
+                row = layout.row(align=True)
+                col = row.column()                           
+                row = col.row()
+                array_elem_nm = '%s[%d]' % (prop_name, i)
                 draw_indented_label(row, None, level)
-
-                row.context_pointer_set("node", node)               
-                op = row.operator('node.rman_open_close_page', text='', icon=icon, emboss=False)            
-                op.prop_name = ui_prop
-
-                sub_prop_names = list(prop)
-                if shadergraph_utils.has_lobe_enable_props(node):
-                    for pn in sub_prop_names:
-                        if pn.startswith('enable'):
-                            row.prop(node, pn, text='')
-                            sub_prop_names.remove(pn)
-                            break
-
-                row.label(text=prop_name.split('.')[-1] + ':')
-
-                if ui_open:
-                    draw_props(node, sub_prop_names, layout, level=level + 1, nt=nt, context=context)
-            elif prop_meta['renderman_type'] == 'array':
-                ui_prop = prop_name + "_uio"
-                ui_open = getattr(node, ui_prop)
-                icon = get_open_close_icon(ui_open)
-
-                split = layout.split(factor=NODE_LAYOUT_SPLIT)
-                row = split.row()
-                row.enabled = not prop_disabled
-                draw_indented_label(row, None, level)
-
-                row.context_pointer_set("node", node)               
-                op = row.operator('node.rman_open_close_page', text='', icon=icon, emboss=False)            
-                op.prop_name = ui_prop
-
-                sub_prop_names = list(prop)
-                arraylen = getattr(node, '%s_arraylen' % prop_name)
-                prop_label = prop_meta.get('label', prop_name)
-                row.label(text=prop_label + ' [%d]:' % arraylen)
-
-                if ui_open:
-                    level += 1
-                    row = layout.row(align=True)
-                    col = row.column()
-                    row = col.row()
-                    draw_indented_label(row, None, level)                     
-                    row.prop(node, '%s_arraylen' % prop_name, text='Size')
-                    for i in range(0, arraylen):
-                        row = layout.row(align=True)
-                        col = row.column()                           
-                        row = col.row()
-                        array_elem_nm = '%s[%d]' % (prop_name, i)
-                        draw_indented_label(row, None, level)
-                        if array_elem_nm in node.inputs:
-                            op_text = ''
-                            socket = node.inputs[array_elem_nm]
-                            row.context_pointer_set("socket", socket)
-                            row.context_pointer_set("node", node)
-                            row.context_pointer_set("nodetree", nt)
-
-                            if socket.is_linked:
-                                input_node = shadergraph_utils.socket_node_input(nt, socket)
-                                rman_icon = rfb_icons.get_node_icon(input_node.bl_label)
-                                row.label(text='%s[%d] (%s):' % (prop_label, i, input_node.name))    
-                                row.menu('NODE_MT_renderman_connection_menu', text='', icon_value=rman_icon.icon_id)
-                                draw_node_properties_recursive(layout, context, nt, input_node, level=level + 1)
-                            else:
-                                row.prop(node, '%s[%d]' % (prop_name, i), slider=True)
-                                rman_icon = rfb_icons.get_icon('rman_connection_menu')
-                                row.menu('NODE_MT_renderman_connection_menu', text='', icon_value=rman_icon.icon_id)
-                return
-            else:                      
-                draw_indented_label(row, None, level)
-                
-                if widget == 'propsearch':
-                    # use a prop_search layout
-                    options = prop_meta['options']
-                    prop_search_parent = options.get('prop_parent')
-                    prop_search_name = options.get('prop_name')
-                    eval(f'row.prop_search(node, prop_name, {prop_search_parent}, "{prop_search_name}")') 
-                elif prop_meta['renderman_type'] in ['struct', 'bxdf', 'vstruct']:
-                    row.label(text=prop_meta['label'])
-                elif read_only:
-                    if not_connectable:
-                        row2 = row.row()
-                        row2.prop(node, prop_name)
-                        row2.enabled=False
-                    else:
-                        row.label(text=prop_meta['label'])
-                        row2 = row.row()
-                        row2.prop(node, prop_name, text="", slider=True)
-                        row2.enabled=False                           
-                else:
-                    row.prop(node, prop_name, slider=True)
-
-                if prop_name in inputs:
+                if array_elem_nm in node.inputs:
+                    op_text = ''
+                    socket = node.inputs[array_elem_nm]
                     row.context_pointer_set("socket", socket)
                     row.context_pointer_set("node", node)
                     row.context_pointer_set("nodetree", nt)
-                    rman_icon = rfb_icons.get_icon('rman_connection_menu')
-                    row.menu('NODE_MT_renderman_connection_menu', text='', icon_value=rman_icon.icon_id)
 
-            if widget in ['fileinput','assetidinput']:                            
-                prop_val = getattr(node, prop_name)
-                if prop_val != '':
-                    from . import texture_utils
-                    from . import scene_utils
-                    if not texture_utils.get_txmanager().is_file_src_tex(prop_val):
-                        colorspace_prop_name = '%s_colorspace' % prop_name
-                        if not hasattr(node, colorspace_prop_name):
-                            return
-                        row = layout.row(align=True)
-                        if texture_utils.get_txmanager().does_file_exist(prop_val):
-                            row.enabled = not prop_disabled
-                            draw_indented_label(row, None, level)
-                            row.prop(node, colorspace_prop_name, text='Color Space')
-                            rman_icon = rfb_icons.get_icon('rman_txmanager')
-                            id = scene_utils.find_node_owner(node)
-                            nodeID = texture_utils.generate_node_id(node, prop_name, ob=id)
-                            op = row.operator('rman_txmgr_list.open_txmanager', text='', icon_value=rman_icon.icon_id)  
-                            op.nodeID = nodeID     
-                        else:
-                            draw_indented_label(row, None, level)
-                            row.label(text="Input mage does not exists.", icon='ERROR')                        
+                    if socket.is_linked:
+                        input_node = shadergraph_utils.socket_node_input(nt, socket)
+                        rman_icon = rfb_icons.get_node_icon(input_node.bl_label)
+                        row.label(text='%s[%d] (%s):' % (prop_label, i, input_node.name))    
+                        row.menu('NODE_MT_renderman_connection_menu', text='', icon_value=rman_icon.icon_id)
+                        draw_node_properties_recursive(layout, context, nt, input_node, level=level + 1)
+                    else:
+                        row.prop(node, '%s[%d]' % (prop_name, i), slider=True)
+                        rman_icon = rfb_icons.get_icon('rman_connection_menu')
+                        row.menu('NODE_MT_renderman_connection_menu', text='', icon_value=rman_icon.icon_id)
+        return        
+
+    elif bl_prop_info.widget == 'colorramp':
+        node_group = node.rman_fake_node_group_ptr 
+        if not node_group:
+            row = layout.row(align=True)
+            row.context_pointer_set("node", node)
+            row.operator('node.rman_fix_ramp') 
+            row.operator('node.rman_fix_all_ramps')
+            return
+
+        ramp_name =  bl_prop_info.prop
+        ramp_node = node_group.nodes[ramp_name]
+        layout.enabled = (nt.library is None)
+        layout.template_color_ramp(
+                ramp_node, 'color_ramp')  
+        return       
+    elif bl_prop_info.widget == 'floatramp':
+        node_group = node.rman_fake_node_group_ptr 
+        if not node_group:
+            row = layout.row(align=True)
+            row.context_pointer_set("node", node)
+            row.operator('node.rman_fix_ramp')
+            
+        ramp_name =  bl_prop_info.prop
+        ramp_node = node_group.nodes[ramp_name]
+        layout.enabled = (nt.library is None)
+        layout.template_curve_mapping(
+                ramp_node, 'mapping')  
+        return     
+
+    elif bl_prop_info.widget == 'displaymetadata':
+        draw_dsypmeta_item(layout, node, prop_name) 
+        return                            
+    
+    row = layout.row(align=True)
+    row.enabled = not bl_prop_info.prop_disabled                  
+    draw_indented_label(row, None, level)
+    
+    if bl_prop_info.widget == 'propsearch':
+        # use a prop_search layout
+        options = prop_meta['options']
+        prop_search_parent = options.get('prop_parent')
+        prop_search_name = options.get('prop_name')
+        eval(f'row.prop_search(node, prop_name, {prop_search_parent}, "{prop_search_name}")') 
+    elif bl_prop_info.renderman_type in ['struct', 'bxdf', 'vstruct']:
+        row.label(text=bl_prop_info.label)
+    elif bl_prop_info.read_only:
+        if bl_prop_info.not_connectable:
+            row2 = row.row()
+            row2.prop(node, prop_name)
+            row2.enabled=False
+        else:
+            row.label(text=bl_prop_info.label)
+            row2 = row.row()
+            row2.prop(node, prop_name, text="", slider=True)
+            row2.enabled=False                           
+    else:
+        row.prop(node, prop_name, slider=True)
+
+    if bl_prop_info.has_input:
+        row.context_pointer_set("socket", bl_prop_info.socket)
+        row.context_pointer_set("node", node)
+        row.context_pointer_set("nodetree", nt)
+        rman_icon = rfb_icons.get_icon('rman_connection_menu')
+        row.menu('NODE_MT_renderman_connection_menu', text='', icon_value=rman_icon.icon_id)
+
+    if bl_prop_info.is_texture:
+        prop_val = getattr(node, prop_name)
+        if prop_val != '':
+            from . import texture_utils
+            from . import scene_utils
+            if texture_utils.get_txmanager().is_file_src_tex(node, prop_name):
+                return            
+            colorspace_prop_name = '%s_colorspace' % prop_name
+            if not hasattr(node, colorspace_prop_name):
+                return
+            row = layout.row(align=True)
+            if texture_utils.get_txmanager().does_file_exist(prop_val):
+                row.enabled = not bl_prop_info.prop_disabled
+                draw_indented_label(row, None, level)
+                row.prop(node, colorspace_prop_name, text='Color Space')
+                rman_icon = rfb_icons.get_icon('rman_txmanager')
+                id = scene_utils.find_node_owner(node)
+                nodeID = texture_utils.generate_node_id(node, prop_name, ob=id)
+                op = row.operator('rman_txmgr_list.open_txmanager', text='', icon_value=rman_icon.icon_id)  
+                op.nodeID = nodeID     
+            else:
+                draw_indented_label(row, None, level)
+                row.label(text="Input mage does not exists.", icon='ERROR')                        
 
 def draw_props(node, prop_names, layout, level=0, nt=None, context=None):
     layout.context_pointer_set("node", node)

@@ -195,6 +195,11 @@ class RendermanMeshPrimVar(bpy.types.PropertyGroup):
                ('UV_TEXTURE', 'UV Texture', '')
                ]
     )
+    export_tangents: BoolProperty(
+        name="Export Tangents",
+        description="Export the tangent vectors for this UV Texture. The primvar name for this will be (Variable Name)_Tn and (Variable Name)_Bn, for the tangent and bitangent vectors, respectively",
+        default=False
+    )
 class RendermanReferencePosePrimVars(bpy.types.PropertyGroup):
 
     has_Pref: BoolProperty(name='has_Pref', default=False)

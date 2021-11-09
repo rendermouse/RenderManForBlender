@@ -42,6 +42,8 @@ class MESH_PT_renderman_prim_vars(CollectionPanel, Panel):
             row.prop_search(item, "data_name", geo, "vertex_colors", text="")
         elif item.data_source == 'UV_TEXTURE':
             row.prop_search(item, "data_name", geo, "uv_layers", text="")
+            row = layout.row()
+            row.prop(item, "export_tangents")
         elif item.data_source == 'VERTEX_GROUP':
             row.prop_search(item, "data_name", ob, "vertex_groups", text="")
         elif item.data_source == 'VERTEX_ATTR_COLOR':

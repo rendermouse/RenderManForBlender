@@ -4,7 +4,7 @@ from ..rfb_utils import object_utils
 from ..rfb_logger import rfb_log
 from bpy.types import Panel
 import bpy
-
+import os
 class VOLUME_PT_renderman_openvdb_attributes(CollectionPanel, Panel):
     bl_context = "data"
     bl_label = "OpenVDB"
@@ -22,7 +22,7 @@ class VOLUME_PT_renderman_openvdb_attributes(CollectionPanel, Panel):
         volume = context.volume
         rm = volume.renderman
 
-        layout.prop(rm, 'openvdb_velocity_grid_name')
+        #layout.operator('renderman.add_openvdb_to_txmanager')
         _draw_ui_from_rman_config('rman_properties_volume', 'VOLUME_PT_renderman_openvdb_attributes', context, layout, rm)             
 
 

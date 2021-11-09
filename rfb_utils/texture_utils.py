@@ -2,6 +2,7 @@ from . import string_utils
 from . import filepath_utils
 from . import scene_utils
 from . import shadergraph_utils
+from .property_utils import BlPropInfo
 #from . import object_utils
 from .prefs_utils import get_pref
 from ..rfb_logger import rfb_log
@@ -17,6 +18,7 @@ import glob
 import subprocess
 import bpy
 import uuid
+import re
 
 __RFB_TXMANAGER__ = None
 
@@ -109,15 +111,40 @@ class RfBTxManager(object):
 
         return self.get_output_tex(txfile)
 
+    def get_output_vdb(self, ob):
+        '''
+        Get the mipmapped version of the openvdb file
+        '''
+        if ob.type != 'VOLUME':
+            return ''
+        db = ob.data
+        grids = db.grids
+
+        openvdb_file = filepath_utils.get_real_path(db.filepath)
+        if db.is_sequence:
+            # if we have a sequence, get the current frame filepath from the grids   
+            openvdb_file = string_utils.get_tokenized_openvdb_file(grids.frame_filepath, grids.frame)
+
+        nodeID = generate_node_id(None, 'filepath', ob=ob)
+        if self.does_nodeid_exists(nodeID):
+            openvdb_file = self.get_output_tex_from_id(nodeID)
+            return openvdb_file
+        return openvdb_file
+
+    def get_txfile_for_vdb(self, ob):
+        nodeID = generate_node_id(None, 'filepath', ob=ob)
+        return self.get_txfile_from_id(nodeID)
+
     def get_txfile_from_id(self, nodeID):
         '''
         Get the txfile from given a nodeID
         '''
         txfile = self.txmanager.get_txfile_from_id(nodeID)
         return txfile       
-            
-    def get_txfile_from_path(self, filepath):
-        return self.txmanager.get_txfile_from_path(filepath)                
+                
+    def get_txfile(self, node, param_name, ob=None):
+        nodeID = generate_node_id(node, param_name, ob=ob)
+        return self.get_txfile_from_id(nodeID)
 
     def txmake_all(self, blocking=True):
         self.txmanager.txmake_all(start_queue=True, blocking=blocking)   
@@ -137,17 +164,20 @@ class RfBTxManager(object):
             if txfile:
                 self.done_callback(nodeID, txfile)      
 
-    def is_file_src_tex(self, file_path):
-        txfile = self.txmanager.get_txfile_from_path(file_path)
+    def is_file_src_tex(self, node, prop_name):
+        id = scene_utils.find_node_owner(node)
+        nodeID = generate_node_id(node, prop_name, ob=id)
+        txfile = self.get_txfile_from_id(nodeID)
         if txfile:
             return (txfile.state == txmanager.STATE_IS_TEX)  
         return False
 
     def does_file_exist(self, file_path):
-        txfile = self.txmanager.get_txfile_from_path(file_path)
-        if txfile:
-            return (txfile.state != txmanager.STATE_INPUT_MISSING)  
-        return True
+        if self.rman_scene:
+            outpath = string_utils.expand_string(file_path, frame=self.rman_scene.bl_frame_current, asFilePath=True)
+        else:
+            outpath = string_utils.expand_string(file_path, asFilePath=True)
+        return os.path.exists(outpath)
 
     def does_nodeid_exists(self, nodeID):
         txfile = self.txmanager.get_txfile_from_id(nodeID)
@@ -162,53 +192,56 @@ def get_txmanager():
     return __RFB_TXMANAGER__    
 
 def update_texture(node, ob=None, check_exists=False):
-    if hasattr(node, 'bl_idname'):
-        if node.bl_idname == "PxrPtexturePatternNode":
-            return
-        elif node.bl_idname == "PxrOSLPatternNode":
-            for input_name, input in node.inputs.items():
-                if hasattr(input, 'is_texture') and input.is_texture:
-                    prop = input.default_value
-                    nodeID = generate_node_id(node, input_name)
-                    real_file = filepath_utils.get_real_path(prop)
-                    get_txmanager().txmanager.add_texture(nodeID, real_file)    
-                    bpy.ops.rman_txmgr_list.add_texture('EXEC_DEFAULT', filepath=real_file)                                                      
-            return
-        elif node.bl_idname == 'ShaderNodeGroup':
-            nt = node.node_tree
-            for node in nt.nodes:
-                update_texture(node, ob=ob)
-            return
+    bl_idname = getattr(node, 'bl_idname', '')
+    if bl_idname == "PxrOSLPatternNode":
+        for input_name, input in node.inputs.items():
+            if hasattr(input, 'is_texture') and input.is_texture:
+                prop = input.default_value
+                nodeID = generate_node_id(node, input_name)
+                real_file = filepath_utils.get_real_path(prop)
+                get_txmanager().txmanager.add_texture(nodeID, real_file)    
+                bpy.ops.rman_txmgr_list.add_texture('EXEC_DEFAULT', filepath=real_file, nodeID=nodeID)                                                      
+        return
+    elif node.bl_idname == 'ShaderNodeGroup':
+        nt = node.node_tree
+        for node in nt.nodes:
+            update_texture(node, ob=ob)
+        return
 
-    if hasattr(node, 'prop_meta'):
-        for prop_name, meta in node.prop_meta.items():
-            if hasattr(node, prop_name):
-                prop = getattr(node, prop_name)
-
-                if meta['renderman_type'] == 'page':
-                    continue
+    prop_meta = getattr(node, 'prop_meta', dict())
+    for prop_name, meta in prop_meta.items():
+        bl_prop_info = BlPropInfo(node, prop_name, meta)
+        if not bl_prop_info.prop:
+            continue
+        if bl_prop_info.renderman_type == 'page':
+            continue
+        elif bl_prop_info.is_texture:
+            node_type = ''
+            if isinstance(ob, bpy.types.Object):
+                if ob.type == 'LIGHT':
+                    node_type = ob.data.renderman.get_light_node_name()
                 else:
-                    if 'widget' in meta and meta['widget'] in ['assetidinput', 'fileinput'] and prop_name != 'iesProfile':
-                        node_type = ''
-                        if isinstance(ob, bpy.types.Object):
-                            if ob.type == 'LIGHT':
-                                node_type = ob.data.renderman.get_light_node_name()
-                            else:
-                                node_type = node.bl_label                            
-                        else:
-                            node_type = node.bl_label
+                    node_type = node.bl_label                            
+            else:
+                node_type = node.bl_label
 
-                        if ob and check_exists:
-                            nodeID = generate_node_id(node, prop_name, ob=ob)
-                            if get_txmanager().does_nodeid_exists(nodeID):
-                                continue
+            if ob and check_exists:
+                nodeID = generate_node_id(node, prop_name, ob=ob)
+                if get_txmanager().does_nodeid_exists(nodeID):
+                    continue
 
-                        category = getattr(node, 'renderman_node_type', 'pattern') 
-                        get_txmanager().add_texture(node, ob, prop_name, prop, node_type=node_type, category=category)
+            category = getattr(node, 'renderman_node_type', 'pattern') 
+            get_txmanager().add_texture(node, ob, prop_name, bl_prop_info.prop, node_type=node_type, category=category)
 
 def generate_node_id(node, prop_name, ob=None):
-    if ob:
-        nodeID = '%s|%s|%s' % (node.name, prop_name, ob.name)    
+    if node is None:
+        nodeID = '%s|%s' % (prop_name, ob.name)
+        return nodeID
+    
+    nm = shadergraph_utils.get_nodetree_name(node)
+    if nm:
+        nodeID = '%s|%s|%s' % (node.name, prop_name, nm)
+
     else:
         prop = ''
         real_file = ''
@@ -218,13 +251,19 @@ def generate_node_id(node, prop_name, ob=None):
         nodeID = '%s|%s|%s' % (node.name, prop_name, real_file)
     return nodeID
 
-def get_textures(id, check_exists=False):
+def get_textures(id, check_exists=False, mat=None):
     if id is None or not id.node_tree:
         return
 
     nt = id.node_tree
+    ob = id
+    if mat:
+        ob = mat
     for node in nt.nodes:
-        update_texture(node, ob=id, check_exists=check_exists)
+        if node.bl_idname == 'ShaderNodeGroup':
+            get_textures(node, check_exists=check_exists, mat=ob)
+        else:            
+            update_texture(node, ob=ob, check_exists=check_exists)
 
 def get_blender_image_path(bl_image):
     if bl_image.packed_file:
@@ -246,11 +285,27 @@ def add_images_from_image_editor():
             if txfile:
                 get_txmanager().done_callback(nodeID, txfile)  
 
+def add_openvdb(ob):
+    db = ob.data
+    grids = db.grids
+    grids.load()                
+    openvdb_file = filepath_utils.get_real_path(db.filepath)
+    if db.is_sequence:
+        grids.load()
+        # if we have a sequence, get the current frame filepath and
+        # then substitute with <f>
+        openvdb_file = string_utils.get_tokenized_openvdb_file(grids.frame_filepath, grids.frame)
+
+    if openvdb_file:
+        input_name = 'filepath'
+        nodeID = generate_node_id(None, input_name, ob=ob)
+        get_txmanager().txmanager.add_texture(nodeID, openvdb_file, category='openvdb')    
+        bpy.ops.rman_txmgr_list.add_texture('EXEC_DEFAULT', filepath=openvdb_file, nodeID=nodeID)          
+
 def parse_scene_for_textures(bl_scene=None):
 
     #add_images_from_image_editor()
 
-    mats_to_scan = []
     if bl_scene:
         for o in scene_utils.renderable_objects(bl_scene):
             if o.type == 'EMPTY':
@@ -263,7 +318,9 @@ def parse_scene_for_textures(bl_scene=None):
                 node = o.data.renderman.get_light_node()
                 if node:
                     update_texture(node, ob=o)
-
+            #elif o.type == 'VOLUME':
+            #    add_openvdb(o)
+   
     for world in bpy.data.worlds:
         if not world.use_nodes:
             continue
@@ -311,6 +368,7 @@ def txmanager_load_cb(bl_scene):
         return    
     get_txmanager().txmanager.load_state()
     bpy.ops.rman_txmgr_list.parse_scene('EXEC_DEFAULT')
+    bpy.ops.rman_txmgr_list.clear_unused('EXEC_DEFAULT')
 
 @persistent
 def txmanager_pre_save_cb(bl_scene):
@@ -319,24 +377,41 @@ def txmanager_pre_save_cb(bl_scene):
     get_txmanager().txmanager.save_state()  
 
 @persistent
-def link_file_handler(bl_scene):
+def depsgraph_handler(bl_scene):
     for update in bpy.context.evaluated_depsgraph_get().updates:
         id = update.id
         if id.library:
-            # only look at objects coming from a library
-            if isinstance(id, bpy.types.Material):
-                get_textures(id, check_exists=True)
+            link_file_handler(id)
+            continue
+        if isinstance(id, bpy.types.Object):
+            if id.type == 'VOLUME':
+                continue
+                '''
+                vol = id.data
+                ob = id
+                txfile = get_txmanager().get_txfile_for_vdb(ob)
+                if txfile:
+                    grids = vol.grids
+                    grids.load()
+                    openvdb_file = string_utils.get_tokenized_openvdb_file(grids.frame_filepath, grids.frame)
+                    if txfile.input_image != openvdb_file:
+                        add_openvdb(ob)
+                '''
+        
+def link_file_handler(id):
+    if isinstance(id, bpy.types.Material):
+        get_textures(id, check_exists=True)
 
-            elif isinstance(id, bpy.types.Object):
-                if id.type == 'CAMERA':
-                    node = shadergraph_utils.find_projection_node(id) 
-                    if node:
-                        update_texture(node, ob=id, check_exists=True)
+    elif isinstance(id, bpy.types.Object):
+        if id.type == 'CAMERA':
+            node = shadergraph_utils.find_projection_node(id) 
+            if node:
+                update_texture(node, ob=id, check_exists=True)
 
-                elif id.type == 'LIGHT':
-                    node = id.data.renderman.get_light_node()
-                    if node:
-                        update_texture(node, ob=id, check_exists=True)           
+        elif id.type == 'LIGHT':
+            node = id.data.renderman.get_light_node()
+            if node:
+                update_texture(node, ob=id, check_exists=True)           
 
 def txmake_all(blocking=True):
     get_txmanager().txmake_all(blocking=blocking)        

@@ -367,6 +367,12 @@ def find_node_by_name(node_name, ob_name):
     (list) - node and object
     """    
 
+    group_node = bpy.data.node_groups.get(ob_name)
+    if group_node:
+        node = group_node.nodes.get(node_name, None) 
+        if node:
+            return (node, group_node)
+
     mat = bpy.data.materials.get(ob_name, None)
     if mat:
         node = mat.node_tree.nodes.get(node_name, None)

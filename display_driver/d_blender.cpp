@@ -44,7 +44,6 @@ struct BlenderImage
 {
     BlenderImage()
     {
-        isReady = false;
         sampleCountOffset = -1;
         isXpu = false;
         framebuffer = nullptr;
@@ -77,7 +76,6 @@ struct BlenderImage
     
     // for XPU
     bool isXpu;
-    bool isReady;
     size_t   sampleCountOffset;
     std::vector<display::RenderOutput> renderOutputs;
     std::vector<size_t> channelOffsets;
@@ -142,6 +140,10 @@ bool DenoiseBuffer(BlenderImage* blenderImage)
                                             );
         if (!failed)
         {
+            if (blenderImage->denoiseFrameBuffer == nullptr)
+            {
+                blenderImage->denoiseFrameBuffer = (unsigned char*) std::malloc(blenderImage->size);
+            }        
             memcpy(blenderImage->denoiseFrameBuffer, quiet, blenderImage->size);
             blenderImage->blenderDenoiser.UnmapResult();
             return true;
@@ -218,11 +220,30 @@ void CopyXpuBuffer(BlenderImage* blenderImage)
 // Generate the GL texture from our float buffer
 void GenerateTexture(BlenderImage* blenderImage)
 {
-    float* buffer = (float*) blenderImage->framebuffer;
-    if (DenoiseBuffer(blenderImage))
+    const GLvoid* buffer;
+#ifndef OSX    
+    if (blenderImage->use_denoiser)
     {
-        buffer = (float*) blenderImage->denoiseFrameBuffer;
+        bool failed = false;
+        failed = blenderImage->blenderDenoiser.DenoiseBuffer((void*) blenderImage->framebuffer, 
+                                            blenderImage->width,
+                                            blenderImage->height,
+                                            blenderImage->channels,
+                                            buffer
+                                            );
+        if (failed)
+        {
+            buffer = (GLvoid*) blenderImage->framebuffer;
+        }
     }
+    else
+    {
+        buffer = (GLvoid*) blenderImage->framebuffer;
+    }
+#else
+    buffer = (GLvoid*) blenderImage->framebuffer;
+#endif
+
     glGenTextures(1, &blenderImage->texture_id);
     glBindTexture(GL_TEXTURE_2D, blenderImage->texture_id);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -269,11 +290,6 @@ float* GetFloatFramebuffer(size_t pos)
     
     if (blenderImage == nullptr)
         return nullptr;
-
-    if (blenderImage->isXpu)
-    {
-        CopyXpuBuffer(blenderImage);
-    }
 
     if (DenoiseBuffer(blenderImage)) {
         return (float*) blenderImage->denoiseFrameBuffer;                  
@@ -337,7 +353,6 @@ void DrawBufferToBlender(int viewWidth, int viewHeight)
 
     if (blenderImage->isXpu)
     {
-        CopyXpuBuffer(blenderImage);
         GenerateTexture(blenderImage);
     }
     
@@ -510,10 +525,6 @@ DspyImageOpen(
     /* Reserve a framebuffer */
     blenderImage->size = blenderImage->width * blenderImage->height * blenderImage->entrysize;
     blenderImage->framebuffer = (unsigned char*) std::malloc(blenderImage->size);
-    if (use_denoiser)
-    {
-        blenderImage->denoiseFrameBuffer = (unsigned char*) std::malloc(blenderImage->size);
-    }
 
     *ppvImage = blenderImage;
     s_blenderImages.push_back(blenderImage);
@@ -603,7 +614,7 @@ DspyImageData(
     int width = (blenderImage->cropXMin + xmax_plus_1) - (blenderImage->cropXMin + xmin);
     int height = (blenderImage->cropYMin + ymax_plus_1) - (blenderImage->cropYMin + ymin);
     for (int y = 0; y < height; ++y) {
-        int ypos = (blenderImage->height) - (y + ymin + blenderImage->cropYMin);
+        int ypos = (blenderImage->height-1) - (y + ymin + blenderImage->cropYMin);
         unsigned char* fb = blenderImage->framebuffer
                           + (blenderImage->cropXMin + xmin) 
                           * blenderImage->entrysize
@@ -779,7 +790,6 @@ bool DisplayBlender::Rebind(const uint32_t width, const uint32_t height,
 
 void DisplayBlender::Close()
 {
-    m_image->isReady = false;
     m_image->sampleCountOffset = -1;
     if (m_image->framebuffer)
     {
@@ -794,13 +804,7 @@ void DisplayBlender::Close()
 void DisplayBlender::Notify(const uint32_t iteration, const uint32_t totaliterations,
                          const NotifyFlags flags, const pxrcore::ParamList& /*metadata*/)
 {
-    if (!m_image->isReady)
-    {
-        // we're now ready to copy from the
-        // shared memory
-        m_image->isReady = true;
-    }
-
+    CopyXpuBuffer(m_image);
 }
 
 static void closeBlenderImages()

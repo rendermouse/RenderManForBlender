@@ -53,7 +53,7 @@ class RmanVolumeTranslator(RmanTranslator):
         primvar = rman_sg_volume.sg_node.GetPrimVars()
         primvar.SetString(self.rman_scene.rman.Tokens.Rix.k_Ri_type, "box")
         if ob.type == 'EMPTY':
-            scale = ob.scale
+            scale = [1.0, 1.0, 1.0] #ob.scale
             display_size = ob.empty_display_size
             bound_box = [-display_size * scale[0], display_size * scale[0], -display_size * scale[1], display_size * scale[1], -display_size * scale[2], display_size * scale[2] ]
             primvar.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_Bound, bound_box, 6)

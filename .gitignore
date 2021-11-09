@@ -3,3 +3,4 @@ __pycache__/
 RenderManAssetLibrary/
 rendermanforblender_updater/
 .vscode/
+.DS_Store

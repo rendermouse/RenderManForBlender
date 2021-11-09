@@ -35,7 +35,7 @@ from .rman_constants import RFB_FLOAT3
 bl_info = {
     "name": "RenderMan For Blender",
     "author": "Pixar",
-    "version": (24, 1, 0),
+    "version": (24, 2, 0),
     "blender": (2, 83, 0),
     "location": "Info Header, render engine menu",
     "description": "RenderMan 24 integration",
@@ -275,6 +275,7 @@ def load_addon():
         from . import rman_bl_nodes
         from . import rman_properties
         from . import rman_handlers
+        from . import rfb_translations
 
         rman_config.register()
         rman_properties.pre_register() 
@@ -284,6 +285,7 @@ def load_addon():
         rman_properties.register()   
         rman_ui.register()      
         rman_handlers.register()
+        rfb_translations.register()
 
         __RMAN_ADDON_LOADED__ = True
 
@@ -316,6 +318,7 @@ def unregister():
         rman_ui.unregister()
         rman_properties.unregister()
         rman_operators.unregister()    
+        rfb_translations.unregister()
     
     for cls in classes:
         try:

@@ -1,6 +1,7 @@
 from .. import rfb_icons
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import draw_utils
+from ..rfb_utils import prefs_utils
 from .rman_ui_base import _RManPanelHeader
 from ..rman_render import RmanRender
 import bpy
@@ -190,6 +191,8 @@ class PRMAN_PT_Renderman_UI_Panel(bpy.types.Panel, _RManPanelHeader):
         box.operator('scene.rman_open_light_mixer_editor', text='Light Mixer')
         box.operator('scene.rman_open_light_linking', text='Light Linking')
         box.operator('scene.rman_open_groups_editor', text='Trace Sets')
+        rman_vol_agg = rfb_icons.get_icon("rman_vol_aggregates")
+        box.operator('scene.rman_open_vol_aggregates_editor', text='Volume Aggregates', icon_value=rman_vol_agg.icon_id)
 
         layout.separator()
         layout.label(text="Apps:")
@@ -246,7 +249,10 @@ class PRMAN_PT_Renderman_UI_Panel(bpy.types.Panel, _RManPanelHeader):
         layout.separator()
         layout.label(text='Utilities:')
         box = layout.box()
-        box.operator("renderman.scene_package")
+        rman_addon_prefs = rfb_icons.get_icon('rman_loadplugin')
+        box.operator("renderman.open_addon_preferences", icon_value=rman_addon_prefs.icon_id)
+        rman_pack_scene = rfb_icons.get_icon('rman_package_scene')
+        box.operator("renderman.scene_package", icon_value=rman_pack_scene.icon_id)
 
         layout.separator()
         # RenderMan Doc
@@ -275,12 +281,16 @@ class RENDER_PT_renderman_live_stats(bpy.types.Panel, _RManPanelHeader):
         box = layout.box()
         if rr.stats_mgr.web_socket_enabled:
             if rr.stats_mgr.is_connected():
-                for label, data in rr.stats_mgr.render_live_stats.items():
-                    if label:
-                        box.label(text='%s: %s' % (label, data))
+                for label in rr.stats_mgr.stats_to_draw:
+                    data = rr.stats_mgr.render_live_stats[label]        
+                    box.label(text='%s: %s' % (label, data))        
                 if rr.rman_running:   
                     box.prop(rm, 'roz_stats_iterations', slider=True, text='Iterations (%d / %d)' % (rr.stats_mgr._iterations, rr.stats_mgr._maxSamples))
                     box.prop(rm, 'roz_stats_progress', slider=True)
+            
+                prefs = prefs_utils.get_addon_prefs()
+                layout.prop(prefs, 'rman_roz_stats_print_level')
+                layout.operator("renderman.disconnect_stats_render")
             else:
                 box.label(text='(not connected)')
                 layout.operator('renderman.attach_stats_render')

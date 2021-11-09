@@ -189,15 +189,20 @@ class RmanScene(object):
   
         self.render_default_light = False
         self.world_df_node = None
-        self.default_light = None        
-        if self.is_viewport_render:
-            self.viewport_render_res_mult = float(self.context.scene.renderman.viewport_render_res_mult)
-        else:
-            self.viewport_render_res_mult = 1.0  
+        self.default_light = None
         self.is_xpu = False  
         self.num_object_instances = 0
         self.num_objects_in_viewlayer = 0
         self.objects_in_viewlayer.clear()
+
+        try:                
+            if self.is_viewport_render:
+                self.viewport_render_res_mult = float(self.context.scene.renderman.viewport_render_res_mult)
+            else:
+                self.viewport_render_res_mult = 1.0
+        except AttributeError as err:
+            rfb_log().debug("Cannot set viewport_render_res_mult: %s" % str(err))
+
 
     def export_for_final_render(self, depsgraph, sg_scene, bl_view_layer, is_external=False):
         self.sg_scene = sg_scene
@@ -385,6 +390,10 @@ class RmanScene(object):
         self.export_integrator()
         self.export_cameras([c for c in self.depsgraph.objects if isinstance(c.data, bpy.types.Camera)])
 
+        # export default light
+        self.export_defaultlight()
+        self.main_camera.sg_node.AddChild(self.default_light)        
+
         self.export_bake_displays()
         self.export_samplefilters()
         self.export_displayfilters()
@@ -431,6 +440,10 @@ class RmanScene(object):
         self.export_hider()
         self.export_integrator()
         self.export_cameras([c for c in self.depsgraph.objects if isinstance(c.data, bpy.types.Camera)])
+
+        # export default light
+        self.export_defaultlight()
+        self.main_camera.sg_node.AddChild(self.default_light)
 
         ob = self.context.active_object
         self.export_materials([m for m in self.depsgraph.ids if isinstance(m, bpy.types.Material)])

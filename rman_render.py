@@ -160,21 +160,11 @@ def draw_threading_func(db):
             time.sleep(1.0)
 
 def call_stats_update_payloads(db):
-    panel_region = None
-    # find the region where the live stats panel is in
-    for window in bpy.context.window_manager.windows:
-        for area in window.screen.areas:
-            if area.type == 'VIEW_3D':
-                for region in area.regions:
-                    if region.type == 'UI':
-                        panel_region = region
-                        break   
 
     while db.rman_running:
         if not db.bl_engine:
             break
         db.stats_mgr.update_payloads()
-        #panel_region.tag_redraw()
         time.sleep(0.1)
 
 def progress_cb(e, d, db):
@@ -398,7 +388,12 @@ class RmanRender(object):
         return (self.rman_running and not self.rman_interactive_running)   
 
     def do_draw_buckets(self):
+        if self.stats_mgr.is_connected() and self.stats_mgr._progress > 99:
+            return False
         return get_pref('rman_viewport_draw_bucket', default=True)
+
+    def do_draw_progressbar(self):
+        return get_pref('rman_viewport_draw_progress') and self.stats_mgr.is_connected() and self.stats_mgr._progress < 100        
 
     def start_stats_thread(self): 
         # start a stats thread so we can periodically call update_payloads
@@ -1023,8 +1018,8 @@ class RmanRender(object):
     def stop_render(self, stop_draw_thread=True):
         global __DRAW_THREAD__
         global __RMAN_STATS_THREAD__
-
         is_main_thread = (threading.current_thread() == threading.main_thread())
+
         if is_main_thread:
             rfb_log().debug("Trying to acquire stop_render_mtx")
         if not self.stop_render_mtx.acquire(timeout=5.0):
@@ -1068,7 +1063,7 @@ class RmanRender(object):
             self.sgmngr.DeleteScene(self.sg_scene)
 
         self.sg_scene = None
-        self.stats_mgr.reset()
+        #self.stats_mgr.reset()
         self.rman_scene.reset()
         self.viewport_buckets.clear()
         self._draw_viewport_buckets = False                
@@ -1147,7 +1142,7 @@ class RmanRender(object):
                     batch.draw(shader)   
 
             # draw progress bar at the bottom of the viewport
-            if get_pref('rman_viewport_draw_progress') and self.stats_mgr.is_connected() and self.stats_mgr._progress < 100:
+            if self.do_draw_progressbar():
                 progress = self.stats_mgr._progress / 100.0 
                 progress_color = get_pref('rman_viewport_progress_color', default=RMAN_RENDERMAN_BLUE) 
                 shader = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
@@ -1162,7 +1157,7 @@ class RmanRender(object):
         num_channels = dspy_plugin.GetNumberOfChannels(ctypes.c_size_t(image_num))
         return num_channels
 
-    def _get_buffer_242(self, width, height, image_num=0, num_channels=-1, back_fill=True, as_flat=True, render=None):
+    def _get_buffer(self, width, height, image_num=0, num_channels=-1, back_fill=True, as_flat=True, render=None):
         dspy_plugin = self.get_blender_dspy_plugin()
         if num_channels == -1:
             num_channels = self.get_numchannels(image_num)
@@ -1257,103 +1252,6 @@ class RmanRender(object):
         except Exception as e:
             rfb_log().debug("Could not get buffer: %s" % str(e))
             return None                                     
-
-    def _get_buffer(self, width, height, image_num=0, num_channels=-1, back_fill=True, as_flat=True, render=None):
-        if envconfig().build_info.version() >= "24.2":
-            return self._get_buffer_242(width, height, image_num=image_num, num_channels=num_channels, back_fill=back_fill, as_flat=as_flat, render=render)
-
-
-        dspy_plugin = self.get_blender_dspy_plugin()
-        if num_channels == -1:
-            num_channels = self.get_numchannels(image_num)
-            if num_channels > 4 or num_channels < 0:
-                rfb_log().debug("Could not get buffer. Incorrect number of channels: %d" % num_channels)
-                return None
-
-        ArrayType = ctypes.c_float * (width * height * num_channels)
-        f = dspy_plugin.GetFloatFramebuffer
-        f.restype = ctypes.POINTER(ArrayType)
-
-        try:
-            buffer = numpy.array(f(ctypes.c_size_t(image_num)).contents)
-            pixels = list()
-
-            # we need to flip the image
-            # also, Blender is expecting a 4 channel image
-
-            if as_flat:
-                # return the buffer as a flat list
-                for y in range(height-1, -1, -1):
-                    i = (width * y * num_channels)
-                    
-                    # if this is already a 4 channel image, just slice it
-                    if num_channels == 4:
-                        j = i + (num_channels * (width))          
-                        pixels.extend(buffer[i:j])
-                        continue
-
-                    for x in range(0, width):
-                        j = i + (num_channels * x)
-                        if num_channels == 3:
-                            pixels.append(buffer[j])
-                            pixels.append(buffer[j+1])
-                            pixels.append(buffer[j+2])
-                            pixels.append(1.0)                        
-                        elif num_channels == 2:
-                            pixels.append(buffer[j])
-                            pixels.append(buffer[j+1])
-                            pixels.append(1.0)                        
-                            pixels.append(1.0)
-                        elif num_channels == 1:
-                            pixels.append(buffer[j])
-                            pixels.append(buffer[j])
-                            pixels.append(buffer[j])   
-                            pixels.append(1.0)                               
-            else:
-                start_x = 0
-                end_x = width
-                start_y = height-1
-                end_y = -1
-
-                if render and render.use_border:
-                    start_y = int(height * (render.border_max_y))-1 
-                    end_y = int(height * (render.border_min_y))-1
-                    if render.border_min_x > 0.0:
-                        start_x = int(width * render.border_min_x)-1
-                    if render.border_max_x < 1.0:
-                        end_x =  int(width * render.border_max_x)-2
-
-                # return the buffer as a list of lists
-                for y in range(start_y, end_y, -1):
-                    i = (width * y * num_channels)
-
-                    for x in range(start_x, end_x):
-                        j = i + (num_channels * x)
-                        if not back_fill:
-                            pixels.append(buffer[j:j+num_channels])
-                            continue
-                        
-                        if num_channels == 4:
-                            pixels.append(buffer[j:j+4])
-                            continue
-
-                        pixel = [1.0] * num_channels
-                        pixel[0] = buffer[j]                             
-                        if num_channels == 3:
-                            pixel[1] = buffer[j+1]
-                            pixel[2] = buffer[j+2]
-                        elif num_channels == 2:
-                            pixel[1] = buffer[j+1]
-                        elif num_channels == 1:
-                            pixel[1] = buffer[j]
-                            pixel[2] = buffer[j]
-
-                        pixels.append(pixel)            
-
-            return pixels
-        except Exception as e:
-            rfb_log().debug("Could not get buffer: %s" % str(e))
-            return None                             
 
     def save_viewport_snapshot(self, frame=1):
         if not self.rman_is_viewport_rendering:

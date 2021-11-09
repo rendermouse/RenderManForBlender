@@ -87,6 +87,8 @@ class PRMAN_MT_Renderman_Presets_Categories_Menu(bpy.types.Menu):
         current_category_path = hostPrefs.getSelectedCategory()        
         for cat in hostPrefs.getAllCategories(asDict=False):
             tokens = cat.split('/')
+            if tokens[0] == 'global_storage':
+                continue
             category_path = os.path.join(hostPrefs.getSelectedLibrary(), cat)
             level = len(tokens)
             category_name = ''
@@ -315,8 +317,10 @@ class PRMAN_OT_Renderman_Presets_Editor(bpy.types.Operator):
         current_category_path = hostPrefs.getSelectedCategory()
         self.preset_categories.clear()
         for cat in hostPrefs.getAllCategories(asDict=False):
-            category = self.preset_categories.add()
             tokens = cat.split('/')
+            if tokens[0] == 'global_storage':
+                continue         
+            category = self.preset_categories.add()               
             level = len(tokens)
             category_name = ''
             for i in range(0, level-1):
