@@ -1,6 +1,6 @@
 # RenderMan for Blender
 
-![Onward Walking Teapot](https://pixar-community-production.s3.us-west-1.amazonaws.com/images-pixar/onward_walking_teapot_rfb.jpg)
+![Onward Walking Teapot](docs/images/onward_walking_teapot_rfb.jpeg)
 
 RenderMan for Blender is a render engine addon written for the 3D creation suite [Blender](https://www.blender.org/).
 
