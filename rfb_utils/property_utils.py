@@ -33,18 +33,23 @@ __GAINS_TO_ENABLE__ = {
 
 # these are the names of the extra enable params
 # on PxrSurface etc. to enable/disable lobes
-__LOBES_ENABLE_PARAMS__ = {
+__LOBES_ENABLE_PARAMS__ = [
     'enableDiffuse',
     'enablePrimarySpecular',
+    'enableSpecular',
     'enableRoughSpecular',
+    'enableClearcoat',
     'enableClearCoat',
     'enableIridescence',
     'enableFuzz',
     'enableSubsurface',
     'enableSingleScatter',
+    'enableSinglescatter',
+    'enableRR',
+    'enableInterior',
     'enableGlass',
     'enableGlow',
-}
+]
 
 class BlPropInfo:
 
@@ -71,6 +76,7 @@ class BlPropInfo:
         self.renderman_array_name = prop_meta.get('renderman_array_name', None)
         self.renderman_array_type = prop_meta.get('renderman_array_type', '')
         self.type = prop_meta.get('type', '')
+        self.page = prop_meta.get('page', '')
 
         inputs = getattr(node, 'inputs', dict())
         self.has_input = (prop_name in inputs)

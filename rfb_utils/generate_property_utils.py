@@ -208,6 +208,9 @@ def generate_property(node, sp, update_function=None):
         if hasattr(sp, nm):
             prop_meta[nm] = getattr(sp, nm)
 
+    page_name = getattr(sp, 'page', '')
+    prop_meta['page'] = page_name
+
     if isinstance(update_function, str):
         lcls = locals()
         exec('update_func = %s' % update_function, globals(), lcls)

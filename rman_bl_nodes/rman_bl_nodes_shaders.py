@@ -310,8 +310,12 @@ class RendermanShadingNode(bpy.types.ShaderNode):
             for prop_name in __LOBES_ENABLE_PARAMS__:
                 if hasattr(self, prop_name):
                     prop_meta = self.prop_meta[prop_name]
-                    page_label = 'Enable %s' % prop_meta['label']
-                    col.prop(self, prop_name, text=page_label )                      
+                    if self.bl_label == 'PxrLayer':
+                        page_label = 'Enable %s' % prop_meta['page']
+                        col.prop(self, prop_name, text=page_label)
+                    else:
+                        page_label = 'Enable %s' % prop_meta['label']
+                        col.prop(self, prop_name, text=page_label )                      
 
         if self.bl_idname == "PxrOSLPatternNode":
             prop = getattr(self, "codetypeswitch")

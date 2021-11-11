@@ -46,7 +46,7 @@ def node_add_inputs(node, node_name, prop_names, first_level=True, label_prefix=
 
         # if this is a page recursively add inputs
         if param_type == 'page':
-            if first_level and has_lobe_enable_props(node) and name != 'Globals':
+            if first_level and has_lobe_enable_props(node) and name != 'page_Globals':
                 # add these
                 label = meta.get('label', name)
                 enable_param = find_enable_param(getattr(node, name))
