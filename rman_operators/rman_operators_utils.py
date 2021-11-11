@@ -74,7 +74,10 @@ class PRMAN_OT_Renderman_Package(Operator):
                 continue
             for fpath, txitem in txfile.tex_dict.items():
                 bfile = os.path.basename(fpath)
-                shutil.copyfile(fpath, os.path.join(texture_dir, bfile))
+                diskpath = os.path.join(texture_dir, bfile)
+                shutil.copyfile(fpath, diskpath)
+                z.write(diskpath, arcname=os.path.join('textures', bfile))
+                remove_files.append(diskpath)
                 bfile = os.path.basename(txitem.outfile)
                 diskpath = os.path.join(texture_dir, bfile)
                 shutil.copyfile(txitem.outfile, diskpath)
