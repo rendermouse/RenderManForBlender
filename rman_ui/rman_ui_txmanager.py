@@ -245,7 +245,9 @@ class PRMAN_OT_Renderman_txmanager_clear_unused(Operator):
                 continue
             node_name,param,ob_name = tokens
 
-            node, ob = scene_utils.find_node_by_name(node_name, ob_name)   
+            node, ob = scene_utils.find_node_by_name(node_name, ob_name)
+            if not node:
+                continue
             if getattr(node, param) != item.name:
                 nodeIDs.append(nodeID)
 
