@@ -158,9 +158,9 @@ class RmanTranslator(object):
                         lighting_subset.append(nm)
                     all_lights.remove(nm)
 
-                elif light_props.renderman_light_role == 'RMAN_LIGHT':                        
-                    if found:
-                        nm = string_utils.sanitize_node_name(light_ob.name)
+                elif light_props.renderman_light_role == 'RMAN_LIGHTFILTER':      
+                    nm = string_utils.sanitize_node_name(light_ob.name)                  
+                    if found:                        
                         lightfilter_subset.append(nm)
                     all_lightfilters.remove(nm)
 

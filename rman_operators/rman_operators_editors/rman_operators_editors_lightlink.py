@@ -208,7 +208,7 @@ class PRMAN_PT_Renderman_Open_Light_Linking(bpy.types.Operator):
             light_link_item = scene.renderman.light_links[rm.light_links_index]  
             row = flow.row()   
             light_props = shadergraph_utils.get_rman_light_properties_group(light_link_item.light_ob)
-            is_rman_light = (light_props.renderman_light_role == 'RMAN_LIGHT')
+            is_rman_light = (light_props.renderman_light_role in ['RMAN_LIGHT', 'RMAN_LIGHTFILTER'])
             row.prop(self, 'do_object_filter', text='', icon='FILTER', icon_only=True)
             if not self.do_object_filter:
                 row.prop(self, 'selected_obj_name', text='')
