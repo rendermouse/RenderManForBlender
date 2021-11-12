@@ -65,6 +65,8 @@ def get_cycles_shader_path():
 def get_token_blender_file_path(p):
     # Same as filesystem_path below, but substitutes the relative Blender path
     # with the <blend_dir> token
+    if not get_pref('rman_use_blend_dir_token', True):
+        return filesystem_path(p)
     if p.startswith('//'):
         pout = bpy.path.abspath(p)
         if p != pout:

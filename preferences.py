@@ -400,6 +400,12 @@ class RendermanPreferences(AddonPreferences):
         description="If on, when soloing a node, all other nodes in the network will be collapsed."
     )    
 
+    rman_use_blend_dir_token: BoolProperty(
+        name="Use blend_dir token",
+        default=True,
+        description="For relative file paths, we add a <blend_dir> token to the path to represent the path where the current blend file is in. Turning this off will use the real path instead"
+    )        
+
     # For the preset browser
     rpbConfigFile: StringProperty(default='')
     rpbUserLibraries: CollectionProperty(type=RendermanPreferencePath)
@@ -511,6 +517,7 @@ class RendermanPreferences(AddonPreferences):
         col.prop(self, 'rman_emit_default_params')    
         col.prop(self, 'rman_invert_light_linking')
         col.prop(self, 'rman_solo_collapse_nodes')
+        col.prop(self, 'rman_use_blend_dir_token')
         col.prop(self, 'rman_editor')      
 
         # XPU Prefs
