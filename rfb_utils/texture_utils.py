@@ -9,6 +9,7 @@ from ..rfb_logger import rfb_log
 from rman_utils import txmanager
 from rman_utils.txmanager import core as txcore
 from rman_utils.txmanager import txparams as txparams
+from rman_utils.txmanager.txfile import TxFile
 from .color_manager_blender import color_manager
 
 from bpy.app.handlers import persistent
@@ -177,7 +178,12 @@ class RfBTxManager(object):
             outpath = string_utils.expand_string(file_path, frame=self.rman_scene.bl_frame_current, asFilePath=True)
         else:
             outpath = string_utils.expand_string(file_path, asFilePath=True)
-        return os.path.exists(outpath)
+        if os.path.exists(outpath):
+            return True
+
+        if re.search(TxFile.tokenExpr, outpath):
+            return True
+        return False
 
     def does_nodeid_exists(self, nodeID):
         txfile = self.txmanager.get_txfile_from_id(nodeID)
