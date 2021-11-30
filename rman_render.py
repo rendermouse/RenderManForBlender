@@ -57,6 +57,21 @@ def __update_areas__():
         for area in window.screen.areas:
             area.tag_redraw()
 
+def __draw_callback__():
+    # callback function for the display driver to call tag_redraw
+    global __RMAN_RENDER__
+    if __RMAN_RENDER__.rman_is_viewport_rendering and __RMAN_RENDER__.bl_engine:
+        try:
+            __RMAN_RENDER__.bl_engine.tag_redraw()
+            pass
+        except ReferenceError as e:
+            return  False
+        return True
+    return False     
+
+DRAWCALLBACK_FUNC = ctypes.CFUNCTYPE(ctypes.c_bool)
+__CALLBACK_FUNC__ = DRAWCALLBACK_FUNC(__draw_callback__)    
+
 class ItHandler(chatserver.ItBaseHandler):
 
     def dspyRender(self):
@@ -144,19 +159,21 @@ def draw_threading_func(db):
             # if there are no 3d viewports, stop IPR
             db.del_bl_engine()
             break
-        if db.rman_is_viewport_rendering:
-            try:
-                db.bl_engine.tag_redraw()
-                time.sleep(refresh_rate)
-            except ReferenceError as e:
-                # calling tag_redraw has failed. This might mean
-                # that there are no more view_3d areas that are shading. Try to
-                # stop IPR.
-                #rfb_log().debug("Error calling tag_redraw (%s). Aborting..." % str(e))
-                db.del_bl_engine()
-                return
-        else:
-            # rendering to "it" add a 1 second sleep
+        if db.rman_is_xpu:
+            if db.has_buffer_updated():
+                try:
+                    db.bl_engine.tag_redraw()
+                    db.reset_buffer_updated()
+                
+                except ReferenceError as e:
+                    # calling tag_redraw has failed. This might mean
+                    # that there are no more view_3d areas that are shading. Try to
+                    # stop IPR.
+                    #rfb_log().debug("Error calling tag_redraw (%s). Aborting..." % str(e))
+                    db.del_bl_engine()
+                    return            
+            time.sleep(refresh_rate)
+        else:            
             time.sleep(1.0)
 
 def call_stats_update_payloads(db):
@@ -192,6 +209,12 @@ def render_cb(e, d, db):
         rfb_log().debug("RenderMan has exited.")
         if db.rman_is_live_rendering:
             db.rman_is_live_rendering = False
+
+def live_render_cb(e, d, db):
+    if d == 0:
+        db.rman_is_refining = False
+    else:
+        db.rman_is_refining = True
 
 def preload_xpu():
     """On linux there is a problem with std::call_once and
@@ -240,6 +263,8 @@ class RmanRender(object):
         self.rman_swatch_render_running = False
         self.rman_is_live_rendering = False
         self.rman_is_viewport_rendering = False
+        self.rman_is_xpu = False
+        self.rman_is_refining = False
         self.rman_render_into = 'blender'
         self.rman_license_failed = False
         self.rman_license_failed_message = ''
@@ -388,9 +413,7 @@ class RmanRender(object):
         return (self.rman_running and not self.rman_interactive_running)   
 
     def do_draw_buckets(self):
-        if self.stats_mgr.is_connected() and self.stats_mgr._progress > 99:
-            return False
-        return get_pref('rman_viewport_draw_bucket', default=True)
+        return get_pref('rman_viewport_draw_bucket', default=True) and self.rman_is_refining
 
     def do_draw_progressbar(self):
         return get_pref('rman_viewport_draw_progress') and self.stats_mgr.is_connected() and self.stats_mgr._progress < 100        
@@ -404,6 +427,8 @@ class RmanRender(object):
     def reset(self):
         self.rman_license_failed = False
         self.rman_license_failed_message = ''
+        self.rman_is_xpu = False
+        self.rman_is_refining = False
 
     def start_render(self, depsgraph, for_background=False):
     
@@ -850,6 +875,8 @@ class RmanRender(object):
                 rman.Dspy.DisableDspyServer()             
                 self.rman_callbacks.clear()
                 ec = rman.EventCallbacks.Get()      
+                ec.RegisterCallback("Render", live_render_cb, self)
+                self.rman_callbacks["Render"] = live_render_cb                    
                 self.viewport_buckets.clear()
                 self._draw_viewport_buckets = True                           
             else:
@@ -870,6 +897,7 @@ class RmanRender(object):
         render_config = rman.Types.RtParamList()
         rendervariant = scene_utils.get_render_variant(self.bl_scene)
         scene_utils.set_render_variant_config(self.bl_scene, config, render_config)
+        self.rman_is_xpu = (rendervariant == 'xpu')
 
         self.sg_scene = self.sgmngr.CreateScene(config, render_config, self.stats_mgr.rman_stats_session) 
 
@@ -893,9 +921,13 @@ class RmanRender(object):
             if render_into_org != '':
                 rm.render_ipr_into = render_into_org    
             
-            # start a thread to periodically call engine.tag_redraw()
+            if not self.rman_is_xpu:
+                # for now, we only set the redraw callback for RIS
+                self.set_redraw_func()
+            # start a thread to periodically call engine.tag_redraw()                
             __DRAW_THREAD__ = threading.Thread(target=draw_threading_func, args=(self, ))
             __DRAW_THREAD__.start()
+
             return True
         except Exception as e:      
             bpy.ops.renderman.printer('INVOKE_DEFAULT', level="ERROR", message='Export failed: %s' % str(e))
@@ -1082,6 +1114,19 @@ class RmanRender(object):
             __BLENDER_DSPY_PLUGIN__ = ctypes.CDLL(os.path.join(envconfig().rmantree, 'lib', 'plugins', 'd_blender%s' % ext))
 
         return __BLENDER_DSPY_PLUGIN__
+
+    def set_redraw_func(self):
+        # pass our callback function to the display driver
+        dspy_plugin = self.get_blender_dspy_plugin()
+        dspy_plugin.SetRedrawCallback(__CALLBACK_FUNC__)
+
+    def has_buffer_updated(self):        
+        dspy_plugin = self.get_blender_dspy_plugin()
+        return dspy_plugin.HasBufferUpdated()      
+
+    def reset_buffer_updated(self):
+        dspy_plugin = self.get_blender_dspy_plugin()
+        dspy_plugin.ResetBufferUpdated()        
                 
     def draw_pixels(self, width, height):
         self.viewport_res_x = width
