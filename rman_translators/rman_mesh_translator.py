@@ -357,7 +357,11 @@ class RmanMeshTranslator(RmanTranslator):
                 return True
 
         if not sg_node:
-            sg_node = rman_sg_mesh.sg_node
+            if rman_sg_mesh.sg_node:
+                sg_node = rman_sg_mesh.sg_node
+            else:
+                sg_node = self.rman_scene.sg_scene.CreateMesh(rman_sg_mesh.db_name)
+                rman_sg_mesh.sg_node = sg_node
 
         rman_sg_mesh.is_subdiv = object_utils.is_subdmesh(ob)
         use_smooth_normals = getattr(ob.data.renderman, 'rman_smoothnormals', False)
@@ -368,7 +372,8 @@ class RmanMeshTranslator(RmanTranslator):
         if nverts == []:
             if not input_mesh:
                 ob.to_mesh_clear()
-            sg_node = None
+            self.rman_scene.sg_scene.DeleteDagNode(rman_sg_mesh.sg_node)
+            rman_sg_mesh.sg_node = None
             rman_sg_mesh.is_transforming = False
             rman_sg_mesh.is_deforming = False
             return None
