@@ -258,10 +258,11 @@ class RmanSceneSync(object):
                 for k,v in rman_sg_node.instances.items():
                     self.rman_scene.attach_material(ob, v)
 
-                if not ob.show_instancer_for_viewport:
-                    rman_sg_node.sg_node.SetHidden(1)
-                else:
-                    rman_sg_node.sg_node.SetHidden(-1)
+                if rman_sg_node.sg_node:
+                    if not ob.show_instancer_for_viewport:
+                        rman_sg_node.sg_node.SetHidden(1)
+                    else:
+                        rman_sg_node.sg_node.SetHidden(-1)
 
     def update_light_visibility(self, rman_sg_node, ob):
         if not self.rman_scene.scene_solo_light:
