@@ -31,6 +31,9 @@ class PRMAN_MT_Viewport_Integrator_Menu(Menu):
 
     def draw(self, context):
         layout = self.layout
+        op = layout.operator('renderman_viewport.change_integrator', text='Reset')
+        op.viewport_integrator = 'RESET'
+        layout.separator()
         for node in rman_bl_nodes.__RMAN_INTEGRATOR_NODES__:
             if node.name not in __HIDDEN_INTEGRATORS__:
                 layout.operator_context = 'EXEC_DEFAULT'
@@ -107,10 +110,19 @@ class PRMAN_OT_Viewport_Integrators(bpy.types.Operator):
                                       description="Viewport integrator"
                                     )
 
+    @classmethod
+    def description(cls, context, properties):
+        help = cls.bl_description
+        if properties.viewport_integrator == 'RESET':
+            help = 'Reset back to the scene integrator'
+        return help
+
     def execute(self, context):
         rman_render = RmanRender.get_rman_render()
-        rman_render.rman_scene_sync.update_viewport_integrator(context, self.viewport_integrator)
-
+        if self.viewport_integrator == 'RESET':
+            rman_render.rman_scene_sync.update_integrator(context)
+        else:
+            rman_render.rman_scene_sync.update_viewport_integrator(context, self.viewport_integrator)
         return {"FINISHED"}
 
 class PRMAN_OT_Viewport_Refinement(bpy.types.Operator):
