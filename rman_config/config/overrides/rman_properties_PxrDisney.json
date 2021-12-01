@@ -1,0 +1,12 @@
+{
+    "name": "PxrDisney.args",
+    "params": [
+        {
+            "name": "inputAOV",    
+            "widget": "default",
+            "default": 0,
+            "readOnly": true,
+            "connectable": true
+        }        
+    ]
+}
