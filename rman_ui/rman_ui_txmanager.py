@@ -365,10 +365,10 @@ class PRMAN_OT_Renderman_txmanager_apply_preset(Operator):
         if item.bumpRough != "-1":
             bumprough['normalmap'] = int(item.bumpRough)
             bumprough['factor'] = item.bumpRough_factor
-            bumprough['invert'] = item.bumpRough_invert
-            bumprough['invertU'] = item.bumpRough_invertU
-            bumprough['invertV'] = item.bumpRough_invertV
-            bumprough['refit'] = item.bumpRough_refit
+            bumprough['invert'] = int(item.bumpRough_invert)
+            bumprough['invertU'] = int(item.bumpRough_invertU)
+            bumprough['invertV'] = int(item.bumpRough_invertV)
+            bumprough['refit'] = int(item.bumpRough_refit)
         else:
             bumprough = list()        
         txsettings['bumprough'] = bumprough
@@ -504,10 +504,10 @@ class PRMAN_OT_Renderman_txmanager_refresh(Operator):
                 bumprough = params.bumprough_as_dict()
                 item.bumpRough = str(bumprough['normalmap'])
                 item.bumpRough_factor = float(bumprough['factor'])
-                item.bumpRough_invert = bool(bumprough['invert'])
-                item.bumpRough_invertU = bool(bumprough['invertU'])
-                item.bumpRough_invertV = bool(bumprough['invertV'])
-                item.bumpRough_refit = bool(bumprough['refit'])
+                item.bumpRough_invert = bool(int(bumprough['invert']))
+                item.bumpRough_invertU = bool(int(bumprough['invertU']))
+                item.bumpRough_invertV = bool(int(bumprough['invertV']))
+                item.bumpRough_refit = bool(int(bumprough['refit']))
             else:
                 params.bumpRough = "-1"                
     
@@ -709,10 +709,10 @@ def index_updated(self, context):
             bumprough = params.bumprough_as_dict()
             item.bumpRough = str(bumprough['normalmap'])
             item.bumpRough_factor = float(bumprough['factor'])
-            item.bumpRough_invert = bool(bumprough['invert'])
-            item.bumpRough_invertU = bool(bumprough['invertU'])
-            item.bumpRough_invertV = bool(bumprough['invertV'])
-            item.bumpRough_refit = bool(bumprough['refit'])
+            item.bumpRough_invert = bool(int(bumprough['invert']))
+            item.bumpRough_invertU = bool(int(bumprough['invertU']))
+            item.bumpRough_invertV = bool(int(bumprough['invertV']))
+            item.bumpRough_refit = bool(int(bumprough['refit']))
         else:
             params.bumpRough = "-1"  
 
