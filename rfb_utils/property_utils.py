@@ -329,6 +329,8 @@ def get_output_param_str(rman_sg_node, node, mat_name, socket, to_socket=None, p
 
 
 def is_vstruct_or_linked(node, param):
+    if param not in node.prop_meta:
+        return True
     meta = node.prop_meta[param]
     if 'vstructmember' not in meta.keys():
         if param in node.inputs:
@@ -348,37 +350,35 @@ def is_vstruct_or_linked(node, param):
 
 # tells if this param has a vstuct connection that is linked and
 # conditional met
-
-
 def is_vstruct_and_linked(node, param):
+    if param not in node.prop_meta:
+        return True    
     meta = node.prop_meta[param]
 
     if 'vstructmember' not in meta.keys():
         return False
-    else:
-        vstruct_name, vstruct_member = meta['vstructmember'].split('.')
-        if node.inputs[vstruct_name].is_linked:
-            from_socket = node.inputs[vstruct_name].links[0].from_socket
-            # if coming from a shader group hookup across that
-            if from_socket.node.bl_idname == 'ShaderNodeGroup':
-                ng = from_socket.node.node_tree
-                group_output = next((n for n in ng.nodes if n.bl_idname == 'NodeGroupOutput'),
-                                    None)
-                if group_output is None:
-                    return False
 
-                in_sock = group_output.inputs[from_socket.name]
-                if len(in_sock.links):
-                    from_socket = in_sock.links[0].from_socket
-            vstruct_from_param = "%s_%s" % (
-                from_socket.identifier, vstruct_member)          
-            return vstruct_conditional(from_socket.node, vstruct_from_param)
-        else:
-            return False
+    vstruct_name, vstruct_member = meta['vstructmember'].split('.')
+    if node.inputs[vstruct_name].is_linked:
+        from_socket = node.inputs[vstruct_name].links[0].from_socket
+        # if coming from a shader group hookup across that
+        if from_socket.node.bl_idname == 'ShaderNodeGroup':
+            ng = from_socket.node.node_tree
+            group_output = next((n for n in ng.nodes if n.bl_idname == 'NodeGroupOutput'),
+                                None)
+            if group_output is None:
+                return False
+
+            in_sock = group_output.inputs[from_socket.name]
+            if len(in_sock.links):
+                from_socket = in_sock.links[0].from_socket
+        vstruct_from_param = "%s_%s" % (
+            from_socket.identifier, vstruct_member)          
+        return vstruct_conditional(from_socket.node, vstruct_from_param)
+
+    return False
 
 # gets the value for a node walking up the vstruct chain
-
-
 def get_val_vstruct(node, param):
     if param in node.inputs and node.inputs[param].is_linked:
         from_socket = node.inputs[param].links[0].from_socket
@@ -389,8 +389,6 @@ def get_val_vstruct(node, param):
         return getattr(node, param)
 
 # parse a vstruct conditional string and return true or false if should link
-
-
 def vstruct_conditional(node, param):
     if not hasattr(node, 'shader_meta') and not hasattr(node, 'output_meta'):
         return False
