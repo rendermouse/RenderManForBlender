@@ -189,10 +189,16 @@ class NODE_MT_renderman_connection_menu(Menu):
         socket = context.socket
         prop_name = socket.name
         prop = getattr(node, prop_name, None)
-        prop_meta = node.prop_meta[prop_name]
-        renderman_type = prop_meta.get('renderman_type', 'pattern')
-        renderman_type = prop_meta.get('renderman_array_type', renderman_type)
-        struct_name = prop_meta.get('struct_name', '')
+        if prop_name in node.prop_meta:
+            prop_meta = node.prop_meta[prop_name]
+            renderman_type = prop_meta.get('renderman_type', 'pattern')
+            renderman_type = prop_meta.get('renderman_array_type', renderman_type)
+            struct_name = prop_meta.get('struct_name', '')
+        else:
+            prop_meta = dict()
+            renderman_type = getattr(socket, 'renderman_type', 'pattern')
+            struct_name = ''
+
         terminal_node = None
 
         if hasattr(prop_meta, 'vstruct') or prop_name == 'inputMaterial':
@@ -432,9 +438,13 @@ def register_renderman_pattern_node_submenus():
         prop_name = getattr(socket, 'name', '')         
         prop = getattr(node, prop_name, None)
         if hasattr(node, 'prop_meta'):
-            prop_meta = node.prop_meta[prop_name]
-            renderman_type = prop_meta.get('renderman_type', 'pattern')
-            renderman_type = prop_meta.get('renderman_array_type', renderman_type)
+            if prop_name in node.prop_meta:
+                prop_meta = node.prop_meta[prop_name]
+                renderman_type = prop_meta.get('renderman_type', 'pattern')
+                renderman_type = prop_meta.get('renderman_array_type', renderman_type)
+            else:
+                prop_meta = dict()
+                renderman_type = getattr(socket, 'renderman_type', 'pattern')
         else:
             renderman_type = 'pattern'
 

@@ -1,6 +1,6 @@
 from bpy.props import PointerProperty, StringProperty, BoolProperty, \
     EnumProperty, IntProperty, FloatProperty, FloatVectorProperty, \
-    CollectionProperty, BoolVectorProperty
+    CollectionProperty, BoolVectorProperty, IntVectorProperty
 
 from ...rfb_utils import shadergraph_utils
 from ...rfb_logger import rfb_log 
@@ -221,8 +221,33 @@ class RendermanReferencePosePrimVars(bpy.types.PropertyGroup):
 
     rman__WNref: FloatVectorProperty(name='rman__WNref',
                                 default=(0,0, 0), size=3,
-                                subtype="XYZ")                                    
+                                subtype="XYZ")        
 
+class RENDERMAN_UL_Array_List(bpy.types.UIList):
+
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+        layout.label(text=item.name)
+
+class RendermanArrayGroup(bpy.types.PropertyGroup):
+    name: StringProperty(name="Name", default="")
+    type: EnumProperty(name="Type",
+        items=[
+              ('float', 'float', ''),
+               ('int', 'int', ''),
+               ('string', 'string', ''),
+               ('color', 'color', ''),
+               ('vector', 'vector', ''),
+               ('normal', 'normal', ''),
+               ('point', 'point', '')
+        ])
+
+    value_float: FloatProperty(name="Value", default=0.0)
+    value_int: IntProperty(name="Value", default=0)
+    value_string: StringProperty(name="Value", default="")
+    value_color: FloatVectorProperty(name="Value", default=(1.0,1.0,1.0), size=3, subtype="COLOR")
+    value_vector: FloatVectorProperty(name="Value", default=(0.0,0.0,0.0), size=3, subtype="NONE")
+    value_normal: FloatVectorProperty(name="Value", default=(0.0,0.0,0.0), size=3, subtype="NONE")
+    value_point: FloatVectorProperty(name="Value", default=(0.0,0.0,0.0), size=3, subtype="XYZ")                                                            
 
 class RendermanAnimSequenceSettings(bpy.types.PropertyGroup):
     animated_sequence: BoolProperty(
@@ -301,7 +326,9 @@ classes = [
     RendermanMeshPrimVar,   
     RendermanReferencePosePrimVars,
     RendermanAnimSequenceSettings,
-    Tab_CollectionGroup
+    Tab_CollectionGroup,
+    RENDERMAN_UL_Array_List,
+    RendermanArrayGroup
 ]
 
 def register():

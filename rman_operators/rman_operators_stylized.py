@@ -96,7 +96,10 @@ class PRMAN_OT_Attach_Stylized_Pattern(bpy.types.Operator):
         nt = mat.node_tree
         output = shadergraph_utils.is_renderman_nodetree(mat)
         if not output:
-            bpy.ops.material.rman_add_rman_nodetree('EXEC_DEFAULT', idtype='material', bxdf_Name='PxrSurface')
+            bpy.ops.object.rman_add_bxdf('EXEC_DEFAULT', bxdf_name='PxrSurface')
+            mat = object_utils.get_active_material(ob)
+            nt = mat.node_tree
+            output = shadergraph_utils.is_renderman_nodetree(mat)
             
         socket = output.inputs[0]
         if not socket.is_linked:
@@ -122,17 +125,26 @@ class PRMAN_OT_Attach_Stylized_Pattern(bpy.types.Operator):
 
             prop_meta = node.prop_meta[prop_name]
             if prop_meta['renderman_type'] == 'array':
+                coll_nm = '%s_collection' % prop_name  
+                coll_idx_nm = '%s_collection_index' % prop_name
+                param_array_type = prop_meta['renderman_array_type'] 
+                override = {'node': node}           
+                bpy.ops.renderman.add_remove_array_elem(override,
+                                                        'EXEC_DEFAULT', 
+                                                        action='ADD',
+                                                        param_name=prop_name,
+                                                        collection=coll_nm,
+                                                        collection_index=coll_idx_nm,
+                                                        elem_type=param_array_type)
 
-                array_len = getattr(node, '%s_arraylen' % prop_name)
-                array_len += 1
-                setattr(node, '%s_arraylen' % prop_name, array_len)      
                 pattern_node = nt.nodes.new(pattern_node_name)   
 
                 if pattern_settings:
                     for param_name, param_settings in pattern_settings['params'].items():
                         val = param_settings['value']
                         setattr(pattern_node, param_name, val)
-            
+
+                array_len = getattr(node, coll_idx_nm)            
                 sub_prop_nm = '%s[%d]' % (prop_name, array_len-1)     
                 nt.links.new(pattern_node.outputs['resultAOV'], node.inputs[sub_prop_nm]) 
                 

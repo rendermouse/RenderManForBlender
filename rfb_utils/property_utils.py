@@ -615,19 +615,19 @@ def set_ramp_rixparams(node, prop_name, prop, param_type, params):
             interp = 'catmull-rom'
             params.SetString("%s_Interpolation" % prop_name, interp )          
 
-def set_array_rixparams(node, rman_sg_node, mat_name, bl_prop_info, prop_name, prop, params):      
-    array_len = getattr(node, '%s_arraylen' % prop_name)
-    sub_prop_names = getattr(node, prop_name)
-    sub_prop_names = sub_prop_names[:array_len]
+def set_array_rixparams(node, rman_sg_node, mat_name, bl_prop_info, prop_name, prop, params):   
+    coll_nm = '%s_collection' % prop_name
     val_array = []
     val_ref_array = []
     param_type = bl_prop_info.renderman_array_type
-    param_name = bl_prop_info.renderman_name 
-    
-    for nm in sub_prop_names:
+    param_name = bl_prop_info.renderman_name     
+    collection = getattr(node, coll_nm)
+
+    for i in range(len(collection)):
+        elem = collection[i]
+        nm = '%s[%d]' % (prop_name, i)
         if hasattr(node, 'inputs')  and nm in node.inputs and \
             node.inputs[nm].is_linked:
-
             to_socket = node.inputs[nm]
             from_socket = to_socket.links[0].from_socket
             from_node = to_socket.links[0].from_node
@@ -637,16 +637,16 @@ def set_array_rixparams(node, rman_sg_node, mat_name, bl_prop_info, prop_name, p
             if val:
                 val_ref_array.append(val)
         else:
-            prop = getattr(node, nm)
+            prop = getattr(elem, 'value_%s' % param_type)
             val = string_utils.convert_val(prop, type_hint=param_type)
             if param_type in RFB_FLOAT3:
                 val_array.extend(val)
             else:
-                val_array.append(val)
+                val_array.append(val)  
     if val_ref_array:
         set_rix_param(params, param_type, param_name, val_ref_array, is_reference=True, is_array=True, array_len=len(val_ref_array))
     else:
-        set_rix_param(params, param_type, param_name, val_array, is_reference=False, is_array=True, array_len=len(val_array))                        
+        set_rix_param(params, param_type, param_name, val_array, is_reference=False, is_array=True, array_len=len(val_array))                               
 
 def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group_node=None):
     # If node is OSL node get properties from dynamic location.

@@ -1,6 +1,7 @@
 from ..rman_constants import RFB_ARRAYS_MAX_LEN, __RMAN_EMPTY_STRING__, __RESERVED_BLENDER_NAMES__
 from ..rfb_logger import rfb_log
 from .property_callbacks import *
+from ..rman_properties.rman_properties_misc import RendermanArrayGroup
 from collections import OrderedDict
 from bpy.props import *
 from copy import deepcopy
@@ -98,11 +99,16 @@ def generate_array_property(node, prop_names, prop_meta, node_desc_param, update
 
     param_name = node_desc_param._name
     param_label = getattr(node_desc_param, 'label', param_name)
+    noconnection = False
+    if hasattr(node_desc_param, 'connectable') and not node_desc_param.connectable:
+        noconnection = True
+
     prop_meta[param_name] = {'renderman_type': 'array', 
                             'renderman_array_type': node_desc_param.type,
                             'renderman_name':  param_name,
                             'label': param_label,
-                            'type': node_desc_param.type
+                            'type': node_desc_param.type,
+                            '__noconnection': noconnection
                             }
     prop_names.append(param_name)
 
@@ -113,25 +119,22 @@ def generate_array_property(node, prop_names, prop_meta, node_desc_param, update
     ui_label = "%s_uio" % param_name
     node.__annotations__[ui_label] = BoolProperty(name=ui_label, default=False)
     sub_prop_names = []
+    
+    coll_nm = '%s_collection' % param_name
+    prop = CollectionProperty(name=coll_nm, type=RendermanArrayGroup)
+    node.__annotations__[coll_nm] = prop
+
+    coll_idx_nm = '%s_collection_index' % param_name
+    prop = IntProperty(name=coll_idx_nm, default=0)
+    node.__annotations__[coll_idx_nm] = prop    
+
+    ## Not used
     arraylen_nm = '%s_arraylen' % param_name
     prop = IntProperty(name=arraylen_nm, 
                         default=0, min=0, max=RFB_ARRAYS_MAX_LEN,
                         description="Size of array",
                         update=update_array_size_func)
     node.__annotations__[arraylen_nm] = prop  
-
-    for i in range(0, RFB_ARRAYS_MAX_LEN+1):
-        ndp = deepcopy(node_desc_param)
-        ndp._name = '%s[%d]' % (param_name, i)
-        if hasattr(ndp, 'label'):
-            ndp.label = '%s[%d]' % (ndp.label, i)
-        ndp.connectable = True
-        ndp.widget = ''
-        name, meta, prop = generate_property(node, ndp, update_function=update_function)
-        meta['renderman_array_name'] = param_name
-        sub_prop_names.append(ndp._name)
-        prop_meta[ndp._name] = meta
-        node.__annotations__[ndp._name] = prop  
             
     setattr(node, param_name, sub_prop_names)   
     return True  
