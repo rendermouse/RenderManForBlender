@@ -9,6 +9,7 @@ from ...rfb_utils import prefs_utils
 from ...rfb_logger import rfb_log
 from ...rman_constants import RMAN_AREA_LIGHT_TYPES
 from .barn_light_filter_draw_helper import BarnLightFilterDrawHelper
+from .frustrum_draw_helper import Frustum
 from mathutils import Vector, Matrix
 from bpy.app.handlers import persistent
 import mathutils
@@ -16,6 +17,7 @@ import math
 import ice
 
 _DRAW_HANDLER_ = None
+_FRUSTUM_DRAW_HELPER_ = None
 _BARN_LIGHT_DRAW_HELPER_ = None
 _PI0_5_ = 1.570796327
 _PRMAN_TEX_CACHE_ = dict()
@@ -788,6 +790,7 @@ def draw_line_shape(ob, shader, pts, indices):
         bgl.glDisable(bgl.GL_DEPTH_TEST)    
    
 def draw_rect_light(ob):
+    global _FRUSTUM_DRAW_HELPER_
     _SHADER_.bind()
 
     set_selection_color(ob)
@@ -812,10 +815,22 @@ def draw_rect_light(ob):
     R_inside_indices = _get_indices(s_rmanLightLogo['R_inside'])
     draw_line_shape(ob, _SHADER_, R_inside, R_inside_indices)
 
-    m = ob_matrix @ Matrix.Rotation(math.radians(180.0), 4, 'Y')
     rm = ob.data.renderman
     light_shader = rm.get_light_node()
     light_shader_name = rm.get_light_node_name()
+
+    m = ob_matrix
+    coneAngle = getattr(light_shader, 'coneAngle', 90.0)
+    if coneAngle < 90.0:
+        softness = getattr(light_shader, 'coneSoftness', 0.0)
+        _FRUSTUM_DRAW_HELPER_.update_input_params(method='rect', coneAngle=coneAngle, coneSoftness=softness)
+        vtx_buffer = _FRUSTUM_DRAW_HELPER_.vtx_buffer()
+
+        pts = [m @ Vector(pt) for pt in vtx_buffer ]
+        indices = _FRUSTUM_DRAW_HELPER_.idx_buffer(len(pts), 0, 0)      
+        draw_line_shape(ob, _SHADER_, pts, indices)        
+
+    m = ob_matrix @ Matrix.Rotation(math.radians(180.0), 4, 'Y')    
     tex = ''
     col = None
     if light_shader_name == 'PxrRectLight':
@@ -829,6 +844,7 @@ def draw_rect_light(ob):
     draw_solid(ob, pts, m, uvs=uvs, tex=tex, col=col)
 
 def draw_sphere_light(ob):
+    global _FRUSTUM_DRAW_HELPER_
     
     _SHADER_.bind()
 
@@ -860,11 +876,23 @@ def draw_sphere_light(ob):
     R_inside_indices = _get_indices(s_rmanLightLogo['R_inside'])
     draw_line_shape(ob, _SHADER_, R_inside, R_inside_indices)
 
-    m = ob_matrix @ Matrix.Scale(0.5, 4) @ Matrix.Rotation(math.radians(90.0), 4, 'X')
-    idx_buffer = make_sphere_idx_buffer() 
     rm = ob.data.renderman
     light_shader = rm.get_light_node()
-    light_shader_name = rm.get_light_node_name()
+    light_shader_name = rm.get_light_node_name()    
+
+    m = ob_matrix
+    coneAngle = getattr(light_shader, 'coneAngle', 90.0)
+    if coneAngle < 90.0:
+        softness = getattr(light_shader, 'coneSoftness', 0.0)
+        _FRUSTUM_DRAW_HELPER_.update_input_params(method='disk', coneAngle=coneAngle, coneSoftness=softness)
+        vtx_buffer = _FRUSTUM_DRAW_HELPER_.vtx_buffer()
+
+        pts = [m @ Vector(pt) for pt in vtx_buffer ]
+        indices = _FRUSTUM_DRAW_HELPER_.idx_buffer(len(pts), 0, 0)      
+        draw_line_shape(ob, _SHADER_, pts, indices)       
+
+    m = ob_matrix @ Matrix.Scale(0.5, 4) @ Matrix.Rotation(math.radians(90.0), 4, 'X')
+    idx_buffer = make_sphere_idx_buffer() 
     if light_shader_name in ['PxrSphereLight']:
         col = light_shader.lightColor
         sphere_indices = [(idx_buffer[i], idx_buffer[i+1], idx_buffer[i+2]) for i in range(0, len(idx_buffer)-2) ]
@@ -954,6 +982,7 @@ def draw_envday_light(ob):
     draw_line_shape(ob, _SHADER_, sphere_shape, sphere_indices)
 
 def draw_disk_light(ob): 
+    global _FRUSTUM_DRAW_HELPER_
                  
     _SHADER_.bind()
 
@@ -979,11 +1008,22 @@ def draw_disk_light(ob):
     R_inside_indices = _get_indices(s_rmanLightLogo['R_inside'])
     draw_line_shape(ob, _SHADER_, R_inside, R_inside_indices)
 
-    ob_matrix = Matrix(ob.matrix_world)        
-    m = ob_matrix @ Matrix.Rotation(math.radians(180.0), 4, 'Y')    
-    
+    ob_matrix = Matrix(ob.matrix_world)   
     rm = ob.data.renderman
-    light_shader = rm.get_light_node()
+    light_shader = rm.get_light_node()    
+
+    m = ob_matrix
+    coneAngle = getattr(light_shader, 'coneAngle', 90.0)
+    if coneAngle < 90.0:
+        softness = getattr(light_shader, 'coneSoftness', 0.0)
+        _FRUSTUM_DRAW_HELPER_.update_input_params(method='disk', coneAngle=coneAngle, coneSoftness=softness)
+        vtx_buffer = _FRUSTUM_DRAW_HELPER_.vtx_buffer()
+
+        pts = [m @ Vector(pt) for pt in vtx_buffer ]
+        indices = _FRUSTUM_DRAW_HELPER_.idx_buffer(len(pts), 0, 0)      
+        draw_line_shape(ob, _SHADER_, pts, indices)    
+
+    m = ob_matrix @ Matrix.Rotation(math.radians(180.0), 4, 'Y')    
     col = light_shader.lightColor    
     draw_solid(ob, s_diskLight, m, col=col)
 
@@ -1033,6 +1073,11 @@ def draw_portal_light(ob):
     R_inside_indices = _get_indices(s_rmanLightLogo['R_inside'])
     draw_line_shape(ob, _SHADER_, R_inside, R_inside_indices)
 
+    m = ob_matrix @ Matrix.Rotation(math.radians(180.0), 4, 'Y')
+    arrow = [m @ Vector(pt) for pt in s_rmanLightLogo['arrow']]
+    arrow_indices = _get_indices(s_rmanLightLogo['arrow'])
+    draw_line_shape(ob, _SHADER_, arrow, arrow_indices)    
+
     m = ob_matrix @ Matrix.Rotation(math.radians(90.0), 4, 'X')
     m = m @ Matrix.Scale(0.5, 4)
     rays = [m @ Vector(pt) for pt in s_portalRays]
@@ -1067,6 +1112,7 @@ def draw_dome_light(ob):
         draw_solid(ob, sphere_pts, m, uvs=make_sphere_uvs(), tex=tex, indices=sphere_indices)
 
 def draw_cylinder_light(ob):
+    global _FRUSTUM_DRAW_HELPER_
 
     _SHADER_.bind()
 
@@ -1078,7 +1124,18 @@ def draw_cylinder_light(ob):
     draw_line_shape(ob, _SHADER_, cylinder, s_cylinderLight['indices'])
 
     rm = ob.data.renderman
-    col = rm.get_light_node().lightColor
+    light_shader = rm.get_light_node()
+    coneAngle = getattr(light_shader, 'coneAngle', 90.0)
+    if coneAngle < 90.0:
+        softness = getattr(light_shader, 'coneSoftness', 0.0)
+        _FRUSTUM_DRAW_HELPER_.update_input_params(method='rect', coneAngle=coneAngle, coneSoftness=softness)
+        vtx_buffer = _FRUSTUM_DRAW_HELPER_.vtx_buffer()
+
+        pts = [m @ Vector(pt) for pt in vtx_buffer ]
+        indices = _FRUSTUM_DRAW_HELPER_.idx_buffer(len(pts), 0, 0)      
+        draw_line_shape(ob, _SHADER_, pts, indices)   
+
+    col = light_shader.lightColor
     draw_solid(ob, s_cylinderLight['vtx'], m, col=col, indices=s_cylinderLight['indices_tris'])        
 
 def draw_arc(a, b, numSteps, quadrant, xOffset, yOffset, pts):
@@ -1354,8 +1411,6 @@ def draw_barn_light_filter(ob):
 
     set_selection_color(ob)
 
-    if not _BARN_LIGHT_DRAW_HELPER_:
-        _BARN_LIGHT_DRAW_HELPER_ = BarnLightFilterDrawHelper()
     _BARN_LIGHT_DRAW_HELPER_.update_input_params(ob)
     vtx_buffer = _BARN_LIGHT_DRAW_HELPER_.vtx_buffer()
 
@@ -1369,10 +1424,18 @@ def draw_barn_light_filter(ob):
 def draw():
     global _PRMAN_TEX_CACHE_
     global _RMAN_TEXTURED_LIGHTS_
+    global _FRUSTUM_DRAW_HELPER_
+    global _BARN_LIGHT_DRAW_HELPER_
 
     if bpy.context.engine != 'PRMAN_RENDER':
         return
-    
+
+    if not _FRUSTUM_DRAW_HELPER_:
+        _FRUSTUM_DRAW_HELPER_ = Frustum()
+
+    if not _BARN_LIGHT_DRAW_HELPER_:
+        _BARN_LIGHT_DRAW_HELPER_ = BarnLightFilterDrawHelper()        
+     
     scene = bpy.context.scene
     lights_set = set()
     user_map = bpy.data.user_map(subset=bpy.data.lights, value_types={'OBJECT'})

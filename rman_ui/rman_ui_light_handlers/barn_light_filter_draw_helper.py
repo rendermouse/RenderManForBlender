@@ -19,7 +19,7 @@ def _gl_lines(idx_buffer, start_vtx, num_vtx, start_idx, loop=False):
     """Fills the index buffer to draw a number of lines.
 
     Args:
-    - idx_buffer (MIndexBuffer): A pre-initialized index buffer to fill. May already contain valid data.
+    - idx_buffer (list): A pre-initialized index buffer to fill. May already contain valid data.
     - start_vtx (int): index of the primitive's first vertex in the vertex buffer.
     - num_vtx (int): number of vertices in the primitive
     - start_idx (p1_type): position of our first write in the index buffer.
@@ -483,7 +483,6 @@ class BarnLightFilterDrawHelper(object):
         Fill the provided index buffer to draw the shape.
 
         Args:
-        - idx_buffer (omr.MIndexBuffer): un-allocated storage for our result.
         - num_vtx (int): The total number of vertices in the VBO.
         - startIdx (int): the index of our first vtx in the VBO
         - item_idx (int): 0 = outer frustum, 1 = inner frustum, 2 = frustum edges
