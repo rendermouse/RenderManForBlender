@@ -31,17 +31,17 @@ def _gl_lines(idx_buffer, vtxbuf_start_idx, num_vtx, start_idx, loop=False):
         vtx_idx += 1
 
 
-class Frustum(object):
+class FrustumDrawHelper(object):
 
     def __init__(self, *args, **kwargs):
         self.depth = 5.0
-        self._opacity = 0.333
 
     def update_input_params(self, *args, **kwargs):
         self.method = kwargs.get('method', 'rect')
         self.base_shape = self._build_base_shape()
         self.angle = kwargs.get('coneAngle', 90.0)
-        self.softness = kwargs.get('coneSoftness', 0.0)        
+        self.softness = kwargs.get('coneSoftness', 0.0)
+        self.depth = kwargs.get('rman_coneAngleDepth', 5.0)
 
     def disk_vtx_buffer(self):
         vtxs = []
@@ -216,19 +216,3 @@ class Frustum(object):
 
         indices = [indices[i:i+2] for i in range(0, len(indices), 2)]
         return indices
-
-    def opacity(self):
-        return self._opacity
-
-    def instance_enabled(self, instance_idx):
-        """Return the enable state of the instance/MRenderItem, potentially
-        taking named params into account."""
-        return self.angle < 90.0
-
-    def set_input_params(self, obj, **kwargs):
-        """Update internal input param values using kwargs."""
-        # print 'frustum.set_input_params(%s)' % kwargs
-        self.angle = kwargs.get('coneAngle', 90.0)
-        self.softness = kwargs.get('coneSoftness', 0.0)
-        self.depth = kwargs.get('rman_coneAngleDepth', 10.0)
-        self._opacity = kwargs.get('rman_coneAngleOpacity', 0.333)

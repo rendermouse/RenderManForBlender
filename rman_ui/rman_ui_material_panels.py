@@ -454,8 +454,7 @@ class PRMAN_PT_context_material(_RManPanelHeader, Panel):
         elif mat:
             split.template_ID(space, "pin_id")
             split.separator()
-
-
+       
 class DATA_PT_renderman_node_shader_light(ShaderNodePanel, Panel):
     bl_label = "Light Parameters"
     bl_context = 'data'
@@ -601,6 +600,26 @@ class DATA_PT_renderman_node_dome_light(ShaderNodePanel, Panel):
 
         layout.prop(rm, 'dome_light_portal')
 
+class DATA_PT_renderman_node_shader_light_viewport(ShaderNodePanel, Panel):
+    bl_label = "Viewport"
+    bl_context = 'data'
+
+    @classmethod
+    def poll(cls, context):
+        rd = context.scene.render
+        return rd.engine == 'PRMAN_RENDER' and hasattr(context, "light") \
+            and context.light is not None and hasattr(context.light, 'renderman') \
+            and context.light.renderman.renderman_light_role != 'RMAN_LIGHTFILTER' \
+            and context.light.renderman.get_light_node_name() in ['PxrRectLight', 'PxrCylinderLight', 'PxrSphereLight', 'PxrDiskLight']
+
+    def draw(self, context):
+        layout = self.layout
+        light = context.light
+        node = light.renderman.get_light_node()
+        if getattr(node, 'coneAngle', 90.0) >= 90.0:
+            layout.enabled = False
+        layout.prop(light.renderman, 'rman_coneAngleDepth')  
+        layout.prop(light.renderman, 'rman_coneAngleOpacity') 
 class MATERIAL_PT_renderman_shader_light_filters(RENDERMAN_UL_LightFilters, Panel):
     bl_context = "material"
     bl_label = "Light Filters"
@@ -628,6 +647,7 @@ classes = [
     DATA_PT_renderman_node_filters_light,
     DATA_PT_renderman_node_portal_light,
     DATA_PT_renderman_node_dome_light,
+    DATA_PT_renderman_node_shader_light_viewport,    
     PRMAN_PT_context_material,
     MATERIAL_PT_renderman_shader_light_filters
 ]
