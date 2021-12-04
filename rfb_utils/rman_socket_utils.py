@@ -41,7 +41,7 @@ def node_add_input(node, param_type, param_name, meta, param_label):
         if param_type == 'struct':
             struct_name = meta.get('struct_name', 'Manifold')
             socket.struct_name = struct_name    
-
+    return socket
 
 def node_add_inputs(node, node_name, prop_names, first_level=True, label_prefix='', remove=False):
     ''' Add new input sockets to this ShadingNode

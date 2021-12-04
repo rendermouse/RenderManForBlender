@@ -274,6 +274,7 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                 op.collection_index = coll_idx_nm
                 op.param_name = prop_name
                 op.action = 'REMOVE'
+                op.elem_type = bl_prop_info.renderman_array_type
 
                 coll_index = getattr(node, coll_idx_nm, None)
                 if coll_idx_nm is None:

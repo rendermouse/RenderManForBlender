@@ -879,22 +879,46 @@ class PRMAN_OT_Add_Remove_Array_Element(bpy.types.Operator):
         node = context.node
         collection = getattr(node, self.collection)
         index = getattr(node, self.collection_index)        
+        meta = node.prop_meta[self.param_name]
+        connectable = True
+        if '__noconnection' in meta and meta['__noconnection']:
+            connectable = False
         if self.action == 'ADD':
             elem = collection.add()
             index += 1
             setattr(node, self.collection_index, index)
             elem.name = '%s[%d]' % (self.param_name, len(collection)-1)  
             elem.type = self.elem_type
-
-            meta = node.prop_meta[self.param_name]
-            if '__noconnection' in meta and meta['__noconnection']:
-                return {'FINISHED'}            
-            param_array_label = '%s[%d]' % (meta.get('label', self.param_name), len(collection)-1)
-            node_add_input(node, self.elem_type, elem.name, meta, param_array_label)
+            if connectable:
+                param_array_label = '%s[%d]' % (meta.get('label', self.param_name), len(collection)-1)
+                node_add_input(node, self.elem_type, elem.name, meta, param_array_label)
 
         else:
-            elem = collection[index]
-            collection.remove(elem)
+            do_rename = False
+            idx = -1
+            if connectable:
+                # rename sockets
+                for i in range(len(collection)):
+                    nm = '%s[%d]' % (self.param_name, i)
+                    if i == index:                        
+                        if nm in node.inputs:
+                            node.inputs.remove(node.inputs[nm])
+                            do_rename = True
+                            idx = index
+                    if do_rename:
+                        new_name = '%s[%d]' % (self.param_name, idx)
+                        new_label = '%s[%d]' % (meta.get('label', self.param_name), idx)
+                        socket = node.inputs.get(nm, None)
+                        if socket and socket.is_linked:
+                            link = socket.links[0]
+                            from_socket = link.from_socket
+                            nt = node.id_data
+                            node.inputs.remove(socket)
+                            socket = node_add_input(node, self.elem_type, new_name, meta, new_label)
+                            if socket:
+                                nt.links.new(from_socket, socket)
+                            idx += 1
+            collection.remove(index)                    
             index -= 1
             setattr(node, self.collection_index, 0)
             for i in range(len(collection)):

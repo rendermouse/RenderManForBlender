@@ -112,6 +112,7 @@ def draw_array_elem(layout, node, prop_name, bl_prop_info, nt, context, level):
         op.collection_index = coll_idx_nm
         op.param_name = prop_name
         op.action = 'REMOVE'
+        op.elem_type = bl_prop_info.renderman_array_type
 
         coll_index = getattr(node, coll_idx_nm, None)
         if coll_idx_nm is None:
