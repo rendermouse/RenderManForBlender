@@ -189,6 +189,8 @@ def get_active_material(ob):
         return mat
 
     material_slots = getattr(ob, 'material_slots', None)
+    if ob.type == 'EMPTY':
+        material_slots = getattr(ob.original, 'material_slots', None)    
     if not material_slots:
         return None
 
