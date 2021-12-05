@@ -73,7 +73,6 @@ class BlPropInfo:
         self.renderman_type = prop_meta.get('renderman_type', '')
         self.param_type = self.renderman_type
         self.arraySize = prop_meta.get('arraySize', None)
-        self.renderman_array_name = prop_meta.get('renderman_array_name', None)
         self.renderman_array_type = prop_meta.get('renderman_array_type', '')
         self.type = prop_meta.get('type', '')
         self.page = prop_meta.get('page', '')
@@ -112,9 +111,6 @@ class BlPropInfo:
             return False
 
         if not self.is_linked and self.param_type in ['struct', 'enum']:
-            return False
-
-        if self.renderman_array_name:
             return False
 
         if self.prop_name == 'inputMaterial' or \

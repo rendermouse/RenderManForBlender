@@ -80,17 +80,8 @@ def node_add_inputs(node, node_name, prop_names, first_level=True, label_prefix=
                                 label_prefix=label_prefix, remove=remove)
                 continue
         elif param_type == 'array':
-            '''
-            arraylen = getattr(node, '%s_arraylen' % name)
-            sub_prop_names = getattr(node, name)
-            sub_prop_names = sub_prop_names[:arraylen]
-            node_add_inputs(node, node_name, sub_prop_names,
-                label_prefix='',
-                first_level=False, remove=False)
-            '''
             if '__noconnection' in meta and meta['__noconnection']:
                 continue
-
             coll_nm = '%s_collection' % name
             coll_idx_nm = '%s_collection_index' % name  
             param_array_type = meta.get('renderman_array_type')
@@ -99,8 +90,12 @@ def node_add_inputs(node, node_name, prop_names, first_level=True, label_prefix=
             for i in range(len(collection)):
                 param_array_name = '%s[%d]' % (name, i)
                 param_array_label = '%s[%d]' % (name, i)
-                param_array_label = label_prefix + meta.get('label', param_name) + '[%d]' % i
-                node_add_input(node, param_array_type, name, meta, param_array_label)
+                param_array_label = label_prefix + meta.get('label', name) + '[%d]' % i
+                if param_array_name in node.inputs.keys():
+                    if remove:
+                        node.inputs.remove(node.inputs[param_array_name])   
+                    continue          
+                node_add_input(node, param_array_type, param_array_name, meta, param_array_label)
 
             continue
 

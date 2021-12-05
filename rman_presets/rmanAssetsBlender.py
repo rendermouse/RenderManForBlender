@@ -394,9 +394,7 @@ def set_asset_params(ob, node, nodeName, Asset):
 
                     if 'arraySize' in meta:
                         pass
-                    elif 'renderman_array_name' in meta:
-                        continue           
-
+    
                     param_type = 'reference %s' % meta['renderman_type']
                     param_name = meta['renderman_name']
                     
@@ -481,32 +479,33 @@ def set_asset_params(ob, node, nodeName, Asset):
                                 display = 'texture'
                             val = string_utils.expand_string(val, display='texture', asFilePath=True)
 
-                    elif 'renderman_array_name' in meta:
-                        continue
                     elif meta['renderman_type'] == 'array':
-                        array_len = getattr(node, '%s_arraylen' % prop_name)
-                        sub_prop_names = getattr(node, prop_name)
-                        sub_prop_names = sub_prop_names[:array_len]
                         val_array = []
                         val_ref_array = []
-                        param_type = '%s[%d]' % (meta['renderman_array_type'], array_len)
+                        coll_nm = '%s_collection' % prop_name
+                        coll_idx_nm = '%s_collection_index' % prop_name  
+                        collection = getattr(node, coll_nm)
+                        array_len = len(collection)
+                        param_array_type = meta.get('renderman_array_type')
+                        param_type = '%s[%d]' % (param_array_type, array_len)
                         
-                        for nm in sub_prop_names:
+                        for elem in collection:
+                            nm = elem.name
                             if hasattr(node, 'inputs')  and nm in node.inputs and \
                                 node.inputs[nm].is_linked:
                                 val_ref_array.append('')
                             else:
-                                prop = getattr(node, nm)
-                                val = string_utils.convert_val(prop, type_hint=param_type)
-                                if param_type in RFB_FLOAT3:
+                                prop = getattr(elem, 'value_' % param_array_type)
+                                val = string_utils.convert_val(prop, type_hint=param_array_type)
+                                if param_array_type in RFB_FLOAT3:
                                     val_array.extend(val)
                                 else:
                                     val_array.append(val)
                         if val_ref_array:
-                            pdict = {'type': '%s [%d]' % (param_type, len(val_ref_array)), 'value': None}
+                            pdict = {'type': '%s [%d]' % (param_array_type, len(val_ref_array)), 'value': None}
                             Asset.addParam(nodeName, param_name, pdict)
                         else:                            
-                            pdict = {'type': param_type, 'value': val_array}
+                            pdict = {'type': param_array_type, 'value': val_array}
                             Asset.addParam(nodeName, param_name, pdict)
                         continue
                     elif meta['renderman_type'] == 'colorramp':
@@ -1087,10 +1086,26 @@ def setParams(Asset, node, paramsList):
             if array_len == '':
                 continue
             array_len = int(array_len)
-            setattr(node, '%s_arraylen' % pname, array_len)    
+            coll_nm = '%s_collection' % pname  
+            coll_idx_nm = '%s_collection_index' % pname
+            collection = getattr(node, coll_nm)
+            elem_type = rman_type
+            if 'reference' in elem_type:
+                elem_type = elem_type.replace('reference ', '')
+            if elem_type == 'integer':
+                elem_type = 'int'
+
+            for i in range(array_len):
+                override = {'node': node}           
+                bpy.ops.renderman.add_remove_array_elem(override,
+                                                        'EXEC_DEFAULT', 
+                                                        action='ADD',
+                                                        param_name=pname,
+                                                        collection=coll_nm,
+                                                        collection_index=coll_idx_nm,
+                                                        elem_type=elem_type)            
 
             pval = param.value()
-
             if pval is None or pval == []:
                 # connected param
                 continue    
@@ -1099,22 +1114,26 @@ def setParams(Asset, node, paramsList):
             if rman_type in ['integer', 'float', 'string']:
                 for i in range(0, plen):
                     val = pval[i]
-                    parm_nm = '%s[%d]' % (pname, (i))
-                    setattr(node, parm_nm, val)
+                    elem = collection[i]
+                    elem.type = elem_type
+                    setattr(node, 'value_%s' % elem.type, val)
+
             # float3 types
             elif rman_type in float3:
                 j = 1
                 if isinstance(pval[0], list):
                     for i in range(0, plen):
-                        parm_nm = '%s[%d]' % (pname, (j))
+                        elem = collection[j]
                         val = (pval[i][0], pval[i][0], pval[i][0])
-                        setattr(node, parm_nm, val)
+                        elem.type = elem_type
+                        setattr(node, 'value_%s' % elem.type, val)                        
                         j +=1
                 else:        
                     for i in range(0, plen, 3):
-                        parm_nm = '%s[%d]' % (pname, (j))
+                        elem = collection[j]                        
                         val = (pval[i], pval[i+1], pval[i+2])
-                        setattr(node, parm_nm, val)                                
+                        elem.type = elem_type
+                        setattr(node, 'value_%s' % elem.type, val)
                         j = j+1            
 
         elif pname in node.bl_rna.properties.keys():
