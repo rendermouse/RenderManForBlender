@@ -898,26 +898,32 @@ class PRMAN_OT_Add_Remove_Array_Element(bpy.types.Operator):
             idx = -1
             if connectable:
                 # rename sockets
-                for i in range(len(collection)):
-                    nm = '%s[%d]' % (self.param_name, i)
-                    if i == index:                        
-                        if nm in node.inputs:
-                            node.inputs.remove(node.inputs[nm])
-                            do_rename = True
-                            idx = index
-                    if do_rename:
-                        new_name = '%s[%d]' % (self.param_name, idx)
-                        new_label = '%s[%d]' % (meta.get('label', self.param_name), idx)
-                        socket = node.inputs.get(nm, None)
-                        if socket and socket.is_linked:
-                            link = socket.links[0]
-                            from_socket = link.from_socket
-                            nt = node.id_data
-                            node.inputs.remove(socket)
-                            socket = node_add_input(node, self.elem_type, new_name, meta, new_label)
-                            if socket:
-                                nt.links.new(from_socket, socket)
-                            idx += 1
+                def update_sockets(socket, name, label):
+                    link = None
+                    from_socket = None
+                    if socket.is_linked:                    
+                        link = socket.links[0]
+                        from_socket = link.from_socket       
+                    node.inputs.remove(socket)                                     
+                    new_socket = node_add_input(node, self.elem_type, name, meta, label)
+                    if not new_socket:
+                        return
+                    if link and from_socket:
+                        nt = node.id_data
+                        nt.links.new(from_socket, new_socket)
+                    
+                idx = 0 
+                elem = collection[index]
+                node.inputs.remove(node.inputs[elem.name])
+                for elem in collection:
+                    nm = elem.name
+                    new_name = '%s[%d]' % (self.param_name, idx)
+                    new_label = '%s[%d]' % (meta.get('label', self.param_name), idx)
+                    socket = node.inputs.get(nm, None)
+                    if socket:
+                        update_sockets(socket, new_name, new_label)
+                        idx += 1                    
+                    
             collection.remove(index)                    
             index -= 1
             setattr(node, self.collection_index, 0)
