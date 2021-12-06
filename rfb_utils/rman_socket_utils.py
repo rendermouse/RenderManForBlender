@@ -50,14 +50,14 @@ def node_add_inputs(node, node_name, prop_names, first_level=True, label_prefix=
     for name in prop_names:
         meta = node.prop_meta[name]
         param_type = meta['renderman_type']
-        #param_type = getattr(meta, 'renderman_array_type', param_type)
 
-        if name in node.inputs.keys() and remove:
-            node.inputs.remove(node.inputs[name])
+        socket = node.inputs.get(name, None)
+        if socket:
+            if remove:
+                node.inputs.remove(socket)
             continue
-        elif name in node.inputs.keys():
-            continue
-
+        notconnectable = meta.get('__noconnection', False)
+        
         # if this is a page recursively add inputs
         if param_type == 'page':
             if first_level and has_lobe_enable_props(node) and name != 'page_Globals':
@@ -72,18 +72,15 @@ def node_add_inputs(node, node_name, prop_names, first_level=True, label_prefix=
                     node_add_inputs(node, node_name, getattr(node, name),
                                     label_prefix=label + ' ',
                                     first_level=False, remove=True)
-                continue
-
             else:
                 node_add_inputs(node, node_name, getattr(node, name),
                                 first_level=first_level,
                                 label_prefix=label_prefix, remove=remove)
-                continue
+            continue
         elif param_type == 'array':
-            if '__noconnection' in meta and meta['__noconnection']:
+            if notconnectable:
                 continue
             coll_nm = '%s_collection' % name
-            coll_idx_nm = '%s_collection_index' % name  
             param_array_type = meta.get('renderman_array_type')
 
             collection = getattr(node, coll_nm)
@@ -99,27 +96,11 @@ def node_add_inputs(node, node_name, prop_names, first_level=True, label_prefix=
 
             continue
 
-        if remove:
+        if remove or notconnectable:
             continue
-        # # if this is not connectable don't add socket
-        if param_type not in __RMAN_SOCKET_MAP__:
-            continue
-        if '__noconnection' in meta and meta['__noconnection']:
-            continue
-
         param_name = name
-
         param_label = label_prefix + meta.get('label', param_name)
-        socket = node.inputs.new(
-            __RMAN_SOCKET_MAP__[param_type], param_name, identifier=param_label)
-        socket.link_limit = 1
-        #socket.default_value = meta['default_value']
-
-        if param_type in ['struct', 'normal', 'vector', 'vstruct', 'void']:
-            socket.hide_value = True
-            if param_type == 'struct':
-                struct_name = meta.get('struct_name', 'Manifold')
-                socket.struct_name = struct_name
+        node_add_input(node, param_type, param_name, meta, param_label)
 
     update_inputs(node)
 
