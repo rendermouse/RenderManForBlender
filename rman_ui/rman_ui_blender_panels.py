@@ -72,4 +72,7 @@ def register():
 def unregister():
 
     for panel in get_panels():
-        panel.COMPAT_ENGINES.remove('PRMAN_RENDER')
+        try:
+            panel.COMPAT_ENGINES.remove('PRMAN_RENDER')
+        except KeyError:
+            continue
