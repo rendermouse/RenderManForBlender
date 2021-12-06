@@ -582,10 +582,11 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                     rman_socket_utils.__RMAN_SOCKET_MAP__[prop_type], prop_name)
             else:
                 prop_default = shader_meta[prop_name]["default"]
-                if prop_type == "float":
-                    prop_default = float(prop_default)
-                elif prop_type == "int":
-                    prop_default = int(float(prop_default))
+                if prop_default:
+                    if prop_type == "float":
+                        prop_default = float(prop_default)
+                    elif prop_type == "int":
+                        prop_default = int(float(prop_default))
 
                 if prop_type == "matrix":
                     self.inputs.new(rman_socket_utils.__RMAN_SOCKET_MAP__["struct"], prop_name, prop_name)
@@ -596,7 +597,8 @@ class RendermanShadingNode(bpy.types.ShaderNode):
                 else:
                     input = self.inputs.new(rman_socket_utils.__RMAN_SOCKET_MAP__[shader_meta[prop_name]["type"]],
                                             prop_name, identifier=prop_name)
-                    input.default_value = prop_default
+                    if prop_default:
+                        input.default_value = prop_default
                     if prop_type == 'struct' or prop_type == 'point':
                         input.hide_value = True
                     input.renderman_type = prop_type
