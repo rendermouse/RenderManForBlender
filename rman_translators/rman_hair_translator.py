@@ -49,7 +49,7 @@ class RmanHairTranslator(RmanTranslator):
         if not curves:
             return
 
-        for i, (vertsArray, points, widths, scalpST) in enumerate(curves):
+        for i, (vertsArray, points, widths, scalpST, mcols) in enumerate(curves):
             curves_sg = self.rman_scene.sg_scene.CreateCurves("%s-%d" % (rman_sg_hair.db_name, i))
             curves_sg.Define(self.rman_scene.rman.Tokens.Rix.k_cubic, "nonperiodic", "catmull-rom", len(vertsArray), len(points))
             primvar = curves_sg.GetPrimVars()
@@ -68,6 +68,9 @@ class RmanHairTranslator(RmanTranslator):
             
             if len(scalpST):
                 primvar.SetFloatArrayDetail("scalpST", scalpST, 2, "uniform")
+
+            if len(mcols):
+                primvar.SetColorDetail("Cs", mcols, "uniform")
                     
             if rman_sg_hair.motion_steps:
                 super().set_primvar_times(rman_sg_hair.motion_steps, primvar)
@@ -129,6 +132,7 @@ class RmanHairTranslator(RmanTranslator):
         total_hair_count = num_parents + num_children
         export_st = psys.settings.renderman.export_scalp_st and psys_modifier and len(
             ob.data.uv_layers) > 0
+        export_mcol = psys.settings.renderman.export_mcol
 
         curve_sets = []
 
@@ -136,6 +140,7 @@ class RmanHairTranslator(RmanTranslator):
 
         vertsArray = []
         scalpST = []
+        mcols = []
         nverts = 0
 
         ob_inv_mtx = ob.matrix_world.inverted_safe()
@@ -187,11 +192,17 @@ class RmanHairTranslator(RmanTranslator):
                     st = psys.uv_on_emitter(psys_modifier, particle=particle, particle_no=pindex)
                     scalpST.append([st[0], st[1]])
 
+                if export_mcol:
+                    particle = psys.particles[
+                        (pindex - num_parents) % num_parents]                        
+                    mcol = psys.mcol_on_emitter(psys_modifier, particle=particle, particle_no=pindex)
+                    mcols.append([mcol[0], mcol[1], mcol[2]])                    
+
             # if we get more than 100000 vertices, export ri.Curve and reset.  This
             # is to avoid a maxint on the array length
             if nverts > 100000:
                 curve_sets.append(
-                    (vertsArray, points, hair_width, scalpST))
+                    (vertsArray, points, hair_width, scalpST, mcols))
 
                 nverts = 0
                 points = []
@@ -199,10 +210,11 @@ class RmanHairTranslator(RmanTranslator):
                 if not conwidth:
                     hair_width = []
                 scalpST = []
+                mcols = []
 
         if nverts > 0:
             curve_sets.append((vertsArray, points,
-                            hair_width, scalpST))
+                            hair_width, scalpST, mcols))
 
         return curve_sets              
             

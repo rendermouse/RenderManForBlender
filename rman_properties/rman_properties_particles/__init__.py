@@ -88,6 +88,12 @@ class RendermanParticleSettings(bpy.types.PropertyGroup):
         default=True
     )
 
+    export_mcol: BoolProperty(
+        name="Export Vertex Color",
+        description="For hair, export the vertex color from the emitter where the hair originates.  Use the variable 'Cs' in your shading network",
+        default=True
+    )    
+
     hair_index_name: StringProperty(
         name="Hair Index Name",
         description="The name of the index primvar used for each hair curve.",
