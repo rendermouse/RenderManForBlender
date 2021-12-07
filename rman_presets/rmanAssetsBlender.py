@@ -495,7 +495,7 @@ def set_asset_params(ob, node, nodeName, Asset):
                                 node.inputs[nm].is_linked:
                                 val_ref_array.append('')
                             else:
-                                prop = getattr(elem, 'value_' % param_array_type)
+                                prop = getattr(elem, 'value_%s' % param_array_type)
                                 val = string_utils.convert_val(prop, type_hint=param_array_type)
                                 if param_array_type in RFB_FLOAT3:
                                     val_array.extend(val)
