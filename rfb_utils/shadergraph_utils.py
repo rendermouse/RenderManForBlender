@@ -438,9 +438,12 @@ def get_group_node(node):
 
     return current_group_node
 
-def get_all_shading_nodes():
+def get_all_shading_nodes(scene=None):
 
     '''Find all shading nodes in the scene
+
+    Arguments:
+        scene (bpy.types.Scene) - (optional) the scene we want to find the shading nodes in
 
     Returns:
         (list) - list of all the shading nodes
@@ -448,8 +451,10 @@ def get_all_shading_nodes():
 
     nodes = list()
 
-    context = bpy.context
-    scene = context.scene
+    if not scene:
+        context = bpy.context
+        scene = context.scene
+        
     world = scene.world
 
     integrator = find_integrator_node(world)

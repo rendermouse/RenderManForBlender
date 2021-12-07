@@ -7,9 +7,7 @@ def upgrade_242(scene):
     shadergraph_utils.reload_bl_ramps(scene, check_library=False)
 
 def upgrade_243(scene):
-    for node in shadergraph_utils.get_all_shading_nodes():
-        nt = node.id_data
-
+    for node in shadergraph_utils.get_all_shading_nodes(scene=scene):
         for prop_name, meta in node.prop_meta.items():
             param_type = meta['renderman_type']       
             if param_type != 'array':
