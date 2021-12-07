@@ -1,6 +1,7 @@
 from .. import rman_constants
 from ..rfb_utils import shadergraph_utils
 from ..rfb_logger import rfb_log
+from collections import OrderedDict
 import bpy
 
 def upgrade_242(scene):
@@ -21,22 +22,26 @@ def upgrade_243(scene):
                 elem.name = '%s[%d]' % (prop_name, len(collection)-1)  
                 elem.type = param_array_type
 
+__RMAN_SCENE_UPGRADE_FUNCTIONS__ = OrderedDict()
+    
+__RMAN_SCENE_UPGRADE_FUNCTIONS__['24.2'] = upgrade_242
+__RMAN_SCENE_UPGRADE_FUNCTIONS__['24.3'] = upgrade_243
 
 def upgrade_scene(bl_scene):
+    global __RMAN_SCENE_UPGRADE_FUNCTIONS__
+
     if bpy.context.engine != 'PRMAN_RENDER':
         return    
     for scene in bpy.data.scenes:
         version = scene.renderman.renderman_version
         if version == '':
+            # we started adding a renderman_version property in 24.1
             version = '24.1'
 
-        if version < '24.2':
-            rfb_log().debug('Upgrade scene to 24.2')
-            upgrade_242(scene)
-            
-        if version < '24.3':
-            rfb_log().debug('Upgrade scene to 24.3')
-            upgrade_243(scene)
+        for version_str, fn in __RMAN_SCENE_UPGRADE_FUNCTIONS__.items():
+            if version < version_str:
+                rfb_log().debug('Upgrade scene to %s' % version_str)
+                fn(scene)
                
 def update_version(bl_scene):
     if bpy.context.engine != 'PRMAN_RENDER':
