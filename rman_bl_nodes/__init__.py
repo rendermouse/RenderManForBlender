@@ -453,6 +453,19 @@ def generate_node_type(node_desc, is_oso=False):
     ntype.__annotations__['plugin_name'] = StringProperty(name='Plugin Name',
                                        default=name, options={'HIDDEN'})
 
+    has_textured_params = False
+    rman_textured_params = list()
+    if node_desc.textured_params:
+        has_textured_params = True
+        ntype.__annotations__['txm_id'] = StringProperty(name='txm_id', default="")
+        for param in node_desc.textured_params:
+            rman_textured_params.append(param.name)
+    
+    setattr(ntype, 'rman_textured_params', rman_textured_params)
+    ntype.__annotations__['rman_has_textured_params'] = BoolProperty(
+                name="rman_has_textured_params",
+                default=has_textured_params)        
+
     class_generate_properties(ntype, name, node_desc)
     if nodeType == 'light':
         ntype.__annotations__['light_primary_visibility'] = BoolProperty(
