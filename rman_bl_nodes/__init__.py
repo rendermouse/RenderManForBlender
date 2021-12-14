@@ -573,15 +573,6 @@ def register_plugin_types(node_desc):
         rfb_log().error("Error registering plugin ", name)
         traceback.print_exc()
 
-class RendermanWorldShaderNodeCategory(NodeCategory):
-
-    @classmethod
-    def poll(cls, context):
-        rd = context.scene.render
-        if rd.engine != 'PRMAN_RENDER':
-            return False        
-        return context.space_data.tree_type == 'ShaderNodeTree' and context.space_data.shader_type == 'WORLD'
-                     
 class RendermanShaderNodeCategory(NodeCategory):
 
     @classmethod
@@ -589,7 +580,7 @@ class RendermanShaderNodeCategory(NodeCategory):
         rd = context.scene.render
         if rd.engine != 'PRMAN_RENDER':
             return False        
-        return context.space_data.tree_type == 'ShaderNodeTree' and context.space_data.shader_type == 'OBJECT'
+        return context.space_data.tree_type == 'ShaderNodeTree' and context.space_data.shader_type in ['OBJECT', 'WORLD']
 
 class RendermanNodeItem(NodeItem):
     '''
@@ -602,6 +593,13 @@ class RendermanNodeItem(NodeItem):
         if item.nodetype != '__RenderMan_Node_Menu__':
             return
         if context.space_data.shader_type == 'OBJECT':
+            light = getattr(context, 'light', None)
+            if light:
+                nt = light.node_tree                        
+                layout.context_pointer_set("nodetree", nt)                 
+                layout.menu('NODE_MT_RM_Pattern_Category_Menu')
+                return
+
             mat = getattr(context, 'material', None)
             if not mat:
                 return
@@ -778,8 +776,7 @@ def register_node_categories():
 
     # we still need to register our nodes for our category
     # otherwise, they won't show up in th search
-    for k in ['bxdf', 'displace', 'light', 'pattern']:
-        v = __RMAN_NODE_CATEGORIES__[k]
+    for k,v in __RMAN_NODE_CATEGORIES__.items():
         for name, ((desc, items), lst) in v.items():
             if items:
                 if k == 'light':
@@ -792,17 +789,6 @@ def register_node_categories():
                     all_items.extend(items)
 
     shader_category = RendermanShaderNodeCategory('RenderMan', 'RenderMan', items=all_items)
-    node_categories.append(shader_category)
-
-    all_items = []
-    all_items.append(RendermanNodeItem('__RenderMan_Node_Menu__', label='RenderMan'))    
-    for k in ['integrator', 'displayfilter', 'samplefilter']:
-        v = __RMAN_NODE_CATEGORIES__[k]
-        for name, ((desc, items), lst) in v.items():
-            if items:
-                all_items.extend(items)
-
-    shader_category = RendermanWorldShaderNodeCategory('RenderMan', 'RenderMan', items=all_items)
     node_categories.append(shader_category)
     nodeitems_utils.register_node_categories("RENDERMANSHADERNODES",
                                             node_categories)   
