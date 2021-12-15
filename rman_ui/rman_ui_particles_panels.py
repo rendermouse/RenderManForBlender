@@ -32,8 +32,17 @@ class PARTICLE_PT_renderman_particle(ParticleButtonsPanel, Panel, _RManPanelHead
         col = split.column()
 
         if psys.settings.type == 'HAIR':
+            ob = psys.id_data
+            mesh = getattr(ob, 'data', None)
 
             col.prop(rm, 'export_scalp_st')
+            if rm.export_scalp_st and mesh:
+                col.prop_search(rm, "uv_name", mesh, "uv_layers", text="")
+            col.separator()
+            col.prop(rm, 'export_mcol')
+            if rm.export_mcol and mesh:
+                col.prop_search(rm, "mcol_name", mesh, "vertex_colors", text="")
+            col.separator()                
             col.prop(rm, 'hair_index_name')
 
 

@@ -85,19 +85,34 @@ class RendermanParticleSettings(bpy.types.PropertyGroup):
     export_scalp_st: BoolProperty(
         name="Export Emitter UV",
         description="On hair, export the u/v from the emitter where the hair originates.  Use the variable 'scalpST' in your manifold node",
+        update=update_psys,
         default=True
+    )
+
+    uv_name: StringProperty(
+        name="UV",
+        description="Which UV map to use for scalpST. Default is to use the current active UV map",
+        update=update_psys
     )
 
     export_mcol: BoolProperty(
         name="Export Vertex Color",
-        description="For hair, export the vertex color from the emitter where the hair originates.  Use the variable 'Cs' in your shading network",
+        description="For hair, export the vertex color from the emitter where the hair originates.  Use the variable 'Cs' in your shading network.",
+        update=update_psys,
         default=True
+    )    
+
+    mcol_name: StringProperty(
+        name="Vertex Color",
+        description="Which vertex colors to use for hair. Default is to use the current active vertex color, if available",
+        update=update_psys
     )    
 
     hair_index_name: StringProperty(
         name="Hair Index Name",
         description="The name of the index primvar used for each hair curve.",
-        default="index"
+        default="index",
+        update=update_psys
     )
 
     override_instance_material: BoolProperty(
