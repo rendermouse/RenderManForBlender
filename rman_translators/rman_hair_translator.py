@@ -1,6 +1,7 @@
 from .rman_translator import RmanTranslator
 from ..rfb_utils import object_utils
 from ..rfb_utils import scenegraph_utils
+from ..rfb_logger import rfb_log
 from ..rman_sg_nodes.rman_sg_hair import RmanSgHair
 from mathutils import Vector
 import math
@@ -127,17 +128,29 @@ class RmanHairTranslator(RmanTranslator):
 
         num_parents = len(psys.particles)
         num_children = len(psys.child_particles)
+        rm = psys.settings.renderman
         if self.rman_scene.is_interactive:
             num_children = int(num_children * psys.settings.display_percentage / 100.0)
         total_hair_count = num_parents + num_children
-        export_st = psys.settings.renderman.export_scalp_st and psys_modifier and len(
+        uv_set = 0
+        export_st = rm.export_scalp_st and psys_modifier and len(
             ob.data.uv_layers) > 0
-        export_mcol = psys.settings.renderman.export_mcol
+        if export_st and rm.uv_name != '':
+            for i, uv in enumerate(ob.data.uv_layers):
+                if uv.name == rm.uv_name:
+                    uv_set = i
+                    break
+        mcol_set = 0
+        export_mcol = rm.export_mcol and psys_modifier and len(
+            ob.data.vertex_colors) > 0
+        if export_mcol and rm.mcol_name != '':
+            for i, mcol in enumerate(ob.data.vertex_colors):
+                if mcol.name == rm.mcol_name:
+                    mcol_set = i
+                    break            
 
         curve_sets = []
-
         points = []
-
         vertsArray = []
         scalpST = []
         mcols = []
@@ -189,14 +202,14 @@ class RmanHairTranslator(RmanTranslator):
                 if export_st:
                     particle = psys.particles[
                         (pindex - num_parents) % num_parents]                        
-                    st = psys.uv_on_emitter(psys_modifier, particle=particle, particle_no=pindex)
+                    st = psys.uv_on_emitter(psys_modifier, particle=particle, particle_no=pindex, uv_no=uv_set)
                     scalpST.append([st[0], st[1]])
 
                 if export_mcol:
                     particle = psys.particles[
-                        (pindex - num_parents) % num_parents]                        
-                    mcol = psys.mcol_on_emitter(psys_modifier, particle=particle, particle_no=pindex)
-                    mcols.append([mcol[0], mcol[1], mcol[2]])                    
+                        (pindex - num_parents) % num_parents]                  
+                    mcol = psys.mcol_on_emitter(psys_modifier, particle=particle, particle_no=pindex, vcol_no=mcol_set)
+                    mcols.append([mcol[0], mcol[1], mcol[2]])
 
             # if we get more than 100000 vertices, export ri.Curve and reset.  This
             # is to avoid a maxint on the array length
