@@ -1,6 +1,7 @@
 from .rman_translator import RmanTranslator
 from ..rfb_utils import object_utils
 from ..rfb_utils import scenegraph_utils
+from ..rfb_logger import rfb_log
 from ..rman_sg_nodes.rman_sg_hair import RmanSgHair
 from mathutils import Vector
 import math
@@ -194,9 +195,13 @@ class RmanHairTranslator(RmanTranslator):
 
                 if export_mcol:
                     particle = psys.particles[
-                        (pindex - num_parents) % num_parents]                        
-                    mcol = psys.mcol_on_emitter(psys_modifier, particle=particle, particle_no=pindex)
-                    mcols.append([mcol[0], mcol[1], mcol[2]])                    
+                        (pindex - num_parents) % num_parents]   
+                    try:                     
+                        mcol = psys.mcol_on_emitter(psys_modifier, particle=particle, particle_no=pindex)
+                        mcols.append([mcol[0], mcol[1], mcol[2]])
+                    except RuntimeError as e:
+                        rfb_log().debug("Cannot get VCol data: %s" % str(e))
+                        pass
 
             # if we get more than 100000 vertices, export ri.Curve and reset.  This
             # is to avoid a maxint on the array length
