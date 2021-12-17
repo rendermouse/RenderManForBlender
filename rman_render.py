@@ -496,15 +496,14 @@ class RmanRender(object):
         
         render_cmd = ''
         if self.rman_render_into == 'it':
-            render_cmd = "prman -live"
+            render_cmd = "prman"
         elif self.rman_render_into == 'blender':
-
             if rendervariant == 'prman':
-                render_cmd = "prman -live"
+                render_cmd = "prman"
             else:
                 render_cmd = "prman -blocking"
         else:
-            render_cmd = "prman -blocking"
+            render_cmd = "prman"
 
         render_cmd = self._append_render_cmd(render_cmd)
         self.sg_scene.Render(render_cmd)
@@ -964,7 +963,7 @@ class RmanRender(object):
         if not self._check_prman_license():
             return False
         self.rman_is_live_rendering = True
-        self.sg_scene.Render("prman -live")
+        self.sg_scene.Render("prman")
         render = self.rman_scene.bl_scene.render
         render_view = self.bl_engine.active_view_get()
         image_scale = render.resolution_percentage / 100.0

@@ -1154,10 +1154,10 @@ class RmanScene(object):
                 options.SetInteger(self.rman.Tokens.Rix.k_hider_decidither, rm.hider_decidither)
                 options.SetInteger(self.rman.Tokens.Rix.k_hider_minsamples, rm.ipr_hider_minSamples)
                 options.SetInteger(self.rman.Tokens.Rix.k_hider_maxsamples, rm.ipr_hider_maxSamples)
-                options.SetInteger(self.rman.Tokens.Rix.k_hider_incremental, 1)
                 pv = rm.ipr_ri_pixelVariance
-
-            if (not self.external_render and rm.render_into == 'blender') or rm.enable_checkpoint:
+            
+            # force incremental when checkpointing
+            if rm.enable_checkpoint:
                 options.SetInteger(self.rman.Tokens.Rix.k_hider_incremental, 1)
 
             if not rm.sample_motion_blur:
