@@ -966,6 +966,7 @@ def setParams(Asset, node, paramsList):
         knots_param = None
         colors_param = None
         floats_param = None
+        interpolation_param = None
 
         if (nm not in rman_ramps) and (nm not in rman_color_ramps):
             continue
@@ -981,13 +982,20 @@ def setParams(Asset, node, paramsList):
                     colors_param = param
                 elif '_Floats' in pname:
                     floats_param = param
+                elif '_Interpolation' in pname:
+                    interpolation_param = param
             
         if colors_param:
             n = rman_color_ramps[nm]
             elements = n.color_ramp.elements
             size = rman_ramp_size[nm]
             knots_vals = knots_param.value()
-            colors_vals = colors_param.value()    
+            colors_vals = colors_param.value() 
+            rman_interp = interpolation_param.value()
+
+            rman_interp_map = { 'bspline':'B_SPLINE' , 'linear': 'LINEAR', 'constant': 'CONSTANT'}
+            interp = rman_interp_map.get(rman_interp, 'LINEAR')    
+            n.color_ramp.interpolation = interp           
 
             if len(colors_vals) == size:
                 for i in range(0, size):
@@ -1067,7 +1075,9 @@ def setParams(Asset, node, paramsList):
             array_len = int(array_len)
             coll_nm = '%s_collection' % pname  
             coll_idx_nm = '%s_collection_index' % pname
-            collection = getattr(node, coll_nm)
+            collection = getattr(node, coll_nm, None)
+            if collection is None:
+                continue
             elem_type = rman_type
             if 'reference' in elem_type:
                 elem_type = elem_type.replace('reference ', '')
@@ -1131,7 +1141,7 @@ def setParams(Asset, node, paramsList):
                 continue
             if 'string' in ptype:
                 if pval != '':
-                    depfile = Asset.getDependencyPath(pval)
+                    depfile = Asset.getDependencyPath(pname, pval)
                     if depfile:
                         pval = depfile
                 setattr(node, pname, pval)
@@ -1214,7 +1224,7 @@ def createNodes(Asset):
                 # loaded through a PxrOSL node.
                 # if PxrOSL is used, we need to find the oso in the asset to
                 # use it in a PxrOSL node.
-                oso = Asset.getDependencyPath(nodeType + '.oso')
+                oso = Asset.getDependencyPath(ExternalFile.k_osl, nodeType + '.oso')
                 if oso is None:
                     err = ('createNodes: OSL file is missing "%s"'
                            % nodeType)
