@@ -8,6 +8,7 @@ except:
     ColorManager = None
 
 __clrmgr__ = None
+__has_warned__ = False
 
 class ColorManagerBlender(ColorManager):
     def __init__(self, config_path, **kwargs):
@@ -38,8 +39,16 @@ def init():
 def get_env_config_path():
     """return ocio config path from the environment
     """
+    global __has_warned__
     blender_config_path = envconfig().get_blender_ocio_config()
-    ociopath = envconfig().getenv('OCIO', blender_config_path)
+    envconfig_path = envconfig().getenv('OCIO', None)
+    ociopath = blender_config_path
+    if envconfig_path:
+        if os.path.exists(envconfig_path):
+            ociopath = envconfig_path
+        elif not __has_warned__:
+            bpy.ops.renderman.printer('INVOKE_DEFAULT', level='WARNING', message='OCIO environment value (%s) is invalid.' % envconfig_path)
+            __has_warned__ = True
     return ociopath
 
 def get_config_path():
