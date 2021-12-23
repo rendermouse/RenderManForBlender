@@ -278,6 +278,9 @@ class RfBStatsManager(object):
         else:
             return 'Disconnected'
 
+    def reset_progress(self):
+        self._progress = 0
+
     def check_payload(self, jsonData, name):
         try:
             dat = jsonData[name]
