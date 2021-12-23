@@ -526,108 +526,105 @@ class RmanRender(object):
         render_cmd = self._append_render_cmd(render_cmd)
         self.sg_scene.Render(render_cmd)
         if self.rman_render_into == 'blender':  
-            if self.rman_is_xpu and not self.stats_mgr.is_connected():
-                pass
-            else:
-                dspy_dict = display_utils.get_dspy_dict(self.rman_scene)
-                
-                render = self.rman_scene.bl_scene.render
-                render_view = self.bl_engine.active_view_get()
-                image_scale = render.resolution_percentage / 100.0
-                width = int(render.resolution_x * image_scale)
-                height = int(render.resolution_y * image_scale)
-
-                bl_image_rps= dict()
-
-                # register any AOV's as passes
-                for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
-                    if i == 0:
-                        continue     
-
-                    num_channels = -1
-                    while num_channels == -1:
-                        num_channels = self.get_numchannels(i)    
-
-                    dspy = dspy_dict['displays'][dspy_nm]
-                    dspy_chan = dspy['params']['displayChannels'][0]
-                    chan_info = dspy_dict['channels'][dspy_chan]
-                    chan_type = chan_info['channelType']['value']                        
-
-                    if num_channels == 4:
-                        self.bl_engine.add_pass(dspy_nm, 4, 'RGBA')
-                    elif num_channels == 3:
-                        if chan_type == 'color':
-                            self.bl_engine.add_pass(dspy_nm, 3, 'RGB')
-                        else:
-                            self.bl_engine.add_pass(dspy_nm, 3, 'XYZ')
-                    elif num_channels == 2:
-                        self.bl_engine.add_pass(dspy_nm, 2, 'XY')                        
-                    else:
-                        self.bl_engine.add_pass(dspy_nm, 1, 'X')
-
-                size_x = width
-                size_y = height
-                if render.use_border:
-                    size_x = int(width * (render.border_max_x - render.border_min_x))
-                    size_y = int(height * (render.border_max_y - render.border_min_y))     
-
-                result = self.bl_engine.begin_result(0, 0,
-                                            size_x,
-                                            size_y,
-                                            view=render_view)                        
-
-                for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
-                    if i == 0:
-                        render_pass = result.layers[0].passes.find_by_name("Combined", render_view)           
-                    else:
-                        render_pass = result.layers[0].passes.find_by_name(dspy_nm, render_view)
-                    bl_image_rps[i] = render_pass            
-                
-                if self.rman_is_xpu:
-                    # FIXME: for now, add a 1 second delay before starting the stats thread
-                    # for some reason, XPU doesn't seem to reset the progress between renders
-                    time.sleep(1.0)
-                self.start_stats_thread()
-                while self.bl_engine and not self.bl_engine.test_break() and self.rman_is_live_rendering:
-                    time.sleep(0.01)
-                    for i, rp in bl_image_rps.items():
-                        buffer = self._get_buffer(width, height, image_num=i, 
-                                                    num_channels=rp.channels, 
-                                                    as_flat=False, 
-                                                    back_fill=False,
-                                                    render=render)
-                        if buffer:
-                            rp.rect = buffer
+            dspy_dict = display_utils.get_dspy_dict(self.rman_scene)
             
-                    if self.bl_engine:
-                        self.bl_engine.update_result(result)        
-          
-                if result:
-                    if self.bl_engine:
-                        self.bl_engine.end_result(result) 
+            render = self.rman_scene.bl_scene.render
+            render_view = self.bl_engine.active_view_get()
+            image_scale = render.resolution_percentage / 100.0
+            width = int(render.resolution_x * image_scale)
+            height = int(render.resolution_y * image_scale)
 
-                    # Try to save out the displays out to disk. This matches
-                    # Cycles behavior                    
-                    for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
-                        filepath = dspy_dict['displays'][dspy_nm]['filePath']
-                        buffer = self._get_buffer(width, height, image_num=i, as_flat=True)
-                        if buffer:
-                            bl_image = bpy.data.images.new(dspy_nm, width, height)
-                            try:
-                                bl_image.use_generated_float = True
-                                bl_image.filepath_raw = filepath                            
-                                bl_image.pixels = buffer
-                                bl_image.file_format = 'OPEN_EXR'
-                                bl_image.update()
-                                bl_image.save()
-                            except:
-                                pass
-                            finally:
-                                bpy.data.images.remove(bl_image)      
+            bl_image_rps= dict()
 
-                if not was_connected and self.stats_mgr.is_connected():
-                    # if stats were not started before rendering, disconnect
-                    self.stats_mgr.disconnect()                                 
+            # register any AOV's as passes
+            for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
+                if i == 0:
+                    continue     
+
+                num_channels = -1
+                while num_channels == -1:
+                    num_channels = self.get_numchannels(i)    
+
+                dspy = dspy_dict['displays'][dspy_nm]
+                dspy_chan = dspy['params']['displayChannels'][0]
+                chan_info = dspy_dict['channels'][dspy_chan]
+                chan_type = chan_info['channelType']['value']                        
+
+                if num_channels == 4:
+                    self.bl_engine.add_pass(dspy_nm, 4, 'RGBA')
+                elif num_channels == 3:
+                    if chan_type == 'color':
+                        self.bl_engine.add_pass(dspy_nm, 3, 'RGB')
+                    else:
+                        self.bl_engine.add_pass(dspy_nm, 3, 'XYZ')
+                elif num_channels == 2:
+                    self.bl_engine.add_pass(dspy_nm, 2, 'XY')                        
+                else:
+                    self.bl_engine.add_pass(dspy_nm, 1, 'X')
+
+            size_x = width
+            size_y = height
+            if render.use_border:
+                size_x = int(width * (render.border_max_x - render.border_min_x))
+                size_y = int(height * (render.border_max_y - render.border_min_y))     
+
+            result = self.bl_engine.begin_result(0, 0,
+                                        size_x,
+                                        size_y,
+                                        view=render_view)                        
+
+            for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
+                if i == 0:
+                    render_pass = result.layers[0].passes.find_by_name("Combined", render_view)           
+                else:
+                    render_pass = result.layers[0].passes.find_by_name(dspy_nm, render_view)
+                bl_image_rps[i] = render_pass            
+            
+            if self.rman_is_xpu:
+                # FIXME: for now, add a 1 second delay before starting the stats thread
+                # for some reason, XPU doesn't seem to reset the progress between renders
+                time.sleep(1.0)
+            self.start_stats_thread()
+            while self.bl_engine and not self.bl_engine.test_break() and self.rman_is_live_rendering:
+                time.sleep(0.01)
+                for i, rp in bl_image_rps.items():
+                    buffer = self._get_buffer(width, height, image_num=i, 
+                                                num_channels=rp.channels, 
+                                                as_flat=False, 
+                                                back_fill=False,
+                                                render=render)
+                    if buffer:
+                        rp.rect = buffer
+        
+                if self.bl_engine:
+                    self.bl_engine.update_result(result)        
+        
+            if result:
+                if self.bl_engine:
+                    self.bl_engine.end_result(result) 
+
+                # Try to save out the displays out to disk. This matches
+                # Cycles behavior                    
+                for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
+                    filepath = dspy_dict['displays'][dspy_nm]['filePath']
+                    buffer = self._get_buffer(width, height, image_num=i, as_flat=True)
+                    if buffer:
+                        bl_image = bpy.data.images.new(dspy_nm, width, height)
+                        try:
+                            bl_image.use_generated_float = True
+                            bl_image.filepath_raw = filepath                            
+                            bl_image.pixels = buffer
+                            bl_image.file_format = 'OPEN_EXR'
+                            bl_image.update()
+                            bl_image.save()
+                        except:
+                            pass
+                        finally:
+                            bpy.data.images.remove(bl_image)      
+
+            if not was_connected and self.stats_mgr.is_connected():
+                # if stats were not started before rendering, disconnect
+                self.stats_mgr.disconnect()                                 
         else:
             while self.bl_engine and not self.bl_engine.test_break() and self.rman_is_live_rendering:
                 time.sleep(0.01)        
