@@ -1,4 +1,6 @@
 from ..rfb_logger import rfb_log
+from ..rfb_utils.prefs_utils import get_pref
+from ..rfb_utils import filepath_utils
 from ..rfb_utils.envconfig_utils import envconfig
 import bpy
 import os
@@ -22,6 +24,14 @@ def load_locale_file(jsonfile):
 
 def get_user_locales():
     paths = list()
+
+    prefs_path = get_pref('rman_config_dir', default='')
+    if prefs_path:
+        prefs_path = filepath_utils.get_real_path(prefs_path)
+        locale_path = os.path.join(prefs_path, 'locales')
+        if os.path.exists(locale_path):
+            paths.append(locale_path)
+
     # first, RFB_SITE_PATH
     RFB_SITE_PATH = envconfig().getenv('RFB_SITE_PATH')
     if RFB_SITE_PATH:
