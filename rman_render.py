@@ -523,6 +523,8 @@ class RmanRender(object):
             return False            
         
         render_cmd = "prman"
+        if self.rman_render_into == 'blender':
+            render_cmd = "prman -live"
         render_cmd = self._append_render_cmd(render_cmd)
         self.sg_scene.Render(render_cmd)
         if self.rman_render_into == 'blender':  
