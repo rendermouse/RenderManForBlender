@@ -176,14 +176,12 @@ def draw_threading_func(db):
         else:            
             time.sleep(1.0)
 
+def call_stats_export_payloads(db):
+    while db.rman_is_exporting:
+        db.stats_mgr.update_payloads()
+        time.sleep(0.1)  
+
 def call_stats_update_payloads(db):
-
-    if db.rman_is_exporting:
-        while db.rman_is_exporting:
-            db.stats_mgr.update_payloads()
-            time.sleep(0.1)
-        return
-
     while db.rman_running:
         if not db.bl_engine:
             break
@@ -428,11 +426,20 @@ class RmanRender(object):
         return get_pref('rman_viewport_draw_bucket', default=True) and self.rman_is_refining
 
     def do_draw_progressbar(self):
-        return get_pref('rman_viewport_draw_progress') and self.stats_mgr.is_connected() and self.stats_mgr._progress < 100        
+        return get_pref('rman_viewport_draw_progress') and self.stats_mgr.is_connected() and self.stats_mgr._progress < 100    
+
+    def start_export_stats_thread(self): 
+        # start an export stats thread
+        global __RMAN_STATS_THREAD__       
+        __RMAN_STATS_THREAD__ = threading.Thread(target=call_stats_export_payloads, args=(self, ))
+        __RMAN_STATS_THREAD__.start()              
 
     def start_stats_thread(self): 
         # start a stats thread so we can periodically call update_payloads
-        global __RMAN_STATS_THREAD__       
+        global __RMAN_STATS_THREAD__
+        if __RMAN_STATS_THREAD__:
+            __RMAN_STATS_THREAD__.join()
+            __RMAN_STATS_THREAD__ = None
         __RMAN_STATS_THREAD__ = threading.Thread(target=call_stats_update_payloads, args=(self, ))
         __RMAN_STATS_THREAD__.start()         
 
@@ -508,7 +515,7 @@ class RmanRender(object):
             bl_layer = depsgraph.view_layer
             self.rman_is_exporting = True
             self.rman_running = True
-            self.start_stats_thread()
+            self.start_export_stats_thread()
             self.rman_scene.export_for_final_render(depsgraph, self.sg_scene, bl_layer, is_external=is_external)
             self.rman_is_exporting = False
             self.stats_mgr.reset_progress()
@@ -754,7 +761,7 @@ class RmanRender(object):
             bl_layer = depsgraph.view_layer
             self.rman_is_exporting = True
             self.rman_running = True
-            self.start_stats_thread()
+            self.start_export_stats_thread()
             self.rman_scene.export_for_bake_render(depsgraph, self.sg_scene, bl_layer, is_external=is_external)
             self.rman_is_exporting = False
 
@@ -763,6 +770,7 @@ class RmanRender(object):
             render_cmd = "prman -blocking"
             render_cmd = self._append_render_cmd(render_cmd)        
             self.sg_scene.Render(render_cmd)
+            self.start_stats_thread()
         except Exception as e:      
             self.bl_engine.report({'ERROR'}, 'Export failed: %s' % str(e))
             self.stop_render(stop_draw_thread=False)
@@ -910,7 +918,7 @@ class RmanRender(object):
             self.rman_scene_sync.sg_scene = self.sg_scene
             rfb_log().info("Parsing scene...")        
             self.rman_is_exporting = True
-            self.start_stats_thread()        
+            self.start_export_stats_thread()        
             self.rman_scene.export_for_interactive_render(context, depsgraph, self.sg_scene)
             self.rman_is_exporting = False
 
@@ -920,6 +928,7 @@ class RmanRender(object):
             render_cmd = "prman -live"   
             render_cmd = self._append_render_cmd(render_cmd)
             self.sg_scene.Render(render_cmd)
+            self.start_stats_thread()
 
             rfb_log().info("RenderMan Viewport Render Started.")  
 
