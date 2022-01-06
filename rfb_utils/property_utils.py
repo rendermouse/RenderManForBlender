@@ -73,7 +73,6 @@ class BlPropInfo:
         self.renderman_type = prop_meta.get('renderman_type', '')
         self.param_type = self.renderman_type
         self.arraySize = prop_meta.get('arraySize', None)
-        self.renderman_array_name = prop_meta.get('renderman_array_name', None)
         self.renderman_array_type = prop_meta.get('renderman_array_type', '')
         self.type = prop_meta.get('type', '')
         self.page = prop_meta.get('page', '')
@@ -112,9 +111,6 @@ class BlPropInfo:
             return False
 
         if not self.is_linked and self.param_type in ['struct', 'enum']:
-            return False
-
-        if self.renderman_array_name:
             return False
 
         if self.prop_name == 'inputMaterial' or \
@@ -329,6 +325,8 @@ def get_output_param_str(rman_sg_node, node, mat_name, socket, to_socket=None, p
 
 
 def is_vstruct_or_linked(node, param):
+    if param not in node.prop_meta:
+        return True
     meta = node.prop_meta[param]
     if 'vstructmember' not in meta.keys():
         if param in node.inputs:
@@ -348,37 +346,35 @@ def is_vstruct_or_linked(node, param):
 
 # tells if this param has a vstuct connection that is linked and
 # conditional met
-
-
 def is_vstruct_and_linked(node, param):
+    if param not in node.prop_meta:
+        return True    
     meta = node.prop_meta[param]
 
     if 'vstructmember' not in meta.keys():
         return False
-    else:
-        vstruct_name, vstruct_member = meta['vstructmember'].split('.')
-        if node.inputs[vstruct_name].is_linked:
-            from_socket = node.inputs[vstruct_name].links[0].from_socket
-            # if coming from a shader group hookup across that
-            if from_socket.node.bl_idname == 'ShaderNodeGroup':
-                ng = from_socket.node.node_tree
-                group_output = next((n for n in ng.nodes if n.bl_idname == 'NodeGroupOutput'),
-                                    None)
-                if group_output is None:
-                    return False
 
-                in_sock = group_output.inputs[from_socket.name]
-                if len(in_sock.links):
-                    from_socket = in_sock.links[0].from_socket
-            vstruct_from_param = "%s_%s" % (
-                from_socket.identifier, vstruct_member)          
-            return vstruct_conditional(from_socket.node, vstruct_from_param)
-        else:
-            return False
+    vstruct_name, vstruct_member = meta['vstructmember'].split('.')
+    if node.inputs[vstruct_name].is_linked:
+        from_socket = node.inputs[vstruct_name].links[0].from_socket
+        # if coming from a shader group hookup across that
+        if from_socket.node.bl_idname == 'ShaderNodeGroup':
+            ng = from_socket.node.node_tree
+            group_output = next((n for n in ng.nodes if n.bl_idname == 'NodeGroupOutput'),
+                                None)
+            if group_output is None:
+                return False
+
+            in_sock = group_output.inputs[from_socket.name]
+            if len(in_sock.links):
+                from_socket = in_sock.links[0].from_socket
+        vstruct_from_param = "%s_%s" % (
+            from_socket.identifier, vstruct_member)          
+        return vstruct_conditional(from_socket.node, vstruct_from_param)
+
+    return False
 
 # gets the value for a node walking up the vstruct chain
-
-
 def get_val_vstruct(node, param):
     if param in node.inputs and node.inputs[param].is_linked:
         from_socket = node.inputs[param].links[0].from_socket
@@ -389,8 +385,6 @@ def get_val_vstruct(node, param):
         return getattr(node, param)
 
 # parse a vstruct conditional string and return true or false if should link
-
-
 def vstruct_conditional(node, param):
     if not hasattr(node, 'shader_meta') and not hasattr(node, 'output_meta'):
         return False
@@ -617,19 +611,19 @@ def set_ramp_rixparams(node, prop_name, prop, param_type, params):
             interp = 'catmull-rom'
             params.SetString("%s_Interpolation" % prop_name, interp )          
 
-def set_array_rixparams(node, rman_sg_node, mat_name, bl_prop_info, prop_name, prop, params):      
-    array_len = getattr(node, '%s_arraylen' % prop_name)
-    sub_prop_names = getattr(node, prop_name)
-    sub_prop_names = sub_prop_names[:array_len]
+def set_array_rixparams(node, rman_sg_node, mat_name, bl_prop_info, prop_name, prop, params):   
+    coll_nm = '%s_collection' % prop_name
     val_array = []
     val_ref_array = []
     param_type = bl_prop_info.renderman_array_type
-    param_name = bl_prop_info.renderman_name 
-    
-    for nm in sub_prop_names:
+    param_name = bl_prop_info.renderman_name     
+    collection = getattr(node, coll_nm)
+
+    for i in range(len(collection)):
+        elem = collection[i]
+        nm = '%s[%d]' % (prop_name, i)
         if hasattr(node, 'inputs')  and nm in node.inputs and \
             node.inputs[nm].is_linked:
-
             to_socket = node.inputs[nm]
             from_socket = to_socket.links[0].from_socket
             from_node = to_socket.links[0].from_node
@@ -639,16 +633,16 @@ def set_array_rixparams(node, rman_sg_node, mat_name, bl_prop_info, prop_name, p
             if val:
                 val_ref_array.append(val)
         else:
-            prop = getattr(node, nm)
+            prop = getattr(elem, 'value_%s' % param_type)
             val = string_utils.convert_val(prop, type_hint=param_type)
             if param_type in RFB_FLOAT3:
                 val_array.extend(val)
             else:
-                val_array.append(val)
+                val_array.append(val)  
     if val_ref_array:
         set_rix_param(params, param_type, param_name, val_ref_array, is_reference=True, is_array=True, array_len=len(val_ref_array))
     else:
-        set_rix_param(params, param_type, param_name, val_array, is_reference=False, is_array=True, array_len=len(val_array))                        
+        set_rix_param(params, param_type, param_name, val_array, is_reference=False, is_array=True, array_len=len(val_array))                               
 
 def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group_node=None):
     # If node is OSL node get properties from dynamic location.

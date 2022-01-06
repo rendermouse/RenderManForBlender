@@ -35,7 +35,7 @@ from .rman_constants import RFB_FLOAT3
 bl_info = {
     "name": "RenderMan For Blender",
     "author": "Pixar",
-    "version": (24, 2, 0),
+    "version": (24, 3, 0),
     "blender": (2, 83, 0),
     "location": "Info Header, render engine menu",
     "description": "RenderMan 24 integration",
@@ -68,7 +68,11 @@ class PRManRender(bpy.types.RenderEngine):
             return 
 
     def __del__(self):
-        from . import rman_render
+        try:
+            from . import rman_render
+        except ModuleNotFoundError:
+            return
+
         rr = rman_render.RmanRender.get_rman_render()
         try:
             if self.is_preview:

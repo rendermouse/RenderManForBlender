@@ -110,6 +110,8 @@ class RmanTranslator(object):
         sg_node.SetPrimVars(primvars)
 
     def export_object_id(self, ob, rman_sg_node, ob_inst):
+        if not rman_sg_node.sg_node:
+            return        
         name = ob.name_full
         attrs = rman_sg_node.sg_node.GetAttributes()
         rman_type = object_utils._detect_primitive_(ob)
@@ -194,6 +196,8 @@ class RmanTranslator(object):
                 attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lightfilter_subset, '')                    
 
     def export_object_attributes(self, ob, rman_sg_node):
+        if not rman_sg_node.sg_node:
+            return          
 
         name = ob.name_full
         rm = ob.renderman

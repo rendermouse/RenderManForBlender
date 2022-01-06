@@ -57,6 +57,21 @@ def __update_areas__():
         for area in window.screen.areas:
             area.tag_redraw()
 
+def __draw_callback__():
+    # callback function for the display driver to call tag_redraw
+    global __RMAN_RENDER__
+    if __RMAN_RENDER__.rman_is_viewport_rendering and __RMAN_RENDER__.bl_engine:
+        try:
+            __RMAN_RENDER__.bl_engine.tag_redraw()
+            pass
+        except ReferenceError as e:
+            return  False
+        return True
+    return False     
+
+DRAWCALLBACK_FUNC = ctypes.CFUNCTYPE(ctypes.c_bool)
+__CALLBACK_FUNC__ = DRAWCALLBACK_FUNC(__draw_callback__)    
+
 class ItHandler(chatserver.ItBaseHandler):
 
     def dspyRender(self):
@@ -144,26 +159,38 @@ def draw_threading_func(db):
             # if there are no 3d viewports, stop IPR
             db.del_bl_engine()
             break
-        if db.rman_is_viewport_rendering:
-            try:
-                db.bl_engine.tag_redraw()
-                time.sleep(refresh_rate)
-            except ReferenceError as e:
-                # calling tag_redraw has failed. This might mean
-                # that there are no more view_3d areas that are shading. Try to
-                # stop IPR.
-                #rfb_log().debug("Error calling tag_redraw (%s). Aborting..." % str(e))
-                db.del_bl_engine()
-                return
-        else:
-            # rendering to "it" add a 1 second sleep
+        if db.rman_is_xpu:
+            if db.has_buffer_updated():
+                try:
+                    db.bl_engine.tag_redraw()
+                    db.reset_buffer_updated()
+                
+                except ReferenceError as e:
+                    # calling tag_redraw has failed. This might mean
+                    # that there are no more view_3d areas that are shading. Try to
+                    # stop IPR.
+                    #rfb_log().debug("Error calling tag_redraw (%s). Aborting..." % str(e))
+                    db.del_bl_engine()
+                    return            
+            time.sleep(refresh_rate)
+        else:            
             time.sleep(1.0)
 
-def call_stats_update_payloads(db):
+def call_stats_export_payloads(db):
+    while db.rman_is_exporting:
+        db.stats_mgr.update_payloads()
+        time.sleep(0.1)  
 
+def call_stats_update_payloads(db):
     while db.rman_running:
         if not db.bl_engine:
             break
+        if db.rman_is_xpu and db.is_regular_rendering():
+            # stop the render if we are rendering in XPU mode
+            # and we've reached ~100%
+            if float(db.stats_mgr._progress) > 98.0:
+                db.rman_is_live_rendering = False
+                break        
         db.stats_mgr.update_payloads()
         time.sleep(0.1)
 
@@ -192,6 +219,12 @@ def render_cb(e, d, db):
         rfb_log().debug("RenderMan has exited.")
         if db.rman_is_live_rendering:
             db.rman_is_live_rendering = False
+
+def live_render_cb(e, d, db):
+    if d == 0:
+        db.rman_is_refining = False
+    else:
+        db.rman_is_refining = True
 
 def preload_xpu():
     """On linux there is a problem with std::call_once and
@@ -240,6 +273,8 @@ class RmanRender(object):
         self.rman_swatch_render_running = False
         self.rman_is_live_rendering = False
         self.rman_is_viewport_rendering = False
+        self.rman_is_xpu = False
+        self.rman_is_refining = False
         self.rman_render_into = 'blender'
         self.rman_license_failed = False
         self.rman_license_failed_message = ''
@@ -388,22 +423,31 @@ class RmanRender(object):
         return (self.rman_running and not self.rman_interactive_running)   
 
     def do_draw_buckets(self):
-        if self.stats_mgr.is_connected() and self.stats_mgr._progress > 99:
-            return False
-        return get_pref('rman_viewport_draw_bucket', default=True)
+        return get_pref('rman_viewport_draw_bucket', default=True) and self.rman_is_refining
 
     def do_draw_progressbar(self):
-        return get_pref('rman_viewport_draw_progress') and self.stats_mgr.is_connected() and self.stats_mgr._progress < 100        
+        return get_pref('rman_viewport_draw_progress') and self.stats_mgr.is_connected() and self.stats_mgr._progress < 100    
+
+    def start_export_stats_thread(self): 
+        # start an export stats thread
+        global __RMAN_STATS_THREAD__       
+        __RMAN_STATS_THREAD__ = threading.Thread(target=call_stats_export_payloads, args=(self, ))
+        __RMAN_STATS_THREAD__.start()              
 
     def start_stats_thread(self): 
         # start a stats thread so we can periodically call update_payloads
-        global __RMAN_STATS_THREAD__       
+        global __RMAN_STATS_THREAD__
+        if __RMAN_STATS_THREAD__:
+            __RMAN_STATS_THREAD__.join()
+            __RMAN_STATS_THREAD__ = None
         __RMAN_STATS_THREAD__ = threading.Thread(target=call_stats_update_payloads, args=(self, ))
         __RMAN_STATS_THREAD__.start()         
 
     def reset(self):
         self.rman_license_failed = False
         self.rman_license_failed_message = ''
+        self.rman_is_xpu = False
+        self.rman_is_refining = False
 
     def start_render(self, depsgraph, for_background=False):
     
@@ -450,15 +494,31 @@ class RmanRender(object):
         render_config = rman.Types.RtParamList()
         rendervariant = scene_utils.get_render_variant(self.bl_scene)
         scene_utils.set_render_variant_config(self.bl_scene, config, render_config)
+        self.rman_is_xpu = (rendervariant == 'xpu')
 
         self.sg_scene = self.sgmngr.CreateScene(config, render_config, self.stats_mgr.rman_stats_session) 
+        was_connected = self.stats_mgr.is_connected()
+        if self.rman_is_xpu and self.rman_render_into == 'blender':
+            if not was_connected:
+                # force the stats to start in the case of XPU
+                # this is so that we can get a progress percentage
+                # if we can't get it to start, abort
+                self.stats_mgr.attach()
+                time.sleep(0.5) # give it a second to attach
+                if not self.stats_mgr.is_connected():
+                    self.bl_engine.report({'ERROR'}, 'Cannot start live stats. Aborting XPU render')
+                    self.stop_render(stop_draw_thread=False)
+                    self.del_bl_engine()
+                    return False            
+
         try:
             bl_layer = depsgraph.view_layer
             self.rman_is_exporting = True
             self.rman_running = True
-            self.start_stats_thread()
+            self.start_export_stats_thread()
             self.rman_scene.export_for_final_render(depsgraph, self.sg_scene, bl_layer, is_external=is_external)
             self.rman_is_exporting = False
+            self.stats_mgr.reset_progress()
 
             self._dump_rib_(self.bl_scene.frame_current)
             rfb_log().info("Finished parsing scene. Total time: %s" % string_utils._format_time_(time.time() - time_start)) 
@@ -469,134 +529,111 @@ class RmanRender(object):
             self.del_bl_engine()
             return False            
         
-        render_cmd = ''
-        if self.rman_render_into == 'it':
+        render_cmd = "prman"
+        if self.rman_render_into == 'blender':
             render_cmd = "prman -live"
-        elif self.rman_render_into == 'blender':
-
-            if rendervariant == 'prman':
-                render_cmd = "prman -live"
-            else:
-                render_cmd = "prman -blocking"
-        else:
-            render_cmd = "prman -blocking"
-
         render_cmd = self._append_render_cmd(render_cmd)
         self.sg_scene.Render(render_cmd)
         if self.rman_render_into == 'blender':  
-
-            if rendervariant != 'prman':
-                # FIXME: Remove this code path when we are able to get progress
-                # from XPU to determine when it reaches 100%. 
-                # Also, make sure we render with prman -live in that case
-                dspy_dict = display_utils.get_dspy_dict(self.rman_scene)
-                filepath = dspy_dict['displays']['beauty']['filePath']
-
-                render = self.bl_scene.render
-                image_scale = 100.0 / render.resolution_percentage
-                result = self.bl_engine.begin_result(0, 0,
-                                            render.resolution_x * image_scale,
-                                            render.resolution_y * image_scale)
-                lay = result.layers[0]
-                try:
-                    lay.load_from_file(filepath)
-                except:
-                    pass
-                self.bl_engine.end_result(result)     
-                self.stop_render()   
-
-            else:
-                dspy_dict = display_utils.get_dspy_dict(self.rman_scene)
-                
-                render = self.rman_scene.bl_scene.render
-                render_view = self.bl_engine.active_view_get()
-                image_scale = render.resolution_percentage / 100.0
-                width = int(render.resolution_x * image_scale)
-                height = int(render.resolution_y * image_scale)
-
-                bl_image_rps= dict()
-
-                # register any AOV's as passes
-                for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
-                    if i == 0:
-                        continue     
-
-                    num_channels = -1
-                    while num_channels == -1:
-                        num_channels = self.get_numchannels(i)    
-
-                    dspy = dspy_dict['displays'][dspy_nm]
-                    dspy_chan = dspy['params']['displayChannels'][0]
-                    chan_info = dspy_dict['channels'][dspy_chan]
-                    chan_type = chan_info['channelType']['value']                        
-
-                    if num_channels == 4:
-                        self.bl_engine.add_pass(dspy_nm, 4, 'RGBA')
-                    elif num_channels == 3:
-                        if chan_type == 'color':
-                            self.bl_engine.add_pass(dspy_nm, 3, 'RGB')
-                        else:
-                            self.bl_engine.add_pass(dspy_nm, 3, 'XYZ')
-                    elif num_channels == 2:
-                        self.bl_engine.add_pass(dspy_nm, 2, 'XY')                        
-                    else:
-                        self.bl_engine.add_pass(dspy_nm, 1, 'X')
-
-                size_x = width
-                size_y = height
-                if render.use_border:
-                    size_x = int(width * (render.border_max_x - render.border_min_x))
-                    size_y = int(height * (render.border_max_y - render.border_min_y))     
-
-                result = self.bl_engine.begin_result(0, 0,
-                                            size_x,
-                                            size_y,
-                                            view=render_view)                        
-
-                for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
-                    if i == 0:
-                        render_pass = result.layers[0].passes.find_by_name("Combined", render_view)           
-                    else:
-                        render_pass = result.layers[0].passes.find_by_name(dspy_nm, render_view)
-                    bl_image_rps[i] = render_pass            
-                
-                while self.bl_engine and not self.bl_engine.test_break() and self.rman_is_live_rendering:
-                    time.sleep(0.01)
-                    for i, rp in bl_image_rps.items():
-                        buffer = self._get_buffer(width, height, image_num=i, 
-                                                    num_channels=rp.channels, 
-                                                    as_flat=False, 
-                                                    back_fill=False,
-                                                    render=render)
-                        if buffer:
-                            rp.rect = buffer
+            dspy_dict = display_utils.get_dspy_dict(self.rman_scene)
             
-                    if self.bl_engine:
-                        self.bl_engine.update_result(result)        
-          
-                if result:
-                    if self.bl_engine:
-                        self.bl_engine.end_result(result) 
+            render = self.rman_scene.bl_scene.render
+            render_view = self.bl_engine.active_view_get()
+            image_scale = render.resolution_percentage / 100.0
+            width = int(render.resolution_x * image_scale)
+            height = int(render.resolution_y * image_scale)
 
-                    # Try to save out the displays out to disk. This matches
-                    # Cycles behavior                    
-                    for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
-                        filepath = dspy_dict['displays'][dspy_nm]['filePath']
-                        buffer = self._get_buffer(width, height, image_num=i, as_flat=True)
-                        if buffer:
-                            bl_image = bpy.data.images.new(dspy_nm, width, height)
-                            try:
-                                bl_image.use_generated_float = True
-                                bl_image.filepath_raw = filepath                            
-                                bl_image.pixels = buffer
-                                bl_image.file_format = 'OPEN_EXR'
-                                bl_image.update()
-                                bl_image.save()
-                            except:
-                                pass
-                            finally:
-                                bpy.data.images.remove(bl_image)                                        
+            bl_image_rps= dict()
 
+            # register any AOV's as passes
+            for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
+                if i == 0:
+                    continue     
+
+                num_channels = -1
+                while num_channels == -1:
+                    num_channels = self.get_numchannels(i)    
+
+                dspy = dspy_dict['displays'][dspy_nm]
+                dspy_chan = dspy['params']['displayChannels'][0]
+                chan_info = dspy_dict['channels'][dspy_chan]
+                chan_type = chan_info['channelType']['value']                        
+
+                if num_channels == 4:
+                    self.bl_engine.add_pass(dspy_nm, 4, 'RGBA')
+                elif num_channels == 3:
+                    if chan_type == 'color':
+                        self.bl_engine.add_pass(dspy_nm, 3, 'RGB')
+                    else:
+                        self.bl_engine.add_pass(dspy_nm, 3, 'XYZ')
+                elif num_channels == 2:
+                    self.bl_engine.add_pass(dspy_nm, 2, 'XY')                        
+                else:
+                    self.bl_engine.add_pass(dspy_nm, 1, 'X')
+
+            size_x = width
+            size_y = height
+            if render.use_border:
+                size_x = int(width * (render.border_max_x - render.border_min_x))
+                size_y = int(height * (render.border_max_y - render.border_min_y))     
+
+            result = self.bl_engine.begin_result(0, 0,
+                                        size_x,
+                                        size_y,
+                                        view=render_view)                        
+
+            for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
+                if i == 0:
+                    render_pass = result.layers[0].passes.find_by_name("Combined", render_view)           
+                else:
+                    render_pass = result.layers[0].passes.find_by_name(dspy_nm, render_view)
+                bl_image_rps[i] = render_pass            
+            
+            if self.rman_is_xpu:
+                # FIXME: for now, add a 1 second delay before starting the stats thread
+                # for some reason, XPU doesn't seem to reset the progress between renders
+                time.sleep(1.0)
+            self.start_stats_thread()
+            while self.bl_engine and not self.bl_engine.test_break() and self.rman_is_live_rendering:
+                time.sleep(0.01)
+                for i, rp in bl_image_rps.items():
+                    buffer = self._get_buffer(width, height, image_num=i, 
+                                                num_channels=rp.channels, 
+                                                as_flat=False, 
+                                                back_fill=False,
+                                                render=render)
+                    if buffer:
+                        rp.rect = buffer
+        
+                if self.bl_engine:
+                    self.bl_engine.update_result(result)        
+        
+            if result:
+                if self.bl_engine:
+                    self.bl_engine.end_result(result) 
+
+                # Try to save out the displays out to disk. This matches
+                # Cycles behavior                    
+                for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
+                    filepath = dspy_dict['displays'][dspy_nm]['filePath']
+                    buffer = self._get_buffer(width, height, image_num=i, as_flat=True)
+                    if buffer:
+                        bl_image = bpy.data.images.new(dspy_nm, width, height)
+                        try:
+                            bl_image.use_generated_float = True
+                            bl_image.filepath_raw = filepath                            
+                            bl_image.pixels = buffer
+                            bl_image.file_format = 'OPEN_EXR'
+                            bl_image.update()
+                            bl_image.save()
+                        except:
+                            pass
+                        finally:
+                            bpy.data.images.remove(bl_image)      
+
+            if not was_connected and self.stats_mgr.is_connected():
+                # if stats were not started before rendering, disconnect
+                self.stats_mgr.disconnect()                                 
         else:
             while self.bl_engine and not self.bl_engine.test_break() and self.rman_is_live_rendering:
                 time.sleep(0.01)        
@@ -724,7 +761,7 @@ class RmanRender(object):
             bl_layer = depsgraph.view_layer
             self.rman_is_exporting = True
             self.rman_running = True
-            self.start_stats_thread()
+            self.start_export_stats_thread()
             self.rman_scene.export_for_bake_render(depsgraph, self.sg_scene, bl_layer, is_external=is_external)
             self.rman_is_exporting = False
 
@@ -733,6 +770,7 @@ class RmanRender(object):
             render_cmd = "prman -blocking"
             render_cmd = self._append_render_cmd(render_cmd)        
             self.sg_scene.Render(render_cmd)
+            self.start_stats_thread()
         except Exception as e:      
             self.bl_engine.report({'ERROR'}, 'Export failed: %s' % str(e))
             self.stop_render(stop_draw_thread=False)
@@ -850,6 +888,8 @@ class RmanRender(object):
                 rman.Dspy.DisableDspyServer()             
                 self.rman_callbacks.clear()
                 ec = rman.EventCallbacks.Get()      
+                ec.RegisterCallback("Render", live_render_cb, self)
+                self.rman_callbacks["Render"] = live_render_cb                    
                 self.viewport_buckets.clear()
                 self._draw_viewport_buckets = True                           
             else:
@@ -870,6 +910,7 @@ class RmanRender(object):
         render_config = rman.Types.RtParamList()
         rendervariant = scene_utils.get_render_variant(self.bl_scene)
         scene_utils.set_render_variant_config(self.bl_scene, config, render_config)
+        self.rman_is_xpu = (rendervariant == 'xpu')
 
         self.sg_scene = self.sgmngr.CreateScene(config, render_config, self.stats_mgr.rman_stats_session) 
 
@@ -877,7 +918,7 @@ class RmanRender(object):
             self.rman_scene_sync.sg_scene = self.sg_scene
             rfb_log().info("Parsing scene...")        
             self.rman_is_exporting = True
-            self.start_stats_thread()        
+            self.start_export_stats_thread()        
             self.rman_scene.export_for_interactive_render(context, depsgraph, self.sg_scene)
             self.rman_is_exporting = False
 
@@ -887,15 +928,20 @@ class RmanRender(object):
             render_cmd = "prman -live"   
             render_cmd = self._append_render_cmd(render_cmd)
             self.sg_scene.Render(render_cmd)
+            self.start_stats_thread()
 
             rfb_log().info("RenderMan Viewport Render Started.")  
 
             if render_into_org != '':
                 rm.render_ipr_into = render_into_org    
             
-            # start a thread to periodically call engine.tag_redraw()
+            if not self.rman_is_xpu:
+                # for now, we only set the redraw callback for RIS
+                self.set_redraw_func()
+            # start a thread to periodically call engine.tag_redraw()                
             __DRAW_THREAD__ = threading.Thread(target=draw_threading_func, args=(self, ))
             __DRAW_THREAD__.start()
+
             return True
         except Exception as e:      
             bpy.ops.renderman.printer('INVOKE_DEFAULT', level="ERROR", message='Export failed: %s' % str(e))
@@ -932,7 +978,7 @@ class RmanRender(object):
         if not self._check_prman_license():
             return False
         self.rman_is_live_rendering = True
-        self.sg_scene.Render("prman -live")
+        self.sg_scene.Render("prman")
         render = self.rman_scene.bl_scene.render
         render_view = self.bl_engine.active_view_get()
         image_scale = render.resolution_percentage / 100.0
@@ -1082,6 +1128,19 @@ class RmanRender(object):
             __BLENDER_DSPY_PLUGIN__ = ctypes.CDLL(os.path.join(envconfig().rmantree, 'lib', 'plugins', 'd_blender%s' % ext))
 
         return __BLENDER_DSPY_PLUGIN__
+
+    def set_redraw_func(self):
+        # pass our callback function to the display driver
+        dspy_plugin = self.get_blender_dspy_plugin()
+        dspy_plugin.SetRedrawCallback(__CALLBACK_FUNC__)
+
+    def has_buffer_updated(self):        
+        dspy_plugin = self.get_blender_dspy_plugin()
+        return dspy_plugin.HasBufferUpdated()      
+
+    def reset_buffer_updated(self):
+        dspy_plugin = self.get_blender_dspy_plugin()
+        dspy_plugin.ResetBufferUpdated()        
                 
     def draw_pixels(self, width, height):
         self.viewport_res_x = width

@@ -28,13 +28,12 @@ from rman_utils.rman_assets import lib as ral
 from rman_utils.rman_assets.core import RmanAsset
 from rman_utils.rman_assets.common.definitions import TrMode, TrStorage, TrSpace, TrType
 from rman_utils.filepath import FilePath
+from rman_utils.rman_assets.common.external_files import ExternalFile
 
 import os
 import os.path
 import re
-import sys
-import time
-import bpy as mc  # just a test
+import shutil
 import bpy
 import mathutils
 from math import radians
@@ -45,8 +44,9 @@ from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import object_utils   
 from ..rfb_utils import transform_utils
 from ..rfb_utils import texture_utils
+from ..rfb_utils import color_manager_blender as clr_mgr
 from ..rfb_utils.prefs_utils import get_pref, get_addon_prefs
-from ..rfb_utils.property_utils import __GAINS_TO_ENABLE__, __LOBES_ENABLE_PARAMS__, is_vstruct_and_linked
+from ..rfb_utils.property_utils import __GAINS_TO_ENABLE__, __LOBES_ENABLE_PARAMS__, is_vstruct_and_linked, BlPropInfo
 from ..rfb_logger import rfb_log
 from ..rman_bl_nodes import __BL_NODES_MAP__, __RMAN_NODE_TYPES__
 from ..rman_constants import RMAN_STYLIZED_FILTERS, RFB_FLOAT3, CYCLES_NODE_MAP
@@ -347,6 +347,8 @@ def fix_blender_name(name):
     return name.replace(' ', '').replace('.', '')
 
 def set_asset_params(ob, node, nodeName, Asset):
+    node_type = node.bl_label
+
     # If node is OSL node get properties from dynamic location.
     if node.bl_idname == "PxrOSLPatternNode":
         for input_name, input in node.inputs.items():
@@ -366,219 +368,180 @@ def set_asset_params(ob, node, nodeName, Asset):
                 val = string_utils.convert_val(input.default_value, type_hint=prop_type)  
 
             pdict = {'type': param_type, 'value': val}
-            Asset.addParam(nodeName, param_name, pdict)                                  
+            Asset.addParam(nodeName, node_type, param_name, pdict)   
 
-    else:
+        return                               
 
-        for prop_name, meta in node.prop_meta.items():
-            if node.plugin_name == 'PxrRamp' and prop_name in ['colors', 'positions']:
-                continue
+    for prop_name, meta in node.prop_meta.items():
+        bl_prop_info = BlPropInfo(node, prop_name, meta)
 
-            param_widget = meta.get('widget', 'default')
-            if param_widget == 'null' and 'vstructmember' not in meta:
-                continue
+        if not bl_prop_info.do_export:
+            continue
+
+        param_widget = bl_prop_info.widget 
+        prop = bl_prop_info.prop
+        param_name = bl_prop_info.renderman_name 
+        param_type = bl_prop_info.renderman_type 
+        is_linked = bl_prop_info.is_linked
+
+        if is_linked:
+            param_type = 'reference %s' % meta['renderman_type']
+            param_name = meta['renderman_name']
+            
+            pdict = {'type': param_type, 'value': None}
+            Asset.addParam(nodeName, node_type, param_name, pdict)            
+
+        # see if vstruct linked
+        elif is_vstruct_and_linked(node, prop_name):
+            val = None
+            vstruct_name, vstruct_member = bl_prop_info.vstructmember.split('.')
+            from_socket = node.inputs[
+                vstruct_name].links[0].from_socket
+
+            vstruct_from_param = "%s_%s" % (
+                from_socket.identifier, vstruct_member)
+            if vstruct_from_param in from_socket.node.output_meta:
+
+                node_meta = getattr(
+                    node, 'shader_meta') if node.bl_idname == "PxrOSLPatternNode" else node.output_meta                        
+                node_meta = node_meta.get(vstruct_from_param)
+                if node_meta:
+                    expr = node_meta.get('vstructConditionalExpr')
+                    # check if we should connect or just set a value
+                    if expr:
+                        if expr.split(' ')[0] == 'set':
+                            val = 1
+                            param_type = meta['renderman_type']      
+
+                pdict = {'type': param_type, 'value': val}
+                Asset.addParam(nodeName, node_type, param_name, pdict)                          
 
             else:
-                prop = getattr(node, prop_name)
-                # if property group recurse
-                if meta['renderman_type'] == 'page':
-                    continue
-                elif prop_name == 'inputMaterial' or \
-                        ('vstruct' in meta and meta['vstruct'] is True) or \
-                        ('type' in meta and meta['type'] == 'vstruct'):
-                    continue
+                rfb_log().warning('Warning! %s not found on %s' %
+                        (vstruct_from_param, from_socket.node.name))
 
-                # if input socket is linked reference that
-                elif hasattr(node, 'inputs') and prop_name in node.inputs and \
-                        node.inputs[prop_name].is_linked:
+        # else output rib
+        else:
+            val = None
 
-                    if 'arraySize' in meta:
-                        pass
-                    elif 'renderman_array_name' in meta:
-                        continue           
+            # if this is a gain on PxrSurface and the lobe isn't
+            # enabled            
+            if node.bl_idname == 'PxrSurfaceBxdfNode' and \
+                    prop_name in __GAINS_TO_ENABLE__ and \
+                    not getattr(node, __GAINS_TO_ENABLE__[prop_name]):
+                val = [0, 0, 0] if meta[
+                    'renderman_type'] == 'color' else 0
 
-                    param_type = 'reference %s' % meta['renderman_type']
-                    param_name = meta['renderman_name']
-                    
-                    pdict = {'type': param_type, 'value': None}
-                    Asset.addParam(nodeName, param_name, pdict)    
+            elif param_type == 'string':
+                val = string_utils.expand_string(prop)
+                options = meta['options']
+                if bl_prop_info.is_texture:                    
+                    tx_node_id = texture_utils.generate_node_id(node, param_name, ob=ob)
+                    tx_val = texture_utils.get_txmanager().get_output_tex_from_id(tx_node_id)
+                    val = tx_val if tx_val != '' else val
+                elif param_widget == 'assetidoutput':
+                    display = 'openexr'
+                    if 'texture' in options:
+                        display = 'texture'
+                    val = string_utils.expand_string(val, display=display, asFilePath=True)
 
-                # see if vstruct linked
-                elif is_vstruct_and_linked(node, prop_name):
-                    val = None
-                    vstruct_name, vstruct_member = meta[
-                        'vstructmember'].split('.')
-                    from_socket = node.inputs[
-                        vstruct_name].links[0].from_socket
-
-                    vstruct_from_param = "%s_%s" % (
-                        from_socket.identifier, vstruct_member)
-                    if vstruct_from_param in from_socket.node.output_meta:
-                        actual_socket = from_socket.node.output_meta[
-                            vstruct_from_param]
-
-                        param_type = 'reference %s' % meta['renderman_type']
-                        param_name = meta['renderman_name']
-
-                        node_meta = getattr(
-                            node, 'shader_meta') if node.bl_idname == "PxrOSLPatternNode" else node.output_meta                        
-                        node_meta = node_meta.get(vstruct_from_param)
-                        is_reference = True
-                        if node_meta:
-                            expr = node_meta.get('vstructConditionalExpr')
-                            # check if we should connect or just set a value
-                            if expr:
-                                if expr.split(' ')[0] == 'set':
-                                    val = 1
-                                    param_type = meta['renderman_type']      
-
-                        pdict = {'type': param_type, 'value': val}
-                        Asset.addParam(nodeName, param_name, pdict)                          
-
-                    else:
-                        rfb_log().warning('Warning! %s not found on %s' %
-                              (vstruct_from_param, from_socket.node.name))
-
-                # else output rib
-                else:
-                    # if struct is not linked continue
-                    if meta['renderman_type'] in ['struct', 'enum']:
-                        continue
-
-                    param_type = meta['renderman_type']
-                    param_name = meta['renderman_name']
-                    val = None
-                    arrayLen = 0
-
-                    # if this is a gain on PxrSurface and the lobe isn't
-                    # enabled
-                    
-                    if node.bl_idname == 'PxrSurfaceBxdfNode' and \
-                            prop_name in __GAINS_TO_ENABLE__ and \
-                            not getattr(node, __GAINS_TO_ENABLE__[prop_name]):
-                        val = [0, 0, 0] if meta[
-                            'renderman_type'] == 'color' else 0
-
-                    elif meta['renderman_type'] == 'string':
-
-                        val = val = string_utils.convert_val(prop, type_hint=meta['renderman_type'])
-                        if param_widget in ['fileinput', 'assetidinput']:
-                            options = meta['options']
-                            # txmanager doesn't currently deal with ptex
-                            if node.bl_idname == "PxrPtexturePatternNode":
-                                val = string_utils.expand_string(val, display='ptex', asFilePath=True)        
-                            # ies profiles don't need txmanager for converting                       
-                            elif 'ies' in options:
-                                val = string_utils.expand_string(val, display='ies', asFilePath=True)
-                            # this is a texture
-                            elif ('texture' in options) or ('env' in options) or ('imageplane' in options):
-                                tx_node_id = texture_utils.generate_node_id(node, param_name, ob=ob)
-                                tx_val = texture_utils.get_txmanager().get_output_tex_from_id(tx_node_id)
-                                val = tx_val if tx_val != '' else val
-                        elif param_widget == 'assetidoutput':
-                            display = 'openexr'
-                            if 'texture' in meta['options']:
-                                display = 'texture'
-                            val = string_utils.expand_string(val, display='texture', asFilePath=True)
-
-                    elif 'renderman_array_name' in meta:
-                        continue
-                    elif meta['renderman_type'] == 'array':
-                        array_len = getattr(node, '%s_arraylen' % prop_name)
-                        sub_prop_names = getattr(node, prop_name)
-                        sub_prop_names = sub_prop_names[:array_len]
-                        val_array = []
-                        val_ref_array = []
-                        param_type = '%s[%d]' % (meta['renderman_array_type'], array_len)
-                        
-                        for nm in sub_prop_names:
-                            if hasattr(node, 'inputs')  and nm in node.inputs and \
-                                node.inputs[nm].is_linked:
-                                val_ref_array.append('')
-                            else:
-                                prop = getattr(node, nm)
-                                val = string_utils.convert_val(prop, type_hint=param_type)
-                                if param_type in RFB_FLOAT3:
-                                    val_array.extend(val)
-                                else:
-                                    val_array.append(val)
-                        if val_ref_array:
-                            pdict = {'type': '%s [%d]' % (param_type, len(val_ref_array)), 'value': None}
-                            Asset.addParam(nodeName, param_name, pdict)
-                        else:                            
-                            pdict = {'type': param_type, 'value': val_array}
-                            Asset.addParam(nodeName, param_name, pdict)
-                        continue
-                    elif meta['renderman_type'] == 'colorramp':
-                        nt = bpy.data.node_groups[node.rman_fake_node_group]
-                        if nt:
-                            ramp_name =  prop
-                            color_ramp_node = nt.nodes[ramp_name]                            
-                            colors = []
-                            positions = []
-                            # double the start and end points
-                            positions.append(float(color_ramp_node.color_ramp.elements[0].position))
-                            colors.append(color_ramp_node.color_ramp.elements[0].color[:3])
-                            for e in color_ramp_node.color_ramp.elements:
-                                positions.append(float(e.position))
-                                colors.append(e.color[:3])
-                            positions.append(
-                                float(color_ramp_node.color_ramp.elements[-1].position))
-                            colors.append(color_ramp_node.color_ramp.elements[-1].color[:3])
-
-                            array_size = len(positions)
-                            pdict = {'type': 'int', 'value': array_size}
-                            Asset.addParam(nodeName, prop_name, pdict)
-
-                            pdict = {'type': 'float[%d]' % array_size, 'value': positions}
-                            Asset.addParam(nodeName, "%s_Knots" % prop_name, pdict)
-
-                            pdict = {'type': 'color[%d]' % array_size, 'value': colors}
-                            Asset.addParam(nodeName, "%s_Colors" % prop_name, pdict)
-
-                            rman_interp_map = { 'LINEAR': 'linear', 'CONSTANT': 'constant'}
-                            interp = rman_interp_map.get(color_ramp_node.color_ramp.interpolation,'catmull-rom')   
-                            pdict = {'type': 'string', 'value': interp}
-                            Asset.addParam(nodeName, "%s_Interpolation" % prop_name, pdict)                            
-                        continue               
-                    elif meta['renderman_type'] == 'floatramp':
-                        nt = bpy.data.node_groups[node.rman_fake_node_group]
-                        if nt:
-                            ramp_name =  prop
-                            float_ramp_node = nt.nodes[ramp_name]                            
-
-                            curve = float_ramp_node.mapping.curves[0]
-                            knots = []
-                            vals = []
-                            # double the start and end points
-                            knots.append(curve.points[0].location[0])
-                            vals.append(curve.points[0].location[1])
-                            for p in curve.points:
-                                knots.append(p.location[0])
-                                vals.append(p.location[1])
-                            knots.append(curve.points[-1].location[0])
-                            vals.append(curve.points[-1].location[1])
-                            array_size = len(knots)   
-
-                            pdict = {'type': 'int', 'value': array_size}
-                            Asset.addParam(nodeName, prop_name, pdict)
-
-                            pdict = {'type': 'float[%d]' % array_size, 'value': knots}
-                            Asset.addParam(nodeName, "%s_Knots" % prop_name, pdict)
-
-                            pdict = {'type': 'float[%d]' % array_size, 'value': vals}
-                            Asset.addParam(nodeName, "%s_Floats" % prop_name, pdict)                                                     
-
-                            pdict = {'type': 'string', 'value': 'catmull-rom'}
-                            Asset.addParam(nodeName, "%s_Interpolation" % prop_name, pdict)                              
+            elif param_type == 'array':
+                val_array = []
+                val_ref_array = []
+                coll_nm = '%s_collection' % prop_name
+                collection = getattr(node, coll_nm)
+                array_len = len(collection)
+                param_array_type = bl_prop_info.renderman_array_type
+                param_type = '%s[%d]' % (param_array_type, array_len)
                 
-                        continue
+                for elem in collection:
+                    nm = elem.name
+                    if hasattr(node, 'inputs')  and nm in node.inputs and \
+                        node.inputs[nm].is_linked:
+                        val_ref_array.append('')
                     else:
+                        prop = getattr(elem, 'value_%s' % param_array_type)
+                        val = string_utils.convert_val(prop, type_hint=param_array_type)
+                        if param_array_type in RFB_FLOAT3:
+                            val_array.extend(val)
+                        else:
+                            val_array.append(val)
+                if val_ref_array:
+                    pdict = {'type': '%s [%d]' % (param_array_type, len(val_ref_array)), 'value': None}
+                    Asset.addParam(nodeName, node_type, param_name, pdict)
+                else:                            
+                    pdict = {'type': param_array_type, 'value': val_array}
+                    Asset.addParam(nodeName, node_type, param_name, pdict)
+                continue
+            elif param_type == 'colorramp':
+                nt = bpy.data.node_groups[node.rman_fake_node_group]
+                if nt:
+                    ramp_name =  prop
+                    color_ramp_node = nt.nodes[ramp_name]                            
+                    colors = []
+                    positions = []
+                    # double the start and end points
+                    positions.append(float(color_ramp_node.color_ramp.elements[0].position))
+                    colors.append(color_ramp_node.color_ramp.elements[0].color[:3])
+                    for e in color_ramp_node.color_ramp.elements:
+                        positions.append(float(e.position))
+                        colors.append(e.color[:3])
+                    positions.append(
+                        float(color_ramp_node.color_ramp.elements[-1].position))
+                    colors.append(color_ramp_node.color_ramp.elements[-1].color[:3])
 
-                        val = string_utils.convert_val(prop, type_hint=meta['renderman_type'])
+                    array_size = len(positions)
+                    pdict = {'type': 'int', 'value': array_size}
+                    Asset.addParam(nodeName, node_type, prop_name, pdict)
 
-                    pdict = {'type': param_type, 'value': val}
-                    Asset.addParam(nodeName, param_name, pdict)     
+                    pdict = {'type': 'float[%d]' % array_size, 'value': positions}
+                    Asset.addParam(nodeName, node_type, "%s_Knots" % prop_name, pdict)
+
+                    pdict = {'type': 'color[%d]' % array_size, 'value': colors}
+                    Asset.addParam(nodeName, node_type, "%s_Colors" % prop_name, pdict)
+
+                    rman_interp_map = { 'LINEAR': 'linear', 'CONSTANT': 'constant'}
+                    interp = rman_interp_map.get(color_ramp_node.color_ramp.interpolation,'catmull-rom')   
+                    pdict = {'type': 'string', 'value': interp}
+                    Asset.addParam(nodeName, node_type, "%s_Interpolation" % prop_name, pdict)                            
+                continue               
+            elif param_type == 'floatramp':
+                nt = bpy.data.node_groups[node.rman_fake_node_group]
+                if nt:
+                    ramp_name =  prop
+                    float_ramp_node = nt.nodes[ramp_name]                            
+
+                    curve = float_ramp_node.mapping.curves[0]
+                    knots = []
+                    vals = []
+                    # double the start and end points
+                    knots.append(curve.points[0].location[0])
+                    vals.append(curve.points[0].location[1])
+                    for p in curve.points:
+                        knots.append(p.location[0])
+                        vals.append(p.location[1])
+                    knots.append(curve.points[-1].location[0])
+                    vals.append(curve.points[-1].location[1])
+                    array_size = len(knots)   
+
+                    pdict = {'type': 'int', 'value': array_size}
+                    Asset.addParam(nodeName, node_type, prop_name, pdict)
+
+                    pdict = {'type': 'float[%d]' % array_size, 'value': knots}
+                    Asset.addParam(nodeName, node_type, "%s_Knots" % prop_name, pdict)
+
+                    pdict = {'type': 'float[%d]' % array_size, 'value': vals}
+                    Asset.addParam(nodeName, node_type, "%s_Floats" % prop_name, pdict)                                                     
+
+                    pdict = {'type': 'string', 'value': 'catmull-rom'}
+                    Asset.addParam(nodeName, node_type, "%s_Interpolation" % prop_name, pdict)                              
+        
+                continue
+            else:
+                val = string_utils.convert_val(prop, type_hint=param_type)
+
+            pdict = {'type': param_type, 'value': val}
+            Asset.addParam(nodeName, node_type, param_name, pdict)     
 
 def set_asset_connections(nodes_list, Asset):
     for node in nodes_list:
@@ -633,7 +596,7 @@ def export_material_preset(mat, nodes_to_convert, renderman_output_node, Asset):
         infodict['name'] = 'rman__surface'
         infodict['type'] = 'reference float3'
         infodict['value'] = None
-        Asset.addParam(nodeName, 'rman__surface', infodict)   
+        Asset.addParam(nodeName, nodeType, 'rman__surface', infodict)   
 
         from_node = renderman_output_node.inputs['Bxdf'].links[0].from_node
         srcPlug = "%s.%s" % (fix_blender_name(from_node.name), 'outColor')
@@ -645,7 +608,7 @@ def export_material_preset(mat, nodes_to_convert, renderman_output_node, Asset):
         infodict['name'] = 'rman__displacement'
         infodict['type'] = 'reference float3'
         infodict['value'] = None
-        Asset.addParam(nodeName, 'rman__displacement', infodict)              
+        Asset.addParam(nodeName, nodeType, 'rman__displacement', infodict)              
 
         from_node = renderman_output_node.inputs['Displacement'].links[0].from_node
         srcPlug = "%s.%s" % (fix_blender_name(from_node.name), 'outColor')
@@ -695,7 +658,7 @@ def export_material_preset(mat, nodes_to_convert, renderman_output_node, Asset):
                                 os.mkdir(shaders_path)
                             shutil.copy(osl_path, out_file)                
                     externalosl = True
-                    Asset.processExternalFile(out_file)
+                    Asset.processExternalFile(None, ExternalFile.k_osl, out_file)
 
             elif renderman_node_type == '':
                 # check if a cycles node
@@ -705,7 +668,8 @@ def export_material_preset(mat, nodes_to_convert, renderman_output_node, Asset):
                 mapping = CYCLES_NODE_MAP[node.bl_idname]
                 cycles_shader_dir = filepath_utils.get_cycles_shader_path()
                 out_file = os.path.join(cycles_shader_dir, '%s.oso' % cycles_shader_dir)
-                Asset.processExternalFile(out_file)
+                externalosl = True
+                Asset.processExternalFile(None, ExternalFile.k_osl, out_file)
 
             node_name = fix_blender_name(node.name)
             shader_name = node.bl_label
@@ -838,7 +802,7 @@ def export_displayfilter_nodes(world, nodes, Asset):
             pdict['type'] = 'string'
             if pdict['value'].startswith('lpe:'):
                 pdict['value'] = 'color ' + pdict['value']
-            Asset.addParam(chan, 'source', pdict)        
+            Asset.addParam(chan, 'rmanDisplayChannel', 'source', pdict)        
                                             
 def parse_texture(imagePath, Asset):
     """Gathers infos from the image header
@@ -874,6 +838,20 @@ def export_asset(nodes, atype, infodict, category, cfg, renderPreview='std',
                               storage=infodict.get('storage', None),
                               convert_to_tex=infodict.get('convert_to_tex', True)
     )
+
+    # On save, we can get the current color manager to store the config.
+    color_mgr = clr_mgr.color_manager()
+    ocio_config = {
+        'config': color_mgr.cfg_name,
+        'path': color_mgr.config_file_path(),
+        'rules': color_mgr.conversion_rules,
+        'aliases': color_mgr.aliases
+    }
+    rfb_log().debug('ocio_config %s', '=' * 80)
+    rfb_log().debug('     config = %s', ocio_config['config'])
+    rfb_log().debug('       path = %s', ocio_config['path'])
+    rfb_log().debug('      rules = %s', ocio_config['rules'])
+    Asset.ocio = ocio_config    
 
     asset_type = ''
     hostPrefs = get_host_prefs()    
@@ -988,6 +966,7 @@ def setParams(Asset, node, paramsList):
         knots_param = None
         colors_param = None
         floats_param = None
+        interpolation_param = None
 
         if (nm not in rman_ramps) and (nm not in rman_color_ramps):
             continue
@@ -1003,13 +982,20 @@ def setParams(Asset, node, paramsList):
                     colors_param = param
                 elif '_Floats' in pname:
                     floats_param = param
+                elif '_Interpolation' in pname:
+                    interpolation_param = param
             
         if colors_param:
             n = rman_color_ramps[nm]
             elements = n.color_ramp.elements
             size = rman_ramp_size[nm]
             knots_vals = knots_param.value()
-            colors_vals = colors_param.value()    
+            colors_vals = colors_param.value() 
+            rman_interp = interpolation_param.value()
+
+            rman_interp_map = { 'bspline':'B_SPLINE' , 'linear': 'LINEAR', 'constant': 'CONSTANT'}
+            interp = rman_interp_map.get(rman_interp, 'LINEAR')    
+            n.color_ramp.interpolation = interp           
 
             if len(colors_vals) == size:
                 for i in range(0, size):
@@ -1087,10 +1073,28 @@ def setParams(Asset, node, paramsList):
             if array_len == '':
                 continue
             array_len = int(array_len)
-            setattr(node, '%s_arraylen' % pname, array_len)    
+            coll_nm = '%s_collection' % pname  
+            coll_idx_nm = '%s_collection_index' % pname
+            collection = getattr(node, coll_nm, None)
+            if collection is None:
+                continue
+            elem_type = rman_type
+            if 'reference' in elem_type:
+                elem_type = elem_type.replace('reference ', '')
+            if elem_type == 'integer':
+                elem_type = 'int'
+
+            for i in range(array_len):
+                override = {'node': node}           
+                bpy.ops.renderman.add_remove_array_elem(override,
+                                                        'EXEC_DEFAULT', 
+                                                        action='ADD',
+                                                        param_name=pname,
+                                                        collection=coll_nm,
+                                                        collection_index=coll_idx_nm,
+                                                        elem_type=elem_type)            
 
             pval = param.value()
-
             if pval is None or pval == []:
                 # connected param
                 continue    
@@ -1099,22 +1103,26 @@ def setParams(Asset, node, paramsList):
             if rman_type in ['integer', 'float', 'string']:
                 for i in range(0, plen):
                     val = pval[i]
-                    parm_nm = '%s[%d]' % (pname, (i))
-                    setattr(node, parm_nm, val)
+                    elem = collection[i]
+                    elem.type = elem_type
+                    setattr(node, 'value_%s' % elem.type, val)
+
             # float3 types
             elif rman_type in float3:
                 j = 1
                 if isinstance(pval[0], list):
                     for i in range(0, plen):
-                        parm_nm = '%s[%d]' % (pname, (j))
+                        elem = collection[j]
                         val = (pval[i][0], pval[i][0], pval[i][0])
-                        setattr(node, parm_nm, val)
+                        elem.type = elem_type
+                        setattr(node, 'value_%s' % elem.type, val)                        
                         j +=1
                 else:        
                     for i in range(0, plen, 3):
-                        parm_nm = '%s[%d]' % (pname, (j))
+                        elem = collection[j]                        
                         val = (pval[i], pval[i+1], pval[i+2])
-                        setattr(node, parm_nm, val)                                
+                        elem.type = elem_type
+                        setattr(node, 'value_%s' % elem.type, val)
                         j = j+1            
 
         elif pname in node.bl_rna.properties.keys():
@@ -1133,7 +1141,7 @@ def setParams(Asset, node, paramsList):
                 continue
             if 'string' in ptype:
                 if pval != '':
-                    depfile = Asset.getDependencyPath(pval)
+                    depfile = Asset.getDependencyPath(pname, pval)
                     if depfile:
                         pval = depfile
                 setattr(node, pname, pval)
@@ -1216,7 +1224,7 @@ def createNodes(Asset):
                 # loaded through a PxrOSL node.
                 # if PxrOSL is used, we need to find the oso in the asset to
                 # use it in a PxrOSL node.
-                oso = Asset.getDependencyPath(nodeType + '.oso')
+                oso = Asset.getDependencyPath(ExternalFile.k_osl, nodeType + '.oso')
                 if oso is None:
                     err = ('createNodes: OSL file is missing "%s"'
                            % nodeType)

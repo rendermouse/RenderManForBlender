@@ -19,6 +19,11 @@
             "options": "prop_parent:context.scene.renderman|prop_name:vol_aggregates",
             "connectable": false,
             "default": ""
-        }        
+        },
+        {
+            "name": "utilityPattern",    
+            "connectable": true,
+            "default": 0
+        }                 
     ]
 }

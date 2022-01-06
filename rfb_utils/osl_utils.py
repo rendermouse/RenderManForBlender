@@ -43,7 +43,10 @@ def readOSO(filePath):
             elif mdict['name'] == 'match':
                 prop_meta['match'] = mdict['default']  
             elif mdict['name'] == 'lockgeom':
-                prop_meta['lockgeom'] = mdict['lockgeom']
+                dflt = 1
+                lockgeom = mdict.get('default', dflt)
+                lockgeom = mdict.get('lockgeom', lockgeom)
+                prop_meta['lockgeom'] = lockgeom
 
         shader_meta[name] = prop_meta                
 

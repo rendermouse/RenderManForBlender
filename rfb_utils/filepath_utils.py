@@ -36,6 +36,7 @@ def view_file(file_path):
         try:
             command = opener + " " + file_path
             os.system(command)
+            return
         except Exception as e:
             rfb_log().error("Open file command failed: %s" % command)
             pass

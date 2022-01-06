@@ -282,6 +282,23 @@ class RendermanLightSettings(bpy.types.PropertyGroup):
                                     poll=validate_dome_light,
                                     update=update_dome_light_portal)
 
+    rman_coneAngleDepth: FloatProperty(name="Cone Angle Depth",
+                                        default=5.0,
+                                        min=0.0,
+                                        max=10.0,                                
+                                        precision=3,
+                                        description="The depth of the cone angle drawn in the viewport"
+    )
+
+    rman_coneAngleOpacity: FloatProperty(name="Cone Angle Opacity",
+                                        default=0.5,
+                                        min=0.1,
+                                        max=1.0,                                
+                                        precision=3,
+                                        description="The opaqueness of the cone angle drawn in the viewport"
+    )    
+
+
     light_primary_visibility: BoolProperty(
         name="Light Primary Visibility",
         description="Camera visibility for this light",

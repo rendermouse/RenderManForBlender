@@ -28,6 +28,20 @@ def find_enable_param(params):
         if prop_name in __LOBES_ENABLE_PARAMS__:
             return prop_name
 
+def node_add_input(node, param_type, param_name, meta, param_label):
+    if param_type not in __RMAN_SOCKET_MAP__:
+        return
+
+    socket = node.inputs.new(
+        __RMAN_SOCKET_MAP__[param_type], param_name, identifier=param_label)
+    socket.link_limit = 1
+
+    if param_type in ['struct', 'normal', 'vector', 'vstruct', 'void']:
+        socket.hide_value = True
+        if param_type == 'struct':
+            struct_name = meta.get('struct_name', 'Manifold')
+            socket.struct_name = struct_name    
+    return socket
 
 def node_add_inputs(node, node_name, prop_names, first_level=True, label_prefix='', remove=False):
     ''' Add new input sockets to this ShadingNode
@@ -36,14 +50,14 @@ def node_add_inputs(node, node_name, prop_names, first_level=True, label_prefix=
     for name in prop_names:
         meta = node.prop_meta[name]
         param_type = meta['renderman_type']
-        param_type = getattr(meta, 'renderman_array_type', param_type)
 
-        if name in node.inputs.keys() and remove:
-            node.inputs.remove(node.inputs[name])
+        socket = node.inputs.get(name, None)
+        if socket:
+            if remove:
+                node.inputs.remove(socket)
             continue
-        elif name in node.inputs.keys():
-            continue
-
+        notconnectable = meta.get('__noconnection', False)
+        
         # if this is a page recursively add inputs
         if param_type == 'page':
             if first_level and has_lobe_enable_props(node) and name != 'page_Globals':
@@ -58,43 +72,35 @@ def node_add_inputs(node, node_name, prop_names, first_level=True, label_prefix=
                     node_add_inputs(node, node_name, getattr(node, name),
                                     label_prefix=label + ' ',
                                     first_level=False, remove=True)
-                continue
-
             else:
                 node_add_inputs(node, node_name, getattr(node, name),
                                 first_level=first_level,
                                 label_prefix=label_prefix, remove=remove)
-                continue
+            continue
         elif param_type == 'array':
-            arraylen = getattr(node, '%s_arraylen' % name)
-            sub_prop_names = getattr(node, name)
-            sub_prop_names = sub_prop_names[:arraylen]
-            node_add_inputs(node, node_name, sub_prop_names,
-                label_prefix='',
-                first_level=False, remove=False)
+            if notconnectable:
+                continue
+            coll_nm = '%s_collection' % name
+            param_array_type = meta.get('renderman_array_type')
+
+            collection = getattr(node, coll_nm)
+            for i in range(len(collection)):
+                param_array_name = '%s[%d]' % (name, i)
+                param_array_label = '%s[%d]' % (name, i)
+                param_array_label = label_prefix + meta.get('label', name) + '[%d]' % i
+                if param_array_name in node.inputs.keys():
+                    if remove:
+                        node.inputs.remove(node.inputs[param_array_name])   
+                    continue          
+                node_add_input(node, param_array_type, param_array_name, meta, param_array_label)
+
             continue
 
-        if remove:
+        if remove or notconnectable:
             continue
-        # # if this is not connectable don't add socket
-        if param_type not in __RMAN_SOCKET_MAP__:
-            continue
-        if '__noconnection' in meta and meta['__noconnection']:
-            continue
-
         param_name = name
-
         param_label = label_prefix + meta.get('label', param_name)
-        socket = node.inputs.new(
-            __RMAN_SOCKET_MAP__[param_type], param_name, identifier=param_label)
-        socket.link_limit = 1
-        #socket.default_value = meta['default_value']
-
-        if param_type in ['struct', 'normal', 'vector', 'vstruct', 'void']:
-            socket.hide_value = True
-            if param_type == 'struct':
-                struct_name = meta.get('struct_name', 'Manifold')
-                socket.struct_name = struct_name
+        node_add_input(node, param_type, param_name, meta, param_label)
 
     update_inputs(node)
 

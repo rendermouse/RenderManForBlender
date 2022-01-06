@@ -633,11 +633,6 @@ def get_dspy_dict(rman_scene, expandTokens=True):
         display_driver = rm.render_into
         do_optix_denoise = rm.blender_optix_denoiser
 
-        # FIXME: remove these lines once we are able to get some kind of progress
-        # when rendering to XPU
-        if rm.render_into == 'blender' and scene_utils.get_render_variant(rman_scene.bl_scene) != 'prman':
-            display_driver = 'openexr'
-
     if rm.render_rman_stylized:
         _add_stylized_channels(dspys_dict, display_driver, rman_scene, expandTokens)        
        

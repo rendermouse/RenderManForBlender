@@ -40,6 +40,11 @@
 #include "BlenderOptiXDenoiser.h"
 #endif
 
+#include <atomic>
+
+typedef bool (*FuncPtr)();
+FuncPtr tag_redraw_func;
+
 struct BlenderImage
 {
     BlenderImage()
@@ -82,6 +87,7 @@ struct BlenderImage
     const uint8_t* surface;
     display::RenderOutput::DataType type;
     size_t noutputs;
+    std::atomic<bool> bufferUpdated;
 
     // These two aren't currently used
     // but are needed if we decide to use a
@@ -340,7 +346,7 @@ void DrawBufferToBlender(int viewWidth, int viewHeight)
 
     if (blenderImage == nullptr)
     {
-        //fprintf(stderr, "d_blender: cannot find first image\n");
+        fprintf(stderr, "d_blender: cannot find first image\n");
         return;
     }
 
@@ -360,6 +366,7 @@ void DrawBufferToBlender(int viewWidth, int viewHeight)
     {
         if (!blenderImage->framebuffer)
         {
+            fprintf(stderr, "Framebuffer not ready\n");
             return;
         }
 
@@ -429,6 +436,36 @@ void DrawBufferToBlender(int viewWidth, int viewHeight)
     
     glDeleteTextures(1, &blenderImage->texture_id);
 }
+
+PRMANEXPORT
+void SetRedrawCallback(bool(*pyfuncobj)())
+{
+    tag_redraw_func = pyfuncobj; 
+}
+
+PRMANEXPORT
+bool HasBufferUpdated()
+{
+    if (s_blenderImages.empty())
+    {
+        return false;
+    }
+    BlenderImage* blenderImage = s_blenderImages[0];
+    return blenderImage->bufferUpdated;
+}
+
+PRMANEXPORT
+void ResetBufferUpdated()
+{
+    if (s_blenderImages.empty())
+    {
+        return;
+    }
+
+    BlenderImage* blenderImage = s_blenderImages[0];
+    blenderImage->bufferUpdated = false;
+}
+
 } // extern "C"
 
 
@@ -640,6 +677,14 @@ DspyImageData(
     } else {
         blenderImage->useActiveRegion = false;
     }
+
+    if (tag_redraw_func)
+    {
+        if (!tag_redraw_func())
+        {
+            tag_redraw_func = NULL;
+        }
+    }
    
     return PkDspyErrorNone;
 }
@@ -799,12 +844,18 @@ void DisplayBlender::Close()
     {
         std::free(m_image->denoiseFrameBuffer);
     }
+    tag_redraw_func = NULL;
 }
 
 void DisplayBlender::Notify(const uint32_t iteration, const uint32_t totaliterations,
                          const NotifyFlags flags, const pxrcore::ParamList& /*metadata*/)
 {
+    if (flags != k_notifyIteration && flags != k_notifyRender)
+    {
+        return;
+    }
     CopyXpuBuffer(m_image);
+    m_image->bufferUpdated = true;
 }
 
 static void closeBlenderImages()

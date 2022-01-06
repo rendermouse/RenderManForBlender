@@ -438,9 +438,12 @@ def get_group_node(node):
 
     return current_group_node
 
-def get_all_shading_nodes():
+def get_all_shading_nodes(scene=None):
 
     '''Find all shading nodes in the scene
+
+    Arguments:
+        scene (bpy.types.Scene) - (optional) the scene we want to find the shading nodes in
 
     Returns:
         (list) - list of all the shading nodes
@@ -448,8 +451,10 @@ def get_all_shading_nodes():
 
     nodes = list()
 
-    context = bpy.context
-    scene = context.scene
+    if not scene:
+        context = bpy.context
+        scene = context.scene
+        
     world = scene.world
 
     integrator = find_integrator_node(world)
@@ -791,17 +796,17 @@ def has_stylized_pattern_node(ob, node=None):
 
             prop_meta = node.prop_meta[prop_name]
             if prop_meta['renderman_type'] == 'array':
-                array_len = getattr(node, '%s_arraylen' % prop_name)
-                for i in range(0, array_len):
-                    nm = '%s[%d]' % (prop_name, i)
-                    sub_prop = getattr(node, nm)
-                    if hasattr(node, 'inputs')  and nm in node.inputs and \
-                        node.inputs[nm].is_linked: 
+                coll_nm = '%s_collection' % prop_name   
+                collection = getattr(node, coll_nm)
 
+                for i in range(len(collection)):
+                    nm = '%s[%d]' % (prop_name, i)  
+                    if hasattr(node, 'inputs')  and nm in node.inputs and \
+                        node.inputs[nm].is_linked:      
                         to_socket = node.inputs[nm]                    
                         from_node = to_socket.links[0].from_node
                         if from_node.bl_label in RMAN_STYLIZED_PATTERNS:
-                            return from_node
+                            return from_node                                                     
 
             elif node.inputs[prop_name].is_linked: 
                 to_socket = node.inputs[prop_name]                    

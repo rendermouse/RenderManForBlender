@@ -62,7 +62,97 @@ def draw_dsypmeta_item(layout, node, prop_name):
         layout.prop(item, 'name')
         layout.prop(item, 'type')
         layout.prop(item, 'value_%s' % item.type, slider=True)
-       
+
+def draw_array_elem(layout, node, prop_name, bl_prop_info, nt, context, level):
+    row = layout.row(align=True)
+    row.enabled = not bl_prop_info.prop_disabled
+
+    ui_prop = prop_name + "_uio"
+    ui_open = getattr(node, ui_prop)
+    icon = get_open_close_icon(ui_open)
+
+    split = layout.split(factor=NODE_LAYOUT_SPLIT)
+    row = split.row()
+    row.enabled = not bl_prop_info.prop_disabled
+    draw_indented_label(row, None, level)
+
+    row.context_pointer_set("node", node)
+    op = row.operator('node.rman_open_close_page', text='', icon=icon, emboss=False)            
+    op.prop_name = ui_prop
+
+    sub_prop_names = list(bl_prop_info.prop)
+
+    prop_label = bl_prop_info.label
+    coll_nm = '%s_collection' % prop_name
+    collection = getattr(node, coll_nm)
+    array_len = len(collection)
+    array_label = prop_label + ' [%d]:' % array_len
+    row.label(text=array_label)
+    if ui_open:
+        level += 1
+        row = layout.row(align=True)
+        col = row.column()
+        row = col.row()
+        draw_indented_label(row, None, level)           
+        coll_idx_nm = '%s_collection_index' % prop_name
+        row.template_list("RENDERMAN_UL_Array_List", "", node, coll_nm, node, coll_idx_nm, rows=5)
+        col = row.column(align=True)
+        row = col.row()
+        row.context_pointer_set("node", node)
+        op = row.operator('renderman.add_remove_array_elem', icon="ADD", text="")
+        op.collection = coll_nm
+        op.collection_index = coll_idx_nm
+        op.param_name = prop_name
+        op.action = 'ADD'
+        op.elem_type = bl_prop_info.renderman_array_type
+        row = col.row()
+        row.context_pointer_set("node", node)
+        op = row.operator('renderman.add_remove_array_elem', icon="REMOVE", text="")
+        op.collection = coll_nm
+        op.collection_index = coll_idx_nm
+        op.param_name = prop_name
+        op.action = 'REMOVE'
+        op.elem_type = bl_prop_info.renderman_array_type
+
+        coll_index = getattr(node, coll_idx_nm, None)
+        if coll_idx_nm is None:
+            return
+
+        if coll_index > -1 and coll_index < len(collection):
+            item = collection[coll_index]
+            row = layout.row(align=True)
+            socket_name = '%s[%d]' % (prop_name, coll_index)
+            socket = node.inputs.get(socket_name, None)
+            if socket and socket.is_linked:
+                input_node = shadergraph_utils.socket_node_input(nt, socket)
+                icon = get_open_close_icon(socket.ui_open)
+
+                split = layout.split()
+                row = split.row()
+                draw_indented_label(row, None, level)
+                row.context_pointer_set("socket", socket)               
+                row.operator('node.rman_open_close_link', text='', icon=icon, emboss=False)                
+                rman_icon = rfb_icons.get_node_icon(input_node.bl_label)               
+                row.label(text='Value (%s):' % input_node.name)
+
+                row.context_pointer_set("socket", socket)
+                row.context_pointer_set("node", node)
+                row.context_pointer_set("nodetree", nt)
+                row.menu('NODE_MT_renderman_connection_menu', text='', icon_value=rman_icon.icon_id)
+                                        
+                if socket.ui_open:
+                    draw_node_properties_recursive(layout, context, nt,
+                                                    input_node, level=level + 1)
+
+                return 
+
+            row.prop(item, 'value_%s' % item.type, slider=True)
+            if socket:                
+                row.context_pointer_set("socket", socket)
+                row.context_pointer_set("node", node)
+                row.context_pointer_set("nodetree", nt)
+                rman_icon = rfb_icons.get_icon('rman_connection_menu')
+                row.menu('NODE_MT_renderman_connection_menu', text='', icon_value=rman_icon.icon_id)            
 
 def _draw_ui_from_rman_config(config_name, panel, context, layout, parent):
     row_dict = dict()
@@ -273,58 +363,8 @@ def draw_prop(node, prop_name, layout, level=0, nt=None, context=None, sticky=Fa
         return
 
     elif bl_prop_info.renderman_type == 'array':
-        row = layout.row(align=True)
-        row.enabled = not bl_prop_info.prop_disabled
-
-        ui_prop = prop_name + "_uio"
-        ui_open = getattr(node, ui_prop)
-        icon = get_open_close_icon(ui_open)
-
-        split = layout.split(factor=NODE_LAYOUT_SPLIT)
-        row = split.row()
-        row.enabled = not bl_prop_info.prop_disabled
-        draw_indented_label(row, None, level)
-
-        row.context_pointer_set("node", node)               
-        op = row.operator('node.rman_open_close_page', text='', icon=icon, emboss=False)            
-        op.prop_name = ui_prop
-
-        sub_prop_names = list(bl_prop_info.prop)
-        arraylen = getattr(node, '%s_arraylen' % prop_name)
-        prop_label = bl_prop_info.label
-        row.label(text=prop_label + ' [%d]:' % arraylen)
-
-        if ui_open:
-            level += 1
-            row = layout.row(align=True)
-            col = row.column()
-            row = col.row()
-            draw_indented_label(row, None, level)                     
-            row.prop(node, '%s_arraylen' % prop_name, text='Size')
-            for i in range(0, arraylen):
-                row = layout.row(align=True)
-                col = row.column()                           
-                row = col.row()
-                array_elem_nm = '%s[%d]' % (prop_name, i)
-                draw_indented_label(row, None, level)
-                if array_elem_nm in node.inputs:
-                    op_text = ''
-                    socket = node.inputs[array_elem_nm]
-                    row.context_pointer_set("socket", socket)
-                    row.context_pointer_set("node", node)
-                    row.context_pointer_set("nodetree", nt)
-
-                    if socket.is_linked:
-                        input_node = shadergraph_utils.socket_node_input(nt, socket)
-                        rman_icon = rfb_icons.get_node_icon(input_node.bl_label)
-                        row.label(text='%s[%d] (%s):' % (prop_label, i, input_node.name))    
-                        row.menu('NODE_MT_renderman_connection_menu', text='', icon_value=rman_icon.icon_id)
-                        draw_node_properties_recursive(layout, context, nt, input_node, level=level + 1)
-                    else:
-                        row.prop(node, '%s[%d]' % (prop_name, i), slider=True)
-                        rman_icon = rfb_icons.get_icon('rman_connection_menu')
-                        row.menu('NODE_MT_renderman_connection_menu', text='', icon_value=rman_icon.icon_id)
-        return        
+        draw_array_elem(layout, node, prop_name, bl_prop_info, nt, context, level)
+        return
 
     elif bl_prop_info.widget == 'colorramp':
         node_group = node.rman_fake_node_group_ptr 

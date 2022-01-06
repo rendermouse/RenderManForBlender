@@ -371,11 +371,17 @@ def _guess_rmantree():
             __RMAN_ENV_CONFIG__ = None
             return None
 
-        # check if this version of RenderMan is supported
+        # check if the major version of RenderMan is supported
         if buildinfo._version_major < rman_constants.RMAN_SUPPORTED_VERSION_MAJOR:
-            rfb_log().error("Error loading addon using RMANTREE=%s.  RMANTREE must be version %s or greater.  Correct RMANTREE setting in addon preferences." % (rmantree, rman_constants.RMAN_SUPPORTED_VERSION_STRING))
+            rfb_log().error("Error loading addon using RMANTREE=%s.  The major version found (%d) is not supported. Minimum version supported is %s." % (rmantree, buildinfo._version_major, rman_constants.RMAN_SUPPORTED_VERSION_STRING))
             __RMAN_ENV_CONFIG__ = None
             return None
+
+        # check if the minor version of RenderMan is supported
+        if buildinfo._version_major == rman_constants.RMAN_SUPPORTED_VERSION_MAJOR and buildinfo._version_minor < rman_constants.RMAN_SUPPORTED_VERSION_MINOR:
+            rfb_log().error("Error loading addon using RMANTREE=%s.  The minor version found (%s) is not supported. Minimum version supported is %s." % (rmantree, buildinfo._version_minor, rman_constants.RMAN_SUPPORTED_VERSION_STRING))
+            __RMAN_ENV_CONFIG__ = None
+            return None            
 
         rfb_log().debug("Guessed RMANTREE: %s" % rmantree)
 

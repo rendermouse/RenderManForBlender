@@ -5,6 +5,7 @@ from ..rfb_utils import draw_utils
 from ..rfb_logger import rfb_log
 from .. import rfb_icons
 import time
+import re
 
 # update node during ipr for a socket default_value
 def update_func(self, context):
@@ -254,7 +255,24 @@ class RendermanSocket:
             layout.prop(node, self.name,
                         text=self.get_pretty_name(node), slider=True)
         else:
-            layout.label(text=self.get_pretty_name(node))
+            # check if this is an array element
+            expr = re.compile(r'.*(\[\d+\])')
+            m = expr.match(self.name)
+            if m and m.groups():
+                group = m.groups()[0]
+                coll_nm = self.name.replace(group, '')
+                collection = getattr(node, '%s_collection' % coll_nm)
+                elem = None
+                for e in collection:
+                    if e.name == self.name:
+                        elem = e
+                        break
+                if elem:               
+                    layout.prop(elem, 'value_%s' % elem.type, text=elem.name, slider=True)
+                else:
+                    layout.label(text=self.get_pretty_name(node))
+            else:
+                layout.label(text=self.get_pretty_name(node))
 
         renderman_node_type = getattr(node, 'renderman_node_type', '')
         if not self.hide and context.region.type == 'UI' and renderman_node_type != 'output':            

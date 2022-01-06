@@ -368,7 +368,9 @@ class RmanMeshTranslator(RmanTranslator):
         if nverts == []:
             if not input_mesh:
                 ob.to_mesh_clear()
-            sg_node = None
+            rman_sg_mesh.npoints = 0
+            rman_sg_mesh.npolys = 0
+            rman_sg_mesh.nverts = 0
             rman_sg_mesh.is_transforming = False
             rman_sg_mesh.is_deforming = False
             return None

@@ -117,6 +117,8 @@ def update_func_with_inputs(self, context):
     prop_meta = getattr(node, 'prop_meta')
     if hasattr(node, 'inputs'):
         for input_name, socket in node.inputs.items():
+            if input_name not in prop_meta:
+                continue
             if 'hidden' in prop_meta[input_name]:
                 socket.hide = prop_meta[input_name]['hidden']
 
