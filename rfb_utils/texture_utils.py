@@ -141,6 +141,8 @@ class RfBTxManager(object):
         # lookup the txmanager for an already converted texture
         txfile = self.txmanager.get_txfile_from_id(plug_uuid)   
         if txfile is None:
+            if file_path == '':
+                return file_path
             category = getattr(node, 'renderman_node_type', 'pattern') 
             node_type = ''
             node_type = node.bl_label            
