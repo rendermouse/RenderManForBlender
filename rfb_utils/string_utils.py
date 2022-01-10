@@ -133,8 +133,10 @@ def expand_string(string, display=None, glob_sequence=False, frame=None, token_d
             if not os.path.exists(dirname):
                 try:
                     os.makedirs(dirname, exist_ok=True)
-                except PermissionError:
-                    rfb_log().error("Cannot create path: %s" % dirname)                    
+                except PermissionError as e:
+                    rfb_log().error("Cannot create path: %s (%s)" % (dirname), str(e))
+                except OSError as e:
+                    rfb_log().error("Cannot create path: %s (%s)" % (dirname, str(e)))                                     
         return string
 
     if __SCENE_STRING_CONVERTER__ is None:
