@@ -64,23 +64,37 @@ class PRMAN_OT_init_preset_library(bpy.types.Operator):
 
     def execute(self, context):
 
-        json_file = os.path.join(self.directory, 'library.json')
-        hostPrefs = rab.get_host_prefs()
+        path = self.directory
+        if path.endswith('/'):
+            # remove trailing /
+            path = path[:-1]
+        ends_with_ral = True
+        if not path.endswith('RenderManAssetLibrary'):
+            # check if it doesn't end with RenderManAssetLibrary
+            path = os.path.join(path, 'RenderManAssetLibrary')
+            ends_with_ral = False
 
+        json_file = os.path.join(path, 'library.json')
+        hostPrefs = rab.get_host_prefs()
         if not os.path.exists(json_file):        
             if os.access(self.directory, os.W_OK):
                 rmantree_lib_path = os.path.join(envconfig().rmantree, 'lib', 'RenderManAssetLibrary')
-                self.directory = ral.copyLibrary(FilePath(rmantree_lib_path), FilePath(self.directory))
+                copy_to_path = self.directory
+                if ends_with_ral:
+                    # remove trailing RenderManAssetLibrary
+                    i = self.directory.rfind('/')
+                    copy_to_path = self.directory[:i]
+                path = ral.copyLibrary(FilePath(rmantree_lib_path), FilePath(copy_to_path))
             else:
                 raise Exception("No preset library found or directory chosen is not writable.")
                 return {'FINISHED'}
-
-        hostPrefs.cfg.setCurrentLibraryByPath(FilePath(self.directory))
+              
+        hostPrefs.cfg.setCurrentLibraryByPath(FilePath(path))
         lib_info = hostPrefs.cfg.getCurrentLibraryInfos()
-        hostPrefs.setSelectedLibrary(FilePath(self.directory))
+        hostPrefs.setSelectedLibrary(FilePath(path))
         lib_info.setData('protected', False) 
-        lib_info.save(FilePath(self.directory))
-        hostPrefs.setSelectedCategory(os.path.join(FilePath(self.directory), 'EnvironmentMaps'))
+        lib_info.save(FilePath(path))
+        hostPrefs.setSelectedCategory(os.path.join(FilePath(path), 'EnvironmentMaps'))
         hostPrefs.setSelectedPreset('')
         hostPrefs.saveAllPrefs()     
 
