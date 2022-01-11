@@ -52,9 +52,18 @@ def safe_mkdir(filepath):
 class PRMAN_OT_init_preset_library(bpy.types.Operator):
     bl_idname = "renderman.init_preset_library"
     bl_label = "Init RenderMan Preset Library"
-    bl_description = "Choose a preset browser library. If not found, copies the factory library from RMANTREE to the path chosen."
+    bl_description = "Choose a preset browser library. If Copy Factory is checked, the factory library will be copied, if a non-library folder was chosen"
 
     directory: bpy.props.StringProperty(subtype='FILE_PATH')
+    copy_factory: bpy.props.BoolProperty(name="Copy Factory", 
+                                        description="Copy the factory library, if an empty folder is chosen or an existing library cannot be found.",
+                                        default=False
+                                        )
+
+    name: StringProperty(name="Library Name", default="%s's Library" % getpass.getuser())
+    author: StringProperty(name="Author", default=getpass.getuser())
+    description: StringProperty(name="Description", default="")
+    version: StringProperty(name="Version", default="1.0")
 
     def invoke(self, context, event):
         self.op = getattr(context, 'op_ptr', None)      
@@ -63,7 +72,6 @@ class PRMAN_OT_init_preset_library(bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
     def execute(self, context):
-
         path = self.directory
         if path.endswith('/'):
             # remove trailing /
@@ -76,22 +84,37 @@ class PRMAN_OT_init_preset_library(bpy.types.Operator):
 
         json_file = os.path.join(path, 'library.json')
         hostPrefs = rab.get_host_prefs()
-        if not os.path.exists(json_file):        
-            if os.access(self.directory, os.W_OK):
-                rmantree_lib_path = os.path.join(envconfig().rmantree, 'lib', 'RenderManAssetLibrary')
+        set_data = False
+        if not os.path.exists(json_file): 
+            set_data = True
+            if self.copy_factory:       
+                if os.access(self.directory, os.W_OK):
+                    rmantree_lib_path = os.path.join(envconfig().rmantree, 'lib', 'RenderManAssetLibrary')
+                    copy_to_path = self.directory
+                    if ends_with_ral:
+                        # remove trailing RenderManAssetLibrary
+                        i = self.directory.rfind('/')
+                        copy_to_path = self.directory[:i]
+                    path = ral.copyLibrary(FilePath(rmantree_lib_path), FilePath(copy_to_path))
+                else:
+                    raise Exception("No preset library found or directory chosen is not writable.")
+                    return {'FINISHED'}
+            else:
                 copy_to_path = self.directory
                 if ends_with_ral:
                     # remove trailing RenderManAssetLibrary
                     i = self.directory.rfind('/')
                     copy_to_path = self.directory[:i]
-                path = ral.copyLibrary(FilePath(rmantree_lib_path), FilePath(copy_to_path))
-            else:
-                raise Exception("No preset library found or directory chosen is not writable.")
-                return {'FINISHED'}
+                path = ral.initLibrary(FilePath(copy_to_path))
               
         hostPrefs.cfg.setCurrentLibraryByPath(FilePath(path))
         lib_info = hostPrefs.cfg.getCurrentLibraryInfos()
         hostPrefs.setSelectedLibrary(FilePath(path))
+        if set_data:
+            lib_info.setData('name', self.properties.name)
+            lib_info.setData('author', self.properties.author)
+            lib_info.setData('description', self.properties.description) 
+            lib_info.setData('version', self.properties.version)   
         lib_info.setData('protected', False) 
         lib_info.save(FilePath(path))
         hostPrefs.setSelectedCategory(os.path.join(FilePath(path), 'EnvironmentMaps'))
@@ -99,7 +122,7 @@ class PRMAN_OT_init_preset_library(bpy.types.Operator):
         hostPrefs.saveAllPrefs()     
 
         # re-open the preset browser
-        bpy.ops.renderman.rman_open_presets_editor('INVOKE_DEFAULT')
+        # bpy.ops.renderman.rman_open_presets_editor('INVOKE_DEFAULT')
 
         return {'FINISHED'}
 
