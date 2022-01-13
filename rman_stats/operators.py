@@ -12,9 +12,46 @@ from ..rfb_logger import rfb_log
 import rman_utils.stats_config.core as rs
 from .. import rman_render
 
+"""
+-------------------------------------------------
+Code from:
+https://gitlab.com/-/snippets/1881226
+
+Code modified by ihsieh@pixar.com (Jan 5, 2021)
+Original comments below.
+-------------------------------------------------
+Test for running a Qt app in Blender.
+
+Warning:
+    Do not use `app.exec_()`, this will block the Blender UI! And possibly also
+    cause threading issues.
+
+In this example there are 4 approaches:
+    - Using a timed modal operator (this should also work in Blender 2.79). On
+      Windows the `bpy.context` is almost empty and on macOS Blender and the UI
+      of the app are blocked. So far this only seems to work on Linux.
+    - Using a timed modal operator to keep the Qt GUI alive and communicate via
+      `queue.Queue`. So far this seems to work fine on Linux and Windows (macOS
+      is untested at the moment).
+    - Using a 'normal' modal operator (this should also work in Blender 2.79).
+      This doesn't seem to work very well. Because the modal operator is only
+      triggered once, the `processEvents()` is also only called once. This
+      means after showing, the UI will never be updated again without manually
+      calling `processEvents()` again. For me the UI doens't even show up
+      properly, because it needs more 'loops' to do this (on Linux).
+    - Using `bpy.app.timers` wich was introduced in Blender 2.80. This also
+      doesn't work reliably. If you try to get `bpy.context` from within the Qt
+      App, it's almost empty. Seems like we run into the 'Blender threading
+      issue' again.
+
+TLDR: Use `run_timed_modal_operator_queue`. :)
+
+isort:skip_file
+
+"""
+
 __STATS_WINDOW__ = None  # Keep a reference so the window is not garbage collected
 COUNTER = 0
-
 
 class LiveStatsQtAppTimed(bpy.types.Operator):
     """Run a Qt app inside of Blender, without blocking Blender."""
@@ -107,7 +144,8 @@ def run_with_timer():
     """Run the app with the new `bpy.app.timers` in Blender 2.80."""
     global __STATS_WINDOW__
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
-    __STATS_WINDOW__ = RmanStatsWrapper()
+    if not __STATS_WINDOW__:
+        __STATS_WINDOW__ = RmanStatsWrapper()
     __STATS_WINDOW__.show()
     bpy.app.timers.register(functools.partial(process_qt_events, app))
 
