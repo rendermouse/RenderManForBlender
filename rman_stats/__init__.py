@@ -441,8 +441,8 @@ def register():
     try:
         from . import operators
         operators.register()
-    except Exception as e:
-        print("EXCEPTIONS: %s" % str(e))
+    except:
+        pass
 
 def unregister():
     try:
