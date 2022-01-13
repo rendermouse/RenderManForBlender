@@ -55,7 +55,7 @@ COUNTER = 0
 
 class LiveStatsQtAppTimed(bpy.types.Operator):
     """Run a Qt app inside of Blender, without blocking Blender."""
-    bl_idname = "wm.run_qt_app_timed"
+    bl_idname = "wm.live_stats_qt_app_timed"
     bl_label = "Run Qt app"
 
     _app = None
@@ -138,9 +138,9 @@ def run_timed_modal_operator():
 
     # Launch immediately. You can also launch it manually by running this
     # command the Blender Python console.
-    bpy.ops.wm.run_qt_app_timed()
+    bpy.ops.wm.live_stats_qt_app_timed()
         
-def run_with_timer():
+def run_stats_with_timer():
     """Run the app with the new `bpy.app.timers` in Blender 2.80."""
     global __STATS_WINDOW__
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
