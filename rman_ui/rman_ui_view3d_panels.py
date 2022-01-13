@@ -2,6 +2,7 @@ from .. import rfb_icons
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import draw_utils
 from ..rfb_utils import prefs_utils
+from ..rfb_logger import rfb_log
 from .rman_ui_base import _RManPanelHeader
 from ..rman_render import RmanRender
 import bpy
@@ -276,31 +277,37 @@ class RENDER_PT_renderman_live_stats(bpy.types.Panel, _RManPanelHeader):
         scene = context.scene
         rm = scene.renderman         
         rr = RmanRender.get_rman_render()
-        layout.label(text='Diagnostics')
-        layout.separator()
-        box = layout.box()
-        if rr.stats_mgr.web_socket_enabled:
+        if hasattr(bpy.types, bpy.ops.renderman.rman_open_stats.idname()):
+            layout.separator()
+            layout.operator("renderman.rman_open_stats")  
             if rr.stats_mgr.is_connected():
-                for label in rr.stats_mgr.stats_to_draw:
-                    data = rr.stats_mgr.render_live_stats[label]        
-                    box.label(text='%s: %s' % (label, data))        
-                if rr.rman_running:   
-                    box.prop(rm, 'roz_stats_iterations', slider=True, text='Iterations (%d / %d)' % (rr.stats_mgr._iterations, rr.stats_mgr._maxSamples))
-                    box.prop(rm, 'roz_stats_progress', slider=True)
-            
                 prefs = prefs_utils.get_addon_prefs()
-                layout.prop(prefs, 'rman_roz_stats_print_level')
-                layout.operator("renderman.disconnect_stats_render")
+                layout.prop(prefs, 'rman_roz_stats_print_level')        
+        else:    
+            layout.label(text='Diagnostics')
+      
+            box = layout.box()
+            if rr.stats_mgr.web_socket_enabled:
+                if rr.stats_mgr.is_connected():
+                    for label in rr.stats_mgr.stats_to_draw:
+                        data = rr.stats_mgr.render_live_stats[label]        
+                        box.label(text='%s: %s' % (label, data))        
+                    if rr.rman_running:   
+                        box.prop(rm, 'roz_stats_iterations', slider=True, text='Iterations (%d / %d)' % (rr.stats_mgr._iterations, rr.stats_mgr._maxSamples))
+                        box.prop(rm, 'roz_stats_progress', slider=True)
+                
+                    prefs = prefs_utils.get_addon_prefs()
+                    layout.prop(prefs, 'rman_roz_stats_print_level')
+                    layout.operator("renderman.disconnect_stats_render")
+                else:
+                    box.label(text='(not connected)')
+                    layout.operator('renderman.attach_stats_render')
             else:
-                box.label(text='(not connected)')
-                layout.operator('renderman.attach_stats_render')
-        else:
-            box.label(text='(live stats disabled)')                        
+                box.label(text='(live stats disabled)')                        
  
 classes = [
     PRMAN_PT_Renderman_UI_Panel,
     RENDER_PT_renderman_live_stats
-
 ]
 
 def register():

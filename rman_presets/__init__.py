@@ -32,15 +32,21 @@ import os
 def register():
     properties.register()
     if get_pref('rman_rpb_framework') == 'QT':
-        from . import qt_app
-        qt_app.register()    
+        try:
+            from . import qt_app
+            qt_app.register()    
+        except:
+            pass
     ui.register()
     operators.register()
 
 def unregister():
     properties.unregister()
     if get_pref('rman_rpb_framework') == 'QT':
-        from . import qt_app
-        qt_app.unregister()    
+        try:
+            from . import qt_app
+            qt_app.unregister()    
+        except:
+            pass
     ui.unregister()
     operators.unregister()    
