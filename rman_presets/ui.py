@@ -98,7 +98,7 @@ class PRMAN_MT_Renderman_Presets_Categories_Menu(bpy.types.Menu):
             if category_path == current_category_path:
                 self.layout.label(text=category_name)
             else:
-                self.layout.operator('renderman.set_current_preset_category',text=category_name).preset_current_path = category_path
+                self.layout.operator('renderman.set_current_preset_category',text=category_name).preset_current_path = cat #category_path
                         
 class VIEW3D_MT_renderman_presets_object_context_menu(bpy.types.Menu):
     bl_label = "Preset Browser"
@@ -130,17 +130,12 @@ class VIEW3D_MT_renderman_presets_object_context_menu(bpy.types.Menu):
 
         current_category_path = hostPrefs.getSelectedCategory()
         lib_path = hostPrefs.getSelectedLibrary()
-        asset_type = 'Environment'        
-        if current_category_path == '' or (lib_path not in current_category_path):
-            current_category_path = os.path.join(lib_path, 'EnvironmentMaps')
-            asset_path = 'Environment'
-        else:
-            rel_path = os.path.relpath(current_category_path, hostPrefs.getSelectedLibrary())                      
 
-            if rel_path.startswith('Materials'):
-                asset_type = 'Materials'
-            elif rel_path.startswith('LightRigs'):
-                asset_type = 'LightRigs'
+        asset_type = 'Environment'
+        if current_category_path.startswith('Materials'):
+            asset_type = 'Materials'
+        elif current_category_path.startswith('LightRigs'):
+            asset_type = 'LightRigs'
 
         layout.separator()  
         if libInfo.isEditable():        
@@ -212,10 +207,10 @@ class PRMAN_MT_renderman_preset_ops_menu(bpy.types.Menu):
         ass = ra.RmanAsset()
         json_path = os.path.join(current_preset, 'asset.json')
         ass.load(json_path)  
-        rel_path = os.path.relpath(hostPrefs.getSelectedCategory(), hostPrefs.getSelectedLibrary())  
 
         op = getattr(context, 'op_ptr')
-        if rel_path.startswith("Materials"):
+        current_category = hostPrefs.getSelectedCategory()
+        if current_category.startswith("Materials"):
             assign = layout.operator("renderman.load_asset_to_scene", text="Import and Assign to selected", )
             assign.preset_path = json_path
             assign.assign = True           
@@ -262,7 +257,7 @@ class PRMAN_OT_Renderman_Presets_Editor(bpy.types.Operator):
             # grab the first category
             category = self.preset_categories[0]
 
-        hostPrefs.setSelectedCategory(category.path)
+        hostPrefs.setSelectedCategory(category.rel_path)
         hostPrefs.saveAllPrefs()
         for asset in hostPrefs.getAssetList(category.path):
             ass = ra.RmanAsset()
@@ -327,8 +322,8 @@ class PRMAN_OT_Renderman_Presets_Editor(bpy.types.Operator):
                 category_name += '    '            
             category.name = '%s%s' % (category_name, tokens[-1])
             category.path = os.path.join(hostPrefs.getSelectedLibrary(), cat)
-            cat.rel_path = cat
-            if current_category_path == category.path:
+            category.rel_path = cat
+            if current_category_path == category.rel_path:
                 self.preset_categories_index = len(self.preset_categories)-1
 
     dummy_index: IntProperty(min=-1, default=-1, update=load_categories)              
@@ -373,7 +368,8 @@ class PRMAN_OT_Renderman_Presets_Editor(bpy.types.Operator):
 
         row2 = box.row()
         col = row2.column()
-        rel_path = os.path.relpath(cat.path, hostPrefs.getSelectedLibrary())        
+        
+        rel_path = cat.rel_path
         col.enabled = (rel_path.startswith('LightRigs')) and self.is_editable
         col.operator("renderman.save_lightrig_to_library", text="", icon="LIGHT").category_path = cat.path
         col = row2.column()
@@ -459,8 +455,7 @@ classes = [
     VIEW3D_MT_renderman_presets_object_context_menu,
     PRMAN_MT_renderman_preset_ops_menu,
     RENDERMAN_UL_Presets_Categories_List,
-    RENDERMAN_UL_Presets_Preset_List,
-    PRMAN_OT_Renderman_Presets_Editor
+    RENDERMAN_UL_Presets_Preset_List
 ]
 
 
@@ -469,13 +464,29 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
 
+    if get_pref('rman_rpb_framework') != 'QT':
+        bpy.utils.register_class(PRMAN_OT_Renderman_Presets_Editor)
+    else:
+        try: 
+            from PySide2 import QtCore, QtWidgets
+        except:
+            # can't find PySide2, load old preset browser
+            bpy.utils.register_class(PRMAN_OT_Renderman_Presets_Editor)
+
     bpy.types.VIEW3D_MT_add.prepend(rman_presets_object_menu) 
-    bpy.types.VIEW3D_MT_object_context_menu.prepend(rman_presets_object_menu)        
+    bpy.types.VIEW3D_MT_object_context_menu.prepend(rman_presets_object_menu)  
+          
 
 def unregister():
 
     bpy.types.VIEW3D_MT_add.remove(rman_presets_object_menu)
     bpy.types.VIEW3D_MT_object_context_menu.remove(rman_presets_object_menu)
+
+    try:
+        bpy.utils.unregister_class(PRMAN_OT_Renderman_Presets_Editor)  
+    except RuntimeError:
+        rfb_log().debug('Could not unregister class: PRMAN_OT_Renderman_Presets_Editor')
+        pass            
 
     for cls in classes:
         try:

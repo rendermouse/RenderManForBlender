@@ -34,6 +34,7 @@ import bpy
 import glob
 from bpy.props import StringProperty, EnumProperty, BoolProperty, CollectionProperty, IntProperty
 from . import rmanAssetsBlender as rab
+from . import core as bl_pb_core
 from .properties import RendermanPresetMetaData
 from rman_utils.rman_assets import lib as ral
 from rman_utils.filepath import FilePath
@@ -195,7 +196,7 @@ class PRMAN_OT_load_asset_to_scene(bpy.types.Operator):
 
     def invoke(self, context, event):
         from . import rmanAssetsBlender
-        mat = rmanAssetsBlender.importAsset(self.properties.preset_path)
+        mat = rmanAssetsBlender.bl_import_asset(self.properties.preset_path)
         if self.properties.assign and mat and type(mat) == bpy.types.Material:
             for ob in context.selected_objects:
                 if ob.type == 'EMPTY':
@@ -331,7 +332,7 @@ class PRMAN_OT_save_asset_base(bpy.types.Operator):
         hostPrefs = rab.get_host_prefs()
         lib_path = FilePath(hostPrefs.cfg.getCurrentLibraryPath())
         category = hostPrefs.getSelectedCategory()
-        label = rab.asset_name_from_label(self.label)
+        label = bl_pb_core.asset_name_from_label(self.label)
         storage_path = filepath_utils.get_real_path(self.storage_path)
         storage_mode = int(self.storage_mode)
 
@@ -444,9 +445,9 @@ class PRMAN_OT_save_asset_to_lib(PRMAN_OT_save_asset_base):
 
     def execute(self, context):
         hostPrefs = rab.get_host_prefs()
-        if hostPrefs.preExportCheck('material', hdr=None, context=context, include_display_filters=self.include_display_filters):
+        if rab.bl_export_check('material', hdr=None, context=context, include_display_filters=self.include_display_filters):
             self.set_storage_path(context)
-            label = rab.asset_name_from_label(self.label)
+            label = bl_pb_core.asset_name_from_label(self.label)
             infodict = dict()
             infodict['metadict'] = {'label': label,
                         'author': self.author,
@@ -456,7 +457,7 @@ class PRMAN_OT_save_asset_to_lib(PRMAN_OT_save_asset_base):
             infodict['storage'] = self.getStorage()
             infodict['convert_to_tex'] = self.convert_to_tex                
             category = hostPrefs.getSelectedCategory()   
-            hostPrefs.exportMaterial(category, infodict, self.preview_render)
+            rab.bl_export_material(hostPrefs, category, infodict, self.preview_render)
             hostPrefs.rpbStorageMode = int(self.storage_mode)
             hostPrefs.rpbStorageKey = self.storage_key
             hostPrefs.rpbStoragePath = self.storage_path
@@ -519,8 +520,8 @@ class PRMAN_OT_save_lightrig_to_lib(PRMAN_OT_save_asset_base):
 
     def execute(self, context):
         hostPrefs = rab.get_host_prefs()
-        if hostPrefs.preExportCheck('lightrigs', hdr=None, context=context):
-            label = rab.asset_name_from_label(self.label)
+        if rab.bl_export_check('lightrigs', hdr=None, context=context):
+            label = bl_pb_core.asset_name_from_label(self.label)
             infodict = dict()
             infodict['metadict'] =  {'label': label,
                         'author': self.author,
@@ -530,7 +531,7 @@ class PRMAN_OT_save_lightrig_to_lib(PRMAN_OT_save_asset_base):
             infodict['storage'] = self.getStorage()
             infodict['convert_to_tex'] = self.convert_to_tex                    
             category = hostPrefs.getSelectedCategory()   
-            hostPrefs.exportMaterial(category, infodict, self.preview_render)      
+            rab.bl_export_material(hostPrefs, category, infodict, self.preview_render)   
             hostPrefs.rpbStorageMode = int(self.storage_mode)
             hostPrefs.rpbStorageKey = self.storage_key
             hostPrefs.rpbStoragePath = self.storage_path             
@@ -590,8 +591,8 @@ class PRMAN_OT_save_envmap_to_lib(PRMAN_OT_save_asset_base):
         hdr = FilePath(self.properties.filepath)
         if self.label == '':
             self.label = os.path.splitext(os.path.basename(self.properties.filepath))[0]
-        if hostPrefs.preExportCheck('envmap', hdr=hdr):
-            label = rab.asset_name_from_label(self.label)
+        if rab.bl_export_check('envmap', hdr=hdr):
+            label = bl_pb_core.asset_name_from_label(self.label)
             infodict = dict()
             infodict['metadict'] = {'label': label,
                         'author': self.author,
@@ -601,7 +602,7 @@ class PRMAN_OT_save_envmap_to_lib(PRMAN_OT_save_asset_base):
             infodict['storage'] = self.getStorage()
             infodict['convert_to_tex'] = self.convert_to_tex                   
             category = hostPrefs.getSelectedCategory()   
-            hostPrefs.exportEnvMap(category, infodict, self.preview_render)
+            rab.bl_export_envmap(hostPrefs,category, infodict, self.preview_render)
             hostPrefs.rpbStorageMode = int(self.storage_mode)
             hostPrefs.rpbStorageKey = self.storage_key
             hostPrefs.rpbStoragePath = self.storage_path            

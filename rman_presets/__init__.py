@@ -26,13 +26,21 @@
 from . import properties
 from . import ui
 from . import operators
+from ..rfb_utils.prefs_utils import get_pref
+import os
 
 def register():
     properties.register()
+    if get_pref('rman_rpb_framework') == 'QT':
+        from . import qt_app
+        qt_app.register()    
     ui.register()
     operators.register()
 
 def unregister():
     properties.unregister()
+    if get_pref('rman_rpb_framework') == 'QT':
+        from . import qt_app
+        qt_app.unregister()    
     ui.unregister()
-    operators.unregister()
+    operators.unregister()    
