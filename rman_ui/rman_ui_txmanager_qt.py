@@ -72,7 +72,7 @@ class PRMAN_OT_TxManager_Qt(bpy.types.Operator):
         if sys.platform == "darwin":
             rfb_qt.run_with_timer(__TXMANAGER_WINDOW__, create_widget)   
         else:
-            bpy.ops.wm.rpb_qt_app_timed()
+            bpy.ops.wm.txm_qt_app_timed()
         mgr = texture_utils.get_txmanager().txmanager
         mgr.update_ui_list()
         if self.nodeID:
