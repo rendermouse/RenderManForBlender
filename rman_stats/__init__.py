@@ -438,15 +438,17 @@ class RfBStatsManager(object):
                 return                
 
 def register():
-    try:
-        from . import operators
-        operators.register()
-    except:
-        pass
+    if prefs_utils.get_pref('rman_ui_framework') == 'QT':
+        try:
+            from . import operators
+            operators.register()
+        except:
+            pass
 
 def unregister():
-    try:
-        from . import operators
-        operators.unregister()
-    except:
-        pass
+    if prefs_utils.get_pref('rman_ui_framework') == 'QT':
+        try:
+            from . import operators
+            operators.unregister()
+        except:
+            pass

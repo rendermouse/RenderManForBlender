@@ -163,7 +163,8 @@ class RfBTxManager(object):
             bpy.ops.rman_txmgr_list.add_texture('EXEC_DEFAULT', filepath=file_path, nodeID=nodeID)
             txmake_all(blocking=False)
             if txfile:
-                self.done_callback(nodeID, txfile)      
+                self.done_callback(nodeID, txfile)   
+        self.txmanager.update_ui_list()                   
 
     def is_file_src_tex(self, node, prop_name):
         id = scene_utils.find_node_owner(node)
@@ -372,6 +373,7 @@ def load_scene_state():
 def txmanager_load_cb(bl_scene):
     if bpy.context.engine != 'PRMAN_RENDER':
         return    
+    get_txmanager().txmanager.reset()
     get_txmanager().txmanager.load_state()
     bpy.ops.rman_txmgr_list.parse_scene('EXEC_DEFAULT')
     bpy.ops.rman_txmgr_list.clear_unused('EXEC_DEFAULT')

@@ -464,7 +464,7 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
 
-    if get_pref('rman_rpb_framework') != 'QT':
+    if get_pref('rman_ui_framework') != 'QT':
         bpy.utils.register_class(PRMAN_OT_Renderman_Presets_Editor)
     else:
         try: 

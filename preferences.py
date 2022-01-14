@@ -407,8 +407,8 @@ class RendermanPreferences(AddonPreferences):
         description="For relative file paths, we add a <blend_dir> token to the path to represent the path where the current blend file is in. Turning this off will use the real path instead"
     )        
 
-    rman_rpb_framework: EnumProperty(
-        name="PresetBrowser Framework",
+    rman_ui_framework: EnumProperty(
+        name="UI Framework",
         default="NATIVE",
         description="Which UI framework to use. Qt is currently experimental and requires PySide2 to be installed. Changes to this requires a restart.",
         items=[('NATIVE', 'Native', ''),
@@ -582,7 +582,7 @@ class RendermanPreferences(AddonPreferences):
             col.prop(self, 'rman_viewport_progress_color')                
         col.prop(self, 'draw_ipr_text')
         col.prop(self, 'draw_panel_icon')
-        col.prop(self, 'rman_rpb_framework')
+        col.prop(self, 'rman_ui_framework')
 
         # Logging
         row = layout.row()

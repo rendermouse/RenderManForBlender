@@ -53,7 +53,6 @@ class RfbBaseQtAppTimed(bpy.types.Operator):
     _app = None
     _window = None
     _timer = None
-    _counter = 0
 
     def __init__(self):
         self._app = (QtWidgets.QApplication.instance()
@@ -66,11 +65,7 @@ class RfbBaseQtAppTimed(bpy.types.Operator):
                 self.cancel(context)
                 return {'FINISHED'}
 
-            # Just for testing: print something so we know it's running
-            # print(f"Modal iteration: {self._counter}")
             self._app.processEvents()
-            self._counter += 1
-
         return {'PASS_THROUGH'}
 
     def execute(self, context):
@@ -92,8 +87,6 @@ class RfbBaseQtAppTimed(bpy.types.Operator):
 class RmanQtWrapper(QtWidgets.QDialog):
 
     def __init__(self):
-        # import here because we will crash Blender
-        # when we try to import it globally
         super().__init__()        
         self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
 
