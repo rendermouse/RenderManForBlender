@@ -534,6 +534,7 @@ def _get_sun_direction(ob):
 
     m = Matrix.Identity(4)     
     m = m @ Matrix.Rotation(math.radians(90.0), 4, 'X')
+    m = m @ Matrix.Rotation(math.radians(90.0), 4, 'Y')
 
     month = float(rm.month)
     day = float(rm.day)
@@ -977,7 +978,7 @@ def draw_envday_light(ob):
     draw_line_shape(ob, _SHADER_, south_arrow_shape, south_arrow_shape_indices)
 
     sunDirection = _get_sun_direction(ob)
-    sunDirection = Matrix(ob_matrix) @ Vector(sunDirection)
+    sunDirection =  Matrix(ob_matrix) @ Vector(sunDirection)
     origin = Matrix(ob_matrix) @ Vector([0,0,0])
     sunDirection_pts = [ origin, sunDirection]
     draw_line_shape(ob, _SHADER_, sunDirection_pts, indices=[(0,1)])
