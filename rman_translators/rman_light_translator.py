@@ -176,7 +176,8 @@ class RmanLightTranslator(RmanTranslator):
 
         elif light_shader_name == 'PxrEnvDayLight': 
             if int(light_shader.month) != 0:   
-                m = Matrix.Rotation(math.radians(-90.0), 4, 'Z')
+                #m = Matrix.Rotation(math.radians(-90.0), 4, 'Z')
+                m = Matrix.Identity(4)
                 rman_sg_light.sg_node.SetOrientTransform(transform_utils.convert_matrix4x4(m))    
         elif light_shader_name == 'PxrDomeLight':
             # m = Matrix.Identity(4)            
