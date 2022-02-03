@@ -193,13 +193,13 @@ class RfBTxManager(object):
         else:
             # lookup the txmanager for an already converted texture
             txfile = self.txmanager.get_txfile_from_id(plug_uuid)         
-            if txfile is None:
+            if txfile is None or txfile.input_image != file_path:
                 self.txmanager.add_texture(plug_uuid, file_path, nodetype=node_type, category=category)    
                 bpy.ops.rman_txmgr_list.add_texture('EXEC_DEFAULT', filepath=file_path, nodeID=plug_uuid)
                 txfile = self.txmanager.get_txfile_from_id(plug_uuid)
                 txmake_all(blocking=False)
                 if txfile:
-                    self.done_callback(plug_uuid, txfile)
+                    self.done_callback(plug_uuid, txfile)        
 
     def is_file_src_tex(self, node, prop_name):
         id = scene_utils.find_node_owner(node)
