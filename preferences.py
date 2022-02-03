@@ -23,6 +23,7 @@
 #
 # ##### END MIT LICENSE BLOCK #####
 
+from enum import Enum
 import bpy
 import sys
 import os
@@ -406,6 +407,15 @@ class RendermanPreferences(AddonPreferences):
         description="For relative file paths, we add a <blend_dir> token to the path to represent the path where the current blend file is in. Turning this off will use the real path instead"
     )        
 
+    rman_ui_framework: EnumProperty(
+        name="UI Framework",
+        default="NATIVE",
+        description="Which UI framework to use. Qt is currently experimental and requires PySide2 to be installed. Changes to this requires a restart.",
+        items=[('NATIVE', 'Native', ''),
+                ("QT", "Qt", '')
+            ]
+    )
+
     # For the preset browser
     rpbConfigFile: StringProperty(default='')
     rpbUserLibraries: CollectionProperty(type=RendermanPreferencePath)
@@ -416,6 +426,7 @@ class RendermanPreferences(AddonPreferences):
     rpbStorageKey: StringProperty(default='')
     rpbStoragePath: StringProperty(default='')
     rpbConvertToTex: IntProperty(default=1)    
+    rpbSwatchSize: IntProperty(default=64)
 
     def update_stats_config(self, context):
         bpy.ops.renderman.update_stats_config('INVOKE_DEFAULT')
@@ -571,6 +582,7 @@ class RendermanPreferences(AddonPreferences):
             col.prop(self, 'rman_viewport_progress_color')                
         col.prop(self, 'draw_ipr_text')
         col.prop(self, 'draw_panel_icon')
+        col.prop(self, 'rman_ui_framework')
 
         # Logging
         row = layout.row()

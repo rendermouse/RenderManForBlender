@@ -184,9 +184,13 @@ class PRMAN_OT_RM_Add_Light(bpy.types.Operator):
 
     def execute(self, context):
         bpy.ops.object.light_add(type='AREA')
-        light_ob = context.object
+        light_ob = getattr(context, 'object', None)
         if not light_ob:
-            light_ob = context.selected_objects[0]
+            if hasattr(context, 'selected_objects'):
+                light_ob = context.selected_objects[0]
+            else:
+                scene = context.scene
+                light_ob = scene.view_layers[0].objects.active
 
         light_ob.data.renderman.renderman_light_role = 'RMAN_LIGHT'
         light_ob.data.renderman.renderman_lock_light_type = True
