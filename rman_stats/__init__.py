@@ -1,3 +1,5 @@
+from ..rfb_logger import rfb_log
+
 import re
 import os
 import sys
@@ -9,9 +11,8 @@ import time
 
 from collections import OrderedDict
 import rman_utils.stats_config.core as stcore
-from . import rman_render
-from .rfb_utils import prefs_utils
-from .rfb_logger import rfb_log
+from ..rfb_utils import prefs_utils
+from ..rfb_logger import rfb_log
 
 __oneK2__ = 1024.0*1024.0
 __RFB_STATS_MANAGER__ = None
@@ -435,3 +436,19 @@ class RfBStatsManager(object):
             except ReferenceError as e:
                 #rfb_log().debug("Error calling update stats (%s). Aborting..." % str(e))
                 return                
+
+def register():
+    if prefs_utils.get_pref('rman_ui_framework') == 'QT':
+        try:
+            from . import operators
+            operators.register()
+        except:
+            pass
+
+def unregister():
+    if prefs_utils.get_pref('rman_ui_framework') == 'QT':
+        try:
+            from . import operators
+            operators.unregister()
+        except:
+            pass

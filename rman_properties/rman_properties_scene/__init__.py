@@ -5,7 +5,6 @@ from bpy.props import PointerProperty, StringProperty, BoolProperty, \
 from ...rfb_utils.envconfig_utils import envconfig
 from ...rfb_utils.prefs_utils import get_pref
 from ...rfb_logger import rfb_log
-from ... import rman_render
 from ... import rman_bl_nodes
 from ...rman_bl_nodes import rman_bl_nodes_props    
 from ..rman_properties_misc import RendermanLightGroup, RendermanGroup, LightLinking, RendermanUserTokenGroup, RendermanVolumeAggregate
@@ -49,6 +48,7 @@ class RendermanSceneSettings(RmanBasePropertyGroup, bpy.types.PropertyGroup):
     light_links_index: IntProperty(min=-1, default=-1, update=update_light_link_index)
 
     def update_scene_solo_light(self, context):
+        from ... import rman_render
         rr = rman_render.RmanRender.get_rman_render()        
         if self.solo_light:
             rr.rman_scene_sync.update_solo_light(context)

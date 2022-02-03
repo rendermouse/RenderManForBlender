@@ -26,6 +26,7 @@ import bpy
 import bgl
 import blf
 import time
+
 from .rfb_utils.prefs_utils import get_pref
 from .rfb_utils import string_utils
 from .rfb_logger import rfb_log
@@ -280,6 +281,7 @@ def load_addon():
         from . import rman_properties
         from . import rman_handlers
         from . import rfb_translations
+        from . import rman_stats
 
         rman_config.register()
         rman_properties.pre_register() 
@@ -290,6 +292,7 @@ def load_addon():
         rman_ui.register()      
         rman_handlers.register()
         rfb_translations.register()
+        rman_stats.register()
 
         __RMAN_ADDON_LOADED__ = True
 
@@ -323,6 +326,7 @@ def unregister():
         rman_properties.unregister()
         rman_operators.unregister()    
         rfb_translations.unregister()
+        rman_stats.unregister()
     
     for cls in classes:
         try:
