@@ -99,6 +99,7 @@ def is_subdmesh(ob):
         return False
 
     rman_subdiv_scheme = getattr(ob.data.renderman, 'rman_subdiv_scheme', 'none')
+    return (rman_subdiv_scheme != 'none')
 
     if rm.primitive == 'AUTO' and rman_subdiv_scheme == 'none':
         return (is_subd_last(ob) or is_subd_displace_last(ob))
@@ -139,6 +140,31 @@ def is_transforming(ob, recurse=False):
         if not transforming and ob.parent.type == 'CURVE' and ob.parent.data:
             transforming = ob.parent.data.use_path
     return transforming
+
+def detect_id_type(db, ob=None):
+    if isinstance(db, bpy.types.Mesh):
+        return 'MESH'
+    elif isinstance(db, bpy.types.Light):
+        if db.renderman.renderman_light_role == 'RMAN_LIGHTFILTER':
+            return 'LIGHTFILTER'
+        return 'LIGHT'
+    elif isinstance(db, bpy.types.Volume):
+        return 'OPENVDB'
+    elif ob:
+        return _detect_primitive_(ob)
+
+    return None
+
+def prototype_key(ob):
+    if isinstance(ob, bpy.types.DepsgraphObjectInstance):
+        if ob.is_instance:
+            return ob.instance_object.data
+        if ob.object.data:
+            return ob.object.data.original
+        return ob.object.original
+    elif ob.data:
+        return ob.original.data.original
+    return ob.original
 
 def _detect_primitive_(ob):
 

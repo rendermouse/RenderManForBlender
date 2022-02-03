@@ -33,7 +33,7 @@ class RmanLightFilterTranslator(RmanTranslator):
                 light_filter_sg = None
 
                 light_filter_db_name = object_utils.get_db_name(light_filter)                
-                rman_sg_lightfilter = self.rman_scene.rman_objects.get(light_filter.original)
+                rman_sg_lightfilter = self.rman_scene.rman_prototypes.get(light_filter.original.data.original)
                 if not rman_sg_lightfilter:
                     rman_sg_lightfilter = self.export(light_filter, light_filter_db_name)
                 elif not isinstance(rman_sg_lightfilter, RmanSgLightFilter):
@@ -43,7 +43,7 @@ class RmanLightFilterTranslator(RmanTranslator):
                         self.rman_scene.get_root_sg_node().RemoveChild(rman_sg_group.sg_node)
                     rman_sg_lightfilter.instances.clear() 
                     del rman_sg_lightfilter
-                    self.rman_scene.rman_objects.pop(light_filter.original)
+                    self.rman_scene.rman_prototypes.pop(light_filter.original.data.original)
                     rman_sg_lightfilter = self.export(light_filter, light_filter_db_name)
                 self.update(light_filter, rman_sg_lightfilter)
                 light_filters.append(rman_sg_lightfilter.sg_filter_node)
@@ -93,7 +93,7 @@ class RmanLightFilterTranslator(RmanTranslator):
 
         rman_group_translator.update_transform(ob, rman_sg_lightfilter)
         self.rman_scene.get_root_sg_node().AddChild(rman_sg_lightfilter.sg_node)
-        self.rman_scene.rman_objects[ob.original] = rman_sg_lightfilter
+        self.rman_scene.rman_prototypes[ob.original.data.original] = rman_sg_lightfilter
         self.rman_scene.sg_scene.Root().AddCoordinateSystem(rman_sg_lightfilter.sg_node)
 
         return rman_sg_lightfilter 
