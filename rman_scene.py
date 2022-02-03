@@ -683,10 +683,11 @@ class RmanScene(object):
             return
 
         rman_sg_node = None
-        if not db:
-            db_name = object_utils.get_db_name(ob)
-        else:
-            db_name = db.name
+        #if not db:
+        #    db_name = object_utils.get_db_name(ob)
+        #else:
+        #    db_name = db.name
+        db_name = object_utils.get_db_name(ob)
         rman_sg_node = translator.export(ob, db_name)
         if not rman_sg_node:
             return None

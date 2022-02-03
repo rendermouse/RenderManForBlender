@@ -95,6 +95,7 @@ class RmanSceneSync(object):
                 self.rman_scene.check_solo_light()  
 
         # Check view_layer
+        '''
         view_layer = self.rman_scene.depsgraph.view_layer
         if len(view_layer.objects) != self.rman_scene.num_objects_in_viewlayer:
             # objects can be removed from the viewlayer by hiding a collection. 
@@ -117,6 +118,7 @@ class RmanSceneSync(object):
                     continue
 
         self.rman_scene.objects_in_viewlayer = [o for o in view_layer.objects]            
+        '''
 
         if self.rman_scene.bl_frame_current != self.rman_scene.bl_scene.frame_current:
             # frame changed, update any materials and objects that 
@@ -911,6 +913,7 @@ class RmanSceneSync(object):
                     continue         
                 
                 rman_update = RmanUpdate()
+
                 rman_update.is_updated_geometry = obj.is_updated_geometry
                 rman_update.is_updated_shading = obj.is_updated_shading
                 rman_update.is_updated_transform = obj.is_updated_transform
@@ -919,6 +922,9 @@ class RmanSceneSync(object):
                 else:
                     proto_key = obj.id.original
                 rfb_log().debug("\tObject: %s Updated" % obj.id.name)
+                rfb_log().debug("\t    is_updated_geometry: %s" % str(obj.is_updated_geometry))
+                rfb_log().debug("\t    is_updated_shading: %s" % str(obj.is_updated_shading))
+                rfb_log().debug("\t    is_updated_transform: %s" % str(obj.is_updated_transform))
                 self.rman_updates[obj.id.original] = rman_update
 
                 self.check_particle_systems(obj)
@@ -1128,6 +1134,15 @@ class RmanSceneSync(object):
                         rman_sg_node = self.rman_scene.export_data_block(proto_key, ob_eval, db)
                         if not rman_sg_node:
                             continue
+
+                        if rman_type == 'LIGHTFILTER':
+                            # update all lights with this light filter
+                            users = bpy.context.blend_data.user_map(subset={ob_eval.original})
+                            for o in users[ob_eval.original]:
+                                if isinstance(o, bpy.types.Light):
+                                    o.node_tree.update_tag()
+                            continue
+
                         is_new_object = True
                         rman_update = self.rman_updates.get(ob_key, None)
                         if not rman_update:
@@ -1136,7 +1151,7 @@ class RmanSceneSync(object):
                             rman_update.is_updated_transform = True
                             self.rman_updates[ob_key] = rman_update    
                         rman_update.is_updated_geometry = False
-
+                                    
                     if not self.num_instances_changed:
                         if ob_key not in self.rman_updates:
                             if not parent:
@@ -1168,9 +1183,13 @@ class RmanSceneSync(object):
                             translator.update(ob_eval, rman_sg_node)    
                             already_udpated.append(proto_key)   
 
-                    
+                    if rman_type == 'LIGHTFILTER':
+                        # Light filters are special
+                        continue
+
                     if rman_sg_node not in clear_instances:
                         # clear all instances
+                        rfb_log().debug("\tClearing instances: %s" % proto_key.name)
                         for k,rman_sg_group in rman_sg_node.instances.items():
                             if ob_eval.parent and object_utils._detect_primitive_(ob_eval.parent) == 'EMPTY':
                                 pass
@@ -1258,24 +1277,21 @@ class RmanSceneSync(object):
             # For now, don't delete the geometry itself
             # there may be a collection instance still referencing the geo
 
+            self.rman_scene.get_root_sg_node().RemoveChild(rman_sg_node.sg_node)
             self.rman_scene.sg_scene.DeleteDagNode(rman_sg_node.sg_node)
             del self.rman_scene.rman_prototypes[key]
-
-            '''
+            
             # We just deleted a light filter. We need to tell all lights
             # associated with this light filter to update
             if isinstance(rman_sg_node, RmanSgLightFilter):
-                for light_ob in rman_sg_node.lights_list:
-                    light_key = object_utils.get_db_name(light_ob, rman_type='LIGHT')
-                    rman_sg_light = self.rman_scene.rman_objects.get(light_ob.original, None)
-                    if rman_sg_light:
-                        self.rman_scene.rman_translators['LIGHT'].update_light_filters(light_ob, rman_sg_light)                                
-            try:
-                self.rman_scene.processed_obs.remove(obj)
-            except ValueError:
-                rfb_log().debug("Obj not in self.rman_scene.processed_obs: %s")
-                pass            
-            '''
+                self.rman_scene.get_root_sg_node().RemoveCoordinateSystem(rman_sg_node.sg_node)
+                for o in rman_sg_node.lights_list:
+                    if o:
+                        if hasattr(o, 'rman_nodetree'):
+                            o.rman_nodetree.update_tag()
+                        elif hasattr(o.data, 'node_tree'):
+                            o.data.node_tree.update_tag()    
+            
             
         if self.rman_scene.render_default_light:
             self.rman_scene.scene_any_lights = self.rman_scene._scene_has_lights()     
