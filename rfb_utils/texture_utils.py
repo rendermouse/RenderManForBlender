@@ -403,6 +403,7 @@ def load_scene_state():
 def txmanager_load_cb(bl_scene):
     if bpy.context.engine != 'PRMAN_RENDER':
         return    
+    get_txmanager().txmanager.reset()
     get_txmanager().txmanager.load_state()
     bpy.ops.rman_txmgr_list.parse_scene('EXEC_DEFAULT')
     bpy.ops.rman_txmgr_list.clear_unused('EXEC_DEFAULT')

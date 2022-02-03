@@ -7,6 +7,8 @@ from ..rfb_utils import texture_utils
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import scene_utils
 from ..rfb_utils import object_utils
+from ..rfb_utils.prefs_utils import get_pref
+from ..rfb_logger import rfb_log
 from ..rman_config import __RFB_CONFIG_DICT__ as rfb_config
 from .. import rman_render
 from rman_utils.txmanager import txparams
@@ -658,7 +660,16 @@ class PRMAN_PT_Renderman_txmanager_list(_RManPanelHeader, Panel):
 
     def draw(self, context):
         layout = self.layout
-        PRMAN_PT_Renderman_txmanager_list.draw_txmanager_layout(context, layout)
+        if get_pref('rman_ui_framework') == 'QT':
+            try:
+                from . import rman_ui_txmanager_qt
+                if rman_ui_txmanager_qt.__QT_LOADED__:
+                    rman_icon = rfb_icons.get_icon('rman_txmanager')  
+                    layout.operator("rman_txmgr_list.open_txmanager", icon_value=rman_icon.icon_id)
+            except:
+                PRMAN_PT_Renderman_txmanager_list.draw_txmanager_layout(context, layout)    
+        else:
+            PRMAN_PT_Renderman_txmanager_list.draw_txmanager_layout(context, layout)
 
 class PRMAN_OT_Renderman_open_txmanager(Operator):
 
@@ -749,11 +760,19 @@ classes = [
     PRMAN_OT_Renderman_txmanager_add_texture,
     PRMAN_OT_Renderman_txmanager_refresh,
     PRMAN_PT_Renderman_txmanager_list,
-    PRMAN_OT_Renderman_open_txmanager,
     PRMAN_OT_Renderman_txmanager_remove_texture    
 ]
 
 def register():
+
+    if get_pref('rman_ui_framework') == 'QT':
+        try:
+            from . import rman_ui_txmanager_qt
+            rman_ui_txmanager_qt.register()
+        except:
+            bpy.utils.register_class(PRMAN_OT_Renderman_open_txmanager)
+    else:
+        bpy.utils.register_class(PRMAN_OT_Renderman_open_txmanager)
 
     for cls in classes:
         bpy.utils.register_class(cls)
@@ -761,7 +780,6 @@ def register():
     bpy.types.Scene.rman_txmgr_list = CollectionProperty(type = TxFileItem)
     bpy.types.Scene.rman_txmgr_list_index = IntProperty(name = "RenderMan Texture Manager",
                                              default = 0, update=index_updated)
-
 
 def unregister():
 
@@ -774,3 +792,9 @@ def unregister():
         except RuntimeError:
             rfb_log().debug('Could not unregister class: %s' % str(cls))
             pass  
+
+    try:
+        from . import rman_ui_txmanager_qt
+        rman_ui_txmanager_qt.unregister()
+    except:
+        pass        
