@@ -236,6 +236,33 @@ class RmanSceneSync(object):
                         if rman_sg_light:
                             self.rman_scene.rman_translators['LIGHT'].update_light_filters(light_ob, rman_sg_light)         
 
+    def camera_updated(self, ob_update):
+        ob = ob_update.id.evaluated_get(self.rman_scene.depsgraph)
+        with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
+            rman_sg_camera = self.rman_scene.rman_cameras.get(ob.original)
+            translator = self.rman_scene.rman_translators['CAMERA']
+
+            if not rman_sg_camera:
+                db_name = object_utils.get_db_name(ob)
+                rman_sg_camera = translator._export_render_cam(ob, db_name)
+                self.rman_scene.rman_cameras[ob.original] = rman_sg_camera           
+                        
+                self.rman_scene.sg_scene.Root().AddChild(rman_sg_camera.sg_node)
+                self.rman_scene.sg_scene.Root().AddCoordinateSystem(rman_sg_camera.sg_node)
+                return
+
+            if ob_update.is_updated_geometry:
+                if not self.rman_scene.is_viewport_render:
+                    translator.update(ob, rman_sg_camera)  
+                else:
+                    translator.update_viewport_cam(ob, rman_sg_camera, force_update=True)              
+
+            if ob_update.is_updated_transform:
+                # we deal with main camera transforms in view_draw
+                if rman_sg_camera == self.rman_scene.main_camera:
+                    return
+                translator._update_render_cam_transform(ob, rman_sg_camera)                        
+
     def _gpencil_transform_updated(self, obj):
         ob = obj.id
         rman_sg_gpencil = self.rman_scene.rman_objects.get(ob.original, None)
@@ -307,6 +334,18 @@ class RmanSceneSync(object):
 
     def update_light_visibility(self, rman_sg_node, ob):
         if not self.rman_scene.scene_solo_light:
+            rman_sg_node.sg_node.SetHidden(ob.renderman.mute)
+        else:
+            rm = ob.renderman
+            if not rm:
+                return
+            if rm.solo:
+                rman_sg_node.sg_node.SetHidden(0)
+            else:
+                rman_sg_node.sg_node.SetHidden(1)            
+
+
+            '''
             vis = rman_sg_node.sg_node.GetHidden()
             if vis == -1:
                 vis = 0
@@ -331,6 +370,7 @@ class RmanSceneSync(object):
             if update_instances and len(rman_sg_node.instances) < 1:
                 self.update_instances.add(ob.original)
             return result
+            '''
 
     def update_object_visibility(self, rman_sg_node, ob):                
         ob_data = bpy.data.objects.get(ob.name, ob)
@@ -925,24 +965,22 @@ class RmanSceneSync(object):
             elif isinstance(obj.id, bpy.types.Object):
                 ob_data = bpy.data.objects.get(ob.name, ob)
                 rman_type = object_utils._detect_primitive_(ob_data)
+
+                if ob.type in ('ARMATURE'):
+                    continue
+                
+                # These types need special handling                
                 if rman_type == 'EMPTY':
                     rfb_log().debug("\tEmpty: %s Updated" % obj.id.name)
                     self.update_empty(obj)   
                     continue             
-                elif rman_type == 'LIGHTFILTER':
+                if rman_type == 'LIGHTFILTER':
                     rfb_log().debug("\tLight Filter: %s Updated" % obj.id.name)
                     self.light_filter_updated(obj)
                     continue                
-                if ob.type in ('ARMATURE'):
-                    continue
-                elif ob.type in ['CAMERA']:
-                    # we deal with main camera transforms in view_draw
-                    rman_sg_camera = self.rman_scene.rman_cameras[ob.original]
-                    if rman_sg_camera == self.rman_scene.main_camera:
-                        continue
-                    translator = self.rman_scene.rman_translators['CAMERA']
-                    with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
-                        translator._update_render_cam_transform(ob, rman_sg_camera)                        
+                if ob.type in ['CAMERA']:
+                    rfb_log().debug("\tCamera updated: %s" % obj.id.name)
+                    self.camera_updated(obj)                       
                     continue         
                 
                 rman_update = RmanUpdate()
@@ -1233,6 +1271,9 @@ class RmanSceneSync(object):
 
                     if not self.rman_scene.check_visibility(instance):
                         continue
+
+                    if rman_type == 'LIGHT':
+                        self.rman_scene.check_solo_light(rman_sg_node, ob_eval)
                     
                     group_db_name = object_utils.get_group_db_name(instance) 
                     rman_sg_group = rman_sg_node.instances.get(group_db_name, None)
@@ -1243,6 +1284,11 @@ class RmanSceneSync(object):
                         self.rman_scene.get_root_sg_node().AddChild(rman_sg_group.sg_node)
 
                     rman_group_translator.update_transform(instance, rman_sg_group)
+
+                    if rman_type == 'LIGHT':
+                        if self.rman_scene.default_light.GetHidden() != 1:
+                            self.rman_scene.default_light.SetHidden(1)
+                        continue
 
                     # Attach a material
                     if psys:
@@ -1464,27 +1510,12 @@ class RmanSceneSync(object):
     def update_light(self, ob):
         if not self.rman_render.rman_interactive_running:
             return        
-        rman_sg_light = self.rman_scene.rman_objects.get(ob.original, None)
-        if not rman_sg_light:
-            return
-        translator = self.rman_scene.rman_translators["LIGHT"]        
-        with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
-            translator.update(ob, rman_sg_light)         
-
+        ob.data.node_tree.update_tag()
+        
     def update_light_filter(self, ob):
         if not self.rman_render.rman_interactive_running:
             return        
-        rman_sg_node = self.rman_scene.rman_objects.get(ob.original, None)
-        if not rman_sg_node:
-            return
-
-        with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
-            self.rman_scene.rman_translators['LIGHTFILTER'].update(ob, rman_sg_node)
-            for light_ob in rman_sg_node.lights_list:
-                light_key = object_utils.get_db_name(light_ob, rman_type='LIGHT')
-                rman_sg_light = self.rman_scene.rman_objects.get(light_ob.original, None)
-                if rman_sg_light:
-                    self.rman_scene.rman_translators['LIGHT'].update_light_filters(light_ob, rman_sg_light)                    
+        ob.data.node_tree.update_tag()
 
     def update_solo_light(self, context):
         if not self.rman_render.rman_interactive_running:
@@ -1495,17 +1526,7 @@ class RmanSceneSync(object):
                     
         with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):            
             for light_ob in scene_utils.get_all_lights(self.rman_scene.bl_scene, include_light_filters=False):
-                rman_sg_node = self.rman_scene.rman_objects.get(light_ob.original, None)
-                if not rman_sg_node:
-                    continue
-                rm = light_ob.renderman
-                if not rm:
-                    continue
-
-                if rm.solo:
-                    rman_sg_node.sg_node.SetHidden(0)
-                else:
-                    rman_sg_node.sg_node.SetHidden(1)  
+                light_ob.update_tag()
 
     def update_un_solo_light(self, context):
         if not self.rman_render.rman_interactive_running:
@@ -1516,15 +1537,7 @@ class RmanSceneSync(object):
                     
         with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):                                               
             for light_ob in scene_utils.get_all_lights(self.rman_scene.bl_scene, include_light_filters=False):
-                rman_sg_node = self.rman_scene.rman_objects.get(light_ob.original, None)
-                if not rman_sg_node:
-                    continue
-                rm = light_ob.renderman
-                if not rm:
-                    continue         
-                if self.rman_scene.check_light_local_view(light_ob, rman_sg_node):
-                    continue
-                rman_sg_node.sg_node.SetHidden(light_ob.hide_get())         
+                light_ob.update_tag()
 
     def update_viewport_chan(self, context, chan_name):
         if not self.rman_render.rman_interactive_running:

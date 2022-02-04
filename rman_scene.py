@@ -351,7 +351,6 @@ class RmanScene(object):
         self.num_object_instances = len(self.depsgraph.object_instances)
         self.num_objects_in_viewlayer = len(self.context.visible_objects)
         self.objects_in_viewlayer = [o for o in self.context.visible_objects]
-        self.check_solo_light()
 
         if self.is_interactive:
             self.export_viewport_stats()
@@ -602,8 +601,11 @@ class RmanScene(object):
             
     def export_data_blocks(self, selected_objects=list()):
         rman_group_translator = self.rman_translators['GROUP']
+        total = len(self.depsgraph.object_instances)
         for i, ob_inst in enumerate(self.depsgraph.object_instances):
             ob = ob_inst.object
+            rfb_log().debug("   Exported %d/%d instances... (%s)" % (i, total, ob.name))
+            self.rman_render.stats_mgr.set_export_stats("Exporting instances",i/total)
             if ob.type in ('ARMATURE', 'CAMERA'):
                 continue
             if selected_objects:
@@ -627,6 +629,8 @@ class RmanScene(object):
             if not self.check_visibility(ob_inst):
                 continue
 
+            if rman_type == 'LIGHT':
+                self.check_solo_light(rman_sg_node, ob_eval)
 
             rman_sg_node = self.export_data_block(proto_key, ob_eval, ob_data)
             if not rman_sg_node:
@@ -809,6 +813,8 @@ class RmanScene(object):
                 cam_translator.update_transform(self.depsgraph.scene_eval.camera, self.main_camera, idx, time_samp)
 
             for i, ob_inst in enumerate(self.depsgraph.object_instances):  
+                rfb_log().debug("   Exported %d/%d motion instances... (%s)" % (i, total, ob.name))
+                self.rman_render.stats_mgr.set_export_stats("Exporting motion instances (%d) " % samp ,i/total)                
                 if selected_objects:
                     if objFound:
                         break
@@ -862,8 +868,6 @@ class RmanScene(object):
                     if rman_sg_group:
                         rman_group_translator.update_transform_num_samples(rman_sg_group, rman_sg_node.motion_steps ) # should have been set in _export_instances()                       
                         rman_group_translator.update_transform_sample( ob_inst, rman_sg_group, idx, time_samp)
-
-                #self.rman_render.stats_mgr.set_export_stats("Exporting instances (%f)" % seg, i/total)
 
             for ob_original,rman_sg_node in self.rman_objects.items():
                 ob = ob_original.evaluated_get(self.depsgraph)
@@ -1388,7 +1392,20 @@ class RmanScene(object):
         return False       
 
 
-    def check_solo_light(self):           
+    def check_solo_light(self, rman_sg_node, ob):
+        if not self.scene_solo_light:
+            rman_sg_node.sg_node.SetHidden(ob.renderman.mute)
+        else:
+            rm = ob.renderman
+            if not rm:
+                return
+            if rm.solo:
+                rman_sg_node.sg_node.SetHidden(0)
+            else:
+                rman_sg_node.sg_node.SetHidden(1)           
+
+
+        '''
         if self.bl_scene.renderman.solo_light:   
             for light_ob in scene_utils.get_all_lights(self.bl_scene, include_light_filters=False):
                 rman_sg_node = self.rman_objects.get(light_ob.original, None)
@@ -1420,6 +1437,7 @@ class RmanScene(object):
                         rman_sg_node.sg_node.SetHidden(1)
                 else:
                     rman_sg_node.sg_node.SetHidden(rm.mute)
+        '''
 
     def export_searchpaths(self):
         # TODO 
