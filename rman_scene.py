@@ -625,16 +625,16 @@ class RmanScene(object):
                 psys = ob_inst.particle_system
                 parent = ob_inst.parent
 
-            rman_type = object_utils._detect_primitive_(ob_eval)
             if not self.check_visibility(ob_inst):
-                continue
+                continue                      
 
-            if rman_type == 'LIGHT':
-                self.check_solo_light(rman_sg_node, ob_eval)
-
+            rman_type = object_utils._detect_primitive_(ob_eval)
             rman_sg_node = self.export_data_block(proto_key, ob_eval, ob_data)
             if not rman_sg_node:
-                continue
+                continue     
+
+            if rman_type == 'LIGHT':
+                self.check_solo_light(rman_sg_node, ob_eval)            
    
 
             if rman_type == 'EMPTY':
@@ -699,10 +699,6 @@ class RmanScene(object):
             return
 
         rman_sg_node = None
-        #if not db:
-        #    db_name = object_utils.get_db_name(ob)
-        #else:
-        #    db_name = db.name
         db_name = object_utils.get_db_name(ob)
         rman_sg_node = translator.export(ob, db_name)
         if not rman_sg_node:

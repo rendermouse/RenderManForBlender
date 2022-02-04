@@ -158,7 +158,7 @@ def detect_id_type(db, ob=None):
 def prototype_key(ob):
     if isinstance(ob, bpy.types.DepsgraphObjectInstance):
         if ob.is_instance:
-            return ob.instance_object.data
+            return ob.object.data.original
         if ob.object.data:
             return ob.object.data.original
         return ob.object.original
