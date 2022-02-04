@@ -349,8 +349,8 @@ class RmanScene(object):
 
         self.rman_render.stats_mgr.set_export_stats("Finished Export", 1.0)
         self.num_object_instances = len(self.depsgraph.object_instances)
-        self.num_objects_in_viewlayer = len(self.depsgraph.view_layer.objects)
-        self.objects_in_viewlayer = [o for o in self.depsgraph.view_layer.objects]
+        self.num_objects_in_viewlayer = len(self.context.visible_objects)
+        self.objects_in_viewlayer = [o for o in self.context.visible_objects]
         self.check_solo_light()
 
         if self.is_interactive:
@@ -586,6 +586,20 @@ class RmanScene(object):
             rfb_log().debug("   Exported %d/%d data blocks... (%s)" % (i, total, obj.name))
             self.rman_render.stats_mgr.set_export_stats("Exporting data blocks",i/total)
 
+    def check_visibility(self, instance):
+        if not self.is_interactive:
+            return True
+        viewport = self.context.space_data
+        ob_eval = instance.object.evaluated_get(self.depsgraph)
+         
+        if instance.is_instance:   
+            ob_eval = instance.instance_object.original.evaluated_get(self.depsgraph)
+            if instance.parent:
+                ob_eval = instance.parent
+
+        visible = ob_eval.visible_in_viewport_get(viewport) 
+        return visible
+            
     def export_data_blocks(self, selected_objects=list()):
         rman_group_translator = self.rman_translators['GROUP']
         for i, ob_inst in enumerate(self.depsgraph.object_instances):
@@ -610,10 +624,8 @@ class RmanScene(object):
                 parent = ob_inst.parent
 
             rman_type = object_utils._detect_primitive_(ob_eval)
-            #if rman_type == 'LIGHTFILTER':
-                # skip if this is a light filter
-                # these will be exported when we do regular lights
-            #    continue
+            if not self.check_visibility(ob_inst):
+                continue
 
 
             rman_sg_node = self.export_data_block(proto_key, ob_eval, ob_data)
