@@ -349,8 +349,9 @@ class RmanScene(object):
 
         self.rman_render.stats_mgr.set_export_stats("Finished Export", 1.0)
         self.num_object_instances = len(self.depsgraph.object_instances)
-        self.num_objects_in_viewlayer = len(self.context.visible_objects)
-        self.objects_in_viewlayer = [o for o in self.context.visible_objects]
+        visible_objects = getattr(self.context, 'visible_objects', list())
+        self.num_objects_in_viewlayer = len(visible_objects)
+        self.objects_in_viewlayer = [o for o in visible_objects]
 
         if self.is_interactive:
             self.export_viewport_stats()

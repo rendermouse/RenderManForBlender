@@ -548,7 +548,7 @@ class RmanSceneSync(object):
                     self.rman_updates[col_obj.original] = rman_update
         else:
             rfb_log().debug("\tRegular empty")
-            rman_sg_node = self.rman_prototypes.get(ob.original, None)
+            rman_sg_node = self.rman_scene.rman_prototypes.get(ob.original, None)
             if not rman_sg_node:
                 return
             translator = self.rman_scene.rman_translators['EMPTY']
@@ -1195,8 +1195,24 @@ class RmanSceneSync(object):
                     rman_type = object_utils._detect_primitive_(ob_eval)
                     
                     rman_sg_node = self.rman_scene.rman_prototypes.get(proto_key, None)
+                    if rman_sg_node and rman_type != rman_sg_node.rman_type:
+                        # Types don't match
+                        #
+                        # This can happen because
+                        # we have not been able to tag our types before Blender
+                        # tells us an object has been added
+                        rfb_log().debug("\tTypes don't match. Removing: %s" % proto_key.name)
+                        self.clear_instances(ob_eval, rman_sg_node)                        
+                        self.rman_scene.sg_scene.DeleteDagNode(rman_sg_node.sg_node)
+                        del self.rman_scene.rman_prototypes[proto_key]
+                        rman_sg_node = None
+
                     if not rman_sg_node:
                         # this is a new object.
+                        if rman_type == 'LIGHT':
+                            # We don't support adding new Blender lights
+                            if not shadergraph_utils.is_rman_light(ob_eval):
+                                continue
                         rfb_log().debug("\tAdding: %s" % proto_key.name)
                         rman_sg_node = self.rman_scene.export_data_block(proto_key, ob_eval, db)
                         if not rman_sg_node:
