@@ -779,13 +779,13 @@ class RmanSceneSync(object):
                                     self.rman_updates[col_obj.original] = rman_update                                   
                         else:
                             psys_db_name = '%s' % psys.name
-                            ob_psys = self.rman_scene.rman_particles.get(ob.original, dict())
+                            proto_key = object_utils.prototype_key(ob)
+                            ob_psys = self.rman_scene.rman_particles.get(proto_key, dict())
                             rman_sg_particles = ob_psys.get(obj.id.original, None)
                             if not rman_sg_particles:
                                 rman_sg_particles = psys_translator.export(ob, psys, psys_db_name)
                                 ob_psys[psys.settings.original] = rman_sg_particles
-                                self.rman_scene.rman_particles[ob.original] = ob_psys 
-                                proto_key = object_utils.prototype_key(ob)
+                                self.rman_scene.rman_particles[proto_key] = ob_psys 
                                 rman_sg_node = self.rman_scene.rman_prototypes.get(proto_key, None)      
                                 if rman_sg_node:          
                                     if not rman_sg_node.rman_sg_particle_group_node:
@@ -1176,6 +1176,13 @@ class RmanSceneSync(object):
             
             rfb_log().debug("\tDeleting: %s" % rman_sg_node.db_name)           
             self.clear_instances(None, rman_sg_node)
+            if key in self.rman_scene.rman_particles:
+                rfb_log().debug("\t\tRemoving particles...")
+                ob_psys = self.rman_scene.rman_particles[key]
+                for k, v in ob_psys.items():
+                    self.rman_scene.sg_scene.DeleteDagNode(v.sg_node)
+                del self.rman_scene.rman_particles[key]
+
 
             self.rman_scene.get_root_sg_node().RemoveChild(rman_sg_node.sg_node)
             self.rman_scene.sg_scene.DeleteDagNode(rman_sg_node.sg_node)

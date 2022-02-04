@@ -762,9 +762,9 @@ class RmanScene(object):
                 psys_translator.set_motion_steps(rman_sg_particles, subframes)
                 psys_translator.update(ob, psys, rman_sg_particles)      
 
-                ob_psys = self.rman_particles.get(ob.original, dict())
+                ob_psys = self.rman_particles.get(proto_key, dict())
                 ob_psys[psys.settings.original] = rman_sg_particles
-                self.rman_particles[ob.original] = ob_psys                 
+                self.rman_particles[proto_key] = ob_psys                 
                 rman_sg_node.rman_sg_particle_group_node.sg_node.AddChild(rman_sg_particles.sg_node)
         elif rman_type == 'EMPTY' and (ob.hide_render or ob.hide_viewport):
             # Make sure empties that are hidden still go out. Children
@@ -837,7 +837,7 @@ class RmanScene(object):
 
                 # check particles for motion
                 for psys in ob.particle_systems:              
-                    ob_psys = self.rman_particles.get(ob.original, None)
+                    ob_psys = self.rman_particles.get(proto_key, None)
                     if not ob_psys:
                         continue
                     rman_sg_particles = ob_psys.get(psys.settings.original, None)
