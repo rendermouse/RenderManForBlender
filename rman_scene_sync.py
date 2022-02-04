@@ -173,13 +173,7 @@ class RmanSceneSync(object):
                             found = True
 
                     if found:
-                        for k,rman_sg_group in rman_sg_node.instances.items():
-                            if ob.parent and object_utils._detect_primitive_(ob.parent) == 'EMPTY':
-                                pass
-                            else:
-                                self.rman_scene.get_root_sg_node().RemoveChild(rman_sg_group.sg_node)
-                                self.rman_scene.sg_scene.DeleteDagNode(rman_sg_group.sg_node)
-                        rman_sg_node.instances.clear()
+                        self.clear_instances(ob, rman_sg_node)
                         del self.rman_scene.rman_prototypes[proto_key]
                         if ob not in object_list:
                             object_list.append(ob)
@@ -684,18 +678,16 @@ class RmanSceneSync(object):
             '''
 
     def clear_instances(self, ob, rman_sg_node=None):
-        rfb_log().debug("Deleting instances")
-        with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
-            if not rman_sg_node:
-                rman_sg_node = self.rman_scene.rman_objects.get(ob.original)
-            for k,rman_sg_group in rman_sg_node.instances.items():
-                if ob.parent and object_utils._detect_primitive_(ob.parent) == 'EMPTY':
-                    pass
-                    #rman_empty_node = self.rman_scene.rman_objects.get(ob.parent.original)
-                    #rman_empty_node.sg_node.RemoveChild(rman_sg_group.sg_node)
-                else:
-                    self.rman_scene.get_root_sg_node().RemoveChild(rman_sg_group.sg_node)                            
-            rman_sg_node.instances.clear()      
+        for k,rman_sg_group in rman_sg_node.instances.items():
+            if ob and ob.parent and object_utils._detect_primitive_(ob.parent) == 'EMPTY':
+                proto_key = object_utils.prototype_key(ob.parent)  
+                rman_empty_node = self.rman_scene.rman_prototypes.get(proto_key)
+                if rman_empty_node:
+                    rman_empty_node.sg_node.RemoveChild(rman_sg_group.sg_node)
+            else:
+                self.rman_scene.get_root_sg_node().RemoveChild(rman_sg_group.sg_node)       
+            self.rman_scene.sg_scene.DeleteDagNode(rman_sg_group.sg_node)                        
+        rman_sg_node.instances.clear()      
 
     def update_materials_dict(self, mat):    
         # See comment below in update_objects_dict 
@@ -1171,9 +1163,9 @@ class RmanSceneSync(object):
                 #self.update_geometry_node_instances(obj.id)
                          
 
-        deleted_obj_keys = list()
-        already_udpated = list()
-        clear_instances = list()
+        deleted_obj_keys = list() # list of potential objects to delete
+        already_udpated = list() # list of objects already updated during our loop
+        clear_instances = list() # list of objects who had their instances cleared
         if self.num_instances_changed or self.rman_updates:
             deleted_obj_keys = list(self.rman_scene.rman_prototypes)
             rfb_log().debug("Updating instances")        
@@ -1265,13 +1257,7 @@ class RmanSceneSync(object):
                     if rman_sg_node not in clear_instances:
                         # clear all instances
                         rfb_log().debug("\tClearing instances: %s" % proto_key.name)
-                        for k,rman_sg_group in rman_sg_node.instances.items():
-                            if ob_eval.parent and object_utils._detect_primitive_(ob_eval.parent) == 'EMPTY':
-                                pass
-                            else:
-                                self.rman_scene.get_root_sg_node().RemoveChild(rman_sg_group.sg_node)
-                                self.rman_scene.sg_scene.DeleteDagNode(rman_sg_group.sg_node)
-                        rman_sg_node.instances.clear()
+                        self.clear_instances(ob_eval, rman_sg_node)
                         clear_instances.append(rman_sg_node) 
 
                     if not self.rman_scene.check_visibility(instance):
@@ -1355,11 +1341,8 @@ class RmanSceneSync(object):
             if not rman_sg_node:
                 continue
             
-            rfb_log().debug("\tDeleting: %s" % rman_sg_node.db_name)
-            for k,v in rman_sg_node.instances.items():
-                if v.sg_node:
-                    self.rman_scene.sg_scene.DeleteDagNode(v.sg_node)    
-            rman_sg_node.instances.clear()             
+            rfb_log().debug("\tDeleting: %s" % rman_sg_node.db_name)           
+            self.clear_instances(None, rman_sg_node)
 
             self.rman_scene.get_root_sg_node().RemoveChild(rman_sg_node.sg_node)
             self.rman_scene.sg_scene.DeleteDagNode(rman_sg_node.sg_node)
