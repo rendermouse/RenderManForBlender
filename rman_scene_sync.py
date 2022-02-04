@@ -100,29 +100,30 @@ class RmanSceneSync(object):
             with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):                     
                 self.rman_scene.check_solo_light()  
 
-        # Check view_layer
+        # Check visible objects
         visible_objects = self.rman_scene.context.visible_objects
-        if len(visible_objects) != self.rman_scene.num_objects_in_viewlayer:
-            # Figure out the difference using sets and re-emit their instances.
-            self.rman_scene.num_objects_in_viewlayer = len(visible_objects)
-            #view_layer = self.rman_scene.depsgraph.view_layer
-            set1 = set(self.rman_scene.objects_in_viewlayer)
-            set2 =  set(visible_objects) #set((view_layer.objects))
-            set_diff1 = set1.difference(set2)
-            set_diff2 = set2.difference(set1)
+        if not self.num_instances_changed:
+            if len(visible_objects) != self.rman_scene.num_objects_in_viewlayer:
+                # The number of visible objects has changed.
+                # Figure out the difference using sets
+                set1 = set(self.rman_scene.objects_in_viewlayer)
+                set2 =  set(visible_objects)
+                set_diff1 = set1.difference(set2)
+                set_diff2 = set2.difference(set1)
 
-            objects = list(set_diff1.union(set_diff2))           
-            for o in list(objects):
-                try:
-                    if o.original not in self.rman_updates:
-                        rman_update = RmanUpdate()
-                        rman_update.is_updated_shading = True
-                        rman_update.is_updated_transform = True
-                        self.rman_updates[o.original] = rman_update
-                except:
-                    continue
-            self.num_instances_changed = True
+                objects = list(set_diff1.union(set_diff2))           
+                for o in list(objects):
+                    try:
+                        if o.original not in self.rman_updates:
+                            rman_update = RmanUpdate()
+                            rman_update.is_updated_shading = True
+                            rman_update.is_updated_transform = True
+                            self.rman_updates[o.original] = rman_update
+                    except:
+                        continue
+                self.num_instances_changed = True
 
+        self.rman_scene.num_objects_in_viewlayer = len(visible_objects)
         self.rman_scene.objects_in_viewlayer = [o for o in visible_objects]            
 
         if self.rman_scene.bl_frame_current != self.rman_scene.bl_scene.frame_current:
@@ -402,8 +403,7 @@ class RmanSceneSync(object):
         ob = ob_update.id.evaluated_get(self.rman_scene.depsgraph)
         for psys in ob.particle_systems:
             if object_utils.is_particle_instancer(psys):
-                # this particle system is a instancer, add the instanced object
-                # to the self.update_instances list
+                # this particle system is a instancer
                 inst_ob = getattr(psys.settings, 'instance_object', None) 
                 collection = getattr(psys.settings, 'instance_collection', None)
                 if inst_ob:
@@ -784,7 +784,6 @@ class RmanSceneSync(object):
        
         # Check the number of instances. If we differ, an object may have been
         # added or deleted
-        '''
         if self.rman_scene.num_object_instances != len(depsgraph.object_instances):
             self.num_instances_changed = True
             if self.rman_scene.num_object_instances > len(depsgraph.object_instances):
@@ -792,7 +791,6 @@ class RmanSceneSync(object):
             else:
                 self.do_add = True
             self.rman_scene.num_object_instances = len(depsgraph.object_instances)
-        '''
 
         rfb_log().debug("------Start update scene--------")
         for obj in reversed(depsgraph.updates):
