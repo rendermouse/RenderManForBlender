@@ -783,8 +783,9 @@ class RmanSceneSync(object):
                             rman_sg_particles = ob_psys.get(obj.id.original, None)
                             if not rman_sg_particles:
                                 rman_sg_particles = psys_translator.export(ob, psys, psys_db_name)
+                                ob_psys[psys.settings.original] = rman_sg_particles
                                 self.rman_scene.rman_particles[ob.original] = ob_psys 
-                                proto_key = o.original.data.original
+                                proto_key = object_utils.prototype_key(ob)
                                 rman_sg_node = self.rman_scene.rman_prototypes.get(proto_key, None)      
                                 if rman_sg_node:          
                                     if not rman_sg_node.rman_sg_particle_group_node:
