@@ -156,20 +156,16 @@ class RmanSceneSync(object):
                 '''
 
     def _mesh_light_update(self, mat):
+        object_list = list()
         with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
-            for ob_inst in self.rman_scene.depsgraph.object_instances:
-                psys = None
-                if ob_inst.is_instance:
-                    ob = ob_inst.instance_object
-                    group_db_name =  object_utils.get_group_db_name(ob_inst)
-                else:
-                    ob = ob_inst.object
-                    group_db_name =  object_utils.get_group_db_name(ob_inst)
+            for ob_inst in self.rman_scene.depsgraph.object_instances:                
+                ob = ob_inst.object.evaluated_get(self.rman_scene.depsgraph)
                 if not hasattr(ob.data, 'materials'):
                     continue   
                 if ob.type in ('ARMATURE', 'CURVE', 'CAMERA'):
-                    continue                         
-                rman_sg_node = self.rman_scene.rman_objects.get(ob.original, None)
+                    continue  
+                proto_key = object_utils.prototype_key(ob_inst)                        
+                rman_sg_node = self.rman_scene.rman_prototypes.get(proto_key, None)
                 if rman_sg_node:
                     found = False
                     for name, material in ob.data.materials.items():
@@ -177,11 +173,19 @@ class RmanSceneSync(object):
                             found = True
 
                     if found:
-                        rman_sg_group = rman_sg_node.instances.get(group_db_name, None)
-                        if rman_sg_group:
-                            rman_sg_node.instances.pop(group_db_name)
-                            self.rman_scene.sg_scene.DeleteDagNode(rman_sg_group.sg_node)                              
-                            self.rman_scene._export_instance(ob_inst)                 
+                        for k,rman_sg_group in rman_sg_node.instances.items():
+                            if ob.parent and object_utils._detect_primitive_(ob.parent) == 'EMPTY':
+                                pass
+                            else:
+                                self.rman_scene.get_root_sg_node().RemoveChild(rman_sg_group.sg_node)
+                                self.rman_scene.sg_scene.DeleteDagNode(rman_sg_group.sg_node)
+                        rman_sg_node.instances.clear()
+                        del self.rman_scene.rman_prototypes[proto_key]
+                        if ob not in object_list:
+                            object_list.append(ob)
+
+        for ob in object_list:
+            ob.update_tag()
 
     def _material_updated(self, obj):
         mat = obj.id
@@ -1266,6 +1270,7 @@ class RmanSceneSync(object):
                                 pass
                             else:
                                 self.rman_scene.get_root_sg_node().RemoveChild(rman_sg_group.sg_node)
+                                self.rman_scene.sg_scene.DeleteDagNode(rman_sg_group.sg_node)
                         rman_sg_node.instances.clear()
                         clear_instances.append(rman_sg_node) 
 
@@ -1355,9 +1360,6 @@ class RmanSceneSync(object):
                 if v.sg_node:
                     self.rman_scene.sg_scene.DeleteDagNode(v.sg_node)    
             rman_sg_node.instances.clear()             
-
-            # For now, don't delete the geometry itself
-            # there may be a collection instance still referencing the geo
 
             self.rman_scene.get_root_sg_node().RemoveChild(rman_sg_node.sg_node)
             self.rman_scene.sg_scene.DeleteDagNode(rman_sg_node.sg_node)
