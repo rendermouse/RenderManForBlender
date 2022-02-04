@@ -809,9 +809,7 @@ class RmanScene(object):
                         break
                 cam_translator.update_transform(self.depsgraph.scene_eval.camera, self.main_camera, idx, time_samp)
 
-            for i, ob_inst in enumerate(self.depsgraph.object_instances):  
-                rfb_log().debug("   Exported %d/%d motion instances... (%s)" % (i, total, ob.name))
-                self.rman_render.stats_mgr.set_export_stats("Exporting motion instances (%d) " % samp ,i/total)                
+            for i, ob_inst in enumerate(self.depsgraph.object_instances):                
                 if selected_objects:
                     if objFound:
                         break
@@ -834,6 +832,8 @@ class RmanScene(object):
                 psys = None
                 parent = None
                 ob = ob_inst.object
+                rfb_log().debug("   Exported %d/%d motion instances... (%s)" % (i, total, ob.name))
+                self.rman_render.stats_mgr.set_export_stats("Exporting motion instances (%d) " % samp ,i/total)                 
                 if ob_inst.is_instance:
                     proto_key = ob_inst.instance_object.data.original
                     psys = ob_inst.particle_system
