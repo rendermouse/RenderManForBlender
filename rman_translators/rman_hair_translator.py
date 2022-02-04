@@ -32,7 +32,7 @@ class RmanHairTranslator(RmanTranslator):
     def export_deform_sample(self, rman_sg_hair, ob, psys, time_sample):
 
         curves = self._get_strands_(ob, psys)
-        for i, (vertsArray, points, widths, scalpST) in enumerate(curves):
+        for i, (vertsArray, points, widths, scalpST, mcols) in enumerate(curves):
             curves_sg = rman_sg_hair.sg_curves_list[i]
             if not curves_sg:
                 continue

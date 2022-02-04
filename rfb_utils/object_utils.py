@@ -158,13 +158,13 @@ def detect_id_type(db, ob=None):
 def prototype_key(ob):
     if isinstance(ob, bpy.types.DepsgraphObjectInstance):
         if ob.is_instance:
-            return ob.object.data.original
+            return ob.object.data.name
         if ob.object.data:
-            return ob.object.data.original
-        return ob.object.original
+            return ob.object.data.name
+        return ob.object.original.name
     elif ob.data:
-        return ob.original.data.original
-    return ob.original
+        return ob.original.data.original.name
+    return ob.original.name
 
 def _detect_primitive_(ob):
 

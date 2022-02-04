@@ -1049,7 +1049,7 @@ class RmanSceneSync(object):
                         # This can happen because
                         # we have not been able to tag our types before Blender
                         # tells us an object has been added
-                        rfb_log().debug("\tTypes don't match. Removing: %s" % proto_key.name)
+                        rfb_log().debug("\tTypes don't match. Removing: %s" % proto_key)
                         self.clear_instances(ob_eval, rman_sg_node)                        
                         self.rman_scene.sg_scene.DeleteDagNode(rman_sg_node.sg_node)
                         del self.rman_scene.rman_prototypes[proto_key]
@@ -1061,7 +1061,7 @@ class RmanSceneSync(object):
                             # We don't support adding new Blender lights
                             if not shadergraph_utils.is_rman_light(ob_eval):
                                 continue
-                        rfb_log().debug("\tAdding: %s" % proto_key.name)
+                        rfb_log().debug("\tAdding: %s" % proto_key)
                         rman_sg_node = self.rman_scene.export_data_block(proto_key, ob_eval, db)
                         if not rman_sg_node:
                             continue
@@ -1110,7 +1110,7 @@ class RmanSceneSync(object):
                     if rman_sg_node and not is_new_object:
                         if rman_update.is_updated_geometry and proto_key not in already_udpated:
                             translator =  self.rman_scene.rman_translators.get(rman_type, None)
-                            rfb_log().debug("\tUpdating Object: %s" % proto_key.name)
+                            rfb_log().debug("\tUpdating Object: %s" % proto_key)
                             translator.update(ob_eval, rman_sg_node)    
                             already_udpated.append(proto_key)   
 
@@ -1120,7 +1120,7 @@ class RmanSceneSync(object):
 
                     if rman_sg_node not in clear_instances:
                         # clear all instances
-                        rfb_log().debug("\tClearing instances: %s" % proto_key.name)
+                        rfb_log().debug("\tClearing instances: %s" % proto_key)
                         self.clear_instances(ob_eval, rman_sg_node)
                         clear_instances.append(rman_sg_node) 
 
