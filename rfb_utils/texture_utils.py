@@ -438,7 +438,8 @@ def check_node_rename(id):
         ob = id.original
         if id.type == 'CAMERA':
             node = shadergraph_utils.find_projection_node(ob) 
-            nodes_list.append(node)
+            if node:
+                nodes_list.append(node)
 
         elif id.type == 'LIGHT':
             shadergraph_utils.gather_all_textured_nodes(ob, nodes_list)
