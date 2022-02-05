@@ -137,7 +137,6 @@ class RmanScene(object):
         self.num_object_instances = 0
         self.num_objects_in_viewlayer = 0
         self.objects_in_viewlayer = list()
-        self.bl_local_view = False
 
         self.create_translators()     
 
@@ -216,7 +215,6 @@ class RmanScene(object):
         self.external_render = is_external
         self.is_interactive = False
         self.is_viewport_render = False
-        self.bl_local_view = False
         self.do_motion_blur = self.bl_scene.renderman.motion_blur
         self.export()
 
@@ -232,7 +230,6 @@ class RmanScene(object):
         self.is_viewport_render = False
         self.do_motion_blur = self.bl_scene.renderman.motion_blur
         self.rman_bake = True
-        self.bl_local_view = False
 
         if self.bl_scene.renderman.hider_type == 'BAKE_BRICKMAP_SELECTED':
             self.export_bake_brickmap_selected()
@@ -245,7 +242,6 @@ class RmanScene(object):
         self.bl_view_layer = context.view_layer
         self.bl_scene = depsgraph.scene_eval        
         self._find_renderman_layer()
-        self.bl_local_view = context.space_data.local_view
         self.depsgraph = depsgraph
         self.external_render = False
         self.is_interactive = True
@@ -262,7 +258,6 @@ class RmanScene(object):
     def export_for_rib_selection(self, context, sg_scene):
         self.reset()
         self.bl_scene = context.scene
-        self.bl_local_view = False
         self.bl_frame_current = self.bl_scene.frame_current
         self.sg_scene = sg_scene
         self.context = context
@@ -280,7 +275,6 @@ class RmanScene(object):
     def export_for_swatch_render(self, depsgraph, sg_scene):
         self.sg_scene = sg_scene
         self.context = bpy.context #None
-        self.bl_local_view = False
         self.bl_scene = depsgraph.scene_eval
         self.depsgraph = depsgraph
         self.external_render = False

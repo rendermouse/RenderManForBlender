@@ -73,33 +73,6 @@ class RmanSceneSync(object):
                 translator.update_transform(camera, rman_sg_camera)  
 
     def _scene_updated(self):
-
-        # Check changes to local view
-        if self.rman_scene.bl_local_view and (self.rman_scene.context.space_data.local_view is None):
-            self.rman_scene.bl_local_view = False
-            for ob in self.rman_scene.bl_scene.objects:
-                if ob.type in ('ARMATURE', 'CURVE', 'CAMERA', 'LIGHT'):
-                    continue
-                if ob.original not in self.rman_updates:
-                    rman_update = RmanUpdate()
-                    rman_update.is_updated_shading = True
-                    rman_update.is_updated_transform = True
-                    self.rman_updates[ob.original] = rman_update                
-            with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):         
-                self.rman_scene.check_solo_light()
-        elif not self.rman_scene.bl_local_view and (self.rman_scene.context.space_data.local_view is not None):
-            self.rman_scene.bl_local_view = True   
-            for ob in self.rman_scene.bl_scene.objects:
-                if ob.type in ('ARMATURE', 'CURVE', 'CAMERA', 'LIGHT'):
-                    continue
-                if ob.original not in self.rman_updates:
-                    rman_update = RmanUpdate()
-                    rman_update.is_updated_shading = True
-                    rman_update.is_updated_transform = True
-                    self.rman_updates[ob.original] = rman_update                 
-            with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):                     
-                self.rman_scene.check_solo_light()  
-
         # Check visible objects
         visible_objects = self.rman_scene.context.visible_objects
         if not self.num_instances_changed:
