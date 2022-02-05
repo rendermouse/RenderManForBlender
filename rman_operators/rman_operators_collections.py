@@ -229,7 +229,10 @@ class COLLECTION_OT_meshlight_lightfilter_add_remove(bpy.types.Operator):
             collection.add()
             index += 1
             setattr(rm, coll_idx, index)
-            collection[-1].name = dflt_name
+            try:
+                collection[-1].name = dflt_name
+            except:
+                pass
 
         elif self.properties.action == 'REMOVE':
             collection.remove(index)

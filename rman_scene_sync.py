@@ -179,17 +179,19 @@ class RmanSceneSync(object):
 
     def _light_filter_transform_updated(self, obj):
         ob = obj.id.evaluated_get(self.rman_scene.depsgraph)
-        rman_sg_lightfilter = self.rman_scene.rman_prototypes.get(ob.original.data.original, None)
+        proto_key = object_utils.prototype_key(ob)
+        rman_sg_lightfilter = self.rman_scene.rman_prototypes.get(proto_key, None)
         if rman_sg_lightfilter:
             rman_group_translator = self.rman_scene.rman_translators['GROUP']  
             with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):              
                 rman_group_translator.update_transform(ob, rman_sg_lightfilter)
 
     def light_filter_updated(self, obj):
-        rman_sg_node = self.rman_scene.rman_prototypes.get(obj.id.original.data.original, None)
+        ob = obj.id.evaluated_get(self.rman_scene.depsgraph)
+        proto_key = object_utils.prototype_key(ob)
+        rman_sg_node = self.rman_scene.rman_prototypes.get(proto_key, None)
         if not rman_sg_node:
             return
-        ob = obj.id
         if obj.is_updated_transform or obj.is_updated_shading:
             rfb_log().debug("\tLight Filter: %s Transform Updated" % obj.id.name)
             self._light_filter_transform_updated(obj)
@@ -199,13 +201,9 @@ class RmanSceneSync(object):
                 self.rman_scene.rman_translators['LIGHTFILTER'].update(ob, rman_sg_node)
                 for light_ob in rman_sg_node.lights_list:
                     if isinstance(light_ob, bpy.types.Material):
-                        rman_sg_material = self.rman_scene.rman_materials.get(light_ob.original, None)
-                        if rman_sg_material:
-                            self.rman_scene.rman_translators['MATERIAL'].update_light_filters(light_ob, rman_sg_material)                      
+                        light_ob.node_tree.update_tag()
                     else:
-                        rman_sg_light = self.rman_scene.rman_prototypes.get(light_ob.original.data.original, None)
-                        if rman_sg_light:
-                            self.rman_scene.rman_translators['LIGHT'].update_light_filters(light_ob, rman_sg_light)         
+                        light_ob.update_tag()
 
     def camera_updated(self, ob_update):
         ob = ob_update.id.evaluated_get(self.rman_scene.depsgraph)

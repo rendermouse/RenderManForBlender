@@ -88,12 +88,14 @@ class RmanLightFilterTranslator(RmanTranslator):
         rman_sg_lightfilter = RmanSgLightFilter(self.rman_scene, sg_group, db_name)
         rman_sg_lightfilter.sg_filter_node = sg_filter_node
         rman_sg_lightfilter.coord_sys = db_name
+        rman_sg_lightfilter.rman_type = 'LIGHTFILTER'
 
         rman_group_translator = self.rman_scene.rman_translators['GROUP']
 
         rman_group_translator.update_transform(ob, rman_sg_lightfilter)
         self.rman_scene.get_root_sg_node().AddChild(rman_sg_lightfilter.sg_node)
-        self.rman_scene.rman_prototypes[ob.original.data.original] = rman_sg_lightfilter
+        proto_key = object_utils.prototype_key(ob)
+        self.rman_scene.rman_prototypes[proto_key] = rman_sg_lightfilter
         self.rman_scene.sg_scene.Root().AddCoordinateSystem(rman_sg_lightfilter.sg_node)
 
         return rman_sg_lightfilter 
