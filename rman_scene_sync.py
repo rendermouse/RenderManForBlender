@@ -1159,6 +1159,23 @@ class RmanSceneSync(object):
                         if (len(ob_eval.particle_systems) > 0) and instance.show_particles:
                             rman_sg_group.sg_node.AddChild(rman_sg_node.rman_sg_particle_group_node.sg_node) 
 
+                    # Delete any removed partcle systems
+                    if proto_key in self.rman_scene.rman_particles:                                                
+                        ob_psys = self.rman_scene.rman_particles[proto_key]
+                        rman_particle_nodes = list(ob_psys)
+                        for psys in ob_eval.particle_systems:
+                            try:
+                                rman_particle_nodes.remove(psys.settings.original)
+                            except:
+                                continue
+                        if rman_particle_nodes:
+                            rfb_log().debug("\t\tRemoving particle nodes: %s" % proto_key)
+                        for k in rman_particle_nodes:                        
+                            rman_particles_node = ob_psys[k]
+                            self.rman_scene.sg_scene.DeleteDagNode(rman_particles_node.sg_node)
+                            del ob_psys[k]
+                                                   
+
                 # delete stuff
                 if deleted_obj_keys:
                     self.delete_objects(deleted_obj_keys)                                                         
