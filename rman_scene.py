@@ -896,7 +896,7 @@ class RmanScene(object):
             rman_empty_node = self.rman_prototypes.get(ob.parent.original, None)
             if not rman_empty_node:
                 # Empty was not created. Export it.
-                rman_empty_node = self.export_data_block(parent_proto_key, ob.parent, None)
+                rman_empty_node = self.export_data_block(parent_proto_key, ob.parent)
             if not rman_empty_node:
                 self.get_root_sg_node().AddChild(rman_sg_node.sg_node)          
                 translator.export_transform(ob, rman_sg_node.sg_node)
