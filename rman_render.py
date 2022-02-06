@@ -1075,6 +1075,7 @@ class RmanRender(object):
             return
 
         self.rman_running = False
+        self.rman_is_exporting = False
         self.rman_interactive_running = False  
         self.rman_swatch_render_running = False
         self.rman_is_viewport_rendering = False            
