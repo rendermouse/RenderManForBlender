@@ -743,8 +743,6 @@ class RmanSceneSync(object):
                     else:              
                         self.rman_scene.get_root_sg_node().AddChild(rman_sg_group.sg_node)                        
 
-                    rman_group_translator.update_transform(instance, rman_sg_group)
-
                     if rman_type == 'LIGHT':
                         # We are dealing with a light. Check if it's a solo light, or muted
                         self.rman_scene.check_solo_light(rman_sg_node, ob_eval)
@@ -752,8 +750,6 @@ class RmanSceneSync(object):
                         # Hide the default light
                         if self.rman_scene.default_light.GetHidden() != 1:
                             self.rman_scene.default_light.SetHidden(1)
-
-                        continue
 
                     # Attach a material
                     if psys:
@@ -783,6 +779,12 @@ class RmanSceneSync(object):
                             rman_particles_node = ob_psys[k]
                             self.rman_scene.sg_scene.DeleteDagNode(rman_particles_node.sg_node)
                             del ob_psys[k]
+
+                    if rman_type == 'META':
+                        continue
+                    
+                    # Transform
+                    rman_group_translator.update_transform(instance, rman_sg_group)                            
                                                    
                 # delete objects
                 if deleted_obj_keys:
