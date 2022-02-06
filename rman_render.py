@@ -1078,7 +1078,8 @@ class RmanRender(object):
         self.rman_is_exporting = False
         self.rman_interactive_running = False  
         self.rman_swatch_render_running = False
-        self.rman_is_viewport_rendering = False            
+        self.rman_is_viewport_rendering = False       
+        self.rman_is_exporting = False     
 
         # Remove callbacks
         ec = rman.EventCallbacks.Get()
