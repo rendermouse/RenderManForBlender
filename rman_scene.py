@@ -610,12 +610,7 @@ class RmanScene(object):
             ob_eval = ob.evaluated_get(self.depsgraph)
             psys = None
             parent = None 
-            proto_key = object_utils.prototype_key(ob_inst)           
-            if ob.type == 'EMPTY':
-                ob_data = None
-            else:
-                ob_data = ob_eval.data.original
-                
+            proto_key = object_utils.prototype_key(ob_inst)                           
             if ob_inst.is_instance:
                 psys = ob_inst.particle_system
                 parent = ob_inst.parent
@@ -624,7 +619,7 @@ class RmanScene(object):
                 continue                      
 
             rman_type = object_utils._detect_primitive_(ob_eval)
-            rman_sg_node = self.export_data_block(proto_key, ob_eval, ob_data)
+            rman_sg_node = self.export_data_block(proto_key, ob_eval)
             if not rman_sg_node:
                 continue     
 
@@ -657,13 +652,13 @@ class RmanScene(object):
             else:
                 self.attach_material(ob, rman_sg_group)
 
-            if ob.parent and object_utils._detect_primitive_(ob.parent) == 'EMPTY':
+            if object_utils.has_empty_parent(ob):
                 # this object is a child of an empty. Add it to the empty.
-                rman_empty_node = self.rman_prototypes.get(ob.parent.original, None)
+                parent_proto_key = object_utils.prototype_key(ob.parent)
+                rman_empty_node = self.rman_prototypes.get(parent_proto_key, None)
                 if not rman_empty_node:
-                    key = ob.parent.original
                     ob_parent_eval = ob.parent.evaluated_get(self.depsgraph)
-                    rman_empty_node = self.export_data_block(key, ob_parent_eval, None)
+                    rman_empty_node = self.export_data_block(parent_proto_key, ob_parent_eval)
                     self._export_hidden_instance(ob_parent_eval, rman_empty_node)
 
                 if not rman_empty_node:
@@ -682,9 +677,8 @@ class RmanScene(object):
                 translator.export_object_id(ob, rman_sg_group, ob_inst)
 
 
-    def export_data_block(self, proto_key, ob, db):
-        rman_type = object_utils.detect_id_type(db, ob=ob)
-        
+    def export_data_block(self, proto_key, ob):
+        rman_type = object_utils._detect_primitive_(ob)        
 
         if proto_key in self.rman_prototypes:
             return self.rman_prototypes[proto_key]
@@ -1027,12 +1021,12 @@ class RmanScene(object):
         translator = self.rman_translators.get('EMPTY')
         translator.export_object_attributes(ob, rman_sg_node)  
         self.attach_material(ob, rman_sg_node)        
-        if ob.parent and object_utils._detect_primitive_(ob.parent) == 'EMPTY':
+        if object_utils.has_empty_parent(ob):
+            parent_proto_key = object_utils.prototype_key(ob.parent)
             rman_empty_node = self.rman_prototypes.get(ob.parent.original, None)
             if not rman_empty_node:
                 # Empty was not created. Export it.
-                key = ob.parent.original
-                rman_empty_node = self.export_data_block(key, ob.parent, None)
+                rman_empty_node = self.export_data_block(parent_proto_key, ob.parent, None)
             if not rman_empty_node:
                 self.get_root_sg_node().AddChild(rman_sg_node.sg_node)          
                 translator.export_transform(ob, rman_sg_node.sg_node)
@@ -1219,7 +1213,7 @@ class RmanScene(object):
         mat = object_utils.get_active_material(ob)
         if mat:
             rman_sg_material = self.rman_materials.get(mat.original, None)
-            if rman_sg_material and rman_sg_material.sg_node:                
+            if rman_sg_material and rman_sg_material.sg_node:              
                 scenegraph_utils.set_material(rman_sg_node.sg_node, rman_sg_material.sg_node)
                 rman_sg_node.is_meshlight = rman_sg_material.has_meshlight 
 

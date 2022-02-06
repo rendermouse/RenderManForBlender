@@ -141,19 +141,15 @@ def is_transforming(ob, recurse=False):
             transforming = ob.parent.data.use_path
     return transforming
 
-def detect_id_type(db, ob=None):
-    if isinstance(db, bpy.types.Mesh):
-        return 'MESH'
-    elif isinstance(db, bpy.types.Light):
-        if db.renderman.renderman_light_role == 'RMAN_LIGHTFILTER':
-            return 'LIGHTFILTER'
-        return 'LIGHT'
-    elif isinstance(db, bpy.types.Volume):
-        return 'OPENVDB'
-    elif ob:
-        return _detect_primitive_(ob)
-
-    return None
+def has_empty_parent(ob):
+    # check if the parent of ob is an Empty
+    if not ob:
+        return False
+    if not ob.parent:
+        return False
+    if _detect_primitive_(ob.parent) == 'EMPTY':
+        return True
+    return False
 
 def prototype_key(ob):
     if isinstance(ob, bpy.types.DepsgraphObjectInstance):
