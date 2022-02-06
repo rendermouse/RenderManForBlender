@@ -1,5 +1,6 @@
 from .rman_translator import RmanTranslator
 from ..rman_sg_nodes.rman_sg_quadric import RmanSgQuadric
+from ..rfb_utils import object_utils
 
 class RmanQuadricTranslator(RmanTranslator):
 
@@ -12,6 +13,9 @@ class RmanQuadricTranslator(RmanTranslator):
         sg_node = self.rman_scene.sg_scene.CreateQuadric(db_name)
         rman_sg_quadric = RmanSgQuadric(self.rman_scene, sg_node, db_name)
 
+        if self.rman_scene.do_motion_blur:
+            rman_sg_quadric.is_transforming = object_utils.is_transforming(ob)
+      
         return rman_sg_quadric
 
     def export_deform_sample(self, rman_sg_quadric, ob, time_sample):
