@@ -184,13 +184,19 @@ class RmanSceneSync(object):
         proto_key = object_utils.prototype_key(ob)
         rman_sg_node = self.rman_scene.rman_prototypes.get(proto_key, None)
         if not rman_sg_node:
+            # Light filter needs to be added
+            rman_update = RmanUpdate()
+            rman_update.is_updated_geometry = obj.is_updated_geometry
+            rman_update.is_updated_shading = obj.is_updated_shading
+            rman_update.is_updated_transform = obj.is_updated_transform
+            self.rman_updates[ob.original] = rman_update               
             return
         if obj.is_updated_transform or obj.is_updated_shading:
             rfb_log().debug("\tLight Filter: %s Transform Updated" % obj.id.name)
             self.light_filter_transform_updated(obj)
         if obj.is_updated_geometry:
             rfb_log().debug("\tLight Filter: %s Shading Updated" % obj.id.name)
-            with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
+            with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):                
                 self.rman_scene.rman_translators['LIGHTFILTER'].update(ob, rman_sg_node)
                 for light_ob in rman_sg_node.lights_list:
                     if isinstance(light_ob, bpy.types.Material):
@@ -228,18 +234,6 @@ class RmanSceneSync(object):
                 rfb_log().debug("\tCamera Transform Updated: %s" % ob.name)
                 translator._update_render_cam_transform(ob, rman_sg_camera)                        
               
-    def update_light_visibility(self, rman_sg_node, ob):
-        if not self.rman_scene.scene_solo_light:
-            rman_sg_node.sg_node.SetHidden(ob.renderman.mute)
-        else:
-            rm = ob.renderman
-            if not rm:
-                return
-            if rm.solo:
-                rman_sg_node.sg_node.SetHidden(0)
-            else:
-                rman_sg_node.sg_node.SetHidden(1)            
-
     def check_particle_systems(self, ob_update):
         ob = ob_update.id.evaluated_get(self.rman_scene.depsgraph)
         for psys in ob.particle_systems:
