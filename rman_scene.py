@@ -617,8 +617,8 @@ class RmanScene(object):
             # Object attrs     
             translator =  self.rman_translators.get(rman_type, None)  
             if translator:
-                translator.export_object_attributes(ob, rman_sg_group)                    
-                translator.export_object_id(ob, rman_sg_group, ob_inst)       
+                translator.export_object_attributes(ob_eval, rman_sg_group)                    
+                translator.export_object_id(ob_eval, rman_sg_group, ob_inst)       
 
             # Add any particles necessary
             if rman_sg_node.rman_sg_particle_group_node:

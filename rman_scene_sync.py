@@ -784,12 +784,18 @@ class RmanSceneSync(object):
                         continue
                     
                     # Transform
-                    rman_group_translator.update_transform(instance, rman_sg_group)                            
+                    rman_group_translator.update_transform(instance, rman_sg_group) 
+
+                    # Object attrs     
+                    translator =  self.rman_scene.rman_translators.get(rman_type, None)  
+                    if translator:
+                        translator.export_object_attributes(ob_eval, rman_sg_group)                    
+                        translator.export_object_id(ob_eval, rman_sg_group, instance)                                                
                                                    
                 # delete objects
                 if deleted_obj_keys:
-                    self.delete_objects(deleted_obj_keys)                                                         
-
+                    self.delete_objects(deleted_obj_keys)     
+                           
         # call txmake all in case of new textures
         texture_utils.get_txmanager().txmake_all(blocking=False)                              
         rfb_log().debug("------End update scene----------")    
