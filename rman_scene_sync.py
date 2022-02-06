@@ -413,8 +413,6 @@ class RmanSceneSync(object):
         self.rman_scene.depsgraph = depsgraph
         self.rman_scene.bl_scene = depsgraph.scene
         self.rman_scene.context = context           
-
-        did_mesh_update = False # did the mesh actually update
        
         # Check the number of instances. If we differ, an object may have been
         # added or deleted
@@ -459,7 +457,6 @@ class RmanSceneSync(object):
 
             elif isinstance(obj.id, bpy.types.Mesh):
                 rfb_log().debug("Mesh updated: %s" % obj.id.name)
-                did_mesh_update = True
                 '''
                 # Experimental code path. We can use context.blend_data.user_map to ask
                 # what objects use this mesh. We can then loop thru and call object_update on these
@@ -606,12 +603,10 @@ class RmanSceneSync(object):
                 pass
                 #self.update_geometry_node_instances(obj.id)
                          
-
-        deleted_obj_keys = list() # list of potential objects to delete
-        already_udpated = list() # list of objects already updated during our loop
-        clear_instances = list() # list of objects who had their instances cleared
         if self.num_instances_changed or self.rman_updates:
-            deleted_obj_keys = list(self.rman_scene.rman_prototypes)
+            deleted_obj_keys = list(self.rman_scene.rman_prototypes) # list of potential objects to delete
+            already_udpated = list() # list of objects already updated during our loop
+            clear_instances = list() # list of objects who had their instances cleared            
             rfb_log().debug("Updating instances")        
             with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene): 
                 rman_group_translator = self.rman_scene.rman_translators['GROUP']
@@ -651,10 +646,6 @@ class RmanSceneSync(object):
 
                     if not rman_sg_node:
                         # this is a new object.
-                        if rman_type == 'LIGHT':
-                            # We don't support adding new Blender lights
-                            if not shadergraph_utils.is_rman_light(ob_eval):
-                                continue
                         rman_sg_node = self.rman_scene.export_data_block(proto_key, ob_eval)
                         if not rman_sg_node:
                             continue
