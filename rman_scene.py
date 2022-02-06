@@ -262,7 +262,7 @@ class RmanScene(object):
         self.export_root_sg_node()
         objs = context.selected_objects
         self.export_materials([m for m in self.depsgraph.ids if isinstance(m, bpy.types.Material)])
-        self.export_data_blocks(objs)
+        self.export_data_blocks(selected_objects=objs)
 
     def export_for_swatch_render(self, depsgraph, sg_scene):
         self.sg_scene = sg_scene
@@ -430,7 +430,7 @@ class RmanScene(object):
         self.export_materials([m for m in self.depsgraph.ids if isinstance(m, bpy.types.Material)])
         objects_needed = [x for x in self.bl_scene.objects if object_utils._detect_primitive_(x) == 'LIGHT']
         objects_needed.append(ob)
-        self.export_data_blocks(objects_needed)  
+        self.export_data_blocks(selected_objects=objects_needed)  
 
         self.export_samplefilters()
         self.export_displayfilters()
