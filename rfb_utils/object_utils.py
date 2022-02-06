@@ -154,7 +154,10 @@ def has_empty_parent(ob):
 def prototype_key(ob):
     if isinstance(ob, bpy.types.DepsgraphObjectInstance):
         if ob.is_instance:
-            return ob.object.data.name
+            if ob.object.data:
+                return ob.object.data.name
+            else:
+                return ob.object.name
         if ob.object.data:
             return ob.object.data.name
         return ob.object.original.name
