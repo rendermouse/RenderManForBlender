@@ -4,6 +4,7 @@ from .rfb_utils import transform_utils
 from .rfb_utils import texture_utils
 from .rfb_utils import scene_utils
 from .rfb_utils import shadergraph_utils
+from .rfb_utils.timer_utils import time_this
 
 from .rfb_logger import rfb_log
 from .rman_sg_nodes.rman_sg_lightfilter import RmanSgLightFilter
@@ -65,6 +66,7 @@ class RmanSceneSync(object):
             else:
                 translator.update_transform(camera, rman_sg_camera)  
 
+    @time_this
     def scene_updated(self):
         # Check visible objects
         visible_objects = self.rman_scene.context.visible_objects
@@ -598,208 +600,213 @@ class RmanSceneSync(object):
                 #self.update_geometry_node_instances(obj.id)
                          
         if self.num_instances_changed or self.rman_updates:
-            deleted_obj_keys = list(self.rman_scene.rman_prototypes) # list of potential objects to delete
-            already_udpated = list() # list of objects already updated during our loop
-            clear_instances = list() # list of objects who had their instances cleared            
-            rfb_log().debug("Updating instances")        
-            with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene): 
-                rman_group_translator = self.rman_scene.rman_translators['GROUP']
-                for instance in depsgraph.object_instances:
-                    if instance.object.type in ('ARMATURE', 'CAMERA'):
-                        continue
-
-                    ob_key = instance.object.original
-                    ob_eval = instance.object.evaluated_get(depsgraph)                
-                    parent = None
-                    psys = None 
-                    is_new_object = False
-                    proto_key = object_utils.prototype_key(instance)              
-                    if instance.is_instance:
-                        ob_key = instance.instance_object.original      
-                        psys = instance.particle_system
-                        parent = instance.parent 
-                        
-                    if proto_key in deleted_obj_keys:
-                        deleted_obj_keys.remove(proto_key) 
-
-                    rman_type = object_utils._detect_primitive_(ob_eval)
-                    
-                    rman_sg_node = self.rman_scene.rman_prototypes.get(proto_key, None)
-                    if rman_sg_node and rman_type != rman_sg_node.rman_type:
-                        # Types don't match
-                        #
-                        # This can happen because
-                        # we have not been able to tag our types before Blender
-                        # tells us an object has been added
-                        # For now, just delete the existing sg_node
-                        rfb_log().debug("\tTypes don't match. Removing: %s" % proto_key)
-                        self.clear_instances(ob_eval, rman_sg_node)                        
-                        self.rman_scene.sg_scene.DeleteDagNode(rman_sg_node.sg_node)
-                        del self.rman_scene.rman_prototypes[proto_key]
-                        rman_sg_node = None
-
-                    if not rman_sg_node:
-                        # this is a new object.
-                        rman_sg_node = self.rman_scene.export_data_block(proto_key, ob_eval)
-                        if not rman_sg_node:
-                            continue
-
-                        rfb_log().debug("\tNew Object added: %s (%s)" % (proto_key, rman_type))
-
-                        if rman_type == 'LIGHTFILTER':
-                            # update all lights with this light filter
-                            users = bpy.context.blend_data.user_map(subset={ob_eval.original})
-                            for o in users[ob_eval.original]:
-                                if isinstance(o, bpy.types.Light):
-                                    o.node_tree.update_tag()
-                            continue
-
-                        is_new_object = True
-                        rman_update = self.rman_updates.get(ob_key, None)
-                        if not rman_update:
-                            rman_update = RmanUpdate()
-                            rman_update.is_updated_shading = True
-                            rman_update.is_updated_transform = True
-                            self.rman_updates[ob_key] = rman_update    
-                        rman_update.is_updated_geometry = False
-                                    
-                    if self.num_instances_changed:
-                        # If the number of instances has changed, 
-                        # we check all instances in the scene
-                        rman_update = self.rman_updates.get(ob_key, None)
-                        if not rman_update:                  
-                            rman_update = RmanUpdate()
-                            rman_update.is_updated_shading = True
-                            rman_update.is_updated_transform = True
-                            self.rman_updates[ob_key] = rman_update  
-                    else:                        
-                        if ob_key not in self.rman_updates:
-                            if not parent:
-                                continue
-                            # check if the parent is also marked to be updated
-                            if parent.original not in self.rman_updates:
-                                continue
+            self.check_instances()
                             
-                            # parent was marked needing update. 
-                            # create an on the fly RmanUpdate()
-                            rman_update = RmanUpdate()
-                            rman_update.is_updated_shading = True
-                            rman_update.is_updated_transform = True
-                            self.rman_updates[ob_key] = rman_update                        
-                        else:
-                            rman_update = self.rman_updates[ob_key]                     
-
-                    if rman_sg_node and not is_new_object:
-                        if rman_update.is_updated_geometry and proto_key not in already_udpated:
-                            translator =  self.rman_scene.rman_translators.get(rman_type, None)
-                            rfb_log().debug("\tUpdating Object: %s" % proto_key)
-                            translator.update(ob_eval, rman_sg_node)    
-                            already_udpated.append(proto_key)   
-
-                    if rman_type == 'EMPTY':
-                        self.rman_scene._export_hidden_instance(ob_eval, rman_sg_node)
-                        continue                            
-
-                    elif rman_type == 'LIGHTFILTER':
-                        # Light filters are special. We don't need to add instances
-                        # of them, as they are part of lights
-                        continue
-
-                    if rman_sg_node not in clear_instances:
-                        # clear all instances for this prototype, if
-                        # we have not already done so
-                        rfb_log().debug("\tClearing instances: %s" % proto_key)
-                        self.clear_instances(ob_eval, rman_sg_node)
-                        clear_instances.append(rman_sg_node) 
-
-                    if not self.rman_scene.check_visibility(instance):
-                        # This instance is not visible in the viewport. Don't
-                        # add an instance of it
-                        continue
-
-                    group_db_name = object_utils.get_group_db_name(instance) 
-                    rman_sg_group = rman_sg_node.instances.get(group_db_name, None)
-                    if not rman_sg_group:
-                        rman_sg_group = rman_group_translator.export(ob_eval, group_db_name)
-                        rman_sg_group.sg_node.AddChild(rman_sg_node.sg_node)
-                        rman_sg_node.instances[group_db_name] = rman_sg_group 
-
-                    if object_utils.has_empty_parent(ob_eval):
-                        # this object is a child of an empty. Add it to the empty.
-                        parent_proto_key = object_utils.prototype_key(ob_eval.parent)
-                        rman_empty_node = self.rman_scene.rman_prototypes.get(parent_proto_key, None)
-                        if not rman_empty_node:                            
-                            ob_parent_eval = ob_eval.parent.evaluated_get(self.depsgraph)
-                            rman_empty_node = self.rman_scene.export_data_block(parent_proto_key, ob_parent_eval)
-                            self.rman_scene._export_hidden_instance(ob_parent_eval, rman_empty_node)
-                        if parent_proto_key in deleted_obj_keys:
-                            deleted_obj_keys.remove(parent_proto_key) 
-
-                        if not rman_empty_node:
-                            self.rman_scene.get_root_sg_node().AddChild(rman_sg_group.sg_node)        
-                        else:
-                            rman_sg_group.sg_node.SetInheritTransform(False) # we don't want to inherit the transform
-                            rman_empty_node.sg_node.AddChild(rman_sg_group.sg_node)  
-                    else:              
-                        self.rman_scene.get_root_sg_node().AddChild(rman_sg_group.sg_node)                        
-
-                    if rman_type == 'LIGHT':
-                        # We are dealing with a light. Check if it's a solo light, or muted
-                        self.rman_scene.check_solo_light(rman_sg_node, ob_eval)
-                        
-                        # Hide the default light
-                        if self.rman_scene.default_light.GetHidden() != 1:
-                            self.rman_scene.default_light.SetHidden(1)
-
-                    # Attach a material
-                    if psys:
-                        self.rman_scene.attach_particle_material(psys.settings, parent, ob_eval, rman_sg_group)
-                        rman_sg_group.bl_psys_settings = psys.settings.original
-                    else:
-                        self.rman_scene.attach_material(ob_eval, rman_sg_group)
-                    self.rman_scene.get_root_sg_node().AddChild(rman_sg_group.sg_node)
-                    rman_sg_node.instances[group_db_name] = rman_sg_group 
-                    if rman_sg_node.rman_sg_particle_group_node:
-                        rman_sg_node.sg_node.RemoveChild(rman_sg_node.rman_sg_particle_group_node.sg_node)
-                        if (len(ob_eval.particle_systems) > 0) and instance.show_particles:
-                            rman_sg_group.sg_node.AddChild(rman_sg_node.rman_sg_particle_group_node.sg_node) 
-
-                    # Delete any removed partcle systems
-                    if proto_key in self.rman_scene.rman_particles:                                                
-                        ob_psys = self.rman_scene.rman_particles[proto_key]
-                        rman_particle_nodes = list(ob_psys)
-                        for psys in ob_eval.particle_systems:
-                            try:
-                                rman_particle_nodes.remove(psys.settings.original)
-                            except:
-                                continue
-                        if rman_particle_nodes:
-                            rfb_log().debug("\t\tRemoving particle nodes: %s" % proto_key)
-                        for k in rman_particle_nodes:                        
-                            rman_particles_node = ob_psys[k]
-                            self.rman_scene.sg_scene.DeleteDagNode(rman_particles_node.sg_node)
-                            del ob_psys[k]
-
-                    if rman_type == 'META':
-                        continue
-                    
-                    # Transform
-                    rman_group_translator.update_transform(instance, rman_sg_group) 
-
-                    # Object attrs     
-                    translator =  self.rman_scene.rman_translators.get(rman_type, None)  
-                    if translator:
-                        translator.export_object_attributes(ob_eval, rman_sg_group)                    
-                        translator.export_object_id(ob_eval, rman_sg_group, instance)                                                
-                                                   
-                # delete objects
-                if deleted_obj_keys:
-                    self.delete_objects(deleted_obj_keys)     
-                           
         # call txmake all in case of new textures
         texture_utils.get_txmanager().txmake_all(blocking=False)                              
         rfb_log().debug("------End update scene----------")    
 
+    @time_this
+    def check_instances(self):
+        deleted_obj_keys = list(self.rman_scene.rman_prototypes) # list of potential objects to delete
+        already_udpated = list() # list of objects already updated during our loop
+        clear_instances = list() # list of objects who had their instances cleared            
+        rfb_log().debug("Updating instances")        
+        with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene): 
+            rman_group_translator = self.rman_scene.rman_translators['GROUP']
+            for instance in self.rman_scene.depsgraph.object_instances:
+                if instance.object.type in ('ARMATURE', 'CAMERA'):
+                    continue
+
+                ob_key = instance.object.original
+                ob_eval = instance.object.evaluated_get(self.rman_scene.depsgraph)                
+                parent = None
+                psys = None 
+                is_new_object = False
+                proto_key = object_utils.prototype_key(instance)              
+                if instance.is_instance:
+                    ob_key = instance.instance_object.original      
+                    psys = instance.particle_system
+                    parent = instance.parent 
+                    
+                if proto_key in deleted_obj_keys:
+                    deleted_obj_keys.remove(proto_key) 
+
+                rman_type = object_utils._detect_primitive_(ob_eval)
+                
+                rman_sg_node = self.rman_scene.rman_prototypes.get(proto_key, None)
+                if rman_sg_node and rman_type != rman_sg_node.rman_type:
+                    # Types don't match
+                    #
+                    # This can happen because
+                    # we have not been able to tag our types before Blender
+                    # tells us an object has been added
+                    # For now, just delete the existing sg_node
+                    rfb_log().debug("\tTypes don't match. Removing: %s" % proto_key)
+                    self.clear_instances(ob_eval, rman_sg_node)                        
+                    self.rman_scene.sg_scene.DeleteDagNode(rman_sg_node.sg_node)
+                    del self.rman_scene.rman_prototypes[proto_key]
+                    rman_sg_node = None
+
+                if not rman_sg_node:
+                    # this is a new object.
+                    rman_sg_node = self.rman_scene.export_data_block(proto_key, ob_eval)
+                    if not rman_sg_node:
+                        continue
+
+                    rfb_log().debug("\tNew Object added: %s (%s)" % (proto_key, rman_type))
+
+                    if rman_type == 'LIGHTFILTER':
+                        # update all lights with this light filter
+                        users = bpy.context.blend_data.user_map(subset={ob_eval.original})
+                        for o in users[ob_eval.original]:
+                            if isinstance(o, bpy.types.Light):
+                                o.node_tree.update_tag()
+                        continue
+
+                    is_new_object = True
+                    rman_update = self.rman_updates.get(ob_key, None)
+                    if not rman_update:
+                        rman_update = RmanUpdate()
+                        rman_update.is_updated_shading = True
+                        rman_update.is_updated_transform = True
+                        self.rman_updates[ob_key] = rman_update    
+                    rman_update.is_updated_geometry = False
+                                
+                if self.num_instances_changed:
+                    # If the number of instances has changed, 
+                    # we check all instances in the scene
+                    rman_update = self.rman_updates.get(ob_key, None)
+                    if not rman_update:                  
+                        rman_update = RmanUpdate()
+                        rman_update.is_updated_shading = True
+                        rman_update.is_updated_transform = True
+                        self.rman_updates[ob_key] = rman_update  
+                else:                        
+                    if ob_key not in self.rman_updates:
+                        if not parent:
+                            continue
+                        # check if the parent is also marked to be updated
+                        if parent.original not in self.rman_updates:
+                            continue
+                        
+                        # parent was marked needing update. 
+                        # create an on the fly RmanUpdate()
+                        rman_update = RmanUpdate()
+                        rman_update.is_updated_shading = True
+                        rman_update.is_updated_transform = True
+                        self.rman_updates[ob_key] = rman_update                        
+                    else:
+                        rman_update = self.rman_updates[ob_key]                     
+
+                if rman_sg_node and not is_new_object:
+                    if rman_update.is_updated_geometry and proto_key not in already_udpated:
+                        translator =  self.rman_scene.rman_translators.get(rman_type, None)
+                        rfb_log().debug("\tUpdating Object: %s" % proto_key)
+                        translator.update(ob_eval, rman_sg_node)    
+                        already_udpated.append(proto_key)   
+
+                if rman_type == 'EMPTY':
+                    self.rman_scene._export_hidden_instance(ob_eval, rman_sg_node)
+                    continue                            
+
+                elif rman_type == 'LIGHTFILTER':
+                    # Light filters are special. We don't need to add instances
+                    # of them, as they are part of lights
+                    continue
+
+                if rman_sg_node not in clear_instances:
+                    # clear all instances for this prototype, if
+                    # we have not already done so
+                    rfb_log().debug("\tClearing instances: %s" % proto_key)
+                    self.clear_instances(ob_eval, rman_sg_node)
+                    clear_instances.append(rman_sg_node) 
+
+                if not self.rman_scene.check_visibility(instance):
+                    # This instance is not visible in the viewport. Don't
+                    # add an instance of it
+                    continue
+
+                group_db_name = object_utils.get_group_db_name(instance) 
+                rman_sg_group = rman_sg_node.instances.get(group_db_name, None)
+                if not rman_sg_group:
+                    rman_sg_group = rman_group_translator.export(ob_eval, group_db_name)
+                    rman_sg_group.sg_node.AddChild(rman_sg_node.sg_node)
+                    rman_sg_node.instances[group_db_name] = rman_sg_group 
+
+                if object_utils.has_empty_parent(ob_eval):
+                    # this object is a child of an empty. Add it to the empty.
+                    parent_proto_key = object_utils.prototype_key(ob_eval.parent)
+                    rman_empty_node = self.rman_scene.rman_prototypes.get(parent_proto_key, None)
+                    if not rman_empty_node:                            
+                        ob_parent_eval = ob_eval.parent.evaluated_get(self.depsgraph)
+                        rman_empty_node = self.rman_scene.export_data_block(parent_proto_key, ob_parent_eval)
+                        self.rman_scene._export_hidden_instance(ob_parent_eval, rman_empty_node)
+                    if parent_proto_key in deleted_obj_keys:
+                        deleted_obj_keys.remove(parent_proto_key) 
+
+                    if not rman_empty_node:
+                        self.rman_scene.get_root_sg_node().AddChild(rman_sg_group.sg_node)        
+                    else:
+                        rman_sg_group.sg_node.SetInheritTransform(False) # we don't want to inherit the transform
+                        rman_empty_node.sg_node.AddChild(rman_sg_group.sg_node)  
+                else:              
+                    self.rman_scene.get_root_sg_node().AddChild(rman_sg_group.sg_node)                        
+
+                if rman_type == 'LIGHT':
+                    # We are dealing with a light. Check if it's a solo light, or muted
+                    self.rman_scene.check_solo_light(rman_sg_node, ob_eval)
+                    
+                    # Hide the default light
+                    if self.rman_scene.default_light.GetHidden() != 1:
+                        self.rman_scene.default_light.SetHidden(1)
+
+                # Attach a material
+                if psys:
+                    self.rman_scene.attach_particle_material(psys.settings, parent, ob_eval, rman_sg_group)
+                    rman_sg_group.bl_psys_settings = psys.settings.original
+                else:
+                    self.rman_scene.attach_material(ob_eval, rman_sg_group)
+                self.rman_scene.get_root_sg_node().AddChild(rman_sg_group.sg_node)
+                rman_sg_node.instances[group_db_name] = rman_sg_group 
+                if rman_sg_node.rman_sg_particle_group_node:
+                    rman_sg_node.sg_node.RemoveChild(rman_sg_node.rman_sg_particle_group_node.sg_node)
+                    if (len(ob_eval.particle_systems) > 0) and instance.show_particles:
+                        rman_sg_group.sg_node.AddChild(rman_sg_node.rman_sg_particle_group_node.sg_node) 
+
+                # Delete any removed partcle systems
+                if proto_key in self.rman_scene.rman_particles:                                                
+                    ob_psys = self.rman_scene.rman_particles[proto_key]
+                    rman_particle_nodes = list(ob_psys)
+                    for psys in ob_eval.particle_systems:
+                        try:
+                            rman_particle_nodes.remove(psys.settings.original)
+                        except:
+                            continue
+                    if rman_particle_nodes:
+                        rfb_log().debug("\t\tRemoving particle nodes: %s" % proto_key)
+                    for k in rman_particle_nodes:                        
+                        rman_particles_node = ob_psys[k]
+                        self.rman_scene.sg_scene.DeleteDagNode(rman_particles_node.sg_node)
+                        del ob_psys[k]
+
+                if rman_type == 'META':
+                    continue
+                
+                # Transform
+                rman_group_translator.update_transform(instance, rman_sg_group) 
+
+                # Object attrs     
+                translator =  self.rman_scene.rman_translators.get(rman_type, None)  
+                if translator:
+                    translator.export_object_attributes(ob_eval, rman_sg_group)                    
+                    translator.export_object_id(ob_eval, rman_sg_group, instance)                                                
+                                                
+            # delete objects
+            if deleted_obj_keys:
+                self.delete_objects(deleted_obj_keys)        
+                     
+    @time_this
     def delete_objects(self, deleted_obj_keys=list()):
         rfb_log().debug("Deleting objects")
         for key in deleted_obj_keys:
