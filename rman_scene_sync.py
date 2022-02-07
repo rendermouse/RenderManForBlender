@@ -391,12 +391,8 @@ class RmanSceneSync(object):
                         update_geo_instances(modifier.node_group.nodes)
 
     def update_portals(self, ob):
-        with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
-            translator = self.rman_scene.rman_translators['LIGHT']
-            for portal in scene_utils.get_all_portals(ob):
-                rman_sg_node = self.rman_scene.rman_objects.get(portal.original, None)
-                if rman_sg_node:
-                    translator.update(portal, rman_sg_node)
+        for portal in scene_utils.get_all_portals(ob):
+           portal.original.update_tag()
 
 
     def update_scene(self, context, depsgraph):
@@ -756,6 +752,9 @@ class RmanSceneSync(object):
                 if rman_type == 'LIGHT':
                     # We are dealing with a light. Check if it's a solo light, or muted
                     self.rman_scene.check_solo_light(rman_sg_node, ob_eval)
+
+                    # check portal lights
+                    self.update_portals(ob_eval)
                     
                     # Hide the default light
                     if self.rman_scene.default_light.GetHidden() != 1:
