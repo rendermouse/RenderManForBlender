@@ -19,9 +19,9 @@ s_orientPxrLight = [-1.0, 0.0, -0.0, 0.0,
                     0.0, 0.0, -1.0, 0.0,
                     0.0, 0.0, 0.0, 1.0]
 
-s_orientPxrDomeLight = [0.0, 0.0, -1.0, 0.0,
-                       -1.0, -0.0, 0.0, 0.0,
-                        0.0, 1.0, 0.0, 0.0,
+s_orientPxrDomeLight = [0.0, 1.0, 0.0, 0.0, 
+                        -1.0, 0.0, 0.0, 0.0, 
+                        0.0, -0.0, 1.0, 0.0, 
                         0.0, 0.0, 0.0, 1.0]
 
 s_orientPxrEnvDayLight = [-0.0, 0.0, -1.0, 0.0,
@@ -126,13 +126,14 @@ class RmanLightTranslator(RmanTranslator):
                     rixparams.SetString('portalName', rman_sg_light.db_name)
                     property_utils.portal_inherit_dome_params(light_shader, portal_parent, parent_node, rixparams)
 
-                    orient_mtx = transform_utils.convert_to_blmatrix(s_orientPxrLight)
-                    portal_mtx = orient_mtx @ Matrix(ob.matrix_world) 
-                    dome_mtx = Matrix.Rotation(math.radians(90.0), 4, 'Y') @ Matrix(portal_parent.matrix_world)
-                    dome_mtx.invert()
-                    mtx = portal_mtx @ dome_mtx  
-                    
-                    rixparams.SetMatrix('portalToDome', transform_utils.convert_matrix4x4(mtx) )
+                    # Calculate the portalToDome matrix
+                    portal_mtx = transform_utils.convert_matrix4x4(s_orientPxrLight) * transform_utils.convert_matrix4x4(ob.matrix_world)
+                    dome_mtx = transform_utils.convert_matrix4x4(s_orientPxrDomeLight) *  transform_utils.convert_matrix4x4(portal_parent.matrix_world)
+                    inv_dome_mtx = self.rman_scene.rman.Types.RtMatrix4x4()
+                    dome_mtx.Inverse(inv_dome_mtx)
+                    portalToDome = portal_mtx * inv_dome_mtx
+                    rixparams.SetMatrix('portalToDome', portalToDome)
+
                     rman_sg_light.sg_node.SetLight(sg_node)
                 else:
                     # If this portal light is not attached to a dome light
@@ -180,6 +181,4 @@ class RmanLightTranslator(RmanTranslator):
                 m = Matrix.Identity(4)
                 rman_sg_light.sg_node.SetOrientTransform(transform_utils.convert_matrix4x4(m))    
         elif light_shader_name == 'PxrDomeLight':
-            # m = Matrix.Identity(4)            
-            m = Matrix.Rotation(math.radians(90.0), 4, 'Z')
-            rman_sg_light.sg_node.SetOrientTransform(transform_utils.convert_matrix4x4(m))
+            rman_sg_light.sg_node.SetOrientTransform(s_orientPxrDomeLight)
