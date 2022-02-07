@@ -10,7 +10,10 @@ def convert_matrix(m):
     return v    
 
 def convert_matrix4x4(m):
-    mtx = convert_matrix( m )
+    mtx = m
+    if len(m) == 4:
+        # convert this to a flat list
+        mtx = convert_matrix( m )
     rman_mtx = rman.Types.RtMatrix4x4( mtx[0],mtx[1],mtx[2],mtx[3],
                                 mtx[4],mtx[5],mtx[6],mtx[7],
                                 mtx[8],mtx[9],mtx[10],mtx[11],
