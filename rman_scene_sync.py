@@ -1,9 +1,7 @@
 # utils
 from .rfb_utils import object_utils
-from .rfb_utils import transform_utils
 from .rfb_utils import texture_utils
 from .rfb_utils import scene_utils
-from .rfb_utils import shadergraph_utils
 from .rfb_utils.timer_utils import time_this
 
 from .rfb_logger import rfb_log
@@ -236,33 +234,47 @@ class RmanSceneSync(object):
                 rfb_log().debug("\tCamera Transform Updated: %s" % ob.name)
                 translator._update_render_cam_transform(ob, rman_sg_camera)                        
               
+
+    def check_particle_instancer(self, ob_update, psys):
+        # this particle system is a instancer
+        inst_ob = getattr(psys.settings, 'instance_object', None) 
+        collection = getattr(psys.settings, 'instance_collection', None)
+        if inst_ob:
+            if inst_ob.original not in self.rman_updates:
+                rman_update = RmanUpdate()
+                rman_update.is_updated_geometry = ob_update.is_updated_geometry
+                rman_update.is_updated_shading = ob_update.is_updated_shading
+                rman_update.is_updated_transform = ob_update.is_updated_transform
+                self.rman_updates[inst_ob.original] = rman_update         
+        elif collection:
+            for col_obj in collection.all_objects:
+                if not col_obj.original.data:
+                    continue
+                if col_obj.original in self.rman_updates:
+                    continue
+                rman_update = RmanUpdate()
+                rman_update.is_updated_geometry = ob_update.is_updated_geometry
+                rman_update.is_updated_shading = ob_update.is_updated_shading
+                rman_update.is_updated_transform = ob_update.is_updated_transform
+                self.rman_updates[col_obj.original] = rman_update                      
+
     def check_particle_systems(self, ob_update):
         ob = ob_update.id.evaluated_get(self.rman_scene.depsgraph)
         for psys in ob.particle_systems:
             if object_utils.is_particle_instancer(psys):
-                # this particle system is a instancer
-                inst_ob = getattr(psys.settings, 'instance_object', None) 
-                collection = getattr(psys.settings, 'instance_collection', None)
-                if inst_ob:
-                    if inst_ob.original not in self.rman_updates:
-                        rman_update = RmanUpdate()
-                        rman_update.is_updated_geometry = ob_update.is_updated_geometry
-                        rman_update.is_updated_shading = ob_update.is_updated_shading
-                        rman_update.is_updated_transform = ob_update.is_updated_transform
-                        self.rman_updates[inst_ob.original] = rman_update  
-                elif collection:
-                    for col_obj in collection.all_objects:
-                        if not col_obj.original.data:
-                            continue
-                        if col_obj.original in self.rman_updates:
-                            continue
-                        rman_update = RmanUpdate()
-                        rman_update.is_updated_geometry = ob_update.is_updated_geometry
-                        rman_update.is_updated_shading = ob_update.is_updated_shading
-                        rman_update.is_updated_transform = ob_update.is_updated_transform
-                        self.rman_updates[col_obj.original] = rman_update                 
-                continue 
+                self.check_particle_instancer(ob_update, psys)
 
+    def update_particle_emitter(self, ob, psys):
+        psys_translator = self.rman_scene.rman_translators['PARTICLES']
+        proto_key = object_utils.prototype_key(ob)
+        rman_sg_particles = self.rman_scene.get_rman_particles(proto_key, psys, ob)
+        psys_translator.update(ob, psys, rman_sg_particles)
+
+    def update_particle_emitters(self, ob):
+        for psys in ob.particle_systems:
+            if not object_utils.is_particle_instancer(psys):
+                self.update_particle_emitter(ob, psys)
+                            
     def update_empty(self, ob_update, rman_sg_node=None):
         ob = ob_update.id
         rfb_log().debug("Update empty: %s" % ob.name)
@@ -489,44 +501,10 @@ class RmanSceneSync(object):
                         if not psys:
                             continue
                         if object_utils.is_particle_instancer(psys):
-                            inst_ob = getattr(psys.settings, 'instance_object', None) 
-                            collection = getattr(psys.settings, 'instance_collection', None)
-                            if inst_ob:
-                                if inst_ob.original not in self.rman_updates:
-                                    rman_update = RmanUpdate()
-                                    rman_update.is_updated_geometry = obj.is_updated_geometry
-                                    rman_update.is_updated_shading = obj.is_updated_shading
-                                    rman_update.is_updated_transform = obj.is_updated_transform
-                                    self.rman_updates[inst_ob.original] = rman_update   
-                            elif collection:
-                                for col_obj in collection.all_objects:
-                                    if not col_obj.original.data:
-                                        continue
-                                    if col_obj.original in self.rman_updates:
-                                        continue
-                                    rman_update = RmanUpdate()
-                                    rman_update.is_updated_geometry = obj.is_updated_geometry
-                                    rman_update.is_updated_shading = obj.is_updated_shading
-                                    rman_update.is_updated_transform = obj.is_updated_transform
-                                    self.rman_updates[col_obj.original] = rman_update                                   
+                            self.check_particle_instancer(obj, psys)                                
                         else:
-                            psys_db_name = '%s' % psys.name
-                            proto_key = object_utils.prototype_key(ob)
-                            ob_psys = self.rman_scene.rman_particles.get(proto_key, dict())
-                            rman_sg_particles = ob_psys.get(obj.id.original, None)
-                            if not rman_sg_particles:
-                                rman_sg_particles = psys_translator.export(ob, psys, psys_db_name)
-                                ob_psys[psys.settings.original] = rman_sg_particles
-                                self.rman_scene.rman_particles[proto_key] = ob_psys 
-                                rman_sg_node = self.rman_scene.get_rman_prototype(proto_key)      
-                                if rman_sg_node:          
-                                    if not rman_sg_node.rman_sg_particle_group_node:
-                                        particles_group_db = ''
-                                        rman_sg_node.rman_sg_particle_group_node = self.rman_scene.rman_translators['GROUP'].export(None, particles_group_db)
-                                    rman_sg_node.rman_sg_particle_group_node.sg_node.AddChild(rman_sg_particles.sg_node)
-                            psys_translator.update(ob, psys, rman_sg_particles)                                                     
+                            self.update_particle_emitter(ob, psys)
                         
-                
             elif isinstance(obj.id, bpy.types.ShaderNodeTree):
                 if obj.id.name in bpy.data.node_groups:
                     # this is probably one of our fake node groups with ramps
@@ -565,10 +543,7 @@ class RmanSceneSync(object):
                 rman_update.is_updated_geometry = obj.is_updated_geometry
                 rman_update.is_updated_shading = obj.is_updated_shading
                 rman_update.is_updated_transform = obj.is_updated_transform
-                if obj.id.data:
-                    proto_key = obj.id.original.data.original
-                else:
-                    proto_key = obj.id.original
+
                 rfb_log().debug("\tObject: %s Updated" % obj.id.name)
                 rfb_log().debug("\t    is_updated_geometry: %s" % str(obj.is_updated_geometry))
                 rfb_log().debug("\t    is_updated_shading: %s" % str(obj.is_updated_shading))
@@ -700,6 +675,7 @@ class RmanSceneSync(object):
                         translator =  self.rman_scene.rman_translators.get(rman_type, None)
                         rfb_log().debug("\tUpdating Object: %s" % proto_key)
                         translator.update(ob_eval, rman_sg_node)    
+                        self.update_particle_emitters(ob_eval)
                         already_udpated.append(proto_key)   
 
                 if rman_type == 'EMPTY':

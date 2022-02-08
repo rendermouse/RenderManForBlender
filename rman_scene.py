@@ -888,6 +888,24 @@ class RmanScene(object):
         rman_sg_node = self.export_data_block(proto_key, ob)
         return rman_sg_node
 
+    def get_rman_particles(self, proto_key, psys, ob):
+        psys_translator = self.rman_translators['PARTICLES']
+        group_translator = self.rman_translators['GROUP']
+        ob_psys = self.rman_particles.get(proto_key, dict())
+        rman_sg_particles = ob_psys.get(psys.settings.original, None)
+        if not rman_sg_particles:
+            psys_db_name = '%s' % psys.name
+            rman_sg_particles = psys_translator.export(ob, psys, psys_db_name)
+            ob_psys[psys.settings.original] = rman_sg_particles
+            self.rman_particles[proto_key] = ob_psys 
+            rman_sg_node = self.get_rman_prototype(proto_key)      
+            if rman_sg_node:          
+                if not rman_sg_node.rman_sg_particle_group_node:
+                    particles_group_db = ''
+                    rman_sg_node.rman_sg_particle_group_node = group_translator.export(None, particles_group_db)
+                rman_sg_node.rman_sg_particle_group_node.sg_node.AddChild(rman_sg_particles.sg_node) 
+        return rman_sg_particles       
+
     def _export_hidden_instance(self, ob, rman_sg_node):
         translator = self.rman_translators.get('EMPTY')
         translator.export_object_attributes(ob, rman_sg_node)  
