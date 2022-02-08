@@ -592,19 +592,14 @@ class RmanScene(object):
                 continue                      
 
             rman_type = object_utils._detect_primitive_(ob_eval)
-            rman_sg_node = self.export_data_block(proto_key, ob_eval)
+            rman_sg_node = self.get_rman_prototype(proto_key, ob=ob_eval, create=True) #self.export_data_block(proto_key, ob_eval)
             if not rman_sg_node:
                 continue     
 
             if rman_type == 'LIGHT':
                 self.check_solo_light(rman_sg_node, ob_eval)           
    
-            if rman_type == 'EMPTY':
-                # If this is an empty, just export it as a coordinate system
-                # along with any instance attributes/materials necessary
-                self._export_hidden_instance(ob_eval, rman_sg_node)
-                continue
-            elif rman_type == 'LIGHTFILTER':
+            if rman_type == 'LIGHTFILTER':
                 # we don't need to create instances of light filters
                 # we just need them to be added as coordinate systems
                 # which should have been done in export
@@ -634,18 +629,11 @@ class RmanScene(object):
 
             if object_utils.has_empty_parent(ob):
                 # this object is a child of an empty. Add it to the empty.
+                ob_parent_eval = ob.parent.evaluated_get(self.depsgraph)
                 parent_proto_key = object_utils.prototype_key(ob.parent)
-                rman_empty_node = self.rman_prototypes.get(parent_proto_key, None)
-                if not rman_empty_node:
-                    ob_parent_eval = ob.parent.evaluated_get(self.depsgraph)
-                    rman_empty_node = self.export_data_block(parent_proto_key, ob_parent_eval)
-                    self._export_hidden_instance(ob_parent_eval, rman_empty_node)
-
-                if not rman_empty_node:
-                    self.get_root_sg_node().AddChild(rman_sg_group.sg_node)        
-                else:
-                    rman_sg_group.sg_node.SetInheritTransform(False) # we don't want to inherit the transform
-                    rman_empty_node.sg_node.AddChild(rman_sg_group.sg_node)  
+                rman_empty_node = self.get_rman_prototype(parent_proto_key, ob=ob_parent_eval, create=True)
+                rman_sg_group.sg_node.SetInheritTransform(False) # we don't want to inherit the transform
+                rman_empty_node.sg_node.AddChild(rman_sg_group.sg_node)  
             else:              
                 self.get_root_sg_node().AddChild(rman_sg_group.sg_node)
             rman_sg_node.instances[group_db_name] = rman_sg_group                      
@@ -739,9 +727,9 @@ class RmanScene(object):
                 self.rman_particles[proto_key] = ob_psys                 
                 rman_sg_node.rman_sg_particle_group_node.sg_node.AddChild(rman_sg_particles.sg_node)
 
-        if rman_type == 'EMPTY' and (ob.hide_render or ob.hide_viewport):
-            # Make sure empties that are hidden still go out. Children
-            # could still be visible
+        if rman_type == 'EMPTY':
+            # If this is an empty, just export it as a coordinate system
+            # along with any instance attributes/materials necessary
             self._export_hidden_instance(ob, rman_sg_node)
             return rman_sg_node                                 
 
@@ -885,7 +873,20 @@ class RmanScene(object):
     def _scene_has_lights(self):
         # Determine if there are any lights in the scene
         num_lights = len(scene_utils.get_all_lights(self.bl_scene, include_light_filters=False))
-        return num_lights > 0     
+        return num_lights > 0  
+
+    def get_rman_prototype(self, proto_key, ob=None, create=False):
+        if proto_key in self.rman_prototypes:
+            return self.rman_prototypes[proto_key]        
+
+        if not create:
+            return None
+
+        if not ob:
+            return None
+
+        rman_sg_node = self.export_data_block(proto_key, ob)
+        return rman_sg_node
 
     def _export_hidden_instance(self, ob, rman_sg_node):
         translator = self.rman_translators.get('EMPTY')
@@ -893,17 +894,9 @@ class RmanScene(object):
         self.attach_material(ob, rman_sg_node)        
         if object_utils.has_empty_parent(ob):
             parent_proto_key = object_utils.prototype_key(ob.parent)
-            rman_empty_node = self.rman_prototypes.get(ob.parent.original, None)
-            if not rman_empty_node:
-                # Empty was not created. Export it.
-                rman_empty_node = self.export_data_block(parent_proto_key, ob.parent)
-            if not rman_empty_node:
-                self.get_root_sg_node().AddChild(rman_sg_node.sg_node)          
-                translator.export_transform(ob, rman_sg_node.sg_node)
-                if ob.renderman.export_as_coordsys:
-                    self.get_root_sg_node().AddCoordinateSystem(rman_sg_node.sg_node)   
-            else:
-                rman_empty_node.sg_node.AddChild(rman_sg_node.sg_node)
+            ob_parent_eval = ob.parent.evaluated_get(self.depsgraph)
+            rman_empty_node = self.get_rman_prototype(parent_proto_key, ob=ob_parent_eval, create=True)
+            rman_empty_node.sg_node.AddChild(rman_sg_node.sg_node)
         else:
             self.get_root_sg_node().AddChild(rman_sg_node.sg_node)          
             translator.export_transform(ob, rman_sg_node.sg_node)

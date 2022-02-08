@@ -133,7 +133,7 @@ class RmanSceneSync(object):
                 if ob.type in ('ARMATURE', 'CURVE', 'CAMERA'):
                     continue  
                 proto_key = object_utils.prototype_key(ob_inst)                        
-                rman_sg_node = self.rman_scene.rman_prototypes.get(proto_key, None)
+                rman_sg_node = self.rman_scene.get_rman_prototype(proto_key)
                 if rman_sg_node:
                     found = False
                     for name, material in ob.data.materials.items():
@@ -175,7 +175,7 @@ class RmanSceneSync(object):
     def light_filter_transform_updated(self, obj):
         ob = obj.id.evaluated_get(self.rman_scene.depsgraph)
         proto_key = object_utils.prototype_key(ob)
-        rman_sg_lightfilter = self.rman_scene.rman_prototypes.get(proto_key, None)
+        rman_sg_lightfilter = self.rman_scene.get_rman_prototype(proto_key)
         if rman_sg_lightfilter:
             rman_group_translator = self.rman_scene.rman_translators['GROUP']  
             with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):              
@@ -184,7 +184,7 @@ class RmanSceneSync(object):
     def light_filter_updated(self, obj):
         ob = obj.id.evaluated_get(self.rman_scene.depsgraph)
         proto_key = object_utils.prototype_key(ob)
-        rman_sg_node = self.rman_scene.rman_prototypes.get(proto_key, None)
+        rman_sg_node = self.rman_scene.get_rman_prototype(proto_key)
         if not rman_sg_node:
             # Light filter needs to be added
             rman_update = RmanUpdate()
@@ -283,7 +283,7 @@ class RmanSceneSync(object):
         else:
             rfb_log().debug("\tRegular empty")
             proto_key = object_utils.prototype_key(ob)
-            rman_sg_node = self.rman_scene.rman_prototypes.get(proto_key, None)
+            rman_sg_node = self.rman_scene.get_rman_prototype(proto_key)
             if not rman_sg_node:
                 return
             translator = self.rman_scene.rman_translators['EMPTY']              
@@ -300,7 +300,7 @@ class RmanSceneSync(object):
         for k,rman_sg_group in rman_sg_node.instances.items():            
             if object_utils.has_empty_parent(ob):
                 proto_key = object_utils.prototype_key(ob.parent)  
-                rman_empty_node = self.rman_scene.rman_prototypes.get(proto_key)
+                rman_empty_node = self.rman_scene.get_rman_prototype(proto_key)
                 if rman_empty_node:
                     rman_empty_node.sg_node.RemoveChild(rman_sg_group.sg_node)
             else:
@@ -518,7 +518,7 @@ class RmanSceneSync(object):
                                 rman_sg_particles = psys_translator.export(ob, psys, psys_db_name)
                                 ob_psys[psys.settings.original] = rman_sg_particles
                                 self.rman_scene.rman_particles[proto_key] = ob_psys 
-                                rman_sg_node = self.rman_scene.rman_prototypes.get(proto_key, None)      
+                                rman_sg_node = self.rman_scene.get_rman_prototype(proto_key)      
                                 if rman_sg_node:          
                                     if not rman_sg_node.rman_sg_particle_group_node:
                                         particles_group_db = ''
@@ -630,7 +630,7 @@ class RmanSceneSync(object):
 
                 rman_type = object_utils._detect_primitive_(ob_eval)
                 
-                rman_sg_node = self.rman_scene.rman_prototypes.get(proto_key, None)
+                rman_sg_node = self.rman_scene.get_rman_prototype(proto_key)
                 if rman_sg_node and rman_type != rman_sg_node.rman_type:
                     # Types don't match
                     #
@@ -732,20 +732,11 @@ class RmanSceneSync(object):
 
                 if object_utils.has_empty_parent(ob_eval):
                     # this object is a child of an empty. Add it to the empty.
+                    ob_parent_eval = ob_eval.parent.evaluated_get(self.rman_scene.depsgraph)
                     parent_proto_key = object_utils.prototype_key(ob_eval.parent)
-                    rman_empty_node = self.rman_scene.rman_prototypes.get(parent_proto_key, None)
-                    if not rman_empty_node:                            
-                        ob_parent_eval = ob_eval.parent.evaluated_get(self.depsgraph)
-                        rman_empty_node = self.rman_scene.export_data_block(parent_proto_key, ob_parent_eval)
-                        self.rman_scene._export_hidden_instance(ob_parent_eval, rman_empty_node)
-                    if parent_proto_key in deleted_obj_keys:
-                        deleted_obj_keys.remove(parent_proto_key) 
-
-                    if not rman_empty_node:
-                        self.rman_scene.get_root_sg_node().AddChild(rman_sg_group.sg_node)        
-                    else:
-                        rman_sg_group.sg_node.SetInheritTransform(False) # we don't want to inherit the transform
-                        rman_empty_node.sg_node.AddChild(rman_sg_group.sg_node)  
+                    rman_empty_node = self.rman_scene.get_rman_prototype(parent_proto_key, ob=ob_parent_eval, create=True)
+                    rman_sg_group.sg_node.SetInheritTransform(False) # we don't want to inherit the transform
+                    rman_empty_node.sg_node.AddChild(rman_sg_group.sg_node)                      
                 else:              
                     self.rman_scene.get_root_sg_node().AddChild(rman_sg_group.sg_node)                        
 
@@ -809,7 +800,7 @@ class RmanSceneSync(object):
     def delete_objects(self, deleted_obj_keys=list()):
         rfb_log().debug("Deleting objects")
         for key in deleted_obj_keys:
-            rman_sg_node = self.rman_scene.rman_prototypes.get(key, None)
+            rman_sg_node = self.rman_scene.get_rman_prototype(key)
             if not rman_sg_node:
                 continue
             
