@@ -341,9 +341,6 @@ class RmanSceneSync(object):
     def update_collection(self, coll):
         # mark all objects in a collection
         # as needing their instances updated
-        # the collection could have been updated with new objects
-        # FIXME: like grease pencil above we seem to crash when removing and adding instances 
-        # of curves, we need to figure out what's going on
         for o in coll.all_objects:
             if o.type in ('ARMATURE', 'CAMERA'):
                 continue
@@ -352,26 +349,6 @@ class RmanSceneSync(object):
                 rman_update.is_updated_shading = True
                 rman_update.is_updated_transform = True
                 self.rman_updates[o.original] = rman_update            
-
-            '''
-            rman_type = object_utils._detect_primitive_(o)
-            rman_sg_node = self.rman_scene.rman_objects.get(o.original, None)
-            if not rman_sg_node:
-                if not self.update_objects_dict(o, rman_type=rman_type):
-                    self.new_objects.add(o)
-                    self.update_instances.add(o)
-                    continue
-
-            if rman_type == 'LIGHT':
-                # Check light visibility. Light visibility is already handled elsewhere
-                with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene): 
-                    if self.rman_scene.check_light_local_view(o, rman_sg_node):
-                        continue
-
-            self.update_instances.add(o.original)
-            self.update_particles.add(o)  
-            self.update_geometry_node_instances(o) 
-            '''
 
     def update_geometry_node_instances(self, obj):
         def update_geo_instances(nodes):
@@ -517,9 +494,9 @@ class RmanSceneSync(object):
                         elif hasattr(o, 'node_tree'):
                             o.node_tree.update_tag()                
                                             
-            elif isinstance(obj.id, bpy.types.Object):
-                ob_data = bpy.data.objects.get(ob.name, ob)
-                rman_type = object_utils._detect_primitive_(ob_data)
+            elif isinstance(obj.id, bpy.types.Object):                
+                ob_eval = obj.id.evaluated_get(depsgraph)
+                rman_type = object_utils._detect_primitive_(ob_eval)
 
                 if ob.type in ('ARMATURE'):
                     continue
@@ -554,12 +531,11 @@ class RmanSceneSync(object):
 
                 # Check if this object is the focus object the camera. If it is
                 # we need to update the camera
-                rman_sg_camera = self.rman_scene.main_camera
-                if rman_sg_camera.rman_focus_object and rman_sg_camera.rman_focus_object == rman_sg_node:
-                    translator = self.rman_scene.rman_translators['CAMERA']
-                    with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
-                        cam_object = translator.find_scene_camera()
-                        translator.update(cam_object, rman_sg_camera)                
+                if obj.is_updated_transform:
+                    for camera in bpy.data.cameras:
+                        rm = camera.renderman
+                        if rm.rman_focus_object and rm.rman_focus_object.original == ob_eval.original:
+                            camera.update_tag()
 
                     
             elif isinstance(obj.id, bpy.types.Collection):

@@ -453,8 +453,9 @@ class RmanCameraTranslator(RmanTranslator):
                     rman_sg_camera.use_focus_object = cam_rm.rman_focus_object
                     if cam_rm.rman_focus_object:
                         dof_focal_distance = (ob.location - cam_rm.rman_focus_object.location).length
-                        rman_sg_node = self.rman_scene.rman_objects.get(cam_rm.rman_focus_object.original, None)
-                        rman_sg_camera.rman_focus_object = rman_sg_node                        
+                        rman_sg_node = self.rman_scene.get_rman_prototype(object_utils.prototype_key(cam_rm.rman_focus_object))
+                        if rman_sg_node:
+                            rman_sg_camera.rman_focus_object = rman_sg_node                        
                     else:
                         dof_focal_distance = cam_rm.rman_focus_distance
                         rman_sg_camera.rman_focus_object = None
@@ -526,8 +527,9 @@ class RmanCameraTranslator(RmanTranslator):
             rman_sg_camera.use_focus_object = cam_rm.rman_focus_object
             if cam_rm.rman_focus_object:
                 dof_focal_distance = (ob.location - cam_rm.rman_focus_object.location).length
-                rman_sg_node = self.rman_scene.rman_objects.get(cam_rm.rman_focus_object.original, None)
-                rman_sg_camera.rman_focus_object = rman_sg_node
+                rman_sg_node = self.rman_scene.get_rman_prototype(object_utils.prototype_key(cam_rm.rman_focus_object))
+                if rman_sg_node:
+                    rman_sg_camera.rman_focus_object = rman_sg_node                
             else:
                 dof_focal_distance = cam_rm.rman_focus_distance
                 rman_sg_camera.rman_focus_object = None
