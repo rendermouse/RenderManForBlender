@@ -441,7 +441,7 @@ def vstruct_conditional(node, param):
         new_tokens.extend(['else', 'False'])
     return eval(" ".join(new_tokens))
 
-def set_frame_sensitive(rman_sg_node, prop):
+def check_frame_sensitive(prop):
     # check if the prop value has any frame token
     # ex: <f>, <f4>, <F4> etc.
     # if it does, it means we need to issue a material
@@ -449,9 +449,8 @@ def set_frame_sensitive(rman_sg_node, prop):
     pat = re.compile(r'<[f|F]\d*>')
     m = pat.search(prop)
     if m:
-        rman_sg_node.is_frame_sensitive = True        
-    else:
-        rman_sg_node.is_frame_sensitive = False  
+        return True
+    return False
 
 def set_dspymeta_params(node, prop_name, params):
     if node.plugin_name not in ['openexr', 'deepexr']:
@@ -650,6 +649,7 @@ def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group
         set_pxrosl_params(node, rman_sg_node, params, ob=ob, mat_name=mat_name)
         return params
 
+    is_frame_sensitive = False
     for prop_name, meta in node.prop_meta.items():
         bl_prop_info = BlPropInfo(node, prop_name, meta)
         param_widget = bl_prop_info.widget 
@@ -756,8 +756,8 @@ def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group
                 val = [0, 0, 0] if param_type == 'color' else 0
 
             elif param_type == 'string':
-                if rman_sg_node:
-                    set_frame_sensitive(rman_sg_node, prop)
+                if not is_frame_sensitive:
+                    is_frame_sensitive = check_frame_sensitive(prop)
 
                 val = string_utils.expand_string(prop)
                 options = meta['options']
@@ -773,6 +773,8 @@ def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group
                 val = string_utils.convert_val(prop, type_hint=param_type)
 
             set_rix_param(params, param_type, param_name, val, is_reference=False, node=node)
+
+    rman_sg_node.is_frame_sensitive = is_frame_sensitive
                     
     return params      
 

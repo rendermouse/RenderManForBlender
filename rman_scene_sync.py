@@ -97,29 +97,27 @@ class RmanSceneSync(object):
             # are marked as frame sensitive
             rfb_log().debug("Frame changed: %d -> %d" % (self.rman_scene.bl_frame_current, self.rman_scene.bl_scene.frame_current))
             self.rman_scene.bl_frame_current = self.rman_scene.bl_scene.frame_current
-            material_translator = self.rman_scene.rman_translators["MATERIAL"]
             self.frame_number_changed = True
+
+            # check for frame sensitive objects
+            for o in self.rman_scene.depsgraph.objects:
+                if o.type == 'CAMERA':
+                    rman_sg_node = self.rman_cameras.get(o.original, None)
+                else:
+                    rman_sg_node = self.rman_scene.get_rman_prototype(object_utils.prototype_key(o), create=False)
+                if rman_sg_node and rman_sg_node.is_frame_sensitive:
+                    o.update_tag()
+
+            for mat in bpy.data.materials:                   
+                rman_sg_material = self.rman_scene.rman_materials.get(mat.original, None)
+                if rman_sg_material and rman_sg_material.is_frame_sensitive:
+                    mat.node_tree.update_tag()                    
 
             with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):  
                 # update frame number
                 options = self.rman_scene.sg_scene.GetOptions()
                 options.SetInteger(self.rman.Tokens.Rix.k_Ri_Frame, self.rman_scene.bl_frame_current)
                 self.rman_scene.sg_scene.SetOptions(options)        
-
-                for mat in bpy.data.materials:   
-                    db_name = object_utils.get_db_name(mat)  
-                    rman_sg_material = self.rman_scene.rman_materials.get(mat.original, None)
-                    if rman_sg_material and rman_sg_material.is_frame_sensitive:
-                        material_translator.update(mat, rman_sg_material)
-
-                '''
-                for o in bpy.data.objects:
-                    if o.original not in self.rman_updates:
-                        rman_update = RmanUpdate()
-                        rman_update.is_updated_shading = True
-                        rman_update.is_updated_transform = True
-                        self.rman_updates[o.original] = rman_update            
-                '''
 
     def _mesh_light_update(self, mat):
         object_list = list()
@@ -139,7 +137,6 @@ class RmanSceneSync(object):
                             found = True
 
                     if found:
-                        self.clear_instances(ob, rman_sg_node)
                         del self.rman_scene.rman_prototypes[proto_key]
                         if ob not in object_list:
                             object_list.append(ob)
