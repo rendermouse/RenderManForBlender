@@ -1,3 +1,6 @@
+from ..rfb_logger import rfb_log
+
+
 class RmanSgNode(object):
     '''
     RmanSgNode and subclasses are meant to be a thin layer class around a RixSceneGraph node.
@@ -52,6 +55,16 @@ class RmanSgNode(object):
 
         # psys
         self.bl_psys_settings = None
+
+    def __del__(self):
+        if self.rman_scene.rman_render.rman_running and self.rman_scene.sg_scene:
+            #rfb_log().debug("Deleting dag node: %s" % self.db_name)
+            self.instances.clear()
+            self.rman_scene.sg_scene.DeleteDagNode(self.sg_node)
+
+    def clear_instances(self):
+        if self.rman_scene.rman_render.rman_running:
+            self.instances.clear()
 
     @property
     def rman_scene(self):

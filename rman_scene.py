@@ -181,6 +181,7 @@ class RmanScene(object):
         self.moving_objects.clear()
         self.rman_prototypes.clear()
   
+        self.main_camera = None
         self.render_default_light = False
         self.world_df_node = None
         self.default_light = None

@@ -241,8 +241,7 @@ class RmanSceneSync(object):
         collection = getattr(psys.settings, 'instance_collection', None)
         if inst_ob:
             if inst_ob.original not in self.rman_updates:
-                rman_update = RmanUpdate()
-                rman_update.is_updated_geometry = ob_update.is_updated_geometry
+                rman_update = RmanUpdate()                
                 rman_update.is_updated_shading = ob_update.is_updated_shading
                 rman_update.is_updated_transform = ob_update.is_updated_transform
                 self.rman_updates[inst_ob.original] = rman_update         
@@ -253,7 +252,6 @@ class RmanSceneSync(object):
                 if col_obj.original in self.rman_updates:
                     continue
                 rman_update = RmanUpdate()
-                rman_update.is_updated_geometry = ob_update.is_updated_geometry
                 rman_update.is_updated_shading = ob_update.is_updated_shading
                 rman_update.is_updated_transform = ob_update.is_updated_transform
                 self.rman_updates[col_obj.original] = rman_update                      
@@ -307,19 +305,7 @@ class RmanSceneSync(object):
                     self.rman_scene.get_root_sg_node().AddCoordinateSystem(rman_sg_node.sg_node)
                 else:
                     self.rman_scene.get_root_sg_node().RemoveCoordinateSystem(rman_sg_node.sg_node)              
-
-    def clear_instances(self, ob, rman_sg_node=None):
-        for k,rman_sg_group in rman_sg_node.instances.items():            
-            if object_utils.has_empty_parent(ob):
-                proto_key = object_utils.prototype_key(ob.parent)  
-                rman_empty_node = self.rman_scene.get_rman_prototype(proto_key)
-                if rman_empty_node:
-                    rman_empty_node.sg_node.RemoveChild(rman_sg_group.sg_node)
-            else:
-                self.rman_scene.get_root_sg_node().RemoveChild(rman_sg_group.sg_node)       
-            self.rman_scene.sg_scene.DeleteDagNode(rman_sg_group.sg_node)                        
-        rman_sg_node.instances.clear()      
-
+ 
     def update_materials_dict(self, mat):    
         # Try to see if we already have a material with the same db_name
         # We need to do this because undo/redo causes all bpy.types.ID 
@@ -590,8 +576,6 @@ class RmanSceneSync(object):
                     # tells us an object has been added
                     # For now, just delete the existing sg_node
                     rfb_log().debug("\tTypes don't match. Removing: %s" % proto_key)
-                    self.clear_instances(ob_eval, rman_sg_node)                        
-                    self.rman_scene.sg_scene.DeleteDagNode(rman_sg_node.sg_node)
                     del self.rman_scene.rman_prototypes[proto_key]
                     rman_sg_node = None
 
@@ -667,7 +651,7 @@ class RmanSceneSync(object):
                     # clear all instances for this prototype, if
                     # we have not already done so
                     rfb_log().debug("\tClearing instances: %s" % proto_key)
-                    self.clear_instances(ob_eval, rman_sg_node)
+                    rman_sg_node.clear_instances()
                     clear_instances.append(rman_sg_node) 
 
                 if not self.rman_scene.check_visibility(instance):
@@ -728,8 +712,6 @@ class RmanSceneSync(object):
                     if rman_particle_nodes:
                         rfb_log().debug("\t\tRemoving particle nodes: %s" % proto_key)
                     for k in rman_particle_nodes:                        
-                        rman_particles_node = ob_psys[k]
-                        self.rman_scene.sg_scene.DeleteDagNode(rman_particles_node.sg_node)
                         del ob_psys[k]
 
                 if rman_type == 'META':
@@ -757,17 +739,11 @@ class RmanSceneSync(object):
                 continue
             
             rfb_log().debug("\tDeleting: %s" % rman_sg_node.db_name)           
-            self.clear_instances(None, rman_sg_node)
             if key in self.rman_scene.rman_particles:
                 rfb_log().debug("\t\tRemoving particles...")
                 ob_psys = self.rman_scene.rman_particles[key]
-                for k, v in ob_psys.items():
-                    self.rman_scene.sg_scene.DeleteDagNode(v.sg_node)
                 del self.rman_scene.rman_particles[key]
 
-
-            self.rman_scene.get_root_sg_node().RemoveChild(rman_sg_node.sg_node)
-            self.rman_scene.sg_scene.DeleteDagNode(rman_sg_node.sg_node)
             del self.rman_scene.rman_prototypes[key]
             
             # We just deleted a light filter. We need to tell all lights
