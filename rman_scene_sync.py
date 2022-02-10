@@ -102,7 +102,7 @@ class RmanSceneSync(object):
             # check for frame sensitive objects
             for o in self.rman_scene.depsgraph.objects:
                 if o.type == 'CAMERA':
-                    rman_sg_node = self.rman_cameras.get(o.original, None)
+                    rman_sg_node = self.rman_scene.rman_cameras.get(o.original, None)
                 else:
                     rman_sg_node = self.rman_scene.get_rman_prototype(object_utils.prototype_key(o), create=False)
                 if rman_sg_node and rman_sg_node.is_frame_sensitive:
