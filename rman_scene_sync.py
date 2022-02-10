@@ -70,6 +70,7 @@ class RmanSceneSync(object):
         visible_objects = self.rman_scene.context.visible_objects
         if not self.num_instances_changed:
             if len(visible_objects) != self.rman_scene.num_objects_in_viewlayer:
+                rfb_log().debug("\tNumber of visible objects changed: %d -> %d" % (self.rman_scene.num_objects_in_viewlayer, len(visible_objects)))
                 # The number of visible objects has changed.
                 # Figure out the difference using sets
                 set1 = set(self.rman_scene.objects_in_viewlayer)
@@ -376,15 +377,17 @@ class RmanSceneSync(object):
                 
         self.rman_scene.depsgraph = depsgraph
         self.rman_scene.bl_scene = depsgraph.scene
-        self.rman_scene.context = context           
+        self.rman_scene.context = context       
+
+        rfb_log().debug("------Start update scene--------")    
        
         # Check the number of instances. If we differ, an object may have been
         # added or deleted
         if self.rman_scene.num_object_instances != len(depsgraph.object_instances):
+            rfb_log().debug("\tNumber of instances changed: %d -> %d" % (self.rman_scene.num_object_instances, len(depsgraph.object_instances)))
             self.num_instances_changed = True
             self.rman_scene.num_object_instances = len(depsgraph.object_instances)
 
-        rfb_log().debug("------Start update scene--------")
         for obj in reversed(depsgraph.updates):
             ob = obj.id
 
