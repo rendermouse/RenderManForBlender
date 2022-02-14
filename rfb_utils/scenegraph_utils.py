@@ -37,4 +37,4 @@ def export_vol_aggregate(bl_scene, primvar, ob):
                 break
 
     if vol_aggregate_group:
-        primvar.SetString("volume:aggregate", ','.join(vol_aggregate_group))     
+        primvar.SetStringArray("volume:aggregate", vol_aggregate_group, len(vol_aggregate_group))
