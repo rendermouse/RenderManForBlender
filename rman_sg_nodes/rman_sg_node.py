@@ -62,6 +62,8 @@ class RmanSgNode(object):
             self.instances.clear()
             if isinstance(self.sg_node, self.rman_scene.rman.scenegraph.Group):
                 self.rman_scene.sg_scene.DeleteDagNode(self.sg_node)
+            elif isinstance(self.sg_node, self.rman_scene.rman.scenegraph.Material):
+                self.rman_scene.sg_scene.DeleteMaterial(self.sg_node)
 
     def clear_instances(self):
         if self.rman_scene.rman_render.rman_running:
