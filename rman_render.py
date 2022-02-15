@@ -672,6 +672,7 @@ class RmanRender(object):
                 self.sg_scene = self.sgmngr.CreateScene(config, render_config, self.stats_mgr.rman_stats_session) 
                 try:
                     self.bl_engine.frame_set(frame, subframe=0.0)
+                    rfb_log().debug("Frame: %d" % frame)
                     self.rman_is_exporting = True
                     self.rman_scene.export_for_final_render(depsgraph, self.sg_scene, bl_view_layer, is_external=True)
                     self.rman_is_exporting = False
