@@ -385,26 +385,13 @@ def txmanager_pre_save_cb(bl_scene):
     get_txmanager().txmanager.save_state()  
 
 @persistent
-def depsgraph_handler(bl_scene):
-    for update in bpy.context.evaluated_depsgraph_get().updates:
+def depsgraph_handler(bl_scene, depsgraph):
+    for update in depsgraph.updates:
         id = update.id
         if id.library:
             link_file_handler(id)
             continue
-        if isinstance(id, bpy.types.Object):
-            if id.type == 'VOLUME':
-                continue
-                '''
-                vol = id.data
-                ob = id
-                txfile = get_txmanager().get_txfile_for_vdb(ob)
-                if txfile:
-                    grids = vol.grids
-                    grids.load()
-                    openvdb_file = string_utils.get_tokenized_openvdb_file(grids.frame_filepath, grids.frame)
-                    if txfile.input_image != openvdb_file:
-                        add_openvdb(ob)
-                '''
+
         
 def link_file_handler(id):
     if isinstance(id, bpy.types.Material):
