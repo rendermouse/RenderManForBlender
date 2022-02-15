@@ -679,7 +679,10 @@ class RmanRender(object):
                                                             frame=frame, 
                                                             asFilePath=True)                                                                            
                     self.sg_scene.Render("rib %s %s" % (rib_output, rib_options))
-                    self.sgmngr.DeleteScene(self.sg_scene)     
+                    self.sgmngr.DeleteScene(self.sg_scene) 
+                    self.sg_scene = None   
+                    self.rman_scene.reset()                     
+
                 except Exception as e:      
                     self.bl_engine.report({'ERROR'}, 'Export failed: %s' % str(e))
                     rfb_log().debug("Export failed: %s" % str(e))

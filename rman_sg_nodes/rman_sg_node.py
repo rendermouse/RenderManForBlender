@@ -57,10 +57,11 @@ class RmanSgNode(object):
         self.bl_psys_settings = None
 
     def __del__(self):
-        if self.rman_scene.rman_render.rman_running and self.rman_scene.sg_scene:
-            #rfb_log().debug("Deleting dag node: %s" % self.db_name)
+        if self.rman_scene.rman_render.rman_running and self.rman_scene.rman_render.sg_scene:
+            rfb_log().debug("Deleting dag node: %s" % self.db_name)
             self.instances.clear()
-            self.rman_scene.sg_scene.DeleteDagNode(self.sg_node)
+            if isinstance(self.sg_node, self.rman_scene.rman.scenegraph.Group):
+                self.rman_scene.sg_scene.DeleteDagNode(self.sg_node)
 
     def clear_instances(self):
         if self.rman_scene.rman_render.rman_running:

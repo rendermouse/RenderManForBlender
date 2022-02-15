@@ -774,7 +774,8 @@ def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group
 
             set_rix_param(params, param_type, param_name, val, is_reference=False, node=node)
 
-    rman_sg_node.is_frame_sensitive = is_frame_sensitive
+    if rman_sg_node:
+        rman_sg_node.is_frame_sensitive = is_frame_sensitive
                     
     return params      
 
