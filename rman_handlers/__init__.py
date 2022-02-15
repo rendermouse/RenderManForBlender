@@ -24,8 +24,8 @@ def rman_save_post(bl_scene):
     texture_utils.txmanager_pre_save_cb(bl_scene)
 
 @persistent
-def depsgraph_update_post(bl_scene):
-    texture_utils.depsgraph_handler(bl_scene)             
+def depsgraph_update_post(bl_scene, depsgraph):
+    texture_utils.depsgraph_handler(bl_scene, depsgraph)             
 
 def register():
 
