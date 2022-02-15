@@ -415,8 +415,8 @@ def txmanager_pre_save_cb(bl_scene):
     get_txmanager().txmanager.save_state()  
 
 @persistent
-def depsgraph_handler(bl_scene):
-    for update in bpy.context.evaluated_depsgraph_get().updates:
+def depsgraph_handler(bl_scene, depsgraph):
+    for update in depsgraph.updates:
         id = update.id
         # check new linked in materials
         if id.library:
