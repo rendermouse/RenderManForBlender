@@ -558,13 +558,13 @@ class RmanScene(object):
         if not self.is_interactive:
             return True
         viewport = self.context.space_data
-        ob_eval = instance.object.evaluated_get(self.depsgraph)
-         
+        ob_eval = instance.object.evaluated_get(self.depsgraph)       
+        '''
         if instance.is_instance:   
             ob_eval = instance.instance_object.original.evaluated_get(self.depsgraph)
             if instance.parent:
                 ob_eval = instance.parent
-
+        '''
         visible = ob_eval.visible_in_viewport_get(viewport) 
         return visible
             
@@ -590,10 +590,11 @@ class RmanScene(object):
                 parent = ob_inst.parent
 
             if not self.check_visibility(ob_inst):
+                rfb_log().debug("       Object (%s) not visible" % (ob.name))
                 continue                      
 
             rman_type = object_utils._detect_primitive_(ob_eval)
-            rman_sg_node = self.get_rman_prototype(proto_key, ob=ob_eval, create=True) #self.export_data_block(proto_key, ob_eval)
+            rman_sg_node = self.get_rman_prototype(proto_key, ob=ob_eval, create=True)
             if not rman_sg_node:
                 continue     
 
