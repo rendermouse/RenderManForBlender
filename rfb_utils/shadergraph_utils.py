@@ -837,6 +837,26 @@ def has_stylized_pattern_node(ob, node=None):
 
     return False
 
+def create_bxdf(bxdf):
+    mat = bpy.data.materials.new(bxdf)
+
+    mat.use_nodes = True
+    nt = mat.node_tree
+
+    output = nt.nodes.new('RendermanOutputNode')
+    default = nt.nodes.new('%sBxdfNode' % bxdf)
+    default.location = output.location
+    default.location[0] -= 300
+    nt.links.new(default.outputs[0], output.inputs[0])
+    output.inputs[1].hide = True
+    output.inputs[3].hide = True  
+    default.update_mat(mat)    
+
+    if bxdf == 'PxrLayerSurface':
+        create_pxrlayer_nodes(nt, default)   
+
+    return mat 
+
 def create_pxrlayer_nodes(nt, bxdf):
     from .. import rman_bl_nodes
 
