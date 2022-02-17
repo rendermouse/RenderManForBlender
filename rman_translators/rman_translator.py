@@ -236,7 +236,7 @@ class RmanTranslator(object):
         lpe_groups_str = "*"
         for obj_group in self.rman_scene.bl_scene.renderman.object_groups:
             for member in obj_group.members:
-                if member.ob_pointer == ob:
+                if member.ob_pointer.original == ob.original:
                     obj_groups_str += ',' + obj_group.name
                     lpe_groups_str += ',' + obj_group.name
                     break

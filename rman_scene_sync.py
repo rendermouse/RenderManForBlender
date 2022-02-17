@@ -470,6 +470,8 @@ class RmanSceneSync(object):
                         
             elif isinstance(obj.id, bpy.types.ShaderNodeTree):
                 if obj.id.name in bpy.data.node_groups:
+                    if len(obj.id.nodes) < 1:
+                        continue
                     # this is probably one of our fake node groups with ramps
                     # update all of the users of this node tree
                     rfb_log().debug("ShaderNodeTree updated: %s" % obj.id.name)
@@ -694,7 +696,15 @@ class RmanSceneSync(object):
                 else:
                     self.rman_scene.attach_material(ob_eval, rman_sg_group)
                 self.rman_scene.get_root_sg_node().AddChild(rman_sg_group.sg_node)
+                
+                # Object attrs     
+                translator =  self.rman_scene.rman_translators.get(rman_type, None)  
+                if translator:
+                    translator.export_object_attributes(ob_eval, rman_sg_group)                    
+                    translator.export_object_id(ob_eval, rman_sg_group, instance)                   
+                
                 rman_sg_node.instances[group_db_name] = rman_sg_group 
+
                 if rman_sg_node.rman_sg_particle_group_node:
                     rman_sg_node.sg_node.RemoveChild(rman_sg_node.rman_sg_particle_group_node.sg_node)
                     if (len(ob_eval.particle_systems) > 0) and instance.show_particles:
@@ -719,13 +729,7 @@ class RmanSceneSync(object):
                 
                 # Transform
                 rman_group_translator.update_transform(instance, rman_sg_group) 
-
-                # Object attrs     
-                translator =  self.rman_scene.rman_translators.get(rman_type, None)  
-                if translator:
-                    translator.export_object_attributes(ob_eval, rman_sg_group)                    
-                    translator.export_object_id(ob_eval, rman_sg_group, instance)                                                
-                                                
+                                                                                            
             # delete objects
             if deleted_obj_keys:
                 self.delete_objects(deleted_obj_keys)        
