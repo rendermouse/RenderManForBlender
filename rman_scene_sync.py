@@ -37,6 +37,7 @@ class RmanSceneSync(object):
         self.sg_scene = sg_scene        
         self.num_instances_changed = False # if the number of instances has changed since the last update
         self.frame_number_changed = False
+        self.check_all_instances = False # force checking all instances
 
         self.rman_updates = dict() # A dicitonary to hold RmanUpdate instances
 
@@ -88,7 +89,7 @@ class RmanSceneSync(object):
                             self.rman_updates[o.original] = rman_update
                     except:
                         continue
-                self.num_instances_changed = True
+                self.check_all_instances = True
 
         self.rman_scene.num_objects_in_viewlayer = len(visible_objects)
         self.rman_scene.objects_in_viewlayer = [o for o in visible_objects]            
@@ -372,8 +373,9 @@ class RmanSceneSync(object):
         ## FIXME: this function is waaayyy too big and is doing too much stuff
 
         self.rman_updates = dict()
-        self.num_instances_changed = False # if the number of instances has changed since the last update
+        self.num_instances_changed = False
         self.frame_number_changed = False
+        self.check_all_instances = False
                 
         self.rman_scene.depsgraph = depsgraph
         self.rman_scene.bl_scene = depsgraph.scene
@@ -386,6 +388,7 @@ class RmanSceneSync(object):
         if self.rman_scene.num_object_instances != len(depsgraph.object_instances):
             rfb_log().debug("\tNumber of instances changed: %d -> %d" % (self.rman_scene.num_object_instances, len(depsgraph.object_instances)))
             self.num_instances_changed = True
+            self.check_all_instances = True
             self.rman_scene.num_object_instances = len(depsgraph.object_instances)
 
         for obj in reversed(depsgraph.updates):
@@ -534,7 +537,7 @@ class RmanSceneSync(object):
                 pass
                 #self.update_geometry_node_instances(obj.id)
                          
-        if self.num_instances_changed or self.rman_updates:
+        if self.check_all_instances or self.rman_updates:
             self.check_instances()
                             
         # call txmake all in case of new textures
@@ -606,7 +609,7 @@ class RmanSceneSync(object):
                         self.rman_updates[ob_key] = rman_update    
                     rman_update.is_updated_geometry = False
                                 
-                if self.num_instances_changed:
+                if self.check_all_instances:
                     # If the number of instances has changed, 
                     # we check all instances in the scene
                     rman_update = self.rman_updates.get(ob_key, None)
