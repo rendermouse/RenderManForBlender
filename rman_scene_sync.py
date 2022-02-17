@@ -610,8 +610,7 @@ class RmanSceneSync(object):
                     rman_update.is_updated_geometry = False
                                 
                 if self.check_all_instances:
-                    # If the number of instances has changed, 
-                    # we check all instances in the scene
+                    # check all instances in the scene
                     rman_update = self.rman_updates.get(ob_key, None)
                     if not rman_update:                  
                         rman_update = RmanUpdate()
