@@ -102,18 +102,21 @@ class RmanSceneSync(object):
             self.frame_number_changed = True
 
             # check for frame sensitive objects
-            for o in self.rman_scene.depsgraph.objects:
-                if o.type == 'CAMERA':
-                    rman_sg_node = self.rman_scene.rman_cameras.get(o.original, None)
-                else:
-                    rman_sg_node = self.rman_scene.get_rman_prototype(object_utils.prototype_key(o), create=False)
-                if rman_sg_node and rman_sg_node.is_frame_sensitive:
-                    o.update_tag()
-
-            for mat in bpy.data.materials:                   
-                rman_sg_material = self.rman_scene.rman_materials.get(mat.original, None)
-                if rman_sg_material and rman_sg_material.is_frame_sensitive:
-                    mat.node_tree.update_tag()                    
+            for id in self.rman_scene.depsgraph.ids:
+                if isinstance(id, bpy.types.Object):
+                    o = id.original
+                    if o.type == 'CAMERA':
+                        rman_sg_node = self.rman_scene.rman_cameras.get(o.original, None)
+                    else:
+                        rman_sg_node = self.rman_scene.get_rman_prototype(object_utils.prototype_key(o), create=False)
+                    if rman_sg_node and rman_sg_node.is_frame_sensitive:
+                        if o.original not in self.rman_updates:
+                            o.original.update_tag()
+                elif isinstance(id, bpy.types.Material):
+                    mat = id.original               
+                    rman_sg_material = self.rman_scene.rman_materials.get(mat, None)
+                    if rman_sg_material and rman_sg_material.is_frame_sensitive:
+                        mat.node_tree.update_tag()                    
 
             with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):  
                 # update frame number
