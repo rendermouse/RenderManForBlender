@@ -716,7 +716,9 @@ class RmanRender(object):
                 self.sg_scene.Render("rib %s %s" % (rib_output, rib_options))     
                 rfb_log().debug("Finished writing RIB. Time: %s" % string_utils._format_time_(time.time() - rib_time_start)) 
                 rfb_log().info("Finished parsing scene. Total time: %s" % string_utils._format_time_(time.time() - time_start))
-                self.sgmngr.DeleteScene(self.sg_scene)
+                self.sgmngr.DeleteScene(self.sg_scene)     
+                self.sg_scene = None
+                self.rman_scene.reset()                       
             except Exception as e:      
                 self.bl_engine.report({'ERROR'}, 'Export failed: %s' % str(e))
                 self.stop_render(stop_draw_thread=False)
@@ -727,7 +729,6 @@ class RmanRender(object):
             spooler = rman_spool.RmanSpool(self, self.rman_scene, depsgraph)
             spooler.batch_render()
         self.rman_running = False
-        self.sg_scene = None
         self.del_bl_engine()
         return True          
 
@@ -829,7 +830,9 @@ class RmanRender(object):
                     self.stop_render(stop_draw_thread=False)
                     self.del_bl_engine()
                     return False                         
-                self.sgmngr.DeleteScene(self.sg_scene)     
+                self.sgmngr.DeleteScene(self.sg_scene)  
+                self.sg_scene = None
+                self.rman_scene.reset()                     
 
             self.bl_engine.frame_set(original_frame, subframe=0.0)
             
@@ -865,12 +868,13 @@ class RmanRender(object):
                 return False                     
 
             self.sgmngr.DeleteScene(self.sg_scene)
+            self.sg_scene = None
+            self.rman_scene.reset()              
 
         if rm.queuing_system != 'none':
             spooler = rman_spool.RmanSpool(self, self.rman_scene, depsgraph)
             spooler.batch_render()
         self.rman_running = False
-        self.sg_scene = None
         self.del_bl_engine()
         return True                  
 
@@ -1043,7 +1047,9 @@ class RmanRender(object):
                     self.stop_render(stop_draw_thread=False)
                     self.del_bl_engine()
                     return False                    
-                self.sgmngr.DeleteScene(self.sg_scene)
+                self.sgmngr.DeleteScene(self.sg_scene)     
+                self.sg_scene = None
+                self.rman_scene.reset()            
             bl_scene.frame_set(original_frame, subframe=0.0)    
         else:
             config = rman.Types.RtParamList()
@@ -1065,9 +1071,9 @@ class RmanRender(object):
                 self.del_bl_engine()
                 return False    
             self.sgmngr.DeleteScene(self.sg_scene)            
+            self.sg_scene = None
+            self.rman_scene.reset()  
 
-
-        self.sg_scene = None
         self.rman_running = False        
         return True                 
 
