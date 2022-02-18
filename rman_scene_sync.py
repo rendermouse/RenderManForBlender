@@ -641,7 +641,8 @@ class RmanSceneSync(object):
                     if rman_update.is_updated_geometry and proto_key not in already_udpated:
                         translator =  self.rman_scene.rman_translators.get(rman_type, None)
                         rfb_log().debug("\tUpdating Object: %s" % proto_key)
-                        translator.update(ob_eval, rman_sg_node)    
+                        translator.update(ob_eval, rman_sg_node)  
+                        translator.export_object_primvars(ob_eval, rman_sg_node)  
                         self.update_particle_emitters(ob_eval)
                         already_udpated.append(proto_key)   
 
