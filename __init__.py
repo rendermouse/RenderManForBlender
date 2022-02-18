@@ -38,8 +38,9 @@ bl_info = {
     "author": "Pixar",
     "version": (24, 4, 0),
     "blender": (2, 83, 0),
-    "location": "Info Header, render engine menu",
+    "location": "Render Properties > Render Engine > RenderMan",
     "description": "RenderMan 24 integration",
+    "doc_url": "https://rmanwiki.pixar.com/display/RFB",
     "warning": "",
     "category": "Render"}
 
