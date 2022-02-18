@@ -261,9 +261,8 @@ class RmanScene(object):
         
         self.depsgraph = context.evaluated_depsgraph_get()
         self.export_root_sg_node()
-        objs = context.selected_objects
         self.export_materials([m for m in self.depsgraph.ids if isinstance(m, bpy.types.Material)])
-        self.export_data_blocks(selected_objects=objs)
+        self.export_data_blocks(selected_objects=True)
 
     def export_for_swatch_render(self, depsgraph, sg_scene):
         self.sg_scene = sg_scene
@@ -567,8 +566,25 @@ class RmanScene(object):
         '''
         visible = ob_eval.visible_in_viewport_get(viewport) 
         return visible
+
+    def is_instance_selected(self, instance):
+        ob = instance.object
+        parent = None
+        if instance.is_instance:
+            parent = instance.parent
+
+        if not ob.original.select_get():
+            if parent:
+                if not parent.original.select_get():
+                    return False                
+            else:
+                return False
+        if parent and not parent.original.select_get():
+            return False
+
+        return True    
             
-    def export_data_blocks(self, selected_objects=list()):
+    def export_data_blocks(self, selected_objects=False):
         rman_group_translator = self.rman_translators['GROUP']
         total = len(self.depsgraph.object_instances)
         for i, ob_inst in enumerate(self.depsgraph.object_instances):
@@ -577,9 +593,13 @@ class RmanScene(object):
             self.rman_render.stats_mgr.set_export_stats("Exporting instances",i/total)
             if ob.type in ('ARMATURE', 'CAMERA'):
                 continue
-            if selected_objects:
-                if ob.original not in selected_objects:
-                    continue
+
+            if selected_objects and not self.is_instance_selected(ob_inst): 
+                continue
+
+            if not self.check_visibility(ob_inst):
+                rfb_log().debug("       Object (%s) not visible" % (ob.name))
+                continue     
 
             ob_eval = ob.evaluated_get(self.depsgraph)
             psys = None
@@ -587,11 +607,7 @@ class RmanScene(object):
             proto_key = object_utils.prototype_key(ob_inst)                           
             if ob_inst.is_instance:
                 psys = ob_inst.particle_system
-                parent = ob_inst.parent
-
-            if not self.check_visibility(ob_inst):
-                rfb_log().debug("       Object (%s) not visible" % (ob.name))
-                continue                      
+                parent = ob_inst.parent                             
 
             rman_type = object_utils._detect_primitive_(ob_eval)
             rman_sg_node = self.get_rman_prototype(proto_key, ob=ob_eval, create=True)
