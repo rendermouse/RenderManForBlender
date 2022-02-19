@@ -22,8 +22,6 @@ def convert_matrix4x4(m):
     return rman_mtx
 
 def get_world_bounding_box(selected_obs):
-    min_list = list()
-    max_list = list()
 
     min_vector = None
     max_vector = None
