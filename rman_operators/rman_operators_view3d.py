@@ -110,7 +110,19 @@ class PRMAN_OT_RM_Add_RenderMan_Geometry(bpy.types.Operator):
 
         if self.properties.rman_open_filebrowser:
             if rm.primitive == 'DELAYED_LOAD_ARCHIVE':
+                ob.empty_display_type = 'CUBE'
                 rm.path_archive = self.properties.filepath
+                # try to get the bounding box from the RIB file
+                with open(rm.path_archive) as f:
+                    for ln in f.readlines():
+                        if not ln.startswith('##bbox: '):
+                            continue
+                        tokens = ln.replace('##bbox: ', '').split(' ')
+                        min_x, max_x, min_y, max_y, min_z, max_z = tokens
+                        max_scale = max(max(float(max_x), float(max_y)), float(max_z))
+                        ob.empty_display_size = max_scale
+                        break
+
             elif rm.primitive == 'PROCEDURAL_RUN_PROGRAM':
                 rm.runprogram_path = self.properties.filepath
             elif rm.primitive == 'DYNAMIC_LOAD_DSO':

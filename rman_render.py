@@ -24,6 +24,7 @@ from .rfb_utils.envconfig_utils import envconfig
 from .rfb_utils import string_utils
 from .rfb_utils import display_utils
 from .rfb_utils import scene_utils
+from .rfb_utils import transform_utils
 from .rfb_utils.prefs_utils import get_pref
 
 # config
@@ -1041,7 +1042,9 @@ class RmanRender(object):
                     rib_output = string_utils.expand_string(rib_path, 
                                                         frame=frame, 
                                                         asFilePath=True) 
-                    self.sg_scene.Render("rib " + rib_output + " -archive")
+                    cmd = 'rib ' + rib_output + ' -archive'                                                        
+                    cmd = cmd + ' -bbox ' + transform_utils.get_world_bounding_box(context.selected_objects)
+                    self.sg_scene.Render(cmd)
                 except Exception as e:      
                     self.bl_engine.report({'ERROR'}, 'Export failed: %s' % str(e))
                     self.stop_render(stop_draw_thread=False)
@@ -1063,7 +1066,9 @@ class RmanRender(object):
                 rib_output = string_utils.expand_string(rib_path, 
                                                     frame=bl_scene.frame_current, 
                                                     asFilePath=True) 
-                self.sg_scene.Render("rib " + rib_output + " -archive")
+                cmd = 'rib ' + rib_output + ' -archive'
+                cmd = cmd + ' -bbox ' + transform_utils.get_world_bounding_box(context.selected_objects)
+                self.sg_scene.Render(cmd)
             except Exception as e:      
                 self.bl_engine.report({'ERROR'}, 'Export failed: %s' % str(e))
                 rfb_log().debug("Export failed: %s" % str(e))
