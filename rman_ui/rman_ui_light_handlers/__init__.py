@@ -1257,12 +1257,8 @@ def draw_rod_light_filter(ob):
 
     set_selection_color(ob)
 
-    m = Matrix(ob.matrix_world)     
-    m = m @ Matrix.Rotation(math.radians(90.0), 4, 'X')
-    m = m @ Matrix.Rotation(math.radians(90.0), 4, 'Y')
-    
-    #m = m @ Matrix.Rotation(math.radians(180.0), 4, 'Y')
-    #m = m @ Matrix.Rotation(math.radians(90.0), 4, 'Z')
+    m = Matrix(ob.matrix_world)        
+    m = m @ Matrix.Rotation(math.radians(180.0), 4, 'Y')
 
     light = ob.data
     rm = light.renderman.get_light_node()
@@ -1355,7 +1351,6 @@ def draw_ramp_light_filter(ob):
 
         m = Matrix(ob.matrix_world)        
         m = m @ Matrix.Rotation(math.radians(180.0), 4, 'Y')
-        m = m @ Matrix.Rotation(math.radians(90.0), 4, 'Z')
 
         # begin
         begin_m = m @ Matrix.Scale(begin, 4)      
@@ -1391,7 +1386,6 @@ def draw_ramp_light_filter(ob):
 
         m = Matrix(ob.matrix_world)        
         m = m @ Matrix.Rotation(math.radians(180.0), 4, 'Y')
-        m = m @ Matrix.Rotation(math.radians(90.0), 4, 'Z')
 
         box = [m @ Vector(pt) for pt in s_rmanLightLogo['box']]
         n = mathutils.geometry.normal(box)
@@ -1417,7 +1411,7 @@ def draw_ramp_light_filter(ob):
 
         m = Matrix(ob.matrix_world)        
         m = m @ Matrix.Rotation(math.radians(180.0), 4, 'Y')
-        m = m @ Matrix.Rotation(math.radians(90.0), 4, 'Z')
+
         disk_indices = _get_indices(s_diskLight)
         if begin > 0.0:
             m1 = m @ Matrix.Scale(begin, 4)      
@@ -1439,7 +1433,6 @@ def draw_barn_light_filter(ob):
 
     m = Matrix(ob.matrix_world) 
     m = m @ Matrix.Rotation(math.radians(180.0), 4, 'Y')
-    #m = m @ Matrix.Rotation(math.radians(90.0), 4, 'Z')
 
     set_selection_color(ob)
 
