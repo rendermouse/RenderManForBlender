@@ -11,15 +11,8 @@ class RmanGroupTranslator(RmanTranslator):
         super().__init__(rman_scene)
 
     def update_transform(self, ob, rman_sg_group):
-        if hasattr(ob, 'renderman') and  object_utils._detect_primitive_(ob) == 'LIGHTFILTER':
-            m = Matrix(ob.matrix_world)    
-            m = m @ Matrix.Rotation(math.radians(90.0), 4, 'X')
-            m = m @ Matrix.Rotation(math.radians(90.0), 4, 'Y')
-            m = transform_utils.convert_matrix(m)
-            rman_sg_group.sg_node.SetTransform(m)     
-        else:       
-            mtx = transform_utils.convert_matrix(ob.matrix_world.copy())
-            rman_sg_group.sg_node.SetTransform( mtx )
+        mtx = transform_utils.convert_matrix(ob.matrix_world.copy())
+        rman_sg_group.sg_node.SetTransform( mtx )
 
     def update_transform_sample(self, ob, rman_sg_group, index, seg):
         mtx = transform_utils.convert_matrix(ob.matrix_world.copy())
