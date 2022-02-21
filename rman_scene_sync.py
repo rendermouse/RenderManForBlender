@@ -371,7 +371,7 @@ class RmanSceneSync(object):
         for portal in scene_utils.get_all_portals(ob):
            portal.original.update_tag()
 
-
+    @time_this
     def update_scene(self, context, depsgraph):
         ## FIXME: this function is waaayyy too big and is doing too much stuff
 
@@ -457,10 +457,9 @@ class RmanSceneSync(object):
             elif isinstance(obj.id, bpy.types.ParticleSettings):
                 rfb_log().debug("ParticleSettings updated: %s" % obj.id.name)
 
-                users = context.blend_data.user_map(subset={obj.id.original}, value_types={'OBJECT'})
                 with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
                     psys_translator = self.rman_scene.rman_translators['PARTICLES']
-                    for o in users[obj.id.original]:
+                    for o in self.rman_scene.bl_scene.objects:
                         psys = None
                         ob = o.evaluated_get(depsgraph)
                         for ps in ob.particle_systems:
