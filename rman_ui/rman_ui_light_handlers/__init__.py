@@ -1454,13 +1454,8 @@ def draw():
         return    
      
     scene = bpy.context.scene
-    lights_set = set()
-    user_map = bpy.data.user_map(subset=bpy.data.lights, value_types={'OBJECT'})
-    for ls in user_map.values():
-        lights_set.update(ls)
         
-    #for ob in [x for x in scene.objects if x.type == 'LIGHT']:
-    for ob in lights_set:    
+    for ob in [x for x in scene.objects if x.type == 'LIGHT']:
         if ob.hide_get():
             continue
         if not ob.data.renderman:
