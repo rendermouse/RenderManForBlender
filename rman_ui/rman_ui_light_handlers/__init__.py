@@ -1458,8 +1458,9 @@ def draw():
         return    
      
     scene = bpy.context.scene
-        
-    for ob in [x for x in scene.objects if x.type == 'LIGHT']:
+      
+    lights_list = [x for x in scene.objects if x.type == 'LIGHT']    
+    for ob in lights_list:
         if ob.hide_get():
             continue
         if not ob.data.renderman:
@@ -1521,7 +1522,7 @@ def draw():
     remove_textures = list()
     for k, v in _PRMAN_TEX_CACHE_.items():
         still_exists = False
-        for ob in lights_set:  
+        for ob in lights_list:  
             rm = ob.data.renderman
             if not rm.use_renderman_node:
                 continue
