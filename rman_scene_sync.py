@@ -647,13 +647,10 @@ class RmanSceneSync(object):
                         already_udpated.append(proto_key)   
 
                 if rman_type == 'EMPTY':
-                    self.rman_scene._export_hidden_instance(ob_eval, rman_sg_node)
-                    continue                            
+                    self.rman_scene._export_hidden_instance(ob_eval, rman_sg_node)                   
 
-                elif rman_type == 'LIGHTFILTER':
-                    # Light filters are special. We don't need to add instances
-                    # of them, as they are part of lights
-                    continue
+                if rman_type in object_utils._RMAN_NO_INSTANCES_:
+                    continue                         
 
                 # clear all instances for this prototype, if
                 # we have not already done so

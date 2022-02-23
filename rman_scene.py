@@ -605,7 +605,7 @@ class RmanScene(object):
             ob_eval = ob.evaluated_get(self.depsgraph)
             psys = None
             instance_parent = None 
-            proto_key = object_utils.prototype_key(ob_inst)                           
+            proto_key = object_utils.prototype_key(ob_inst)                      
             if ob_inst.is_instance:
                 psys = ob_inst.particle_system
                 instance_parent = ob_inst.parent                             
@@ -618,11 +618,8 @@ class RmanScene(object):
             if rman_type == 'LIGHT':
                 self.check_solo_light(rman_sg_node, ob_eval)           
    
-            if rman_type == 'LIGHTFILTER':
-                # we don't need to create instances of light filters
-                # we just need them to be added as coordinate systems
-                # which should have been done in export
-                continue
+            if rman_type in object_utils._RMAN_NO_INSTANCES_:
+                continue      
             
             group_db_name = object_utils.get_group_db_name(ob_inst) 
             rman_sg_group = rman_group_translator.export(ob, group_db_name)
@@ -761,7 +758,7 @@ class RmanScene(object):
 
         return rman_sg_node
 
-    def export_instances_motion(self, selected_objects=list()):
+    def export_instances_motion(self, selected_objects=False):
         origframe = self.bl_scene.frame_current
 
         mb_segs = self.bl_scene.renderman.motion_segments
@@ -795,31 +792,29 @@ class RmanScene(object):
                         break
                 cam_translator.update_transform(self.depsgraph.scene_eval.camera, self.main_camera, idx, time_samp)
 
-            for i, ob_inst in enumerate(self.depsgraph.object_instances):                
-                if selected_objects:
-                    if objFound:
-                        break
+            rfb_log().debug(" Export Sample: %i" % samp)
+            for i, ob_inst in enumerate(self.depsgraph.object_instances):   
+                if selected_objects and not self.is_instance_selected(ob_inst): 
+                    continue               
 
-                    if ob_inst.is_instance:
-                        if ob_inst.instance_object.name == selected_objects:
-                            objFound = True
-                    elif ob_inst.object.name == selected_objects.name:
-                            objFound = True
-
-                    if not objFound:
-                        continue       
-
-                if not ob_inst.show_self:
+                if not self.check_visibility(ob_inst):
                     continue                    
 
                 psys = None
                 ob = ob_inst.object.evaluated_get(self.depsgraph)
                 proto_key = object_utils.prototype_key(ob_inst)
                 rfb_log().debug("   Exported %d/%d motion instances... (%s)" % (i, total, ob.name))
-                self.rman_render.stats_mgr.set_export_stats("Exporting motion instances (%d) " % samp ,i/total)                 
+                self.rman_render.stats_mgr.set_export_stats("Exporting motion instances (%d) " % samp ,i/total)   
+                instance_parent = None
+                rman_parent_node = None              
                 if ob_inst.is_instance:
-                    proto_key = ob_inst.instance_object.data.original
                     psys = ob_inst.particle_system
+                    instance_parent = ob_inst.parent
+                    rman_parent_node = self.get_rman_prototype(object_utils.prototype_key(instance_parent))
+
+                rman_type = object_utils._detect_primitive_(ob)
+                if rman_type in object_utils._RMAN_NO_INSTANCES_:
+                    continue                   
 
                 # check particles for motion
                 for psys in ob.particle_systems:              
@@ -842,7 +837,7 @@ class RmanScene(object):
                 if ob.name_full not in self.moving_objects and not psys:
                     continue
          
-                rman_sg_node = self.rman_prototypes.get(proto_key, None)
+                rman_sg_node = self.get_rman_prototype(proto_key, ob=ob)
                 if not rman_sg_node:
                     continue
                 
@@ -856,7 +851,10 @@ class RmanScene(object):
 
                     if rman_sg_node.is_transforming or psys:
                         group_db_name = object_utils.get_group_db_name(ob_inst) 
-                        rman_sg_group = rman_sg_node.instances.get(group_db_name, None)
+                        if instance_parent:
+                            rman_sg_group = rman_parent_node.instances.get(group_db_name, None)
+                        else:
+                            rman_sg_group = rman_sg_node.instances.get(group_db_name, None)
                         if rman_sg_group:
                             if first_sample:
                                 rman_group_translator.update_transform_num_samples(rman_sg_group, rman_sg_node.motion_steps )

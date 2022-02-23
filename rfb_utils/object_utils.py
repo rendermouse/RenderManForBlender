@@ -3,6 +3,9 @@ import numpy as np
 from .prefs_utils import get_pref
 from . import string_utils
 
+# These types don't create instances
+_RMAN_NO_INSTANCES_ = ['EMPTY', 'EMPTY_INSTANCER', 'LIGHTFILTER']
+
 def get_db_name(ob, rman_type='', psys=None):
     db_name = ''    
 
