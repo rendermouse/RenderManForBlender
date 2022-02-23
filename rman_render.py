@@ -39,20 +39,6 @@ __BLENDER_DSPY_PLUGIN__ = None
 __DRAW_THREAD__ = None
 __RMAN_STATS_THREAD__ = None
 
-def __turn_off_viewport__():
-    '''
-    Loop through all of the windows/areas and turn shading to SOLID
-    for all view_3d areas.
-    '''
-    rfb_log().debug("Attempting to turn off viewport render")
-    for window in bpy.context.window_manager.windows:
-        for area in window.screen.areas:
-            if area.type == 'VIEW_3D':
-                for space in area.spaces:
-                    if space.type == 'VIEW_3D':
-                        space.shading.type = 'SOLID'    
-            area.tag_redraw()     
-
 def __update_areas__():
     for window in bpy.context.window_manager.windows:
         for area in window.screen.areas:
@@ -93,7 +79,7 @@ class ItHandler(chatserver.ItBaseHandler):
         global __RMAN_RENDER__
         rfb_log().debug("Stop Render Requested.")
         if __RMAN_RENDER__.rman_interactive_running:
-            __turn_off_viewport__()
+            __RMAN_RENDER__.bl_viewport.shading.type = 'SOLID'
         __RMAN_RENDER__.del_bl_engine() 
 
     def selectObjectById(self):
@@ -156,8 +142,8 @@ def start_cmd_server():
 def draw_threading_func(db):
     refresh_rate = get_pref('rman_viewport_refresh_rate', default=0.01)
     while db.rman_is_live_rendering:
-        if not scene_utils.any_areas_shading():
-            # if there are no 3d viewports, stop IPR
+        if db.bl_viewport.shading.type != 'RENDERED':
+            # if the viewport is not rendering, stop IPR
             db.del_bl_engine()
             break
         if db.rman_is_xpu:
@@ -288,6 +274,7 @@ class RmanRender(object):
         self.stats_mgr = RfBStatsManager(self)
         self.deleting_bl_engine = threading.Lock()
         self.stop_render_mtx = threading.Lock()
+        self.bl_viewport = None
 
         self._start_prman_begin()
 
@@ -449,6 +436,7 @@ class RmanRender(object):
         self.rman_license_failed_message = ''
         self.rman_is_xpu = False
         self.rman_is_refining = False
+        self.bl_viewport = None
 
     def start_render(self, depsgraph, for_background=False):
     
@@ -891,6 +879,7 @@ class RmanRender(object):
         self.it_port = start_cmd_server()    
         render_into_org = '' 
         self.rman_render_into = rm.render_ipr_into
+        self.bl_viewport = context.space_data
         
         self.rman_callbacks.clear()
         # register the blender display driver
