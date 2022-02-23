@@ -58,12 +58,13 @@ class RmanSgNode(object):
 
     def __del__(self):
         if self.rman_scene.rman_render.rman_running and self.rman_scene.rman_render.sg_scene:
-            #rfb_log().debug("Deleting dag node: %s" % self.db_name)
-            self.instances.clear()
-            if isinstance(self.sg_node, self.rman_scene.rman.scenegraph.Group):
-                self.rman_scene.sg_scene.DeleteDagNode(self.sg_node)
-            elif isinstance(self.sg_node, self.rman_scene.rman.scenegraph.Material):
-                self.rman_scene.sg_scene.DeleteMaterial(self.sg_node)
+            with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene): 
+                #rfb_log().debug("Deleting dag node: %s" % self.db_name)
+                self.instances.clear()
+                if isinstance(self.sg_node, self.rman_scene.rman.scenegraph.Group):
+                    self.rman_scene.sg_scene.DeleteDagNode(self.sg_node)
+                elif isinstance(self.sg_node, self.rman_scene.rman.scenegraph.Material):
+                    self.rman_scene.sg_scene.DeleteMaterial(self.sg_node)
 
     def clear_instances(self):
         if self.rman_scene.rman_render.rman_running:

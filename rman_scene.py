@@ -558,13 +558,14 @@ class RmanScene(object):
         if not self.is_interactive:
             return True
         viewport = self.context.space_data
-        ob_eval = instance.object.evaluated_get(self.depsgraph)       
-        '''
+             
         if instance.is_instance:   
-            ob_eval = instance.instance_object.original.evaluated_get(self.depsgraph)
-            if instance.parent:
-                ob_eval = instance.parent
-        '''
+            ob_eval = instance.instance_object
+            ob_eval_visible = ob_eval.visible_in_viewport_get(viewport)             
+            parent_visible = instance.parent.visible_in_viewport_get(viewport) 
+            return (ob_eval_visible or parent_visible)
+
+        ob_eval = instance.object.evaluated_get(self.depsgraph)  
         visible = ob_eval.visible_in_viewport_get(viewport) 
         return visible
 
