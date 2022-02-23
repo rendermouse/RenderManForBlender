@@ -429,9 +429,9 @@ class RmanScene(object):
 
         ob = self.context.active_object
         self.export_materials([m for m in self.depsgraph.ids if isinstance(m, bpy.types.Material)])
-        objects_needed = [x for x in self.bl_scene.objects if object_utils._detect_primitive_(x) == 'LIGHT']
-        objects_needed.append(ob)
-        self.export_data_blocks(selected_objects=objects_needed)  
+        objects_needed = [x.original for x in self.bl_scene.objects if object_utils._detect_primitive_(x) == 'LIGHT']
+        objects_needed.append(ob.original)
+        self.export_data_blocks(objects_list=objects_needed)  
 
         self.export_samplefilters()
         self.export_displayfilters()
@@ -585,7 +585,7 @@ class RmanScene(object):
 
         return True    
             
-    def export_data_blocks(self, selected_objects=False):
+    def export_data_blocks(self, selected_objects=False, objects_list=False):
         rman_group_translator = self.rman_translators['GROUP']
         total = len(self.depsgraph.object_instances)
         for i, ob_inst in enumerate(self.depsgraph.object_instances):
@@ -596,6 +596,10 @@ class RmanScene(object):
                 continue
 
             if selected_objects and not self.is_instance_selected(ob_inst): 
+                continue
+
+            # only export these objects
+            if objects_list and ob.original not in objects_list:
                 continue
 
             if not self.check_visibility(ob_inst):
