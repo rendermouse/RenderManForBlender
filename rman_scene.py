@@ -148,6 +148,7 @@ class RmanScene(object):
         self.rman_translators['HAIR'] = RmanHairTranslator(rman_scene=self) 
         self.rman_translators['GROUP'] = RmanGroupTranslator(rman_scene=self)
         self.rman_translators['EMPTY'] = RmanEmptyTranslator(rman_scene=self)
+        self.rman_translators['EMPTY_INSTANCER'] = RmanEmptyTranslator(rman_scene=self)
         self.rman_translators['POINTS'] = RmanPointsTranslator(rman_scene=self)
         self.rman_translators['META'] = RmanBlobbyTranslator(rman_scene=self)
         self.rman_translators['PARTICLES'] = RmanParticlesTranslator(rman_scene=self)
@@ -603,11 +604,11 @@ class RmanScene(object):
 
             ob_eval = ob.evaluated_get(self.depsgraph)
             psys = None
-            parent = None 
+            instance_parent = None 
             proto_key = object_utils.prototype_key(ob_inst)                           
             if ob_inst.is_instance:
                 psys = ob_inst.particle_system
-                parent = ob_inst.parent                             
+                instance_parent = ob_inst.parent                             
 
             rman_type = object_utils._detect_primitive_(ob_eval)
             rman_sg_node = self.get_rman_prototype(proto_key, ob=ob_eval, create=True)
@@ -640,7 +641,7 @@ class RmanScene(object):
 
             # Attach a material                    
             if psys:
-                self.attach_particle_material(psys.settings, parent, ob, rman_sg_group)
+                self.attach_particle_material(psys.settings, instance_parent, ob, rman_sg_group)
                 rman_sg_group.bl_psys_settings = psys.settings.original
             else:
                 self.attach_material(ob, rman_sg_group)
@@ -654,7 +655,13 @@ class RmanScene(object):
                 rman_empty_node.sg_node.AddChild(rman_sg_group.sg_node)  
             else:              
                 self.get_root_sg_node().AddChild(rman_sg_group.sg_node)
-            rman_sg_node.instances[group_db_name] = rman_sg_group                      
+                
+            if instance_parent:
+                rman_parent_node = self.get_rman_prototype(object_utils.prototype_key(instance_parent), ob=instance_parent, create=True)
+                if rman_parent_node:
+                    rman_parent_node.instances[group_db_name] = rman_sg_group
+            else:
+                rman_sg_node.instances[group_db_name] = rman_sg_group                      
 
             if rman_type == "META":
                 # meta/blobbies are already in world space. Their instances don't need to

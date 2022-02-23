@@ -196,6 +196,8 @@ def _detect_primitive_(ob):
         elif ob.type == 'CAMERA':
             return 'CAMERA'
         elif ob.type == 'EMPTY':
+            if ob.is_instancer:
+                return 'EMPTY_INSTANCER'
             return 'EMPTY'
         elif ob.type == 'GPENCIL':
             return 'GPENCIL'

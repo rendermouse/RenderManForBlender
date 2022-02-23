@@ -89,7 +89,7 @@ class RmanSceneSync(object):
                             self.rman_updates[o.original] = rman_update
                     except:
                         continue
-                self.check_all_instances = True
+                #self.check_all_instances = True
 
         self.rman_scene.num_objects_in_viewlayer = len(visible_objects)
         self.rman_scene.objects_in_viewlayer = [o for o in visible_objects]            
@@ -258,12 +258,6 @@ class RmanSceneSync(object):
                 rman_update.is_updated_transform = ob_update.is_updated_transform
                 self.rman_updates[col_obj.original] = rman_update                      
 
-    def check_particle_systems(self, ob_update):
-        ob = ob_update.id.evaluated_get(self.rman_scene.depsgraph)
-        for psys in ob.particle_systems:
-            if object_utils.is_particle_instancer(psys):
-                self.check_particle_instancer(ob_update, psys)
-
     def update_particle_emitter(self, ob, psys):
         psys_translator = self.rman_scene.rman_translators['PARTICLES']
         proto_key = object_utils.prototype_key(ob)
@@ -391,7 +385,6 @@ class RmanSceneSync(object):
         if self.rman_scene.num_object_instances != len(depsgraph.object_instances):
             rfb_log().debug("\tNumber of instances changed: %d -> %d" % (self.rman_scene.num_object_instances, len(depsgraph.object_instances)))
             self.num_instances_changed = True
-            self.check_all_instances = True
             self.rman_scene.num_object_instances = len(depsgraph.object_instances)
 
         for obj in reversed(depsgraph.updates):
@@ -458,7 +451,6 @@ class RmanSceneSync(object):
                 rfb_log().debug("ParticleSettings updated: %s" % obj.id.name)
 
                 with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
-                    psys_translator = self.rman_scene.rman_translators['PARTICLES']
                     for o in self.rman_scene.bl_scene.objects:
                         psys = None
                         ob = o.evaluated_get(depsgraph)
@@ -469,9 +461,18 @@ class RmanSceneSync(object):
                         if not psys:
                             continue
                         if object_utils.is_particle_instancer(psys):
-                            self.check_particle_instancer(obj, psys)                                
+                            #self.check_particle_instancer(obj, psys)
+                            pass
                         else:
                             self.update_particle_emitter(ob, psys)
+
+                        if o.original not in self.rman_updates:
+                            rman_update = RmanUpdate()
+
+                            rman_update.is_updated_geometry = obj.is_updated_geometry
+                            rman_update.is_updated_shading = obj.is_updated_shading
+                            rman_update.is_updated_transform = obj.is_updated_transform   
+                            self.rman_updates[o.original] = rman_update                         
                         
             elif isinstance(obj.id, bpy.types.ShaderNodeTree):
                 if obj.id.name in bpy.data.node_groups:
@@ -520,8 +521,6 @@ class RmanSceneSync(object):
                 rfb_log().debug("\t    is_updated_transform: %s" % str(obj.is_updated_transform))
                 self.rman_updates[obj.id.original] = rman_update
 
-                self.check_particle_systems(obj)
-
                 # Check if this object is the focus object the camera. If it is
                 # we need to update the camera
                 if obj.is_updated_transform:
@@ -538,6 +537,13 @@ class RmanSceneSync(object):
             else:
                 pass
                 #self.update_geometry_node_instances(obj.id)
+
+        if not self.rman_updates and self.num_instances_changed:
+            # The number of instances changed, but we are not able
+            # to determine what changed. We are forced to check
+            # all instances.
+            rfb_log().debug("Set check_all_instances to True")
+            self.check_all_instances = True
                          
         if self.check_all_instances or self.rman_updates:
             self.check_instances()
@@ -560,14 +566,14 @@ class RmanSceneSync(object):
 
                 ob_key = instance.object.original
                 ob_eval = instance.object.evaluated_get(self.rman_scene.depsgraph)                
-                parent = None
+                instance_parent = None
                 psys = None 
                 is_new_object = False
                 proto_key = object_utils.prototype_key(instance)              
                 if instance.is_instance:
                     ob_key = instance.instance_object.original      
                     psys = instance.particle_system
-                    parent = instance.parent 
+                    instance_parent = instance.parent 
                     
                 if proto_key in deleted_obj_keys:
                     deleted_obj_keys.remove(proto_key) 
@@ -575,6 +581,7 @@ class RmanSceneSync(object):
                 rman_type = object_utils._detect_primitive_(ob_eval)
                 
                 rman_sg_node = self.rman_scene.get_rman_prototype(proto_key)
+                rman_parent_node = None
                 if rman_sg_node and rman_type != rman_sg_node.rman_type:
                     # Types don't match
                     #
@@ -610,6 +617,7 @@ class RmanSceneSync(object):
                         rman_update.is_updated_transform = True
                         self.rman_updates[ob_key] = rman_update    
                     rman_update.is_updated_geometry = False
+                    clear_instances.append(rman_sg_node)
                                 
                 if self.check_all_instances:
                     # check all instances in the scene
@@ -621,22 +629,15 @@ class RmanSceneSync(object):
                         self.rman_updates[ob_key] = rman_update  
                 else:                        
                     if ob_key not in self.rman_updates:
-                        if not parent:
+                        if not instance_parent:
                             continue
-                        # check if the parent is also marked to be updated
-                        if parent.original not in self.rman_updates:
+                        if instance_parent.original not in self.rman_updates:
                             continue
-                        
-                        # parent was marked needing update. 
-                        # create an on the fly RmanUpdate()
-                        rman_update = RmanUpdate()
-                        rman_update.is_updated_shading = True
-                        rman_update.is_updated_transform = True
-                        self.rman_updates[ob_key] = rman_update                        
+                        rman_update = self.rman_updates[instance_parent.original]
                     else:
                         rman_update = self.rman_updates[ob_key]                     
 
-                if rman_sg_node and not is_new_object:
+                if rman_sg_node and not is_new_object and not instance.is_instance:
                     if rman_update.is_updated_geometry and proto_key not in already_udpated:
                         translator =  self.rman_scene.rman_translators.get(rman_type, None)
                         rfb_log().debug("\tUpdating Object: %s" % proto_key)
@@ -654,9 +655,16 @@ class RmanSceneSync(object):
                     # of them, as they are part of lights
                     continue
 
-                if rman_sg_node not in clear_instances:
-                    # clear all instances for this prototype, if
-                    # we have not already done so
+                # clear all instances for this prototype, if
+                # we have not already done so
+                if instance_parent:
+                    parent_proto_key = object_utils.prototype_key(instance_parent)
+                    rman_parent_node = self.rman_scene.get_rman_prototype(parent_proto_key, ob=instance_parent)
+                    if rman_parent_node and rman_parent_node not in clear_instances:
+                        rfb_log().debug("\tClearing parent instances: %s" % parent_proto_key)
+                        rman_parent_node.clear_instances()
+                        clear_instances.append(rman_parent_node) 
+                elif rman_sg_node not in clear_instances:
                     rfb_log().debug("\tClearing instances: %s" % proto_key)
                     rman_sg_node.clear_instances()
                     clear_instances.append(rman_sg_node) 
@@ -671,7 +679,6 @@ class RmanSceneSync(object):
                 if not rman_sg_group:
                     rman_sg_group = rman_group_translator.export(ob_eval, group_db_name)
                     rman_sg_group.sg_node.AddChild(rman_sg_node.sg_node)
-                    rman_sg_node.instances[group_db_name] = rman_sg_group 
 
                 if object_utils.has_empty_parent(ob_eval):
                     # this object is a child of an empty. Add it to the empty.
@@ -696,7 +703,7 @@ class RmanSceneSync(object):
 
                 # Attach a material
                 if psys:
-                    self.rman_scene.attach_particle_material(psys.settings, parent, ob_eval, rman_sg_group)
+                    self.rman_scene.attach_particle_material(psys.settings, instance_parent, ob_eval, rman_sg_group)
                     rman_sg_group.bl_psys_settings = psys.settings.original
                 else:
                     self.rman_scene.attach_material(ob_eval, rman_sg_group)
@@ -708,7 +715,10 @@ class RmanSceneSync(object):
                     translator.export_object_attributes(ob_eval, rman_sg_group)                    
                     translator.export_object_id(ob_eval, rman_sg_group, instance)                   
                 
-                rman_sg_node.instances[group_db_name] = rman_sg_group 
+                if rman_parent_node:
+                    rman_parent_node.instances[group_db_name] = rman_sg_group
+                else:
+                    rman_sg_node.instances[group_db_name] = rman_sg_group                   
 
                 if rman_sg_node.rman_sg_particle_group_node:
                     rman_sg_node.sg_node.RemoveChild(rman_sg_node.rman_sg_particle_group_node.sg_node)
