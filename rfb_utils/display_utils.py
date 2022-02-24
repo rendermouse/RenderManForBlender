@@ -504,9 +504,6 @@ def _set_rman_holdouts_dspy_dict(dspys_dict, dspy_drv, rman_scene, expandTokens)
         if display_driver == 'openexr':
             param_list.SetInteger('asrgba', 1)
 
-    if display_driver == 'blender' and rman_scene.is_viewport_render:
-            display_driver = 'null'
-
     dspy_params = {}                        
     dspy_params['displayChannels'] = []
     d = _default_dspy_params()
