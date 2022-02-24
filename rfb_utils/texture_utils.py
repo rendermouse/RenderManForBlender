@@ -288,11 +288,15 @@ def update_texture(node, ob=None, check_exists=False):
         get_txmanager().add_texture(node, ob, prop_name, bl_prop_info.prop, node_type=node_type, category=category)        
 
 def generate_node_name(node, prop_name, ob=None, nm=None):
+    node_name = ''
     if not nm:
         nm = shadergraph_utils.get_nodetree_name(node)
     if nm:        
         node_name = '%s|%s|' %  (nm, node.name)
-    else:
+    elif ob:
+        node_name = '%s|%s|' % (ob.name, node.name)
+    
+    if node_name == '':
         prop = ''
         real_file = ''
         if hasattr(node, prop_name):
