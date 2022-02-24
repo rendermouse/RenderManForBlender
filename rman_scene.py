@@ -1402,7 +1402,7 @@ class RmanScene(object):
         sample_filter_names = []        
         samplefilters_list = list()
 
-        if rm.do_holdout_matte != "OFF" and not self.is_viewport_render:
+        if rm.do_holdout_matte != "OFF":
             sf_node = self.rman.SGManager.RixSGShader("SampleFilter", "PxrShadowFilter", "rm_PxrShadowFilter_shadows")
             params = sf_node.params
             params.SetString("occludedAov", "occluded")
