@@ -409,26 +409,26 @@ def gather_all_textured_nodes(ob, nodes_list):
             gather_all_textured_nodes(node, nodes_list)               
 
 def get_nodetree_name(node):
-    nt = node.id_data
+    nt = node.id_data.original
 
     for nm, ng in bpy.data.node_groups.items():
-        if nt == ng:
+        if nt == ng.original:
             return nm
             
     for mat in bpy.data.materials:
         if mat.node_tree is None:
             continue
-        if mat.node_tree == nt:
+        if mat.node_tree.original == nt:
             return mat.name
 
     for world in bpy.data.worlds:
-        if world.node_tree == nt:
+        if world.node_tree.original == nt:
             return world.name         
 
     for ob in bpy.data.objects:
         if ob.type == 'LIGHT':
             light = ob.data
-            if light.node_tree == nt:
+            if light.node_tree.original == nt:
                 return ob.name           
         elif ob.type == 'CAMERA':
             if find_projection_node(ob) == node:
