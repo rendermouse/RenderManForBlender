@@ -559,7 +559,6 @@ class RmanSceneSync(object):
         clear_instances = list() # list of objects who had their instances cleared            
         rfb_log().debug("Updating instances")        
         with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene): 
-            rman_group_translator = self.rman_scene.rman_translators['GROUP']
             for instance in self.rman_scene.depsgraph.object_instances:
                 if instance.object.type in ('ARMATURE', 'CAMERA'):
                     continue
@@ -581,7 +580,6 @@ class RmanSceneSync(object):
                 rman_type = object_utils._detect_primitive_(ob_eval)
                 
                 rman_sg_node = self.rman_scene.get_rman_prototype(proto_key)
-                rman_parent_node = None
                 if rman_sg_node and rman_type != rman_sg_node.rman_type:
                     # Types don't match
                     #
@@ -671,21 +669,7 @@ class RmanSceneSync(object):
                     # add an instance of it
                     continue
 
-                group_db_name = object_utils.get_group_db_name(instance) 
-                rman_sg_group = rman_sg_node.instances.get(group_db_name, None)
-                if not rman_sg_group:
-                    rman_sg_group = rman_group_translator.export(ob_eval, group_db_name)
-                    rman_sg_group.sg_node.AddChild(rman_sg_node.sg_node)
-
-                if object_utils.has_empty_parent(ob_eval):
-                    # this object is a child of an empty. Add it to the empty.
-                    ob_parent_eval = ob_eval.parent.evaluated_get(self.rman_scene.depsgraph)
-                    parent_proto_key = object_utils.prototype_key(ob_eval.parent)
-                    rman_empty_node = self.rman_scene.get_rman_prototype(parent_proto_key, ob=ob_parent_eval, create=True)
-                    rman_sg_group.sg_node.SetInheritTransform(False) # we don't want to inherit the transform
-                    rman_empty_node.sg_node.AddChild(rman_sg_group.sg_node)                      
-                else:              
-                    self.rman_scene.get_root_sg_node().AddChild(rman_sg_group.sg_node)                        
+                self.rman_scene.export_instance(ob_eval, instance, rman_sg_node, rman_type, instance_parent, psys)
 
                 if rman_type == 'LIGHT':
                     # We are dealing with a light. Check if it's a solo light, or muted
@@ -696,31 +680,7 @@ class RmanSceneSync(object):
                     
                     # Hide the default light
                     if self.rman_scene.default_light.GetHidden() != 1:
-                        self.rman_scene.default_light.SetHidden(1)
-
-                # Attach a material
-                if psys:
-                    self.rman_scene.attach_particle_material(psys.settings, instance_parent, ob_eval, rman_sg_group)
-                    rman_sg_group.bl_psys_settings = psys.settings.original
-                else:
-                    self.rman_scene.attach_material(ob_eval, rman_sg_group)
-                self.rman_scene.get_root_sg_node().AddChild(rman_sg_group.sg_node)
-                
-                # Object attrs     
-                translator =  self.rman_scene.rman_translators.get(rman_type, None)  
-                if translator:
-                    translator.export_object_attributes(ob_eval, rman_sg_group)                    
-                    translator.export_object_id(ob_eval, rman_sg_group, instance)                   
-                
-                if rman_parent_node:
-                    rman_parent_node.instances[group_db_name] = rman_sg_group
-                else:
-                    rman_sg_node.instances[group_db_name] = rman_sg_group                   
-
-                if rman_sg_node.rman_sg_particle_group_node:
-                    rman_sg_node.sg_node.RemoveChild(rman_sg_node.rman_sg_particle_group_node.sg_node)
-                    if (len(ob_eval.particle_systems) > 0) and instance.show_particles:
-                        rman_sg_group.sg_node.AddChild(rman_sg_node.rman_sg_particle_group_node.sg_node) 
+                        self.rman_scene.default_light.SetHidden(1)                
 
                 # Delete any removed partcle systems
                 if proto_key in self.rman_scene.rman_particles:                                                
@@ -735,12 +695,6 @@ class RmanSceneSync(object):
                         rfb_log().debug("\t\tRemoving particle nodes: %s" % proto_key)
                     for k in rman_particle_nodes:                        
                         del ob_psys[k]
-
-                if rman_type == 'META':
-                    continue
-                
-                # Transform
-                rman_group_translator.update_transform(instance, rman_sg_group) 
                                                                                             
             # delete objects
             if deleted_obj_keys:
@@ -757,7 +711,6 @@ class RmanSceneSync(object):
             rfb_log().debug("\tDeleting: %s" % rman_sg_node.db_name)           
             if key in self.rman_scene.rman_particles:
                 rfb_log().debug("\t\tRemoving particles...")
-                ob_psys = self.rman_scene.rman_particles[key]
                 del self.rman_scene.rman_particles[key]
 
             del self.rman_scene.rman_prototypes[key]

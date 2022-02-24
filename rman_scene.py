@@ -585,9 +585,62 @@ class RmanScene(object):
             return False
 
         return True    
+
+    def export_instance(self, ob_eval, ob_inst, rman_sg_node, rman_type, instance_parent, psys):
+        rman_group_translator = self.rman_translators['GROUP']
+        group_db_name = object_utils.get_group_db_name(ob_inst) 
+        rman_sg_group = rman_group_translator.export(ob_eval, group_db_name)
+        rman_sg_group.sg_node.AddChild(rman_sg_node.sg_node)
+
+        # Object attrs     
+        translator =  self.rman_translators.get(rman_type, None)  
+        if translator:
+            translator.export_object_attributes(ob_eval, rman_sg_group)                    
+            translator.export_object_id(ob_eval, rman_sg_group, ob_inst)       
+
+        # Add any particles necessary
+        if rman_sg_node.rman_sg_particle_group_node:
+            if (len(ob_eval.particle_systems) > 0) and ob_inst.show_particles:
+                rman_sg_group.sg_node.AddChild(rman_sg_node.rman_sg_particle_group_node.sg_node)    
+
+        # Attach a material                    
+        if psys:
+            self.attach_particle_material(psys.settings, instance_parent, ob_eval, rman_sg_group)
+            rman_sg_group.bl_psys_settings = psys.settings.original
+        else:
+            self.attach_material(ob_eval, rman_sg_group)
+
+        if object_utils.has_empty_parent(ob_eval):
+            # this object is a child of an empty. Add it to the empty.
+            ob_parent_eval = ob_eval.parent.evaluated_get(self.depsgraph)
+            parent_proto_key = object_utils.prototype_key(ob_eval.parent)
+            rman_empty_node = self.get_rman_prototype(parent_proto_key, ob=ob_parent_eval, create=True)
+            rman_sg_group.sg_node.SetInheritTransform(False) # we don't want to inherit the transform
+            rman_empty_node.sg_node.AddChild(rman_sg_group.sg_node)  
+        else:              
+            self.get_root_sg_node().AddChild(rman_sg_group.sg_node)
+            
+        if instance_parent:
+            rman_parent_node = self.get_rman_prototype(object_utils.prototype_key(instance_parent), ob=instance_parent, create=True)
+            if rman_parent_node:
+                if group_db_name in rman_parent_node.instances:
+                    del rman_parent_node[group_db_name]
+                rman_parent_node.instances[group_db_name] = rman_sg_group
+        else:
+            if group_db_name in rman_sg_node.instances:
+                del rman_sg_node[group_db_name]            
+            rman_sg_node.instances[group_db_name] = rman_sg_group                      
+
+        if rman_type == "META":
+            # meta/blobbies are already in world space. Their instances don't need to
+            # set a transform.
+            return rman_sg_group           
+                
+        rman_group_translator.update_transform(ob_inst, rman_sg_group)        
+        return rman_sg_group
+        
             
     def export_data_blocks(self, selected_objects=False, objects_list=False):
-        rman_group_translator = self.rman_translators['GROUP']
         total = len(self.depsgraph.object_instances)
         for i, ob_inst in enumerate(self.depsgraph.object_instances):
             ob = ob_inst.object
@@ -625,52 +678,8 @@ class RmanScene(object):
    
             if rman_type in object_utils._RMAN_NO_INSTANCES_:
                 continue      
-            
-            group_db_name = object_utils.get_group_db_name(ob_inst) 
-            rman_sg_group = rman_group_translator.export(ob, group_db_name)
-            rman_sg_group.sg_node.AddChild(rman_sg_node.sg_node)
 
-            # Object attrs     
-            translator =  self.rman_translators.get(rman_type, None)  
-            if translator:
-                translator.export_object_attributes(ob_eval, rman_sg_group)                    
-                translator.export_object_id(ob_eval, rman_sg_group, ob_inst)       
-
-            # Add any particles necessary
-            if rman_sg_node.rman_sg_particle_group_node:
-                if (len(ob.particle_systems) > 0) and ob_inst.show_particles:
-                    rman_sg_group.sg_node.AddChild(rman_sg_node.rman_sg_particle_group_node.sg_node)    
-
-            # Attach a material                    
-            if psys:
-                self.attach_particle_material(psys.settings, instance_parent, ob, rman_sg_group)
-                rman_sg_group.bl_psys_settings = psys.settings.original
-            else:
-                self.attach_material(ob, rman_sg_group)
-
-            if object_utils.has_empty_parent(ob):
-                # this object is a child of an empty. Add it to the empty.
-                ob_parent_eval = ob.parent.evaluated_get(self.depsgraph)
-                parent_proto_key = object_utils.prototype_key(ob.parent)
-                rman_empty_node = self.get_rman_prototype(parent_proto_key, ob=ob_parent_eval, create=True)
-                rman_sg_group.sg_node.SetInheritTransform(False) # we don't want to inherit the transform
-                rman_empty_node.sg_node.AddChild(rman_sg_group.sg_node)  
-            else:              
-                self.get_root_sg_node().AddChild(rman_sg_group.sg_node)
-                
-            if instance_parent:
-                rman_parent_node = self.get_rman_prototype(object_utils.prototype_key(instance_parent), ob=instance_parent, create=True)
-                if rman_parent_node:
-                    rman_parent_node.instances[group_db_name] = rman_sg_group
-            else:
-                rman_sg_node.instances[group_db_name] = rman_sg_group                      
-
-            if rman_type == "META":
-                # meta/blobbies are already in world space. Their instances don't need to
-                # set a transform.
-                return            
-                 
-            rman_group_translator.update_transform(ob_inst, rman_sg_group)
+            self.export_instance(ob_eval, ob_inst, rman_sg_node, rman_type, instance_parent, psys)
 
     def export_data_block(self, proto_key, ob):
         rman_type = object_utils._detect_primitive_(ob)   
