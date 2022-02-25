@@ -113,14 +113,16 @@ class RmanTranslator(object):
         if not rman_sg_node.sg_node:
             return        
         name = ob.name_full
+        if ob_inst.is_instance:
+            name = ob_inst.parent.name
         attrs = rman_sg_node.sg_node.GetAttributes()
         rman_type = object_utils._detect_primitive_(ob)
 
         # Add ID
         if name != "":            
-            persistent_id = ob_inst.persistent_id[0]
+            persistent_id = ob_inst.persistent_id[1]
             if persistent_id == 0:           
-                persistent_id = int(hashlib.sha1(ob.name_full.encode()).hexdigest(), 16) % 10**8
+                persistent_id = int(hashlib.sha1(name.encode()).hexdigest(), 16) % 10**8
             self.rman_scene.obj_hash[persistent_id] = name
             attrs.SetInteger(self.rman_scene.rman.Tokens.Rix.k_identifier_id, persistent_id)
 

@@ -45,10 +45,11 @@ def get_group_db_name(ob_inst):
             ob = ob_inst.instance_object
             parent = ob_inst.parent
             psys = ob_inst.particle_system
+            persistent_id = "%d%d" % (ob_inst.persistent_id[1], ob_inst.persistent_id[0])            
             if psys:
-                group_db_name = "%s|%s|%s|%d|%d" % (parent.name_full, ob.name_full, psys.name, ob_inst.persistent_id[1], ob_inst.persistent_id[0])
+                group_db_name = "%s|%s|%s|%s" % (parent.name_full, ob.name_full, psys.name, persistent_id)
             else:
-                group_db_name = "%s|%s|%d|%d" % (parent.name_full, ob.name_full, ob_inst.persistent_id[1], ob_inst.persistent_id[0])
+                group_db_name = "%s|%s|%s" % (parent.name_full, ob.name_full, persistent_id)
         else:
             ob = ob_inst.object
             group_db_name = "%s" % (ob.name_full)
