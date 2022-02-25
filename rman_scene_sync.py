@@ -332,35 +332,6 @@ class RmanSceneSync(object):
                 rman_update.is_updated_transform = True
                 self.rman_updates[o.original] = rman_update            
 
-    def update_geometry_node_instances(self, obj):
-        def update_geo_instances(nodes):
-            # look for all point instance nodes
-            for n in [node for node in nodes if isinstance(node, bpy.types.GeometryNodePointInstance)]:
-                if n.instance_type == 'OBJECT':
-                    instance_obj = n.inputs['Object'].default_value
-                    if instance_obj:
-                        self.clear_instances(instance_obj)
-                        self.update_particles.add(instance_obj)                        
-                        self.update_instances.add(instance_obj.original)
-                elif n.instance_type == 'COLLECTION':
-                    instance_coll = n.inputs['Collection'].default_value
-                    if instance_coll:
-                        self.update_collection(instance_coll)                
-
-
-        if rman_constants.BLENDER_VERSION_MAJOR >= 2 and rman_constants.BLENDER_VERSION_MINOR >= 92:
-            if isinstance(obj, bpy.types.GeometryNodeTree):
-                rfb_log().debug("Geometry Node Tree updated: %s" % obj.name)
-                # look for all point instance nodes
-                update_geo_instances(obj.nodes)     
-            elif hasattr(obj, 'modifiers'):
-                # This is an object with modifiers. Look for any geometry node trees attached.
-                node_tree = None
-                for modifier in obj.modifiers:
-                    if modifier.type == 'NODES':
-                        rfb_log().debug("Geometry Node Tree updated: %s" % modifier.node_group.name)
-                        update_geo_instances(modifier.node_group.nodes)
-
     def update_portals(self, ob):
         for portal in scene_utils.get_all_portals(ob):
            portal.original.update_tag()
@@ -478,7 +449,9 @@ class RmanSceneSync(object):
                 if obj.id.name in bpy.data.node_groups:
                     if len(obj.id.nodes) < 1:
                         continue
-                    # this is probably one of our fake node groups with ramps
+                    if not obj.id.name.startswith(rman_constants.RMAN_FAKE_NODEGROUP):
+                        continue
+                    # this is one of our fake node groups with ramps
                     # update all of the users of this node tree
                     rfb_log().debug("ShaderNodeTree updated: %s" % obj.id.name)
                     users = context.blend_data.user_map(subset={obj.id.original})
@@ -535,8 +508,7 @@ class RmanSceneSync(object):
                 #self.update_collection(obj.id)
 
             else:
-                pass
-                #self.update_geometry_node_instances(obj.id)
+                rfb_log().debug("Not handling %s update: %s" % (str(type(obj.id), obj.id.name)))
 
         if not self.rman_updates and self.num_instances_changed:
             # The number of instances changed, but we are not able

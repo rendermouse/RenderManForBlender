@@ -40,6 +40,7 @@ RFB_MAX_USER_TOKENS = 10
 RFB_VIEWPORT_MAX_BUCKETS = 10
 RFB_PREFS_NAME = __name__.split('.')[0]
 RMAN_RENDERMAN_BLUE = (0.0, 0.498, 1.0, 1.0)
+RMAN_FAKE_NODEGROUP = '.__RMAN_FAKE_NODEGROUP__'
 
 RFB_FLOAT3 = ['color', 'point', 'vector', 'normal']
 RFB_FLOATX = ['color', 'point', 'vector', 'normal', 'matrix']

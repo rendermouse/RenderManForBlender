@@ -16,6 +16,7 @@ from ..rman_properties import rman_properties_world
 from ..rman_properties import rman_properties_camera
 from ..rman_constants import RFB_ARRAYS_MAX_LEN
 from ..rman_constants import CYCLES_NODE_MAP
+from ..rman_constants import RMAN_FAKE_NODEGROUP
 from nodeitems_utils import NodeCategory, NodeItem
 from collections import OrderedDict
 from bpy.props import *
@@ -362,7 +363,7 @@ def generate_node_type(node_desc, is_oso=False):
 
         if color_rman_ramps or float_rman_ramps:
             node_group = bpy.data.node_groups.new(
-                '.__RMAN_FAKE_NODEGROUP__', 'ShaderNodeTree') 
+                RMAN_FAKE_NODEGROUP, 'ShaderNodeTree') 
             node_group.use_fake_user = True             
             self.rman_fake_node_group_ptr = node_group    
             self.rman_fake_node_group = node_group.name    
