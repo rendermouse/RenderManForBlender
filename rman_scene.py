@@ -591,11 +591,16 @@ class RmanScene(object):
         group_db_name = object_utils.get_group_db_name(ob_inst) 
         rman_sg_group = rman_group_translator.export(ob_eval, group_db_name)
         rman_sg_group.sg_node.AddChild(rman_sg_node.sg_node)
+        is_empty_instancer = False
+        if instance_parent and object_utils._detect_primitive_(instance_parent) == 'EMPTY_INSTANCER': 
+            is_empty_instancer = True
 
         # Object attrs     
         translator =  self.rman_translators.get(rman_type, None)  
         if translator:
-            translator.export_object_attributes(ob_eval, rman_sg_group)                    
+            translator.export_object_attributes(ob_eval, rman_sg_group)
+            if is_empty_instancer:
+                translator.export_object_attributes(instance_parent, rman_sg_group, remove=False)
             translator.export_object_id(ob_eval, rman_sg_group, ob_inst)       
 
         # Add any particles necessary
@@ -603,8 +608,10 @@ class RmanScene(object):
             if (len(ob_eval.particle_systems) > 0) and ob_inst.show_particles:
                 rman_sg_group.sg_node.AddChild(rman_sg_node.rman_sg_particle_group_node.sg_node)    
 
-        # Attach a material                    
-        if psys:
+        # Attach a material       
+        if is_empty_instancer and instance_parent.renderman.rman_material_override:
+            self.attach_material(instance_parent, rman_sg_group)
+        elif psys:
             self.attach_particle_material(psys.settings, instance_parent, ob_eval, rman_sg_group)
             rman_sg_group.bl_psys_settings = psys.settings.original
         else:

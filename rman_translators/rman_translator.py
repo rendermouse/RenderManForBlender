@@ -197,7 +197,7 @@ class RmanTranslator(object):
             else:
                 attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lightfilter_subset, '')                    
 
-    def export_object_attributes(self, ob, rman_sg_node):
+    def export_object_attributes(self, ob, rman_sg_node, remove=True):
         if not rman_sg_node.sg_node:
             return          
 
@@ -217,10 +217,12 @@ class RmanTranslator(object):
                 if isinstance(cond, str):
                     node = rm
                     if exec(cond):
-                        attrs.Remove(ri_name)
+                        if remove:
+                            attrs.Remove(ri_name)
                         continue
                 elif float(val) == cond:
-                    attrs.Remove(ri_name)
+                    if remove:
+                        attrs.Remove(ri_name)
                     continue
 
             is_array = False

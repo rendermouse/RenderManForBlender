@@ -169,6 +169,8 @@ def prototype_key(ob):
     return ob.original.name
 
 def _detect_primitive_(ob):
+    if ob is None:
+        return ''
 
     if isinstance(ob, bpy.types.ParticleSystem):
         return ob.settings.type
