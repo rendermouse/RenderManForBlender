@@ -508,7 +508,7 @@ class RmanSceneSync(object):
                 #self.update_collection(obj.id)
 
             else:
-                rfb_log().debug("Not handling %s update: %s" % (str(type(obj.id), obj.id.name)))
+                rfb_log().debug("Not handling %s update: %s" % (str(type(obj.id)), obj.id.name))
 
         if not self.rman_updates and self.num_instances_changed:
             # The number of instances changed, but we are not able
