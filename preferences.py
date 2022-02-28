@@ -458,7 +458,7 @@ class RendermanPreferences(AddonPreferences):
 
     rman_roz_stats_print_level: EnumProperty(
                     name="Stats Print Level",
-                    default = 1,
+                    default = '1',
                     items=[('0', 'None', ''),
                             ('1', 'Basic', ''),
                             ('2', 'Moderate', ''),
