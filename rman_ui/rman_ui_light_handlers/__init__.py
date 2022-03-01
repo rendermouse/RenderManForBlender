@@ -1456,6 +1456,11 @@ def draw():
 
     if bpy.context.engine != 'PRMAN_RENDER':
         return    
+
+    # check if overlays is disabled
+    viewport = bpy.context.space_data
+    if not viewport.overlay.show_overlays:
+        return
      
     scene = bpy.context.scene
       
