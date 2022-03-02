@@ -428,6 +428,8 @@ def get_nodetree_name(node):
     for ob in bpy.data.objects:
         if ob.type == 'LIGHT':
             light = ob.data
+            if light.node_tree is None:
+                continue
             if light.node_tree.original == nt:
                 return ob.name           
         elif ob.type == 'CAMERA':
