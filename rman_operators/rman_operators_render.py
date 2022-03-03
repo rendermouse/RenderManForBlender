@@ -195,10 +195,27 @@ class PRMAN_OT_StartInteractive(bpy.types.Operator):
     bl_description = "Start Interactive Rendering"
     bl_options = {'INTERNAL'}    
 
+    render_to_it: bpy.props.BoolProperty(default=False)
+
+    @classmethod
+    def description(cls, context, properties): 
+        if properties.render_to_it:
+            return "Start IPR and render to 'it'"
+        return cls.bl_description
+
     def invoke(self, context, event=None):
-        view = context.space_data
-        if view and view.shading.type != 'RENDERED':        
-            view.shading.type = 'RENDERED'
+        scene = context.scene
+        if self.render_to_it:
+            rr = RmanRender.get_rman_render()
+            rr.rman_scene.ipr_render_into = 'it'            
+            depsgraph = context.evaluated_depsgraph_get()
+            rr.start_interactive_render(context, depsgraph)
+        else:
+            view = context.space_data
+            if view and view.shading.type != 'RENDERED':        
+                rr = RmanRender.get_rman_render()
+                rr.rman_scene.ipr_render_into = 'blender'
+                view.shading.type = 'RENDERED'
 
         return {'FINISHED'}
 
@@ -211,7 +228,11 @@ class PRMAN_OT_StopInteractive(bpy.types.Operator):
     bl_options = {'INTERNAL'}    
 
     def invoke(self, context, event=None):
-        if context.space_data.type == 'VIEW_3D':
+        scene = context.scene
+        rr = RmanRender.get_rman_render()
+        if rr.is_ipr_to_it():            
+            rr.stop_render(stop_draw_thread=False)
+        elif context.space_data.type == 'VIEW_3D':
             context.space_data.shading.type = 'SOLID'
         else:
             for window in bpy.context.window_manager.windows:

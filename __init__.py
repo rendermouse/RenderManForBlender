@@ -107,9 +107,14 @@ class PRManRender(bpy.types.RenderEngine):
         if self.export_failed:
             return            
 
+        if self.rman_render.is_ipr_to_it():
+            # if we are already IPRing to "it", stop the render
+            self.rman_render.stop_render(stop_draw_thread=False)
+
         # if interactive rendering has not started, start it
         if not self.rman_render.rman_interactive_running and self.rman_render.sg_scene is None:
             self.rman_render.bl_engine = self
+            self.rman_render.rman_scene.ipr_render_into = 'blender'
             if not self.rman_render.start_interactive_render(context, depsgraph):
                 self.export_failed = True
                 return

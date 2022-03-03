@@ -798,7 +798,7 @@ def draw_rman_viewport_props(self, context):
     if context.engine == "PRMAN_RENDER":
         view = context.space_data
         rman_render = RmanRender.get_rman_render()
-        if view.shading.type == 'RENDERED':
+        if view.shading.type == 'RENDERED' or rman_render.is_ipr_to_it():
             rman_rerender_controls = rfb_icons.get_icon("rman_ipr_cancel")
             row.operator('renderman.stop_ipr', text="",
                             icon_value=rman_rerender_controls.icon_id)
@@ -831,6 +831,7 @@ def draw_rman_viewport_props(self, context):
             # texture cache clear
             rman_icon = rfb_icons.get_icon('rman_lightning_grey')
             row.operator('rman_txmgr_list.clear_all_cache', text='', icon_value=rman_icon.icon_id)
+
         elif rman_render.rman_running:
             rman_rerender_controls = rfb_icons.get_icon("rman_ipr_cancel")
             row.operator('renderman.stop_render', text="",
@@ -844,8 +845,9 @@ def draw_rman_viewport_props(self, context):
                 #rman_render.stop_render()
                 rman_render.del_bl_engine()
             rman_rerender_controls = rfb_icons.get_icon("rman_ipr_on")
-            row.operator('renderman.start_ipr', text="",
+            op = row.operator('renderman.start_ipr', text="",
                             icon_value=rman_rerender_controls.icon_id)
+            op.render_to_it = False
         row.popover(panel="PRMAN_PT_Viewport_Options", text="")
 
 
@@ -880,6 +882,8 @@ class PRMAN_PT_Viewport_Options(Panel):
         if prefs.rman_viewport_draw_progress:
             col.prop(prefs, 'rman_viewport_progress_color')
         col.prop(prefs, 'draw_ipr_text')
+        if rm.current_platform != ("macOS"):
+            col.prop(rm, 'blender_ipr_optix_denoiser')
 
         if rm.current_platform != ("macOS") and rm.has_xpu_license:
             col = layout.column(align=True)

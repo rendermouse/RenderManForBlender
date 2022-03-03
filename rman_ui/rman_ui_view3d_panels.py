@@ -70,23 +70,9 @@ class PRMAN_PT_Renderman_UI_Panel(bpy.types.Panel, _RManPanelHeader):
 
             row = layout.row(align=True)
             rman_rerender_controls = rfb_icons.get_icon("rman_ipr_on")
-            row.operator('renderman.start_ipr', text="IPR",
+            op = row.operator('renderman.start_ipr', text="Start IPR to 'it'",
                             icon_value=rman_rerender_controls.icon_id)    
-
-            row.prop(context.scene, "rm_ipr", text="",
-                    icon=draw_utils.get_open_close_icon(context.scene.rm_ipr))
-
-            if context.scene.rm_ipr:
-                scene = context.scene
-                rd = scene.render
-
-                box = layout.box()
-                box.use_property_split = True
-                box.use_property_decorate = False
-                row = box.row(align=True)
-
-                # Display Driver
-                row.prop(rm, "render_ipr_into")
+            op.render_to_it = True                            
 
             row = layout.row(align=True)
             rman_batch = rfb_icons.get_icon("rman_batch")

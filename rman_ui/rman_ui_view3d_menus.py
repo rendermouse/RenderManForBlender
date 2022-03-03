@@ -404,8 +404,12 @@ class VIEW3D_MT_RM_Add_Render_Menu(bpy.types.Menu):
 
         if not rm.is_rman_interactive_running:
             rman_rerender_controls = rfb_icons.get_icon("rman_ipr_on")
-            layout.operator('renderman.start_ipr', text="IPR",
+            op = layout.operator('renderman.start_ipr', text="IPR",
                             icon_value=rman_rerender_controls.icon_id)                
+            op.render_to_it = False
+            op = layout.operator('renderman.start_ipr', text="IPR to it",
+                            icon_value=rman_rerender_controls.icon_id)                
+            op.render_to_it = True            
             rman_render_icon = rfb_icons.get_icon("rman_render")
             layout.operator("render.render", text="Render",
                         icon_value=rman_render_icon.icon_id)        

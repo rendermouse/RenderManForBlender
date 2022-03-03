@@ -79,7 +79,7 @@ class ItHandler(chatserver.ItBaseHandler):
         global __RMAN_RENDER__
         rfb_log().debug("Stop Render Requested.")
         if __RMAN_RENDER__.rman_interactive_running:
-            __RMAN_RENDER__.bl_viewport.shading.type = 'SOLID'
+            __RMAN_RENDER__.stop_render(stop_draw_thread=False)
         __RMAN_RENDER__.del_bl_engine() 
 
     def selectObjectById(self):
@@ -409,6 +409,9 @@ class RmanRender(object):
     def is_regular_rendering(self):
         # return if we are doing a regular render and not interactive
         return (self.rman_running and not self.rman_interactive_running)   
+
+    def is_ipr_to_it(self):
+        return (self.rman_interactive_running and self.rman_scene.ipr_render_into == 'it')
 
     def do_draw_buckets(self):
         return get_pref('rman_viewport_draw_bucket', default=True) and self.rman_is_refining
@@ -878,7 +881,7 @@ class RmanRender(object):
         rm = depsgraph.scene_eval.renderman
         self.it_port = start_cmd_server()    
         render_into_org = '' 
-        self.rman_render_into = rm.render_ipr_into
+        self.rman_render_into = self.rman_scene.ipr_render_into
         self.bl_viewport = context.space_data
         
         self.rman_callbacks.clear()

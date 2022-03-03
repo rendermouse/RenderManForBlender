@@ -134,6 +134,8 @@ class RmanScene(object):
         self.num_objects_in_viewlayer = 0
         self.objects_in_viewlayer = list()
 
+        self.ipr_render_into = 'blender'
+
         self.create_translators()     
 
 
@@ -243,7 +245,7 @@ class RmanScene(object):
         self.is_viewport_render = False
         self.rman_bake = False
         
-        if self.bl_scene.renderman.render_ipr_into == 'blender':
+        if self.ipr_render_into == 'blender':
             self.is_viewport_render = True
 
         self.do_motion_blur = False
@@ -558,6 +560,8 @@ class RmanScene(object):
         if not self.is_interactive:
             return True
         viewport = self.context.space_data
+        if viewport is None or viewport.type != 'VIEW_3D':
+            return True
              
         if instance.is_instance:   
             ob_eval = instance.instance_object

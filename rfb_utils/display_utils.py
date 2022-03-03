@@ -620,7 +620,7 @@ def get_dspy_dict(rman_scene, expandTokens=True):
     do_optix_denoise = False
 
     if rman_scene.is_interactive:
-        display_driver = rm.render_ipr_into
+        display_driver = rman_scene.ipr_render_into
         do_optix_denoise = rm.blender_ipr_optix_denoiser
 
     elif (not rman_scene.external_render): 

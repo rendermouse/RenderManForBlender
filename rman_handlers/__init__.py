@@ -3,6 +3,7 @@ from ..rfb_utils import string_utils
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import upgrade_utils
 from ..rman_ui import rman_ui_light_handlers
+from ..rman_render import RmanRender
 from bpy.app.handlers import persistent
 import bpy
 
@@ -25,7 +26,25 @@ def rman_save_post(bl_scene):
 
 @persistent
 def depsgraph_update_post(bl_scene, depsgraph):
-    texture_utils.depsgraph_handler(bl_scene, depsgraph)             
+    texture_utils.depsgraph_handler(bl_scene, depsgraph)   
+    rman_render = RmanRender.get_rman_render()
+
+    # check updates if we are render ipring into it
+    if rman_render.is_ipr_to_it():
+        context = bpy.context
+        rman_render.update_scene(context, depsgraph)
+        rman_render.update_view(context, depsgraph)        
+
+@persistent
+def frame_change_post(bl_scene):
+    rman_render = RmanRender.get_rman_render()
+    # check updates if we are render ipring into it
+    if rman_render.is_ipr_to_it():
+        context = bpy.context
+        depsgraph = context.evaluated_depsgraph_get()
+        rman_render.update_scene(context, depsgraph)
+        rman_render.update_view(context, depsgraph)           
+      
 
 def register():
 
@@ -45,6 +64,9 @@ def register():
     if depsgraph_update_post not in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.append(depsgraph_update_post)
 
+    if frame_change_post not in bpy.app.handlers.frame_change_post:
+        bpy.app.handlers.frame_change_post.append(frame_change_post)
+
 def unregister():
 
     if rman_load_post in bpy.app.handlers.load_post:
@@ -57,4 +79,7 @@ def unregister():
         bpy.app.handlers.save_post.remove(rman_save_post)
 
     if depsgraph_update_post in bpy.app.handlers.depsgraph_update_post:
-        bpy.app.handlers.depsgraph_update_post.remove(depsgraph_update_post)              
+        bpy.app.handlers.depsgraph_update_post.remove(depsgraph_update_post)     
+
+    if frame_change_post in bpy.app.handlers.frame_change_post:
+        bpy.app.handlers.frame_change_post.remove(frame_change_post)                 

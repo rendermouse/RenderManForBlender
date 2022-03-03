@@ -79,7 +79,7 @@
             }             
         },         
         {
-            "panel": "RENDER_PT_renderman_render",
+            "panel": "",
             "page": "Display",
             "name": "render_ipr_into",
             "label": "Render IPR to",
@@ -90,14 +90,14 @@
             "help": "Controls where IPR renders will go to."
         },      
         {
-            "panel": "RENDER_PT_renderman_render",
+            "panel": "",
             "page": "Display",
             "name": "blender_ipr_optix_denoiser",
             "label": "Use Optix Denoiser",
             "type": "int",
             "default": 0,
             "widget": "checkbox",
-            "help": "Denoise IPR with OptiX denoiser",
+            "help": "Denoise viewport renders with OptiX denoiser",
             "update_function_name": "update_blender_ipr_optix_denoiser",
             "update_function": "def update_blender_ipr_optix_denoiser(self, context):\n    from ..rman_render import RmanRender\n    rr = RmanRender.get_rman_render()\n    rr.rman_scene_sync.update_displays(context)",
             "conditionalVisOps": {
