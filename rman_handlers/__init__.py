@@ -2,13 +2,13 @@ from ..rfb_utils import texture_utils
 from ..rfb_utils import string_utils
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import upgrade_utils
-from ..rman_ui import rman_ui_light_handlers
-from ..rman_render import RmanRender
 from bpy.app.handlers import persistent
 import bpy
 
 @persistent
 def rman_load_post(bl_scene):
+    from ..rman_ui import rman_ui_light_handlers
+    
     string_utils.update_blender_tokens_cb(bl_scene)
     rman_ui_light_handlers.clear_gl_tex_cache(bl_scene)
     texture_utils.txmanager_load_cb(bl_scene)
@@ -25,26 +25,8 @@ def rman_save_post(bl_scene):
     texture_utils.txmanager_pre_save_cb(bl_scene)
 
 @persistent
-def depsgraph_update_post(bl_scene, depsgraph):
+def texture_despgraph_handler(bl_scene, depsgraph):
     texture_utils.depsgraph_handler(bl_scene, depsgraph)   
-    rman_render = RmanRender.get_rman_render()
-
-    # check updates if we are render ipring into it
-    if rman_render.is_ipr_to_it():
-        context = bpy.context
-        rman_render.update_scene(context, depsgraph)
-        rman_render.update_view(context, depsgraph)        
-
-@persistent
-def frame_change_post(bl_scene):
-    rman_render = RmanRender.get_rman_render()
-    # check updates if we are render ipring into it
-    if rman_render.is_ipr_to_it():
-        context = bpy.context
-        depsgraph = context.evaluated_depsgraph_get()
-        rman_render.update_scene(context, depsgraph)
-        rman_render.update_view(context, depsgraph)           
-      
 
 def register():
 
@@ -60,12 +42,9 @@ def register():
     if rman_save_post not in bpy.app.handlers.save_post:
         bpy.app.handlers.save_post.append(rman_save_post)      
 
-    # depsgraph_update_post handler
-    if depsgraph_update_post not in bpy.app.handlers.depsgraph_update_post:
-        bpy.app.handlers.depsgraph_update_post.append(depsgraph_update_post)
-
-    if frame_change_post not in bpy.app.handlers.frame_change_post:
-        bpy.app.handlers.frame_change_post.append(frame_change_post)
+    # texture_depsgraph_update_post handler
+    if texture_despgraph_handler not in bpy.app.handlers.depsgraph_update_post:
+        bpy.app.handlers.depsgraph_update_post.append(texture_despgraph_handler)
 
 def unregister():
 
@@ -78,8 +57,8 @@ def unregister():
     if rman_save_post in bpy.app.handlers.save_post:
         bpy.app.handlers.save_post.remove(rman_save_post)
 
-    if depsgraph_update_post in bpy.app.handlers.depsgraph_update_post:
-        bpy.app.handlers.depsgraph_update_post.remove(depsgraph_update_post)     
+    if texture_despgraph_handler in bpy.app.handlers.depsgraph_update_post:
+        bpy.app.handlers.depsgraph_update_post.remove(texture_despgraph_handler)     
 
-    if frame_change_post in bpy.app.handlers.frame_change_post:
-        bpy.app.handlers.frame_change_post.remove(frame_change_post)                 
+    from . import rman_it_handlers
+    rman_it_handlers.remove_ipr_to_it_handlers()                

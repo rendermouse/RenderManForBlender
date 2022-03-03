@@ -33,6 +33,9 @@ from .rman_config import __RFB_CONFIG_DICT__ as rfb_config
 # roz stats
 from .rman_stats import RfBStatsManager
 
+# handlers
+from .rman_handlers.rman_it_handlers import add_ipr_to_it_handlers, remove_ipr_to_it_handlers
+
 __RMAN_RENDER__ = None
 __RMAN_IT_PORT__ = -1
 __BLENDER_DSPY_PLUGIN__ = None
@@ -899,6 +902,7 @@ class RmanRender(object):
                 self._draw_viewport_buckets = True                           
             else:
                 rman.Dspy.EnableDspyServer()
+                add_ipr_to_it_handlers()
         except:
             # force rendering to 'it'
             rfb_log().error('Could not register Blender display driver. Rendering to "it".')
@@ -1100,6 +1104,7 @@ class RmanRender(object):
         for k,v in self.rman_callbacks.items():
             ec.UnregisterCallback(k, v, self)
         self.rman_callbacks.clear()          
+        remove_ipr_to_it_handlers()
 
         self.rman_is_live_rendering = False
 
