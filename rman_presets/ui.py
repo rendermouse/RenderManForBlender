@@ -39,6 +39,7 @@ from bpy.props import *
 from . import icons
 from . import rmanAssetsBlender as rab
 from rman_utils.rman_assets import core as ra
+from rman_utils.rman_assets.common.exceptions import RmanAssetError
 
 from bpy.props import StringProperty, IntProperty
 import os
@@ -152,7 +153,11 @@ class VIEW3D_MT_renderman_presets_object_context_menu(bpy.types.Menu):
                 ass = ra.RmanAsset()
                 path = os.path.join(lib_path, asset)
                 json_path = os.path.join(path, 'asset.json')
-                ass.load(json_path)
+                try:
+                    ass.load(json_path)
+                except RmanAssetError as e:
+                    rfb_log().debug("%s" % str(e))
+                    continue
                 label = ass.label()       
                 thumb = icons.get_preset_icon(path)
                 metadict = ass.getMetadataDict()
@@ -177,7 +182,11 @@ class VIEW3D_MT_renderman_presets_object_context_menu(bpy.types.Menu):
                 ass = ra.RmanAsset()
                 path = os.path.join(lib_path, asset)
                 json_path = os.path.join(path, 'asset.json')
-                ass.load(json_path)
+                try:
+                    ass.load(json_path)
+                except RmanAssetError as e :
+                    rfb_log().debug("%s" % str(e))
+                    continue
                 label = ass.label()       
                 thumb = icons.get_preset_icon(path)  
                 metadict = ass.getMetadataDict()
@@ -206,7 +215,12 @@ class PRMAN_MT_renderman_preset_ops_menu(bpy.types.Menu):
         current_preset = hostPrefs.getSelectedPreset()
         ass = ra.RmanAsset()
         json_path = os.path.join(current_preset, 'asset.json')
-        ass.load(json_path)  
+        try:
+            ass.load(json_path)  
+        except RmanAssetError as e:
+            rfb_log().debug("%s" % str(e))
+            layout.label("%s" % str(e))
+            return
 
         op = getattr(context, 'op_ptr')
         current_category = hostPrefs.getSelectedCategory()
@@ -261,7 +275,12 @@ class PRMAN_OT_Renderman_Presets_Editor(bpy.types.Operator):
         hostPrefs.saveAllPrefs()
         for asset in hostPrefs.getAssetList(category.path):
             ass = ra.RmanAsset()
-            ass.load(os.path.join(hostPrefs.getSelectedLibrary(), asset, 'asset.json'))
+            try:
+                json_path = os.path.join(hostPrefs.getSelectedLibrary(), asset, 'asset.json')
+                ass.load(json_path)
+            except RmanAssetError as e:
+                rfb_log().debug("%s" % str(e))
+                continue
 
             preset = self.presets.add()
             preset.label = ass.label()
