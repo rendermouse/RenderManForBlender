@@ -158,15 +158,15 @@ def prototype_key(ob):
     if isinstance(ob, bpy.types.DepsgraphObjectInstance):
         if ob.is_instance:
             if ob.object.data:
-                return ob.object.data.name
+                return '%s-DATA' % ob.object.data.name
             else:
-                return ob.object.name
+                return '%s-OBJECT' % ob.object.name
         if ob.object.data:
-            return ob.object.data.name
-        return ob.object.original.name
+            return '%s-DATA' % ob.object.data.name
+        return '%s-OBJECT' % ob.object.original.name
     elif ob.data:
-        return ob.original.data.original.name
-    return ob.original.name
+        return '%s-DATA' % ob.original.data.original.name
+    return '%s-OBJECT' % ob.original.name
 
 def _detect_primitive_(ob):
     if ob is None:
