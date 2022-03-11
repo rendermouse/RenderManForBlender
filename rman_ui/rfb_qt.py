@@ -98,6 +98,7 @@ def process_qt_events(app, window):
     if window and not window.isVisible():
         return None
     app.processEvents()
+    window.update()
     return 0.01  # Run again after 0.001 seconds
         
 def run_with_timer(window, cls):
