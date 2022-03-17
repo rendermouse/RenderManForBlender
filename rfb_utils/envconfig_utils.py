@@ -91,15 +91,19 @@ class RmanEnvConfig(object):
     def read_envvars_file(self):
         bl_config_path = bpy.utils.user_resource('CONFIG')
         jsonfile = ''
-        for f in os.listdir(bl_config_path):
-            if not f.endswith('.json'):
-                continue
-            if f == 'rfb_envvars.json':
-                jsonfile = os.path.join(bl_config_path, f)
-                break
+        try:
+            for f in os.listdir(bl_config_path):
+                if not f.endswith('.json'):
+                    continue
+                if f == 'rfb_envvars.json':
+                    jsonfile = os.path.join(bl_config_path, f)
+                    break
+        except FileNotFoundError as e:
+            rfb_log().debug("%s" % str(e))
+            pass
         if jsonfile == '':
-            return
-
+            return        
+        
         rfb_log().warning("Reading rfb_envvars.json")
         jdata = json.load(open(jsonfile))
         environment = jdata.get('environment', list())
