@@ -35,6 +35,64 @@ from .rfb_utils import envconfig_utils
 from . import rfb_logger
 from . import rfb_icons
 
+# Defaults for our preferences.
+# Append to this dictionary whenever a new preference is added.
+__DEFAULTS__ = {
+    'rman_xpu_gpu_selection': -1,
+    'rman_xpu_device': 'CPU',
+    'rman_xpu_cpu_devices': [],
+    'draw_ipr_text': True,
+    'draw_panel_icon': True,
+    'path_fallback_textures_path': os.path.join('<OUT>', 'textures'),        
+    'path_fallback_textures_path_always': False,            
+    'rman_txmanager_keep_extension': True,
+    'rman_txmanager_workers': 2,       
+    'rman_txmanager_tex_extensions': 'tex tx txr ptx ptex ies',
+    'rman_scene_version_padding': 3,
+    'rman_scene_take_padding': 2,      
+    'rman_scene_version_increment': 'MANUALLY',
+    'rman_scene_take_increment': 'MANUALLY',
+    'rman_logging_level': 'WARNING',     
+    'rman_logging_file': '',       
+    'rman_do_preview_renders': False,
+    'rman_preview_renders_minSamples': 0,
+    'rman_preview_renders_maxSamples': 1,
+    'rman_preview_renders_pixelVariance': 0.15,
+    'rman_viewport_draw_lights_textured': True,
+    'rman_viewport_lights_draw_wireframe': True,
+    'rman_viewport_draw_bucket': True,
+    'rman_viewport_draw_progress': True,
+    'rman_viewport_crop_color': (0.0, 0.498, 1.0, 1.0),       
+    'rman_viewport_bucket_color': (0.0, 0.498, 1.0, 1.0), 
+    'rman_viewport_progress_color': (0.0, 0.498, 1.0, 1.0),        
+    'rman_editor': '',
+    'rman_invert_light_linking': False,
+    'rman_show_cycles_convert': False,
+    'rman_render_nurbs_as_mesh': True,
+    'rman_emit_default_params': False,
+    'rman_show_advanced_params': False,      
+    'rman_config_dir': "",
+    'rman_viewport_refresh_rate': 0.01,
+    'rman_solo_collapse_nodes': True,
+    'rman_use_blend_dir_token': True,          
+    'rman_ui_framework': "NATIVE",
+    'rpbConfigFile': '',
+    'rpbUserLibraries': [],
+    'rpbSelectedLibrary': '',
+    'rpbSelectedCategory': '',
+    'rpbSelectedPreset': '',
+    'rpbStorageMode': 0,
+    'rpbStorageKey': '',
+    'rpbStoragePath': '',
+    'rpbConvertToTex': 1,
+    'rpbSwatchSize': 64,
+    'rman_roz_logLevel': '3',     
+    'rman_roz_grpcServer': True,  
+    'rman_roz_webSocketServer': False,         
+    'rman_roz_webSocketServer_Port': 0, 
+    'rman_roz_stats_print_level': '1'                           
+}
+
 class RendermanPreferencePath(bpy.types.PropertyGroup):
     path: StringProperty(name="", subtype='DIR_PATH')
 
