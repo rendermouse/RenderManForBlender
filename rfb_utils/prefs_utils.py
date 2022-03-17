@@ -25,6 +25,9 @@ def get_pref(pref_name='', default=None):
 
     prefs = get_addon_prefs()
     if not prefs:
+        if default is None:
+            from ..preferences import __DEFAULTS__
+            default = __DEFAULTS__.get(pref_name, None)
         return default
     return getattr(prefs, pref_name, default)
 
