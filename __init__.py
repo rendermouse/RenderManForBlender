@@ -319,7 +319,7 @@ def register():
     load_addon()
 
 def unregister():
-    global __ADDON_LOADED__
+    global __RMAN_ADDON_LOADED__
 
     from . import preferences
     preferences.unregister()
