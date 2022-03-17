@@ -635,6 +635,7 @@ class RmanRender(object):
                 # if stats were not started before rendering, disconnect
                 self.stats_mgr.disconnect()                                 
         else:
+            self.start_stats_thread()
             while self.bl_engine and not self.bl_engine.test_break() and self.rman_is_live_rendering:
                 time.sleep(0.01)        
 
