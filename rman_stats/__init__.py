@@ -209,7 +209,7 @@ class RfBStatsManager(object):
         self.mgr.serverId = self.web_socket_server_id
 
         # update what stats to draw
-        print_level = int(prefs_utils.get_pref('rman_roz_stats_print_level'))
+        print_level = int(prefs_utils.get_pref('rman_roz_stats_print_level', default='1'))
         if print_level == 1:
             self.stats_to_draw = __BASIC_STATS__
         elif print_level == 2:
