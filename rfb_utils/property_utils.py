@@ -771,8 +771,13 @@ def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group
                     val = string_utils.expand_string(prop, display=display, asFilePath=True)
             else:
                 val = string_utils.convert_val(prop, type_hint=param_type)
+            is_array = False 
+            array_len = -1
+            if bl_prop_info.arraySize:
+                is_array = True
+                array_len = int(bl_prop_info.arraySize)
 
-            set_rix_param(params, param_type, param_name, val, is_reference=False, node=node)
+            set_rix_param(params, param_type, param_name, val, is_reference=False, is_array=is_array, array_len=array_len, node=node)
                     
     return params      
 
