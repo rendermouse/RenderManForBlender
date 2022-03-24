@@ -41,7 +41,6 @@ __DEFAULTS__ = {
     'rman_xpu_gpu_selection': -1,
     'rman_xpu_device': 'CPU',
     'rman_xpu_cpu_devices': [],
-    'draw_ipr_text': True,
     'draw_panel_icon': True,
     'path_fallback_textures_path': os.path.join('<OUT>', 'textures'),        
     'path_fallback_textures_path_always': False,            
@@ -224,11 +223,6 @@ class RendermanPreferences(AddonPreferences):
         default='',
         update=lambda s,c: fix_path(s, 'path_rmantree')
     )
-
-    draw_ipr_text: BoolProperty(
-        name="Draw IPR Text",
-        description="Draw notice on View3D when IPR is active",
-        default=True)
 
     draw_panel_icon: BoolProperty(
         name="Draw Panel Icon",
@@ -638,7 +632,6 @@ class RendermanPreferences(AddonPreferences):
         col.prop(self, 'rman_viewport_draw_progress')
         if self.rman_viewport_draw_progress:
             col.prop(self, 'rman_viewport_progress_color')                
-        col.prop(self, 'draw_ipr_text')
         col.prop(self, 'draw_panel_icon')
         col.prop(self, 'rman_ui_framework')
 

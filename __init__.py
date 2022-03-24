@@ -248,20 +248,6 @@ class PRManRender(bpy.types.RenderEngine):
             blf.disable(0, blf.SHADOW)   
             return
 
-        # Draw text area that RenderMan is running.        
-        if get_pref('draw_ipr_text', False) and not self.rman_render.rman_is_viewport_rendering:
-
-            pos_x = w / 2 - 100
-            pos_y = 20
-            blf.enable(0, blf.SHADOW)
-            blf.shadow_offset(0, 1, -1)
-            blf.shadow(0, 5, 0.0, 0.0, 0.0, 0.8)
-            blf.size(0, 32, 36)
-            blf.position(0, pos_x, pos_y, 0)
-            blf.color(0, 1.0, 0.0, 0.0, 1.0)
-            blf.draw(0, "%s" % ('RenderMan Interactive Mode Running'))
-            blf.disable(0, blf.SHADOW)   
-
         if not self.rman_render.rman_is_viewport_rendering:
             return             
 
