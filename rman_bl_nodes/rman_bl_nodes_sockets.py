@@ -13,6 +13,8 @@ def update_func(self, context):
     node = self.node if hasattr(self, 'node') else self
 
 __CYCLES_GROUP_NODES__ = ['ShaderNodeGroup', 'NodeGroupInput', 'NodeGroupOutput']
+__SOCKET_HIDE_VALUE__ = ['bxdf', 'projection', 'light', 'integrator', 'struct', 'vstruct'
+                        'samplefilter', 'displayfilter']
 
 
 # list for socket registration
@@ -242,6 +244,7 @@ class RendermanSocket:
 
     def draw(self, context, layout, node, text):
         
+        renderman_type = getattr(self, 'renderman_type', '')
         if self.hide and self.hide_value:
             pass
         elif self.hide_value:
@@ -251,6 +254,8 @@ class RendermanSocket:
         elif node.bl_idname in __CYCLES_GROUP_NODES__ or node.bl_idname == "PxrOSLPatternNode":
             layout.prop(self, 'default_value',
                         text=self.get_pretty_name(node), slider=True)
+        elif renderman_type in __SOCKET_HIDE_VALUE__:
+            layout.label(text=self.get_pretty_name(node))                        
         elif hasattr(node, self.name):
             layout.prop(node, self.name,
                         text=self.get_pretty_name(node), slider=True)
