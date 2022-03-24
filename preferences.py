@@ -506,7 +506,7 @@ class RendermanPreferences(AddonPreferences):
     rman_roz_grpcServer: BoolProperty(name="Send Stats to 'it' HUD", default=True, 
                                         description="Turn this off if you don't want stats to be sent to the 'it' HUD.",
                                         update=update_stats_config)
-    rman_roz_webSocketServer: BoolProperty(name="Enable Live Stats", default=False, 
+    rman_roz_webSocketServer: BoolProperty(name="Enable Live Stats", default=True, 
                                         description="Turning this off will disable the live statistics system in RfB.",
                                         update=update_stats_config)
     rman_roz_webSocketServer_Port: IntProperty(name="Port", default=0, 
