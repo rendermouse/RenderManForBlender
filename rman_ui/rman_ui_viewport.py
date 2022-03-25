@@ -6,6 +6,7 @@ from .. import rfb_icons
 from ..rfb_utils.prefs_utils import get_pref, get_addon_prefs
 from ..rfb_utils import display_utils
 from ..rfb_utils import camera_utils
+from ..rfb_logger import rfb_log
 from bpy.types import Menu
 
 import bpy
@@ -251,7 +252,9 @@ class DrawCropWindowHelper(object):
         return [remap_start_x, remap_end_x, remap_start_y, remap_end_y] 
 
     def check_render_border(self):
-        space = bpy.context.space_data
+        space = bpy.context.space_data        
+        if space.shading.type != 'RENDERED':
+            return
         region_data = bpy.context.region_data
         region = bpy.context.region
         scene = bpy.context.scene
