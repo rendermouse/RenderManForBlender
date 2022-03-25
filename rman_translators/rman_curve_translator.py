@@ -118,21 +118,6 @@ class RmanCurveTranslator(RmanMeshTranslator):
 
         return rman_sg_curve
 
-    def _is_mesh(self, ob):
-        is_mesh = False
-        if len(ob.modifiers) > 0:
-            is_mesh = True            
-        elif len(ob.data.splines) < 1:
-            is_mesh = True
-        elif ob.data.dimensions == '2D' and ob.data.fill_mode != 'NONE':
-            is_mesh = True
-        else:
-            l = ob.data.extrude + ob.data.bevel_depth
-            if l > 0:
-                is_mesh = True                            
-
-        return is_mesh
-
     def export_deform_sample(self, rman_sg_curve, ob, time_sample):
         if rman_sg_curve.is_mesh:
             super().export_deform_sample(rman_sg_curve, ob, time_sample, sg_node=rman_sg_curve.sg_mesh_node)
@@ -146,7 +131,7 @@ class RmanCurveTranslator(RmanMeshTranslator):
             rman_sg_curve.sg_node.RemoveChild(c)
             self.rman_scene.sg_scene.DeleteDagNode(c)         
 
-        rman_sg_curve.is_mesh = self._is_mesh(ob)
+        rman_sg_curve.is_mesh = object_utils.curve_is_mesh(ob)
 
         if rman_sg_curve.is_mesh:
             rman_sg_curve.sg_mesh_node = self.rman_scene.sg_scene.CreateMesh('%s-MESH' % rman_sg_curve.db_name)

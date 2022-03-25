@@ -168,6 +168,24 @@ def prototype_key(ob):
         return '%s-DATA' % ob.original.data.original.name
     return '%s-OBJECT' % ob.original.name
 
+def curve_is_mesh(ob):
+    '''
+    Check if we need to consider this curve a mesh
+    '''
+    is_mesh = False
+    if len(ob.modifiers) > 0:
+        is_mesh = True            
+    elif len(ob.data.splines) < 1:
+        is_mesh = True
+    elif ob.data.dimensions == '2D' and ob.data.fill_mode != 'NONE':
+        is_mesh = True
+    else:
+        l = ob.data.extrude + ob.data.bevel_depth
+        if l > 0:
+            is_mesh = True                            
+
+    return is_mesh    
+
 def _detect_primitive_(ob):
     if ob is None:
         return ''
@@ -192,6 +210,8 @@ def _detect_primitive_(ob):
         elif ob.type == 'FONT':
             return 'MESH'                       
         elif ob.type in ['CURVE']:
+            if curve_is_mesh(ob):
+                return 'MESH'
             return 'CURVE'
         elif ob.type == 'SURFACE':
             if get_pref('rman_render_nurbs_as_mesh', True):
