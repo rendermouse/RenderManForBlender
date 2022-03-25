@@ -842,6 +842,7 @@ class RmanScene(object):
                     continue                   
 
                 # check particles for motion
+                '''
                 for psys in ob.particle_systems:              
                     ob_psys = self.rman_particles.get(proto_key, None)
                     if not ob_psys:
@@ -857,6 +858,7 @@ class RmanScene(object):
                             idx = i
                             break                           
                     psys_translator.export_deform_sample(rman_sg_particles, ob, psys, idx)                       
+                '''
 
                 # object is not moving and not part of a particle system
                 if ob.name_full not in self.moving_objects and not psys:
