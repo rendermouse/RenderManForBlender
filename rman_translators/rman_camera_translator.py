@@ -51,6 +51,13 @@ class RmanCameraTranslator(RmanTranslator):
 
         cam = ob.data
         mtx = ob.matrix_world
+        
+        # don't use matrix_world directly
+        # extract the translation, rotation, scale, and normalize
+        # the scale
+        translation, rotation, scale = mtx.decompose()
+        scale.normalize() 
+        mtx = Matrix.LocRotScale(translation, rotation, scale)
 
         v = transform_utils.convert_matrix(mtx)
         if rman_sg_camera.cam_matrix == v:
