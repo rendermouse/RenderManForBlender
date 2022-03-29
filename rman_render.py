@@ -463,9 +463,10 @@ class RmanRender(object):
             self.rman_callbacks.clear()
             ec = rman.EventCallbacks.Get()
             ec.RegisterCallback("Render", render_cb, self)
-            self.rman_callbacks["Render"] = render_cb    
-            ec.RegisterCallback("Progress", batch_progress_cb, self)
-            self.rman_callbacks["Progress"] = batch_progress_cb               
+            self.rman_callbacks["Render"] = render_cb  
+            if envconfig().getenv('RFB_BATCH_NO_PROGRESS') is None:  
+                ec.RegisterCallback("Progress", batch_progress_cb, self)
+                self.rman_callbacks["Progress"] = batch_progress_cb               
             rman.Dspy.DisableDspyServer()          
         else:
 

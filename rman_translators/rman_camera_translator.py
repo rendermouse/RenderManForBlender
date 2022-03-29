@@ -8,6 +8,7 @@ from ..rfb_utils import object_utils
 from ..rfb_utils import scene_utils
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import camera_utils
+from .. import rman_constants 
 from mathutils import Matrix, Vector
 from copy import deepcopy
 import math
@@ -52,12 +53,8 @@ class RmanCameraTranslator(RmanTranslator):
         cam = ob.data
         mtx = ob.matrix_world
         
-        # don't use matrix_world directly
-        # extract the translation, rotation, scale, and normalize
-        # the scale
-        translation, rotation, scale = mtx.decompose()
-        scale.normalize() 
-        mtx = Matrix.LocRotScale(translation, rotation, scale)
+        # normalize the matrix
+        mtx.normalize()
 
         v = transform_utils.convert_matrix(mtx)
         if rman_sg_camera.cam_matrix == v:
