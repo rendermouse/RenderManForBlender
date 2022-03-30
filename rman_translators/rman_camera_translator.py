@@ -54,7 +54,10 @@ class RmanCameraTranslator(RmanTranslator):
         mtx = ob.matrix_world
         
         # normalize the matrix
-        mtx.normalize()
+        try:
+            mtx.normalize()
+        except SystemError as e:
+            rfb_log().debug("Could not normalize matrix: %s" % str(e))
 
         v = transform_utils.convert_matrix(mtx)
         if rman_sg_camera.cam_matrix == v:
