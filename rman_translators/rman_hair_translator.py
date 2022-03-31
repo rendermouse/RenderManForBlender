@@ -10,14 +10,17 @@ import numpy as np
 
 class BlHair:
 
-    def __init__(self):        
+    def __init__(self, constant_width=None):        
         self.points = []
         self.next_points = []
         self.vertsArray = []
         self.scalpST = []
         self.mcols = []
         self.nverts = 0
-        self.hair_width = None     
+        if constant_width is not None:
+            self.hair_width = constant_width
+        else:
+            self.hair_width = None     
 class RmanHairTranslator(RmanTranslator):
 
     def __init__(self, rman_scene):
@@ -224,11 +227,12 @@ class RmanHairTranslator(RmanTranslator):
             # get the scalp ST
             if export_st:
                 st = psys.uv_on_emitter(psys_modifier, particle=particle, particle_no=pindex, uv_no=uv_set)
-                bl_curve.scalpST.append([st[0], st[1]])
+                bl_curve.scalpST.append(st)
 
+            # get mcol
             if export_mcol:                 
                 mcol = psys.mcol_on_emitter(psys_modifier, particle=particle, particle_no=pindex, vcol_no=mcol_set)
-                bl_curve.mcols.append([mcol[0], mcol[1], mcol[2]])
+                bl_curve.mcols.append(mcol)
 
             # if we get more than 100000 vertices, start a new BlHair.  This
             # is to avoid a maxint on the array length
