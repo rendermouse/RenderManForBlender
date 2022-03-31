@@ -46,8 +46,7 @@ def _get_mesh_uv_(mesh, name=""):
 
     uv_count = len(uv_loop_layer.data)
     fastuvs = np.zeros(uv_count * 2)
-    uv_loop_layer.data.foreach_get("uv", fastuvs)
-    fastuvs = fastuvs.reshape(uv_count, 2)    
+    uv_loop_layer.data.foreach_get("uv", fastuvs)   
     uvs = fastuvs.tolist()
 
     return uvs
@@ -202,7 +201,8 @@ def _get_primvars_(ob, rman_sg_mesh, geo, rixparams):
         if uvs and len(uvs) > 0:
             detail = "facevarying" if facevarying_detail == len(uvs) else "vertex"
             rixparams.SetFloatArrayDetail("st", uvs, 2, detail)
-            export_tangents(ob, geo, rixparams)    
+            if rm.export_default_tangents:
+                export_tangents(ob, geo, rixparams)    
 
     if rm.export_default_vcol:
         vcols = _get_mesh_vcol_(geo)

@@ -98,6 +98,22 @@
             "page": ""
         },
         {
+            "panel": "MESH_PT_renderman_prim_vars",
+            "name": "export_default_tangents",
+            "label": "Export Default Tangents",
+            "type": "int",
+            "editable": true,
+            "default": 0,
+            "widget": "checkbox",
+            "help": "Export the tangent and bitangent vectors for the active UV set. They will be exported as 'Tn' and 'Bn' primitive variables, respectively",
+            "page": "",
+            "conditionalVisOps": {
+                "conditionalVisOp": "notEqualTo",
+                "conditionalVisPath": "export_default_uv",
+                "conditionalVisValue": "0"
+            }            
+        },         
+        {
             "panel": "CURVE_PT_renderman_prim_vars",
             "name": "export_default_vcol",
             "label": "Export Default Vertex Color",
