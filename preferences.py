@@ -498,11 +498,14 @@ class RendermanPreferences(AddonPreferences):
                         update=update_stats_config
                         )
     rman_roz_grpcServer: BoolProperty(name="Send Stats to 'it' HUD", default=True, 
-                                        description="Turn this off if you don't want stats to be sent to the 'it' HUD.",
+                                        description="(DEPRECATED) Turn this off if you don't want stats to be sent to the 'it' HUD.",
                                         update=update_stats_config)
-    rman_roz_webSocketServer: BoolProperty(name="Enable Live Stats", default=True, 
+    rman_roz_webSocketServer: BoolProperty(name="Enable Live Stats", default=False, 
+                                        description="(DEPRECATED) Turning this off will disable the live statistics system in RfB.",
+                                        update=update_stats_config)
+    rman_roz_liveStatsEnabled: BoolProperty(name="Enable Live Stats", default=True, 
                                         description="Turning this off will disable the live statistics system in RfB.",
-                                        update=update_stats_config)
+                                        update=update_stats_config)                                        
     rman_roz_webSocketServer_Port: IntProperty(name="Port", default=0, 
                                         min=0,
                                         description="Port number of the live stats server to use. Setting to 0 will randomly select an open port.",
@@ -657,10 +660,9 @@ class RendermanPreferences(AddonPreferences):
             row = col.row()
             col = row.column()
             col.prop(self, 'rman_roz_logLevel')  
-            col.prop(self, 'rman_roz_grpcServer')
-            col.prop(self, 'rman_roz_webSocketServer')    
+            col.prop(self, 'rman_roz_liveStatsEnabled')    
 
-            if self.rman_roz_webSocketServer:     
+            if self.rman_roz_liveStatsEnabled:     
                 try:
                     from .rman_stats import RfBStatsManager
                     stats_mgr = RfBStatsManager.get_stats_manager()
