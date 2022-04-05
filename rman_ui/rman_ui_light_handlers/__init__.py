@@ -1511,13 +1511,13 @@ def draw():
             draw_dome_light(ob)        
         elif light_shader_name == 'PxrCylinderLight':
             draw_cylinder_light(ob)     
-        elif light_shader_name in ['PxrGoboLightFilter', 'PxrCookieLightFilter', 'PxrRectLight']:
+        elif light_shader_name in ['PxrRectLight']:
              draw_rect_light(ob)             
         elif light_shader_name in ['PxrRodLightFilter', 'PxrBlockerLightFilter']:
             draw_rod_light_filter(ob)
         elif light_shader_name == 'PxrRampLightFilter':
             draw_ramp_light_filter(ob)
-        elif light_shader_name == 'PxrBarnLightFilter':
+        elif light_shader_name in ['PxrGoboLightFilter', 'PxrCookieLightFilter', 'PxrBarnLightFilter']:
             # get all lights that the barn is attached to
             draw_barn_light_filter(ob)
         else:   
