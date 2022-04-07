@@ -199,7 +199,7 @@ def _get_primvars_(ob, rman_sg_mesh, geo, rixparams):
     if rm.export_default_uv:
         uvs = _get_mesh_uv_(geo)
         if uvs and len(uvs) > 0:
-            detail = "facevarying" if facevarying_detail == len(uvs) else "vertex"
+            detail = "facevarying" if (facevarying_detail*2) == len(uvs) else "vertex"
             rixparams.SetFloatArrayDetail("st", uvs, 2, detail)
             if rm.export_default_tangents:
                 export_tangents(ob, geo, rixparams)    
@@ -226,7 +226,7 @@ def _get_primvars_(ob, rman_sg_mesh, geo, rixparams):
         elif p.data_source == 'UV_TEXTURE':
             uvs = _get_mesh_uv_(geo, p.data_name)
             if uvs and len(uvs) > 0:
-                detail = "facevarying" if facevarying_detail == len(uvs) else "vertex"
+                detail = "facevarying" if (facevarying_detail*2) == len(uvs) else "vertex"
                 rixparams.SetFloatArrayDetail(p.name, uvs, 2, detail)
                 if p.export_tangents:
                     export_tangents(ob, geo, rixparams, uvmap=p.data_name, name=p.name) 
