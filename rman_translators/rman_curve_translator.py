@@ -108,7 +108,7 @@ class RmanCurveTranslator(RmanMeshTranslator):
     def export(self, ob, db_name):
     
         sg_node = self.rman_scene.sg_scene.CreateGroup(db_name)
-        is_mesh = self._is_mesh(ob)        
+        is_mesh = object_utils.curve_is_mesh(ob)
         rman_sg_curve = RmanSgCurve(self.rman_scene, sg_node, db_name)
         rman_sg_curve.is_mesh = is_mesh
 
