@@ -6,6 +6,7 @@ from ..rfb_utils import property_utils
 
 import bpy
 import math
+import numpy as np
 
 def get_bspline_curve(curve):
     P = []
@@ -17,15 +18,17 @@ def get_bspline_curve(curve):
 
     for i, spline in enumerate(curve.splines):
 
-        width = []
-        for bp in spline.points:
-            P.append([bp.co[0], bp.co[1], bp.co[2]])
-            w = bp.radius * 0.01
-            if w < 0.01:
-                w = 0.01
-            width.extend( 3 * [w])  
+        npoints = len(spline.points)
+        pts = np.zeros(npoints*4, dtype=np.float32)
+        width = np.zeros(npoints, dtype=np.float32)
 
-        widths.append(width)
+        spline.points.foreach_get('co', pts)
+        spline.points.foreach_get('radius', width)
+        pts = np.reshape(pts, (npoints, 4))
+        width = np.where(width >= 1.0, width*0.01, 0.01)
+
+        P.extend(pts[0:, 0:3].tolist())
+        widths.append(width.tolist())
         index.append(i)
         nvertices.append(len(spline.points))
         name = spline.id_data.name
@@ -42,13 +45,16 @@ def get_curve(curve):
 
     for i, spline in enumerate(curve.splines):
 
-        width = []
-        for bp in spline.points:
-            P.append([bp.co[0], bp.co[1], bp.co[2]])
-            w = bp.radius * 0.01
-            if w < 0.01:
-                w = 0.01
-            width.extend( 3 * [w])  
+        npoints = len(spline.points)
+        pts = np.zeros(npoints*4, dtype=np.float32)
+        width = np.zeros(npoints, dtype=np.float32)
+
+        spline.points.foreach_get('co', pts)
+        spline.points.foreach_get('radius', width)
+        pts = np.reshape(pts, (npoints, 4))
+        width = np.where(width >= 1.0, width*0.01, 0.01)
+
+        P.extend(pts[0:, 0:3].tolist())
 
         widths.append(width)
         index.append(i)
@@ -68,7 +74,10 @@ def get_bezier_curve(curve):
             P.append(bp.handle_left)
             P.append(bp.co)
             P.append(bp.handle_right)
-            width.extend( 3 * [bp.radius * 0.01])
+            w = bp.radius * 0.01
+            if w < 0.01:
+                w = 0.01
+            width.extend( 3 * [w])
 
         if spline.use_cyclic_u:
             period = 'periodic'
