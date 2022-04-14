@@ -10,17 +10,18 @@ import numpy as np
 
 class BlHair:
 
-    def __init__(self, constant_width=None):        
+    def __init__(self):        
         self.points = []
         self.next_points = []
         self.vertsArray = []
         self.scalpST = []
         self.mcols = []
         self.nverts = 0
-        if constant_width is not None:
-            self.hair_width = constant_width
-        else:
-            self.hair_width = None     
+        self.hair_width = []
+
+    @property
+    def constant_width(self):
+        return (len(self.hair_width) < 2)
 class RmanHairTranslator(RmanTranslator):
 
     def __init__(self, rman_scene):
@@ -89,9 +90,9 @@ class RmanHairTranslator(RmanTranslator):
                 index_nm = 'index'
             primvar.SetIntegerDetail(index_nm, range(len(bl_curve.vertsArray)), "uniform")
 
-            width_detail = "constant"
-            if isinstance(bl_curve.hair_width, list):
-                width_detail = "vertex"
+            width_detail = "vertex"
+            if bl_curve.constant_width:
+                width_detail = "constant" 
             primvar.SetFloatDetail(self.rman_scene.rman.Tokens.Rix.k_width, bl_curve.hair_width, width_detail)
             
             if len(bl_curve.scalpST):
@@ -170,10 +171,8 @@ class RmanHairTranslator(RmanTranslator):
         curve_sets = []
         bl_curve = BlHair()
         if conwidth:
-            bl_curve.hair_width = base_width
-        else:
-            bl_curve.hair_width = []             
-
+            bl_curve.hair_width.append(base_width)
+        
         start_idx = 0
         if psys.settings.child_type != 'NONE' and num_children > 0:
             start_idx = num_parents
@@ -239,11 +238,6 @@ class RmanHairTranslator(RmanTranslator):
             if bl_curve.nverts > 100000:
                 curve_sets.append(bl_curve)
                 bl_curve = BlHair()
-
-                if not conwidth:
-                    bl_curve.hair_width = []
-                else:
-                    bl_curve.hair_width = base_width
 
         if bl_curve.nverts > 0:       
             curve_sets.append(bl_curve)
