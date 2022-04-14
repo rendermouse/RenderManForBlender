@@ -156,6 +156,13 @@ class RmanCurveTranslator(RmanMeshTranslator):
         else:
             self.update_curve(ob, rman_sg_curve)
 
+    def update_primvars(self, ob, primvar):
+        rm_scene = self.rman_scene.bl_scene.renderman
+        rm = ob.renderman
+        property_utils.set_primvar_bl_props(primvar, rm, inherit_node=rm_scene)
+        rm = ob.data.renderman
+        property_utils.set_primvar_bl_props(primvar, rm, inherit_node=rm_scene)          
+
     def update_bspline_curve(self, ob, rman_sg_curve):
         P, num_curves, nvertices, widths, index, name = get_bspline_curve(ob.data)
         num_pts = len(P)
@@ -169,6 +176,8 @@ class RmanCurveTranslator(RmanMeshTranslator):
         if widths:
             primvar.SetFloatDetail(self.rman_scene.rman.Tokens.Rix.k_width, widths, "vertex")
         primvar.SetIntegerDetail("index", index, "uniform")
+        self.update_primvars(ob, primvar)           
+
         curves_sg.SetPrimVars(primvar)     
 
         rman_sg_curve.sg_node.AddChild(curves_sg)                       
@@ -204,6 +213,8 @@ class RmanCurveTranslator(RmanMeshTranslator):
             primvar.SetIntegerDetail(self.rman_scene.rman.Tokens.Rix.k_Ri_nvertices, [num_pts], "uniform")
             if width:
                 primvar.SetFloatDetail(self.rman_scene.rman.Tokens.Rix.k_width, width, "vertex")
+
+            self.update_primvars(ob, primvar)                  
             curves_sg.SetPrimVars(primvar)
 
             rman_sg_curve.sg_node.AddChild(curves_sg)        
