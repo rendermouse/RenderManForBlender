@@ -679,14 +679,21 @@
             "page": "Dicing",
             "help": "Micropolygon distance in raster space for 'instanceprojection' dicing. Values are expressed in pixel size.",
             "conditionalVisOps": {
-                "conditionalVisOp": "notEqualTo",
-                "conditionalVisPath": "bl_object_type",
-                "conditionalVisValue": "OPENVDB"
-            }            
+                "conditionalVis1Path": "bl_object_type",
+                "conditionalVis2Op": "notEqualTo",
+                "conditionalVis1Value": "OPENVDB",
+                "conditionalVisOp": "and",
+                "conditionalVis1Op": "notEqualTo",
+                "conditionalVisLeft": "conditionalVis1",
+                "conditionalVisRight": "conditionalVis2",
+                "conditionalVis2Path": "bl_object_type",
+                "conditionalVis2Value": "RI_VOLUME"
+            }        
         },
         {
             "panel": "OBJECT_PT_renderman_object_geometry_attributes",
             "name": "rman_micropolygonlength_volume",
+            "primvar": "dice:micropolygonlength",
             "label": "MicroPolygon Length",
             "type": "float",
             "default": 10.0,
@@ -696,10 +703,16 @@
             "page": "Dicing",
             "help": "Micropolygon distance in raster space for 'instanceprojection' dicing. Values are expressed in pixel size.",
             "conditionalVisOps": {
-                "conditionalVisOp": "equalTo",
-                "conditionalVisPath": "bl_object_type",
-                "conditionalVisValue": "OPENVDB"
-            }            
+                "conditionalVis1Path": "bl_object_type",
+                "conditionalVis2Op": "equalTo",
+                "conditionalVis1Value": "OPENVDB",
+                "conditionalVisOp": "or",
+                "conditionalVis1Op": "equalTo",
+                "conditionalVisLeft": "conditionalVis1",
+                "conditionalVisRight": "conditionalVis2",
+                "conditionalVis2Path": "bl_object_type",
+                "conditionalVis2Value": "RI_VOLUME"
+            }
         },        
         {
             "panel": "OBJECT_PT_renderman_object_geometry_attributes",
@@ -801,6 +814,96 @@
                 "conditionalVisValue": 1
             }
         },
+        {
+            "panel": "OBJECT_PT_renderman_object_geometry_volume",
+            "page": "",
+            "name": "volume_temporalmethod",
+            "label": "Temporal Method",
+            "primvar": "volume:temporalmethod",
+            "type": "int",
+            "editable": true,
+            "default": 0,
+            "widget": "mapper",   
+            "options": "Eulerian:0|Reves:1",                     
+            "conditionalVisOps": {
+                "conditionalVis1Path": "bl_object_type",
+                "conditionalVis2Op": "equalTo",
+                "conditionalVis1Value": "OPENVDB",
+                "conditionalVisOp": "or",
+                "conditionalVis1Op": "equalTo",
+                "conditionalVisLeft": "conditionalVis1",
+                "conditionalVisRight": "conditionalVis2",
+                "conditionalVis2Path": "bl_object_type",
+                "conditionalVis2Value": "RI_VOLUME"
+            }, 
+            "help": "Method of generating temporal data for volume rendering."
+        },  
+        {
+            "panel": "OBJECT_PT_renderman_object_geometry_volume",
+            "page": "",
+            "name": "volume_fps",
+            "label": "Velocity frames per second",
+            "primvar": "volume:fps",
+            "type": "float",
+            "editable": true,
+            "default": 1,                
+            "conditionalVisOps": {
+                "conditionalVis1Path": "bl_object_type",
+                "conditionalVis2Op": "equalTo",
+                "conditionalVis1Value": "OPENVDB",
+                "conditionalVisOp": "or",
+                "conditionalVis1Op": "equalTo",
+                "conditionalVisLeft": "conditionalVis1",
+                "conditionalVisRight": "conditionalVis2",
+                "conditionalVis2Path": "bl_object_type",
+                "conditionalVis2Value": "RI_VOLUME"
+            }, 
+            "help": "The frames per second for volumetric velocity data. The velocity data will be divided by this quantity to derive the velocity for the frame."
+        },         
+        {
+            "panel": "OBJECT_PT_renderman_object_geometry_volume",
+            "page": "",
+            "name": "volume_shutteroffset",
+            "label": "Shutter Offset",
+            "primvar": "volume:shutteroffset",
+            "type": "float",
+            "editable": true,
+            "default": 1,                
+            "conditionalVisOps": {
+                "conditionalVis1Path": "bl_object_type",
+                "conditionalVis2Op": "equalTo",
+                "conditionalVis1Value": "OPENVDB",
+                "conditionalVisOp": "or",
+                "conditionalVis1Op": "equalTo",
+                "conditionalVisLeft": "conditionalVis1",
+                "conditionalVisRight": "conditionalVis2",
+                "conditionalVis2Path": "bl_object_type",
+                "conditionalVis2Value": "RI_VOLUME"
+            }, 
+            "help": "The shutter offset used to interpret volumetric velocity. A value of 1 will use the current position of the object and the position of the object on the next frame as the time interval to use for motion blur. A value of -1 will use the position of the object on the previous frame and the current position of the object as the time. A value of 0 will generate an interval which begins halfway through the previous frame and ends halfway into the next frame."
+        },         
+        {
+            "panel": "OBJECT_PT_renderman_object_geometry_volume",
+            "page": "",
+            "name": "volume_velocityshuttercorrection",
+            "label": "Velocity Shutter Correction",
+            "primvar": "volume:velocityshuttercorrection",
+            "type": "int",
+            "editable": true,
+            "default": 0,                
+            "conditionalVisOps": {
+                "conditionalVis1Path": "bl_object_type",
+                "conditionalVis2Op": "equalTo",
+                "conditionalVis1Value": "OPENVDB",
+                "conditionalVisOp": "or",
+                "conditionalVis1Op": "equalTo",
+                "conditionalVisLeft": "conditionalVis1",
+                "conditionalVisRight": "conditionalVis2",
+                "conditionalVis2Path": "bl_object_type",
+                "conditionalVis2Value": "RI_VOLUME"
+            }, 
+            "help": "The shutter offset used to interpret volumetric velocity. A value of 1 will use the current position of the object and the position of the object on the next frame as the time interval to use for motion blur. A value of -1 will use the position of the object on the previous frame and the current position of the object as the time. A value of 0 will generate an interval which begins halfway through the previous frame and ends halfway into the next frame."
+        },                                        
         {
             "panel": "OBJECT_PT_renderman_object_render",
             "name": "rman_visibilityCamera",

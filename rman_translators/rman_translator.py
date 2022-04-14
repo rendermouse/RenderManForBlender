@@ -80,34 +80,11 @@ class RmanTranslator(object):
         rm_scene = self.rman_scene.bl_scene.renderman
         try:
             primvars = sg_node.GetPrimVars()
+            property_utils.set_primvar_bl_props(primvars, rm, inherit_node=rm_scene)
+            sg_node.SetPrimVars(primvars)
         except AttributeError:
             rfb_log().debug("Cannot get RtPrimVar for this node")
-            return
-
-        # set any properties marked primvar in the config file
-        for prop_name, meta in rm.prop_meta.items():
-            if 'primvar' not in meta:
-                continue
-
-            val = getattr(rm, prop_name)
-            if not val:
-                continue
-
-            if 'inheritable' in meta:
-                if float(val) == meta['inherit_true_value']:
-                    if hasattr(rm_scene, prop_name):
-                        val = getattr(rm_scene, prop_name)
-
-            ri_name = meta['primvar']
-            is_array = False
-            array_len = -1
-            if 'arraySize' in meta:
-                is_array = True
-                array_len = meta['arraySize']
-            param_type = meta['renderman_type']
-            property_utils.set_rix_param(primvars, param_type, ri_name, val, is_reference=False, is_array=is_array, array_len=array_len)                
-
-        sg_node.SetPrimVars(primvars)
+            return        
 
     def export_object_id(self, ob, rman_sg_node, ob_inst):
         if not rman_sg_node.sg_node:
@@ -210,6 +187,15 @@ class RmanTranslator(object):
             if 'riattr' not in meta:
                 continue
 
+            conditionalVisOps = meta.get('conditionalVisOps', None)
+            if conditionalVisOps:
+                # check conditionalVisOps to see if this riattr applies
+                # to this object
+                expr = conditionalVisOps.get('expr', None)
+                node = rm              
+                if expr and not eval(expr):
+                    continue            
+
             ri_name = meta['riattr']            
             val = getattr(rm, prop_name)
             if 'inheritable' in meta:
@@ -233,7 +219,7 @@ class RmanTranslator(object):
                 if type(val) == str and val.startswith('['):
                     val = eval(val)                
             param_type = meta['renderman_type']
-            property_utils.set_rix_param(attrs, param_type, ri_name, val, is_reference=False, is_array=is_array, array_len=array_len)            
+            property_utils.set_rix_param(attrs, param_type, ri_name, val, is_reference=False, is_array=is_array, array_len=array_len, node=rm, prop_name=prop_name)
 
         obj_groups_str = "World"
         obj_groups_str += "," + name

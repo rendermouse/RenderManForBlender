@@ -148,17 +148,6 @@ def _export_reference_pose(ob, rm, rixparams, vertex_detail):
             rixparams.SetNormalDetail('__WNref', rman__WNref, 'vertex')
         else:
             rfb_log().error("Number of WNref primvars do not match. Please re-freeze the reference position.")
-        
-    '''
-    if rman__Pref:
-        rixparams.SetPointDetail('__Pref', rman__Pref, 'vertex')
-    if rman__WPref:
-        rixparams.SetPointDetail('__WPref', rman__WPref, 'vertex')
-    if rman__Nref:
-        rixparams.SetNormalDetail('__Nref', rman__Nref, 'vertex')
-    if rman__WNref:
-        rixparams.SetNormalDetail('__WNref', rman__WNref, 'vertex')
-    '''
 
 def export_tangents(ob, geo, rixparams, uvmap="", name=""):
     # also export the tangent and bitangent vectors
@@ -243,27 +232,7 @@ def _get_primvars_(ob, rman_sg_mesh, geo, rixparams):
                 rixparams.SetColorDetail(p.data_name, vattr, detail)
 
     rm_scene = rman_sg_mesh.rman_scene.bl_scene.renderman
-    for prop_name, meta in rm.prop_meta.items():
-        if 'primvar' not in meta:
-            continue
-
-        val = getattr(rm, prop_name)
-        if not val:
-            continue
-
-        if 'inheritable' in meta:
-            if float(val) == meta['inherit_true_value']:
-                if hasattr(rm_scene, prop_name):
-                    val = getattr(rm_scene, prop_name)
-
-        ri_name = meta['primvar']
-        is_array = False
-        array_len = -1
-        if 'arraySize' in meta:
-            is_array = True
-            array_len = meta['arraySize']
-        param_type = meta['renderman_type']
-        property_utils.set_rix_param(rixparams, param_type, ri_name, val, is_reference=False, is_array=is_array, array_len=array_len, node=rm)
+    property_utils.set_primvar_bl_props(rixparams, rm, inherit_node=rm_scene)
 
 class RmanMeshTranslator(RmanTranslator):
 

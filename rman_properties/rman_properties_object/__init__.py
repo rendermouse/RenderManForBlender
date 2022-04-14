@@ -111,8 +111,8 @@ class RendermanObjectSettings(RmanBasePropertyGroup, bpy.types.PropertyGroup):
     user_attributes_index: IntProperty(min=-1, default=-1)
 
     def get_object_type(self):
-        if bpy.context.object:
-            return object_utils._detect_primitive_(bpy.context.object)
+        if self.id_data:
+            return object_utils._detect_primitive_(self.id_data)
         return ""        
 
     bl_object_type: StringProperty(

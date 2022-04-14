@@ -1,3 +1,4 @@
+from operator import methodcaller
 from . import texture_utils
 from . import string_utils
 from . import shadergraph_utils
@@ -132,7 +133,7 @@ def get_property_default(node, prop_name):
             
     return dflt
 
-def set_rix_param(params, param_type, param_name, val, is_reference=False, is_array=False, array_len=-1, node=None):
+def set_rix_param(params, param_type, param_name, val, is_reference=False, is_array=False, array_len=-1, node=None, prop_name=''):
     """Sets a single parameter in an RtParamList
 
     Arguments:
@@ -145,6 +146,7 @@ def set_rix_param(params, param_type, param_name, val, is_reference=False, is_ar
         array_len (int) - length of array
         node (AnyType) - the Blender object that this param originally came from. This is necessary
                         so we can grab and compare val with the default value (see get_property_default)
+        prop_name (str) - name of the property that we look for the default value
     """
 
 
@@ -176,7 +178,10 @@ def set_rix_param(params, param_type, param_name, val, is_reference=False, is_ar
     else:
         # check if we need to emit this parameter.
         if node != None and not prefs_utils.get_pref('rman_emit_default_params', False):
-            dflt = get_property_default(node, param_name)
+            if prop_name != '':
+                dflt = get_property_default(node, prop_name)
+            else:
+                dflt = get_property_default(node, param_name)
 
             # FIXME/TODO: currently, the python version of RtParamList
             # doesn't allow us to retrieve existing values. For now, only do the
@@ -242,7 +247,40 @@ def set_rix_param(params, param_type, param_name, val, is_reference=False, is_ar
             elif param_type == "vector":
                 params.SetVector(param_name, val)
             elif param_type == "normal":
-                params.SetNormal(param_name, val)               
+                params.SetNormal(param_name, val)    
+
+def set_primvar_bl_props(primvars, rm, inherit_node=None):
+    # set any properties marked primvar in the config file
+    for prop_name, meta in rm.prop_meta.items():
+        if 'primvar' not in meta:
+            continue
+            
+        conditionalVisOps = meta.get('conditionalVisOps', None)
+        if conditionalVisOps:
+            # check conditionalVisOps to see if this primvar applies
+            # to this object
+            expr = conditionalVisOps.get('expr', None)
+            node = rm              
+            if expr and not eval(expr):
+                continue
+
+        val = getattr(rm, prop_name)
+        if not val:
+            continue
+
+        if 'inheritable' in meta:
+            if float(val) == meta['inherit_true_value']:
+                if inherit_node and hasattr(inherit_node, prop_name):
+                    val = getattr(inherit_node, prop_name)
+
+        ri_name = meta['primvar']
+        is_array = False
+        array_len = -1
+        if 'arraySize' in meta:
+            is_array = True
+            array_len = meta['arraySize']
+        param_type = meta['renderman_type']
+        set_rix_param(primvars, param_type, ri_name, val, is_reference=False, is_array=is_array, array_len=array_len, node=rm, prop_name=prop_name)                
 
 def build_output_param_str(rman_sg_node, mat_name, from_node, from_socket, convert_socket=False, param_type=''):
     nodes_to_blnodeinfo = getattr(rman_sg_node, 'nodes_to_blnodeinfo', dict())

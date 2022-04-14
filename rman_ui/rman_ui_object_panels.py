@@ -575,7 +575,8 @@ class OBJECT_PT_renderman_object_geometry_volume(Panel, CollectionPanel):
         rm = context.object.renderman
         if context.object.type in ['LIGHT']:
             return False
-        if rm.primitive != 'RI_VOLUME':
+        rman_type = object_utils._detect_primitive_(context.object)
+        if rman_type not in ['OPENVDB', 'RI_VOLUME']:
             return False
         return (context.object and rd.engine in {'PRMAN_RENDER'})
 

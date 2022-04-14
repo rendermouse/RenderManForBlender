@@ -4,11 +4,9 @@ from ..rfb_utils import filepath_utils
 from ..rfb_utils import transform_utils
 from ..rfb_utils import string_utils
 from ..rfb_utils import scenegraph_utils
-from ..rfb_utils import texture_utils
-from ..rfb_utils.envconfig_utils import envconfig
+from ..rfb_utils import property_utils
 from ..rfb_logger import rfb_log
 import json
-import os
 class RmanOpenVDBTranslator(RmanTranslator):
 
     def __init__(self, rman_scene):
@@ -31,22 +29,14 @@ class RmanOpenVDBTranslator(RmanTranslator):
             return
 
         super().export_object_primvars(ob, rman_sg_node, sg_node=sg_node)  
-        prop_name = 'rman_micropolygonlength_volume'
         rm = ob.renderman
         rm_scene = self.rman_scene.bl_scene.renderman
-        meta = rm.prop_meta[prop_name]
-        val = getattr(rm, prop_name)
-        inherit_true_value = meta['inherit_true_value']
-        if float(val) == inherit_true_value:
-            if hasattr(rm_scene, 'rman_micropolygonlength'):
-                val = getattr(rm_scene, 'rman_micropolygonlength')
-
         try:
             primvars = sg_node.GetPrimVars()
-            primvars.SetFloat('dice:micropolygonlength', val)
+            property_utils.set_primvar_bl_props(primvars, rm, inherit_node=rm_scene)
             sg_node.SetPrimVars(primvars)
         except AttributeError:
-            rfb_log().debug("Cannot get RtPrimVar for this node")
+            rfb_log().debug("Cannot get RtPrimVar for this node")        
 
     def export_deform_sample(self, rman_sg_openvdb, ob, time_sample):
         pass
