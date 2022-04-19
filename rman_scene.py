@@ -261,6 +261,9 @@ class RmanScene(object):
         self.bl_view_layer = context.view_layer
         self._find_renderman_layer()
         self.rman_bake = False        
+        self.external_render = False
+        self.is_interactive = False
+        self.is_viewport_render = False          
         
         self.depsgraph = context.evaluated_depsgraph_get()
         self.export_root_sg_node()
