@@ -48,6 +48,6 @@ class RmanAlembicTranslator(RmanTranslator):
         abc_args += " -ccw"
 
         primvar.SetString(self.rman_scene.rman.Tokens.Rix.k_data, abc_args)
-
+        super().export_object_primvars(ob, primvar)
         rman_sg_alembic.sg_node.SetPrimVars(primvar)        
 

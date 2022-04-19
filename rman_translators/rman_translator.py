@@ -68,23 +68,21 @@ class RmanTranslator(object):
 
         v = transform_utils.convert_matrix(m)
 
-        sg_node.SetTransform( v )        
+        sg_node.SetTransform( v )       
 
-    def export_object_primvars(self, ob, rman_sg_node, sg_node=None):
-        if not sg_node:
-            sg_node = rman_sg_node.sg_node
+    def export_object_primvars(self, ob, primvars):
+        '''
+        This method should be called by subclasses of RmanTranslator
+        in their update() methods, if they are setting any primvars. This
+        sets things like displacement bound and micropolygon length.
 
-        if not sg_node:
-            return
+        Args:
+            ob (bpy.types.Object) - Blender Object
+            primvars (RtPrimVars) - primitive variables
+        '''
         rm = ob.renderman
         rm_scene = self.rman_scene.bl_scene.renderman
-        try:
-            primvars = sg_node.GetPrimVars()
-            property_utils.set_primvar_bl_props(primvars, rm, inherit_node=rm_scene)
-            sg_node.SetPrimVars(primvars)
-        except AttributeError:
-            rfb_log().debug("Cannot get RtPrimVar for this node")
-            return        
+        property_utils.set_primvar_bl_props(primvars, rm, inherit_node=rm_scene)
 
     def export_object_id(self, ob, rman_sg_node, ob_inst):
         if not rman_sg_node.sg_node:

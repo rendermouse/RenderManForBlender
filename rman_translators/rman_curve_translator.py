@@ -131,9 +131,9 @@ class RmanCurveTranslator(RmanMeshTranslator):
         if rman_sg_curve.is_mesh:
             super().export_deform_sample(rman_sg_curve, ob, time_sample, sg_node=rman_sg_curve.sg_mesh_node)
 
-    def export_object_primvars(self, ob, rman_sg_node):
-        if rman_sg_node.is_mesh:
-            super().export_object_primvars(ob, rman_sg_node, sg_node=rman_sg_node.sg_mesh_node)
+    #def export_object_primvars(self, ob, rman_sg_node):
+    #    if rman_sg_node.is_mesh:
+    #        super().export_object_primvars(ob, rman_sg_node, sg_node=rman_sg_node.sg_mesh_node)
 
     def update(self, ob, rman_sg_curve):
         for c in [ rman_sg_curve.sg_node.GetChild(i) for i in range(0, rman_sg_curve.sg_node.GetNumChildren())]:
@@ -176,7 +176,8 @@ class RmanCurveTranslator(RmanMeshTranslator):
         if widths:
             primvar.SetFloatDetail(self.rman_scene.rman.Tokens.Rix.k_width, widths, "vertex")
         primvar.SetIntegerDetail("index", index, "uniform")
-        self.update_primvars(ob, primvar)           
+        #self.update_primvars(ob, primvar)           
+        super().export_object_primvars(ob, primvar)
 
         curves_sg.SetPrimVars(primvar)     
 
@@ -214,7 +215,8 @@ class RmanCurveTranslator(RmanMeshTranslator):
             if width:
                 primvar.SetFloatDetail(self.rman_scene.rman.Tokens.Rix.k_width, width, "vertex")
 
-            self.update_primvars(ob, primvar)                  
+            #self.update_primvars(ob, primvar)   
+            super().export_object_primvars(ob, primvar)               
             curves_sg.SetPrimVars(primvar)
 
             rman_sg_curve.sg_node.AddChild(curves_sg)        

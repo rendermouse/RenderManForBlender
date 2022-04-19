@@ -10,9 +10,6 @@ class RmanEmptyTranslator(RmanTranslator):
     def __init__(self, rman_scene):
         super().__init__(rman_scene)
 
-    def export_object_primvars(self, ob, rman_sg_node):
-        pass        
-
     def update_transform(self, ob, rman_sg_group):
         pass
 

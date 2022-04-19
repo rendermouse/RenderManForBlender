@@ -385,6 +385,8 @@ class RmanMeshTranslator(RmanTranslator):
         subdiv_scheme = getattr(ob.data.renderman, 'rman_subdiv_scheme', 'none')
         rman_sg_mesh.subdiv_scheme = subdiv_scheme
 
+        super().export_object_primvars(ob, primvar)
+
         if rman_sg_mesh.is_multi_material:
             material_ids = _get_material_ids(ob, mesh)
             for mat_id, faces in \
@@ -409,8 +411,6 @@ class RmanMeshTranslator(RmanTranslator):
                     pvars.Inherit(primvar)
                     pvars.SetIntegerArray(self.rman_scene.rman.Tokens.Rix.k_shade_faceset, faces, len(faces))                    
                     sg_sub_mesh.SetPrimVars(pvars)
-                    # call export_object_primvars so we can get things like displacement bound
-                    super().export_object_primvars(ob, rman_sg_mesh, sg_sub_mesh)
                     scenegraph_utils.set_material(sg_sub_mesh, sg_material.sg_node)
                     sg_node.AddChild(sg_sub_mesh)
                     rman_sg_mesh.multi_material_children.append(sg_sub_mesh)

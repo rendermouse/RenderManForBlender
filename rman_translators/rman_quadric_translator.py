@@ -62,4 +62,5 @@ class RmanQuadricTranslator(RmanTranslator):
             primvar.SetFloat(self.rman_scene.rman.Tokens.Rix.k_Ri_phimax, rm.quadric_phimax)            
             primvar.SetFloat(self.rman_scene.rman.Tokens.Rix.k_Ri_thetamax, rm.quadric_sweepangle)
 
+        super().export_object_primvars(ob, primvar)
         rman_sg_quadric.sg_node.SetPrimVars(primvar)        

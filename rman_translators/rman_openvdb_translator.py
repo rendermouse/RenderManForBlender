@@ -21,23 +21,6 @@ class RmanOpenVDBTranslator(RmanTranslator):
 
         return rman_sg_openvdb
 
-    def export_object_primvars(self, ob, rman_sg_node, sg_node=None):       
-        if not sg_node:
-            sg_node = rman_sg_node.sg_node
-
-        if not sg_node:
-            return
-
-        super().export_object_primvars(ob, rman_sg_node, sg_node=sg_node)  
-        rm = ob.renderman
-        rm_scene = self.rman_scene.bl_scene.renderman
-        try:
-            primvars = sg_node.GetPrimVars()
-            property_utils.set_primvar_bl_props(primvars, rm, inherit_node=rm_scene)
-            sg_node.SetPrimVars(primvars)
-        except AttributeError:
-            rfb_log().debug("Cannot get RtPrimVar for this node")        
-
     def export_deform_sample(self, rman_sg_openvdb, ob, time_sample):
         pass
 
@@ -107,4 +90,5 @@ class RmanOpenVDBTranslator(RmanTranslator):
         scenegraph_utils.export_vol_aggregate(self.rman_scene.bl_scene, primvar, ob)     
 
         primvar.SetInteger("volume:dsominmax", rm.volume_dsominmax)
+        super().export_object_primvars(ob, primvar)
         rman_sg_openvdb.sg_node.SetPrimVars(primvar)

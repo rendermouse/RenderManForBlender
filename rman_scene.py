@@ -751,7 +751,6 @@ class RmanScene(object):
                 rman_sg_node.is_deforming = False       
 
         translator.update(ob, rman_sg_node)
-        translator.export_object_primvars(ob, rman_sg_node)
 
         if len(ob.particle_systems) > 0:
             # Deal with any particles now.

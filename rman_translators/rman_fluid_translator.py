@@ -47,32 +47,6 @@ class RmanFluidTranslator(RmanTranslator):
 
         return rman_sg_fluid
 
-    def export_object_primvars(self, ob, rman_sg_node, sg_node=None): 
-        if rman_sg_node.rman_sg_liquid_node:
-            sg_node = rman_sg_node.rman_sg_liquid_node  
-            super().export_object_primvars(ob, rman_sg_node, sg_node=sg_node)             
-            return 
-
-        sg_node = rman_sg_node.rman_sg_volume_node
-        super().export_object_primvars(ob, rman_sg_node, sg_node=sg_node)  
-        prop_name = 'rman_micropolygonlength_volume'
-        rm = ob.renderman
-        rm_scene = self.rman_scene.bl_scene.renderman
-        meta = rm.prop_meta[prop_name]
-        val = getattr(rm, prop_name)
-        inherit_true_value = meta['inherit_true_value']
-        if float(val) == inherit_true_value:
-            if hasattr(rm_scene, 'rman_micropolygonlength'):
-                val = getattr(rm_scene, 'rman_micropolygonlength')
-
-        try:
-            primvars = sg_node.GetPrimVars()
-            primvars.SetFloat('dice:micropolygonlength', val)
-            sg_node.SetPrimVars(primvars)
-        except AttributeError:
-            rfb_log().debug("Cannot get RtPrimVar for this node")
-
-
     def export_deform_sample(self, rman_sg_fluid, ob, time_sample):
         return
 
@@ -150,7 +124,7 @@ class RmanFluidTranslator(RmanTranslator):
         else:
             primvar.SetPointDetail(self.rman_scene.rman.Tokens.Rix.k_P, P, "vertex")               
         primvar.SetFloatDetail(self.rman_scene.rman.Tokens.Rix.k_width, width, "vertex")
-
+        super().export_object_primvars(ob, primvar)
         sg_node.SetPrimVars(primvar)
 
         # Attach material
@@ -177,7 +151,8 @@ class RmanFluidTranslator(RmanTranslator):
 
         primvar.SetFloatDetail("density", [], "varying")
         primvar.SetFloatDetail("flame", [], "varying")        
-        primvar.SetColorDetail("color", [], "varying")                  
+        primvar.SetColorDetail("color", [], "varying")   
+        super().export_object_primvars(ob, primvar)               
         rman_sg_fluid.rman_sg_volume_node.SetPrimVars(primvar)
         
         attrs = rman_sg_fluid.rman_sg_volume_node.GetAttributes() 
@@ -199,7 +174,7 @@ class RmanFluidTranslator(RmanTranslator):
         primvar.SetColorDetail("color", [item for index, item in enumerate(fluid_data.color_grid) if index % 4 != 0], "varying")
         primvar.SetVectorDetail("velocity", fluid_data.velocity_grid, "varying")
         primvar.SetFloatDetail("temperature", fluid_data.temperature_grid, "varying")
-
+        super().export_object_primvars(ob, primvar)
         rman_sg_fluid.rman_sg_volume_node.SetPrimVars(primvar)  
 
         attrs = rman_sg_fluid.rman_sg_volume_node.GetAttributes() 

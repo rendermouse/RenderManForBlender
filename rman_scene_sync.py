@@ -410,7 +410,6 @@ class RmanSceneSync(object):
                             continue
                         rman_sg_node = self.rman_scene.rman_objects.get(o.original, None)
                         translator.update(o, rman_sg_node)
-                        translator.export_object_primvars(o, rman_sg_node)
                         # material slots could have changed, so we need to double
                         # check that too
                         for k,v in rman_sg_node.instances.items():
@@ -612,7 +611,6 @@ class RmanSceneSync(object):
                         translator =  self.rman_scene.rman_translators.get(rman_type, None)
                         rfb_log().debug("\tUpdating Object: %s" % proto_key)
                         translator.update(ob_eval, rman_sg_node)  
-                        translator.export_object_primvars(ob_eval, rman_sg_node)  
                         self.update_particle_emitters(ob_eval)
                         already_udpated.append(proto_key)   
 

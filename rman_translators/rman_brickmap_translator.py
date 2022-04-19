@@ -26,4 +26,5 @@ class RmanBrickmapTranslator(RmanTranslator):
         rm = ob.renderman
         bkm_filepath = string_utils.expand_string(rm.bkm_filepath)
         primvar.SetString("filename", bkm_filepath)
+        super().export_object_primvars(ob, primvar)
         rman_sg_brickmap.sg_node.SetPrimVars(primvar)        

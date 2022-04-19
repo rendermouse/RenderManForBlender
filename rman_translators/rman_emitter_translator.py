@@ -71,6 +71,7 @@ class RmanEmitterTranslator(RmanTranslator):
         else:
             primvar.SetFloatDetail(self.rman_scene.rman.Tokens.Rix.k_width, width, "vertex")                     
 
+        super().export_object_primvars(ob, primvar)
         sg_emitter_node.SetPrimVars(primvar)
 
         # Attach material

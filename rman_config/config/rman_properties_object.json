@@ -698,8 +698,7 @@
             "type": "float",
             "default": 10.0,
             "editable": true,
-            "inheritable": true,
-            "inherit_true_value": -1.0,
+            "always_write": true,
             "page": "Dicing",
             "help": "Micropolygon distance in raster space for 'instanceprojection' dicing. Values are expressed in pixel size.",
             "conditionalVisOps": {

@@ -69,7 +69,7 @@ class RmanPointsTranslator(RmanTranslator):
 
         primvar.SetPointDetail(self.rman_scene.rman.Tokens.Rix.k_P, P, "vertex")
         primvar.SetFloatDetail(self.rman_scene.rman.Tokens.Rix.k_constantwidth, rm.primitive_point_width, "constant")
-            
+        super().export_object_primvars(ob, primvar)            
         rman_sg_points.sg_node.SetPrimVars(primvar)         
 
         if not input_mesh:

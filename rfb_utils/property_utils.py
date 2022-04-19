@@ -178,10 +178,11 @@ def set_rix_param(params, param_type, param_name, val, is_reference=False, is_ar
     else:
         # check if we need to emit this parameter.
         if node != None and not prefs_utils.get_pref('rman_emit_default_params', False):
+            pname = param_name
             if prop_name != '':
-                dflt = get_property_default(node, prop_name)
-            else:
-                dflt = get_property_default(node, param_name)
+                pname = prop_name
+            dflt = get_property_default(node, pname)
+            
 
             # FIXME/TODO: currently, the python version of RtParamList
             # doesn't allow us to retrieve existing values. For now, only do the
@@ -213,11 +214,11 @@ def set_rix_param(params, param_type, param_name, val, is_reference=False, is_ar
                 # on default behavior
                 always_write = False
                 prop_meta = getattr(node, 'prop_meta', dict())
-                if param_name in node.prop_meta:
-                    meta = prop_meta.get(param_name)
+                if pname in node.prop_meta:
+                    meta = prop_meta.get(pname)
                     always_write = meta.get('always_write', always_write)
                     if always_write:
-                        rfb_log().debug('Param: %s for Node: %s is marked always_write' % (param_name, node.name))
+                        rfb_log().debug('Param: %s for Node: %s is marked always_write' % (pname, node.name))
 
                 if not always_write and val == dflt:
                     return                  
