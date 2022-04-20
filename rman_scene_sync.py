@@ -618,7 +618,6 @@ class RmanSceneSync(object):
         self.rman_scene.context = context           
 
         particle_settings_node = None   
-        did_mesh_update = False # did the mesh actually update
         prev_num_instances = self.rman_scene.num_object_instances # the number of instances previously
         
         # Check the number of instances. If we differ, an object may have been
@@ -668,7 +667,6 @@ class RmanSceneSync(object):
 
             elif isinstance(obj.id, bpy.types.Mesh):
                 rfb_log().debug("Mesh updated: %s" % obj.id.name)
-                did_mesh_update = True
                 '''
                 # Experimental code path. We can use context.blend_data.user_map to ask
                 # what objects use this mesh. We can then loop thru and call object_update on these
@@ -846,10 +844,6 @@ class RmanSceneSync(object):
                         self.update_particles.add(obj.id)
 
                         if not self.num_instances_changed:
-                            if rman_type == 'MESH' and not did_mesh_update:
-                                # if a mesh didn't actually update don't call obj_geometry_updated
-                                rfb_log().debug("Skip object updated: %s" % obj.id.name)
-                                continue
                             self._obj_geometry_updated(obj)
 
             elif isinstance(obj.id, bpy.types.Collection):
