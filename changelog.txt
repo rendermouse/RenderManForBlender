@@ -1,3 +1,53 @@
+v24.4 April 22, 2022
+
+Changes:
+* Live stats are now enabled by default in the preferences.
+* Setting the environment variable, RFB_BATCH_NO_PROGRESS, will disable progress printing during batch rendering via Blender.
+
+Bug Fixes:
+* Fix issue with depth of field not matching between viewport renders and preview renders
+* Fix issue where rotating dome lights would cause portal lights to rotate on the wrong axis.
+* An issue where textures in the texture manager would fail when materials/nodes were renamed has been addressed.
+* Fix issue where light filters were still being drawn in the viewport when they were deleted.
+* Holdouts should now render correctly when doing viewport renders
+* Lights are correctly hidden when the viewports overlays has been disabled
+* Fix an issue with progress not displaying correctly when rendering to "it". 
+
+v24.3 January 6, 2022
+
+New Features:
+* A cone shape will now be drawn in the viewport to represent the cone angle for lights that
+support the Cone Angle parameter, emulating behavior that is present in the other RenderMan DCC
+integrations. Light support this include PxrRectLight, PxrDiskLight, PxrSphereLight, and PxrCylinderLight.
+Two new properties, Cone Angle Depth and Cone Angle Opacity, controls the depth and opacity of the cone
+draw in the viewport.
+* Add a Reset entry in the viewport integrators menu. Selecting Reset will reset
+back to the scene integrator
+* Added a pref to turn off the use of the <blend_dir> token to reference
+relative paths
+
+Changes:
+* Rendering in the viewport with RIS should be slightly faster.
+* The UI for arrays has changed. The addon will try to update any older scenes to use the
+new arrays, but it is not guaranteed to work in all conditions, and may require
+rebuilding/reconnecting of the shader network.
+* The addon will now warn if the minor version of RenderMan selected is not compatible.
+* When rendering hair, the mesh vertex colors will be added to the hair
+as primitive variable "Cs".
+* You can now choose a separate UV map and vertex colors for hair other than the current
+active one.
+
+Bug Fixes:
+* Fixed an issue where importing SVGs as curves did not render correctly.
+* Fixed a bug where bump and presence were not connectable on PxrSurface
+* Fixed the enable parameter labels on PxrLayer
+* Fixed a bug that caused light linking of LightFilters to not work
+* Fixed an issue where the token was not working properly
+* Fixed an issue where inputAOV on PxrDisneyBsdf was not connectable
+* Fixed an issue where utilityInteger on LamaSurface was not connectable
+* Fixed an issue where the bump2roughness settings in the texture manager
+would reset after changes were applied.
+
 v24.2 November 9, 2021
 New Features:
 * Add a new Volume Aggregates editor. For more information on volume aggregates, see the documentation 
