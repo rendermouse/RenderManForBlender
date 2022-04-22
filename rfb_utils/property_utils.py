@@ -762,8 +762,7 @@ def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group
                 val = string_utils.expand_string(prop)
                 options = meta['options']
                 if bl_prop_info.is_texture:
-                    tx_node_id = texture_utils.generate_node_id(node, param_name, ob=ob)
-                    tx_val = texture_utils.get_txmanager().get_output_tex_from_id(tx_node_id)
+                    tx_val = texture_utils.get_txmanager().get_output_tex_from_path(node, param_name, val, ob=ob)
                     val = tx_val if tx_val != '' else val
                 elif param_widget == 'assetidoutput':
                     display = 'openexr'
@@ -772,8 +771,13 @@ def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group
                     val = string_utils.expand_string(prop, display=display, asFilePath=True)
             else:
                 val = string_utils.convert_val(prop, type_hint=param_type)
+            is_array = False 
+            array_len = -1
+            if bl_prop_info.arraySize:
+                is_array = True
+                array_len = int(bl_prop_info.arraySize)
 
-            set_rix_param(params, param_type, param_name, val, is_reference=False, node=node)
+            set_rix_param(params, param_type, param_name, val, is_reference=False, is_array=is_array, array_len=array_len, node=node)
                     
     return params      
 

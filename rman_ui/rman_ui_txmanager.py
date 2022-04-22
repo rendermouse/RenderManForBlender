@@ -244,11 +244,15 @@ class PRMAN_OT_Renderman_txmanager_clear_unused(Operator):
 
             tokens = nodeID.split('|')
             if len(tokens) < 3:
-                continue
-            node_name,param,ob_name = tokens
+                return
 
-            node, ob = scene_utils.find_node_by_name(node_name, ob_name)
+            ob_name = tokens[0]
+            node_name = tokens[1]
+            param = tokens[2][1:] 
+            node, ob = scene_utils.find_node_by_name(node_name, ob_name)            
+
             if not node:
+                nodeIDs.append(nodeID)
                 continue
             if getattr(node, param) != item.name:
                 nodeIDs.append(nodeID)
@@ -430,12 +434,25 @@ class PRMAN_OT_Renderman_txmanager_add_texture(Operator):
 
         item = None
         # check if nodeID already exists in the list
-        for idx, i in enumerate(context.scene.rman_txmgr_list):
+        nodeIDs = list()
+        rman_txmgr_list = context.scene.rman_txmgr_list
+        for idx, i in enumerate(rman_txmgr_list):
             if i.nodeID == self.nodeID:
                 item = i
                 break
+            txfile_item = texture_utils.get_txmanager().txmanager.get_txfile_from_id(i.nodeID)
+            if txfile_item is None:
+                nodeIDs.append(i.nodeID)
+                continue
+            
+            if txfile_item == txfile and i.nodeID != self.nodeID:
+                nodeIDs.append(i.nodeID)
+
+        for nodeID in nodeIDs:
+            bpy.ops.rman_txmgr_list.remove_texture('EXEC_DEFAULT', nodeID=nodeID)                
+                
         if not item:
-            item = context.scene.rman_txmgr_list.add()
+            item = rman_txmgr_list.add()
             item.nodeID = self.nodeID
         item.name = txfile.input_image
         params = txfile.params

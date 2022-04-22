@@ -190,14 +190,13 @@ class RfBStatsManager(object):
 
     def update_session_config(self):
 
-        self.web_socket_enabled = prefs_utils.get_pref('rman_roz_webSocketServer', default=False)
+        self.web_socket_enabled = prefs_utils.get_pref('rman_roz_liveStatsEnabled', default=False)
         self.web_socket_port = prefs_utils.get_pref('rman_roz_webSocketServer_Port', default=0)
 
         config_dict = dict()
         config_dict["logLevel"] = int(prefs_utils.get_pref('rman_roz_logLevel', default='3'))
-        config_dict["grpcServer"] = prefs_utils.get_pref('rman_roz_grpcServer', default=True)
         config_dict["webSocketPort"] = self.web_socket_port
-        config_dict["webSocketServer"] = self.web_socket_enabled
+        config_dict["liveStatsEnabled"] = self.web_socket_enabled
 
         config_str = json.dumps(config_dict)
         self.rman_stats_session_config.Update(config_str)
@@ -320,7 +319,7 @@ class RfBStatsManager(object):
                 if name == "/system.processMemory":
                     # Payload has 3 floats: max, resident, XXX
                     # Convert resident mem to MB : payload[1] / 1024*1024;
-                    memPayload = dat["payload"].split(',')
+                    memPayload = dat["payload"]
                     maxresMB = ((float)(memPayload[1])) / __oneK2__
                     # Set consistent fixed point output in string
                     
@@ -349,7 +348,7 @@ class RfBStatsManager(object):
                     self._prevTotalRaysValid = True
                     self._prevTotalRays = currentTotalRays    
                 elif name == "/rman@iterationComplete":
-                    itr = eval(dat['payload'])[0]
+                    itr = dat['payload'][0]
                     self._iterations = itr  
                     self.render_live_stats[label] = '%d / %d' % (itr, self._maxSamples)
                 elif name == "/rman/renderer@progress":

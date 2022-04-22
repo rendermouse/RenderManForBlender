@@ -379,35 +379,58 @@ def gather_nodes(node):
 
     return nodes    
 
-def gather_all_nodes_for_material(mat, nodes_list):   
-    for node in mat.node_tree.nodes:
+def gather_all_nodes_for_material(ob, nodes_list):
+    for node in ob.node_tree.nodes:
         if node not in nodes_list:
+            if isinstance(ob, bpy.types.ShaderNodeGroup):
+                nodes_list.insert(0, node)
+            else:
+                nodes_list.append(node)
+        if node.bl_idname == 'ShaderNodeGroup':
+            gather_all_nodes_for_material(node, nodes_list)
+
+def gather_all_textured_nodes(ob, nodes_list):   
+    nt = None
+    if isinstance(ob, bpy.types.Object):
+        if ob.type == 'LIGHT':
+            nt = ob.data.node_tree
+    elif isinstance(ob, bpy.types.Material):
+        nt = ob.node_tree
+    elif isinstance(ob, bpy.types.ShaderNodeGroup):
+        nt = ob.node_tree
+    if nt is None:
+        return
+        
+    for node in nt.nodes:
+        has_textured_params = getattr(node, 'rman_has_textured_params', False)
+        if node not in nodes_list and has_textured_params:
             nodes_list.append(node)
         if node.bl_idname == 'ShaderNodeGroup':
-            for n in node.node_tree.nodes:
-                nodes_list.insert(0, n)
+            gather_all_textured_nodes(node, nodes_list)               
 
 def get_nodetree_name(node):
-    nt = node.id_data
+    nt = node.id_data.original
 
     for nm, ng in bpy.data.node_groups.items():
-        if nt == ng:
+        if nt == ng.original:
             return nm
             
     for mat in bpy.data.materials:
         if mat.node_tree is None:
             continue
-        if mat.node_tree == nt:
+        if mat.node_tree.original == nt:
             return mat.name
 
     for world in bpy.data.worlds:
-        if world.node_tree == nt:
+        if world.node_tree.original == nt:
             return world.name         
 
     for ob in bpy.data.objects:
         if ob.type == 'LIGHT':
             light = ob.data
-            if light.node_tree == nt:
+            if light.node_tree is None:
+                continue
+            if light.node_tree.original == nt:
                 return ob.name           
         elif ob.type == 'CAMERA':
             if find_projection_node(ob) == node:

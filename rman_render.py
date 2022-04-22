@@ -14,6 +14,7 @@ import threading
 import subprocess
 import ctypes
 import numpy
+import traceback
 
 # for viewport buckets
 import gpu
@@ -526,6 +527,7 @@ class RmanRender(object):
             self.rman_is_live_rendering = True
         except Exception as e:      
             self.bl_engine.report({'ERROR'}, 'Export failed: %s' % str(e))
+            rfb_log().error('Export Failed:\n%s' % traceback.format_exc())
             self.stop_render(stop_draw_thread=False)
             self.del_bl_engine()
             return False            
@@ -683,6 +685,7 @@ class RmanRender(object):
                     self.sgmngr.DeleteScene(self.sg_scene)     
                 except Exception as e:      
                     self.bl_engine.report({'ERROR'}, 'Export failed: %s' % str(e))
+                    rfb_log().error('Export Failed:\n%s' % traceback.format_exc())
                     self.stop_render(stop_draw_thread=False)
                     self.del_bl_engine()
                     return False                       
@@ -715,6 +718,7 @@ class RmanRender(object):
                 self.sgmngr.DeleteScene(self.sg_scene)
             except Exception as e:      
                 self.bl_engine.report({'ERROR'}, 'Export failed: %s' % str(e))
+                rfb_log().error('Export Failed:\n%s' % traceback.format_exc())
                 self.stop_render(stop_draw_thread=False)
                 self.del_bl_engine()
                 return False                         
@@ -775,6 +779,7 @@ class RmanRender(object):
             self.start_stats_thread()
         except Exception as e:      
             self.bl_engine.report({'ERROR'}, 'Export failed: %s' % str(e))
+            rfb_log().error('Export Failed:\n%s' % traceback.format_exc())
             self.stop_render(stop_draw_thread=False)
             self.del_bl_engine()
             return False                  
@@ -854,6 +859,7 @@ class RmanRender(object):
                 rfb_log().info("Finished parsing scene. Total time: %s" % string_utils._format_time_(time.time() - time_start))
             except Exception as e:      
                 self.bl_engine.report({'ERROR'}, 'Export failed: %s' % str(e))
+                rfb_log().error('Export Failed:\n%s' % traceback.format_exc())
                 self.stop_render(stop_draw_thread=False)
                 self.del_bl_engine()
                 return False                     
@@ -947,6 +953,7 @@ class RmanRender(object):
             return True
         except Exception as e:      
             bpy.ops.renderman.printer('INVOKE_DEFAULT', level="ERROR", message='Export failed: %s' % str(e))
+            rfb_log().error('Export Failed:\n%s' % traceback.format_exc())
             self.stop_render(stop_draw_thread=False)
             self.del_bl_engine()
             return False
@@ -1053,6 +1060,7 @@ class RmanRender(object):
                 self.sg_scene.Render("rib " + rib_output + " -archive")
             except Exception as e:      
                 self.bl_engine.report({'ERROR'}, 'Export failed: %s' % str(e))
+                rfb_log().error('Export Failed:\n%s' % traceback.format_exc())
                 self.stop_render(stop_draw_thread=False)
                 self.del_bl_engine()
                 return False    
@@ -1079,7 +1087,8 @@ class RmanRender(object):
         self.rman_running = False
         self.rman_interactive_running = False  
         self.rman_swatch_render_running = False
-        self.rman_is_viewport_rendering = False            
+        self.rman_is_viewport_rendering = False       
+        self.rman_is_exporting = False     
 
         # Remove callbacks
         ec = rman.EventCallbacks.Get()
