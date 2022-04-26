@@ -233,8 +233,8 @@ class RmanSceneSync(object):
                 # we deal with main camera transforms in view_draw
                 if rman_sg_camera == self.rman_scene.main_camera:
                     return
-                rfb_log().debug("\tCamera Transform Updated: %s" % ob.name)
-                translator._update_render_cam_transform(ob, rman_sg_camera)                        
+                if translator._update_render_cam_transform(ob, rman_sg_camera):
+                    rfb_log().debug("\tCamera Transform Updated: %s" % ob.name)
               
 
     def check_particle_instancer(self, ob_update, psys):
@@ -469,15 +469,12 @@ class RmanSceneSync(object):
                 
                 # These types need special handling                
                 if rman_type == 'EMPTY':
-                    rfb_log().debug("\tEmpty: %s Updated" % obj.id.name)
                     self.update_empty(obj)   
                     continue             
                 if rman_type == 'LIGHTFILTER':
-                    rfb_log().debug("\tLight Filter: %s Updated" % obj.id.name)
                     self.light_filter_updated(obj)
                     continue                
                 if ob.type in ['CAMERA']:
-                    rfb_log().debug("\tCamera updated: %s" % obj.id.name)
                     self.camera_updated(obj)                       
                     continue         
                 

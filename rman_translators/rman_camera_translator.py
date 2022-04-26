@@ -50,7 +50,6 @@ class RmanCameraTranslator(RmanTranslator):
 
     def _update_render_cam_transform(self, ob, rman_sg_camera, index=0, seg=0.0):
 
-        cam = ob.data
         mtx = ob.matrix_world
         
         # normalize the matrix
@@ -61,7 +60,7 @@ class RmanCameraTranslator(RmanTranslator):
 
         v = transform_utils.convert_matrix(mtx)
         if rman_sg_camera.cam_matrix == v:
-            return
+            return False
 
         rman_sg_camera.cam_matrix = v
         if rman_sg_camera.is_transforming:
@@ -69,6 +68,7 @@ class RmanCameraTranslator(RmanTranslator):
         else:
             rman_sg_camera.sg_node.SetTransform( v )    
                
+        return True
 
     def update_transform(self, ob, rman_sg_camera, index=0, seg=0):
         if self.rman_scene.is_viewport_render:
