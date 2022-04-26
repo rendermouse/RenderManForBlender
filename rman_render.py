@@ -27,6 +27,7 @@ from .rfb_utils import display_utils
 from .rfb_utils import scene_utils
 from .rfb_utils import transform_utils
 from .rfb_utils.prefs_utils import get_pref
+from .rfb_utils.timer_utils import time_this
 
 # config
 from .rman_config import __RFB_CONFIG_DICT__ as rfb_config
@@ -620,7 +621,7 @@ class RmanRender(object):
                         try:
                             bl_image.use_generated_float = True
                             bl_image.filepath_raw = filepath                            
-                            bl_image.pixels = buffer
+                            bl_image.pixels.foreach_set(buffer)
                             bl_image.file_format = 'OPEN_EXR'
                             bl_image.update()
                             bl_image.save()
@@ -1335,6 +1336,7 @@ class RmanRender(object):
             rfb_log().debug("Could not get buffer: %s" % str(e))
             return None                                     
 
+    @time_this
     def save_viewport_snapshot(self, frame=1):
         if not self.rman_is_viewport_rendering:
             return
@@ -1351,7 +1353,7 @@ class RmanRender(object):
         nm = 'rman_viewport_snapshot_<F4>_%d' % len(bpy.data.images)
         nm = string_utils.expand_string(nm, frame=frame)
         img = bpy.data.images.new(nm, width, height, float_buffer=True, alpha=True)                
-        img.pixels = pixels
+        img.pixels.foreach_set(pixels)
         img.update()
        
     def update_scene(self, context, depsgraph):
