@@ -151,7 +151,7 @@ def draw_threading_func(db):
             # if the viewport is not rendering, stop IPR
             db.del_bl_engine()
             break
-        if db.rman_is_xpu:
+        if db.xpu_slow_mode:
             if db.has_buffer_updated():
                 try:
                     db.bl_engine.tag_redraw()
@@ -280,6 +280,7 @@ class RmanRender(object):
         self.deleting_bl_engine = threading.Lock()
         self.stop_render_mtx = threading.Lock()
         self.bl_viewport = None
+        self.xpu_slow_mode = False
 
         self._start_prman_begin()
 
@@ -445,6 +446,7 @@ class RmanRender(object):
         self.rman_is_xpu = False
         self.rman_is_refining = False
         self.bl_viewport = None
+        self.xpu_slow_mode = False
 
     def start_render(self, depsgraph, for_background=False):
     
@@ -925,6 +927,8 @@ class RmanRender(object):
         rendervariant = scene_utils.get_render_variant(self.bl_scene)
         scene_utils.set_render_variant_config(self.bl_scene, config, render_config)
         self.rman_is_xpu = (rendervariant == 'xpu')
+        if self.rman_is_xpu:
+            self.xpu_slow_mode = envconfig().getenv('RFB_XPU_SLOW_MODE', default=False)
 
         self.sg_scene = self.sgmngr.CreateScene(config, render_config, self.stats_mgr.rman_stats_session) 
 
@@ -949,9 +953,10 @@ class RmanRender(object):
             if render_into_org != '':
                 rm.render_ipr_into = render_into_org    
             
-            if not self.rman_is_xpu:
-                # for now, we only set the redraw callback for RIS
+            if not self.xpu_slow_mode:
                 self.set_redraw_func()
+            else:
+                rfb_log().debug("XPU slow mode enabled.")
             # start a thread to periodically call engine.tag_redraw()                
             __DRAW_THREAD__ = threading.Thread(target=draw_threading_func, args=(self, ))
             __DRAW_THREAD__.start()
