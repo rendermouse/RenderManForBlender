@@ -603,8 +603,9 @@ class RmanRender(object):
                                                 as_flat=False, 
                                                 back_fill=False,
                                                 render=render)
-                    if buffer:
-                        rp.rect = buffer
+                    if buffer is None:
+                        continue
+                    rp.rect = buffer
         
                 if self.bl_engine:
                     self.bl_engine.update_result(result)        
@@ -618,19 +619,23 @@ class RmanRender(object):
                 for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
                     filepath = dspy_dict['displays'][dspy_nm]['filePath']
                     buffer = self._get_buffer(width, height, image_num=i, as_flat=True)
-                    if buffer:
-                        bl_image = bpy.data.images.new(dspy_nm, width, height)
-                        try:
-                            bl_image.use_generated_float = True
-                            bl_image.filepath_raw = filepath                            
-                            bl_image.pixels.foreach_set(buffer)
-                            bl_image.file_format = 'OPEN_EXR'
-                            bl_image.update()
-                            bl_image.save()
-                        except:
-                            pass
-                        finally:
-                            bpy.data.images.remove(bl_image)      
+                    if buffer is None:
+                        continue
+
+                    bl_image = bpy.data.images.new(dspy_nm, width, height)
+                    try:
+                        if isinstance(buffer, numpy.ndarray):
+                            buffer = buffer.tolist()
+                        bl_image.use_generated_float = True
+                        bl_image.filepath_raw = filepath                            
+                        bl_image.pixels.foreach_set(buffer)
+                        bl_image.file_format = 'OPEN_EXR'
+                        bl_image.update()
+                        bl_image.save()
+                    except:
+                        pass
+                    finally:
+                        bpy.data.images.remove(bl_image)      
 
             if not was_connected and self.stats_mgr.is_connected():
                 # if stats were not started before rendering, disconnect
@@ -1259,36 +1264,28 @@ class RmanRender(object):
 
         try:
             buffer = numpy.array(f(ctypes.c_size_t(image_num)).contents)
-            pixels = list()
-
-            # we need to flip the image
-            # also, Blender is expecting a 4 channel image
 
             if as_flat:
-                if num_channels == 4:
-                    return buffer.tolist()
+                if (num_channels == 4) or not back_fill:
+                    return buffer
                 else:
+                    p_pos = 0
+                    pixels = numpy.ones(width*height*4, dtype=numpy.float32)
                     for y in range(0, height):
                         i = (width * y * num_channels)
                         
                         for x in range(0, width):
                             j = i + (num_channels * x)
                             if num_channels == 3:
-                                pixels.append(buffer[j])
-                                pixels.append(buffer[j+1])
-                                pixels.append(buffer[j+2])
-                                pixels.append(1.0)                        
+                                pixels[p_pos:p_pos+3] = buffer[j:j+3]
                             elif num_channels == 2:
-                                pixels.append(buffer[j])
-                                pixels.append(buffer[j+1])
-                                pixels.append(1.0)                        
-                                pixels.append(1.0)
+                                pixels[p_pos:p_pos+2] = buffer[j:j+2]
                             elif num_channels == 1:
-                                pixels.append(buffer[j])
-                                pixels.append(buffer[j])
-                                pixels.append(buffer[j])   
-                                pixels.append(1.0)  
-                    return pixels                             
+                                pixels[p_pos] = buffer[j]
+                                pixels[p_pos+1] = buffer[j]
+                                pixels[p_pos+2] = buffer[j]
+                            p_pos += 4                                
+                    return pixels
             else:
                 if render and render.use_border:
                     start_x = 0
@@ -1298,45 +1295,45 @@ class RmanRender(object):
 
                 
                     if render.border_min_y > 0.0:
-                        start_y = int(height * (render.border_min_y))-1
+                        start_y = round(height * render.border_min_y)-1
                     if render.border_max_y > 0.0:                        
-                        end_y = int(height * (render.border_max_y))-1 
+                        end_y = round(height * render.border_max_y)-1 
                     if render.border_min_x > 0.0:
-                        start_x = int(width * render.border_min_x)-1
+                        start_x = round(width * render.border_min_x)-1
                     if render.border_max_x < 1.0:
-                        end_x =  int(width * render.border_max_x)-2
+                        end_x = round(width * render.border_max_x)-2
 
                     # return the buffer as a list of lists
+                    if back_fill:
+                        pixels = numpy.ones( ((end_x-start_x)*(end_y-start_y), 4), dtype=numpy.float32 )
+                    else:
+                        pixels = numpy.zeros( ((end_x-start_x)*(end_y-start_y), num_channels) )
+                    p_pos = 0
                     for y in range(start_y, end_y):
                         i = (width * y * num_channels)
 
                         for x in range(start_x, end_x):
                             j = i + (num_channels * x)
-                            if not back_fill:
-                                pixels.append(buffer[j:j+num_channels])
-                                continue
-                            
-                            if num_channels == 4:
-                                pixels.append(buffer[j:j+4])
-                                continue
+                            if (num_channels==4) or not back_fill:
+                                # just slice
+                                pixels[p_pos] = buffer[j:j+num_channels]
+                            else:
+                                pixels[p_pos][0] = buffer[j]                             
+                                if num_channels == 3:
+                                    pixels[p_pos][1] = buffer[j+1]
+                                    pixels[p_pos][2] = buffer[j+2]
+                                elif num_channels == 2:
+                                    pixels[p_pos][1] = buffer[j+1]
+                                elif num_channels == 1:
+                                    pixels[p_pos][1] = buffer[j]
+                                    pixels[p_pos][2] = buffer[j]
 
-                            pixel = [1.0] * num_channels
-                            pixel[0] = buffer[j]                             
-                            if num_channels == 3:
-                                pixel[1] = buffer[j+1]
-                                pixel[2] = buffer[j+2]
-                            elif num_channels == 2:
-                                pixel[1] = buffer[j+1]
-                            elif num_channels == 1:
-                                pixel[1] = buffer[j]
-                                pixel[2] = buffer[j]
-
-                            pixels.append(pixel)            
+                            p_pos += 1
 
                     return pixels
                 else:
-                    buffer = numpy.reshape(buffer, (-1, num_channels))
-                    return buffer.tolist()
+                    buffer.shape = (-1, num_channels)
+                    return buffer
         except Exception as e:
             rfb_log().debug("Could not get buffer: %s" % str(e))
             return None                                     
@@ -1351,13 +1348,15 @@ class RmanRender(object):
         height = int(self.viewport_res_y * res_mult)
 
         pixels = self._get_buffer(width, height)
-        if not pixels:
+        if pixels is None:
             rfb_log().error("Could not save snapshot.")
             return
 
         nm = 'rman_viewport_snapshot_<F4>_%d' % len(bpy.data.images)
         nm = string_utils.expand_string(nm, frame=frame)
-        img = bpy.data.images.new(nm, width, height, float_buffer=True, alpha=True)                
+        img = bpy.data.images.new(nm, width, height, float_buffer=True, alpha=True) 
+        if isinstance(pixels, numpy.ndarray):
+            pixels = pixels.tolist()               
         img.pixels.foreach_set(pixels)
         img.update()
        
