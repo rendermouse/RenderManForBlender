@@ -1218,9 +1218,7 @@ class RmanScene(object):
                 if len(interval_tokens) > 0:
                     options.SetStringArray(self.rman.Tokens.Rix.k_checkpoint_interval, interval_tokens, len(interval_tokens) )
             if rm.checkpoint_exitat != '':
-                exitat_tokens = rm.checkpoint_exitat.split()
-                if len(exitat_tokens) > 0:
-                    options.SetStringArray(self.rman.Tokens.Rix.k_checkpoint_interval, exitat_tokens, len(exitat_tokens) )
+                options.SetString(self.rman.Tokens.Rix.k_checkpoint_exitat, rm.checkpoint_exitat)
 
             options.SetInteger(self.rman.Tokens.Rix.k_checkpoint_asfinal, int(rm.checkpoint_asfinal))
         
