@@ -536,7 +536,7 @@ class RmanRender(object):
         render_cmd = self._append_render_cmd(render_cmd)
         self.sg_scene.Render(render_cmd)
         if self.rman_render_into == 'blender':  
-            dspy_dict = display_utils.get_dspy_dict(self.rman_scene)
+            dspy_dict = display_utils.get_dspy_dict(self.rman_scene, include_holdouts=False)
             
             render = self.rman_scene.bl_scene.render
             render_view = self.bl_engine.active_view_get()

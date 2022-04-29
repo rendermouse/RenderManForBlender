@@ -563,7 +563,7 @@ def _set_rman_holdouts_dspy_dict(dspys_dict, dspy_drv, rman_scene, expandTokens)
             'params': dspy_params,
             'dspyDriverParams': None}                    
 
-def get_dspy_dict(rman_scene, expandTokens=True):
+def get_dspy_dict(rman_scene, expandTokens=True, include_holdouts=True):
     """
     Create a dictionary of display channels and displays. The layout:
 
@@ -640,7 +640,7 @@ def get_dspy_dict(rman_scene, expandTokens=True):
         # We're using blender's layering system
         _set_blender_dspy_dict(layer, dspys_dict, display_driver, rman_scene, expandTokens, do_optix_denoise=do_optix_denoise)       
 
-    if rm.do_holdout_matte != "OFF":
+    if rm.do_holdout_matte != "OFF" and include_holdouts:
         _set_rman_holdouts_dspy_dict(dspys_dict, display_driver, rman_scene, expandTokens)  
 
     return dspys_dict
