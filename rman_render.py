@@ -628,7 +628,7 @@ class RmanRender(object):
                         # i.e.: it does not include the result of the Blender
                         # compositor
                         toks = os.path.splitext(filepath)
-                        filepath = '%s_%s%s' % (toks[0], 'beauty_raw.exr')
+                        filepath = '%s_%s' % (toks[0], 'beauty_raw.exr')
 
                     bl_image = bpy.data.images.new(dspy_nm, width, height)
                     try:
