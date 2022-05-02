@@ -438,6 +438,10 @@ class RmanRender(object):
             __RMAN_STATS_THREAD__.join()
             __RMAN_STATS_THREAD__ = None
         __RMAN_STATS_THREAD__ = threading.Thread(target=call_stats_update_payloads, args=(self, ))
+        if self.rman_is_xpu:
+            # FIXME: for now, add a 1 second delay before starting the stats thread
+            # for some reason, XPU doesn't seem to reset the progress between renders
+            time.sleep(1.0)        
         __RMAN_STATS_THREAD__.start()         
 
     def reset(self):
@@ -498,12 +502,12 @@ class RmanRender(object):
 
         self.sg_scene = self.sgmngr.CreateScene(config, render_config, self.stats_mgr.rman_stats_session) 
         was_connected = self.stats_mgr.is_connected()
-        if self.rman_is_xpu and self.rman_render_into == 'blender':
+        if self.rman_is_xpu:
             if not was_connected:
                 # force the stats to start in the case of XPU
                 # this is so that we can get a progress percentage
                 # if we can't get it to start, abort
-                self.stats_mgr.attach()
+                self.stats_mgr.attach(force=True)
                 time.sleep(0.5) # give it a second to attach
                 if not self.stats_mgr.is_connected():
                     self.bl_engine.report({'ERROR'}, 'Cannot start live stats. Aborting XPU render')
@@ -590,10 +594,6 @@ class RmanRender(object):
                     render_pass = result.layers[0].passes.find_by_name(dspy_nm, render_view)
                 bl_image_rps[i] = render_pass            
             
-            if self.rman_is_xpu:
-                # FIXME: for now, add a 1 second delay before starting the stats thread
-                # for some reason, XPU doesn't seem to reset the progress between renders
-                time.sleep(1.0)
             self.start_stats_thread()
             while self.bl_engine and not self.bl_engine.test_break() and self.rman_is_live_rendering:
                 time.sleep(0.01)

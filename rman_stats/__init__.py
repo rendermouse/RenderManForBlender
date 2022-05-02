@@ -188,10 +188,13 @@ class RfBStatsManager(object):
         self.update_session_config()     
         self.rman_stats_session = rman.Stats.AddSession(self.rman_stats_session_config)  
 
-    def update_session_config(self):
+    def update_session_config(self, force_enabled=False):
 
         self.web_socket_enabled = prefs_utils.get_pref('rman_roz_liveStatsEnabled', default=False)
         self.web_socket_port = prefs_utils.get_pref('rman_roz_webSocketServer_Port', default=0)
+
+        if force_enabled:
+            self.web_socket_enabled = True
 
         config_dict = dict()
         config_dict["logLevel"] = int(prefs_utils.get_pref('rman_roz_logLevel', default='3'))
@@ -242,10 +245,15 @@ class RfBStatsManager(object):
                         self.mgr.enableMetric(name)
                 return       
         
-    def attach(self):
+    def attach(self, force=False):
 
         if not self.mgr:
             return 
+
+        if force:
+            # force the live stats to be enabled
+            self.update_session_config(force_enabled=True)
+
         if (self.mgr.clientConnected()):
             return
 
