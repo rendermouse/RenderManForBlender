@@ -615,12 +615,20 @@ class RmanRender(object):
                     self.bl_engine.end_result(result) 
 
                 # Try to save out the displays out to disk. This matches
-                # Cycles behavior                    
+                # Cycles behavior
                 for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
                     filepath = dspy_dict['displays'][dspy_nm]['filePath']
                     buffer = self._get_buffer(width, height, image_num=i, as_flat=True)
                     if buffer is None:
                         continue
+
+                    if i == 0:
+                        # if this is the beauty, add the substring 'beauty_raw'
+                        # to indicate this is the "raw" beauty 
+                        # i.e.: it does not include the result of the Blender
+                        # compositor
+                        toks = os.path.splitext(filepath)
+                        filepath = '%s_%s%s' % (toks[0], 'beauty_raw.exr')
 
                     bl_image = bpy.data.images.new(dspy_nm, width, height)
                     try:

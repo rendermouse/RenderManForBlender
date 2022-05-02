@@ -226,6 +226,7 @@ class StringExpression(object):
           
             # get the real path
             result = filepath_utils.get_real_path(result)
+            result = result.replace(' ', '_')
 
             dirname = os.path.dirname(result)
             if not os.path.exists(dirname):

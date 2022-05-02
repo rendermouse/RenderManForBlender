@@ -9,29 +9,36 @@ from copy import deepcopy
 import bpy
 import os
 import getpass
+import re
 
 __BLENDER_TO_RMAN_DSPY__ = { 'TIFF': 'tiff', 'TARGA': 'targa', 'TARGA_RAW': 'targa', 'OPEN_EXR': 'openexr', 'PNG': 'png'}
+__RMAN_TO_BLENDER__ = { 'tiff': 'TIFF', 'targa': 'TARGA', 'openexr':'OPEN_EXR', 'png':'PNG'}
 
-def get_channel_name(aov, layer_name):
-    aov_name = aov.name.replace(' ', '')
-    aov_channel_name = aov.channel_name
-    if not aov.aov_name or not aov.channel_name:
-        return ''
-    elif aov.aov_name == "color rgba":
-        aov_channel_name = "Ci,a"
-    # Remaps any color lpe channel names to a denoise friendly one
-    elif aov_name in channel_name_map.keys():
-        aov_channel_name = '%s_%s_%s' % (
-            channel_name_map[aov_name], aov_name, layer_name)
+def get_beauty_filepath(bl_scene, use_blender_frame=False, expand_tokens=False):
+    view_layer = bpy.context.view_layer
+    rm_rl = None
+    if view_layer.renderman.use_renderman:
+        rm_rl = view_layer.renderman      
+    rm = bl_scene.renderman
 
-    elif aov.aov_name == "color custom_lpe":
-        aov_channel_name = aov.name
+    string_utils.set_var('scene', bl_scene.name.replace(' ', '_'))
+    string_utils.set_var('layer', view_layer.name.replace(' ', '_'))    
 
+    filePath = rm.path_beauty_image_output
+    if use_blender_frame:
+        filePath = re.sub(r'<[f|F]\d*>', '####', filePath)
+    if rm_rl:
+        file_format = bl_scene.render.image_settings.file_format
+        display_driver = __BLENDER_TO_RMAN_DSPY__.get(file_format, 'openexr')
     else:
-        aov_channel_name = '%s_%s' % (
-            aov_name, layer_name)
+        aov = rm_rl.custom_aovs[0]
+        display_driver = aov.displaydriver
 
-    return aov_channel_name
+    if expand_tokens:
+        filePath = string_utils.expand_string(filePath,
+                                            display=display_driver, 
+                                            asFilePath=True)
+    return filePath
 
 def _default_dspy_params():
     d = {}
@@ -561,8 +568,24 @@ def _set_rman_holdouts_dspy_dict(dspys_dict, dspy_drv, rman_scene, expandTokens)
             'camera': None,
             'bake_mode': None,                
             'params': dspy_params,
-            'dspyDriverParams': None}                    
+            'dspyDriverParams': None}           
 
+def any_dspys_denoise(view_layer):         
+    if view_layer.renderman.use_renderman:
+        rm_rl = view_layer.renderman  
+    if rm_rl:     
+        for aov in rm_rl.custom_aovs:
+            if aov.denoise:
+                return True
+    return False
+
+def get_renderman_layer(view_layer=None):
+    if view_layer is None:
+        view_layer = bpy.context.view_layer
+    if view_layer.renderman.use_renderman:
+        return view_layer.renderman 
+    return None
+             
 def get_dspy_dict(rman_scene, expandTokens=True, include_holdouts=True):
     """
     Create a dictionary of display channels and displays. The layout:

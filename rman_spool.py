@@ -2,7 +2,6 @@ import subprocess
 import os
 import getpass
 import socket
-import datetime
 import bpy
 from .rfb_utils import string_utils
 from .rfb_utils.envconfig_utils import envconfig
@@ -21,6 +20,7 @@ class RmanSpool(object):
         self.rman_scene = rman_scene
         self.is_localqueue = True
         self.is_tractor = False
+        self.any_denoise = False
         if depsgraph:
             self.bl_scene = depsgraph.scene_eval
             self.depsgraph = depsgraph
@@ -84,12 +84,12 @@ class RmanSpool(object):
 
     def add_blender_render_task(self, frame, parentTask, title, bl_filename, img):
         rm = self.bl_scene.renderman
-        out_dir = '<OUT>'
 
         task = author.Task()
         task.title = title
-        if img:
-            task.preview = 'sho %s' % str(img)
+        if img:        
+            img_expanded = string_utils.expand_string(img, frame=frame, asFilePath=True)
+            task.preview = 'sho %s' % img_expanded
 
         command = author.Command(local=False, service="PixarRender")
         bl_blender_path = bpy.app.binary_path
@@ -107,11 +107,14 @@ class RmanSpool(object):
                                 start, last, by, bl_filename): 
 
         rm = self.bl_scene.renderman
-
+        self.any_denoise = display_utils.any_dspys_denoise(self.rman_scene.bl_view_layer)
+        img = None
+        if not self.any_denoise:
+            dspys_dict = display_utils.get_dspy_dict(self.rman_scene, expandTokens=False)  
+            img = dspys_dict['displays']['beauty']['filePath']
+        
         if anim is False:
-
-            img_expanded = ''
-
+     
             frametasktitle = ("%s Frame: %d " %
                             (tasktitle, int(start)))
             frametask = author.Task()
@@ -121,7 +124,7 @@ class RmanSpool(object):
             prmantasktitle = "%s (render)" % frametasktitle
 
             self.add_blender_render_task(start, frametask, prmantasktitle,
-                                bl_filename, img_expanded)
+                                bl_filename, img)
 
             parent_task.addChild(frametask)
 
@@ -136,13 +139,11 @@ class RmanSpool(object):
 
             for iframe in range(int(start), int(last + 1), int(by)):
 
-                img_expanded = ''
-
                 prmantasktitle = ("%s Frame: %d (blender)" %
                                 (tasktitle, int(iframe)))
 
                 self.add_blender_render_task(iframe, renderframestask, prmantasktitle,
-                                      bl_filename, img_expanded)
+                                      bl_filename, img)
 
             parent_task.addChild(renderframestask)                                 
 

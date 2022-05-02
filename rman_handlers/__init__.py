@@ -4,6 +4,18 @@ from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import upgrade_utils
 from bpy.app.handlers import persistent
 import bpy
+import os
+import re
+import sys
+            
+
+__ORIGINAL_BL_FILEPATH__ = None
+__ORIGINAL_BL_FILE_FORMAT__ = None
+__BL_TMP_FILE__ = None
+if sys.platform == ("win32"):
+    __BL_TMP_DIR__ = 'C:/tmp'
+else:
+    __BL_TMP_DIR__ = '/tmp'
 
 @persistent
 def rman_load_post(bl_scene):
@@ -28,6 +40,52 @@ def rman_save_post(bl_scene):
 def texture_despgraph_handler(bl_scene, depsgraph):
     texture_utils.depsgraph_handler(bl_scene, depsgraph)   
 
+@persistent
+def render_pre(bl_scene):
+    '''
+    render_pre handler that changes the Blender filepath attribute
+    to match our filename output format. In the case of background
+    mode, set it to a temporary filename. The temporary filename will
+    get removed in the render_post handler.
+    '''
+    global __ORIGINAL_BL_FILEPATH__
+    global __ORIGINAL_BL_FILE_FORMAT__
+    global __BL_TMP_FILE__
+    global __BL_TMP_DIR__
+    from ..rfb_utils import display_utils
+
+    __ORIGINAL_BL_FILEPATH__ = bl_scene.render.filepath
+    __ORIGINAL_BL_FILE_FORMAT__ = bl_scene.render.image_settings.file_format    
+    if not bpy.app.background:
+        filePath = display_utils.get_beauty_filepath(bl_scene, use_blender_frame=True, expand_tokens=True)
+        bl_scene.render.filepath = filePath
+        bl_scene.render.image_settings.file_format = 'OPEN_EXR'
+    else:
+        __BL_TMP_FILE__ = os.path.join(__BL_TMP_DIR__, '####.png')
+        bl_scene.render.filepath = __BL_TMP_FILE__
+        bl_scene.render.image_settings.file_format = 'PNG'        
+
+@persistent
+def render_post(bl_scene):
+    '''
+    render_post handler that puts the Blender filepath attribute back
+    to its original value. Also, remove the temporary output file if 
+    it exists.
+    '''
+
+    global __ORIGINAL_BL_FILEPATH__
+    global __ORIGINAL_BL_FILE_FORMAT__
+    global __BL_TMP_FILE__
+    from ..rfb_utils import display_utils
+
+    bl_scene.render.filepath = __ORIGINAL_BL_FILEPATH__
+    bl_scene.render.image_settings.file_format = __ORIGINAL_BL_FILE_FORMAT__
+    if __BL_TMP_FILE__:
+        filePath = re.sub(r'####', '%04d' % bl_scene.frame_current, __BL_TMP_FILE__)
+        if os.path.exists(filePath):
+            os.remove(filePath)
+        __BL_TMP_FILE__ = None
+
 def register():
 
     # load_post handler
@@ -46,6 +104,12 @@ def register():
     if texture_despgraph_handler not in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.append(texture_despgraph_handler)
 
+    if render_pre not in bpy.app.handlers.render_pre:
+        bpy.app.handlers.render_pre.append(render_pre)
+
+    if render_post not in bpy.app.handlers.render_post:
+        bpy.app.handlers.render_post.append(render_post)        
+
 def unregister():
 
     if rman_load_post in bpy.app.handlers.load_post:
@@ -59,6 +123,12 @@ def unregister():
 
     if texture_despgraph_handler in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.remove(texture_despgraph_handler)     
+
+    if render_pre in bpy.app.handlers.render_pre:
+        bpy.app.handlers.render_pre.remove(render_pre)
+
+    if render_post in bpy.app.handlers.render_post:
+        bpy.app.handlers.render_post.remove(render_post)            
 
     from . import rman_it_handlers
     rman_it_handlers.remove_ipr_to_it_handlers()                
