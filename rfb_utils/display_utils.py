@@ -332,8 +332,7 @@ def _add_chan_to_dpsychan_list(rm, rm_rl, dspys_dict, chan):
         d[u'remap_c'] = { 'type': u'float', 'value': chan.remap_c}
         d[u'exposure'] = { 'type': u'float2', 'value': [chan.exposure_gain, chan.exposure_gamma] }
 
-        if rm.hider_pixelFilterMode != 'importance':
-            # per channel filter does not work in importance mode
+        if chan.chan_pixelfilter != 'default':
             d[u'filter'] = {'type': u'string', 'value': chan.chan_pixelfilter}
             d[u'filterwidth'] = { 'type': u'float2', 'value': [chan.chan_pixelfilter_x, chan.chan_pixelfilter_y]}
 
