@@ -28,11 +28,11 @@ def get_beauty_filepath(bl_scene, use_blender_frame=False, expand_tokens=False):
     if use_blender_frame:
         filePath = re.sub(r'<[f|F]\d*>', '####', filePath)
     if rm_rl:
-        file_format = bl_scene.render.image_settings.file_format
-        display_driver = __BLENDER_TO_RMAN_DSPY__.get(file_format, 'openexr')
-    else:
         aov = rm_rl.custom_aovs[0]
         display_driver = aov.displaydriver
+    else:        
+        file_format = bl_scene.render.image_settings.file_format
+        display_driver = __BLENDER_TO_RMAN_DSPY__.get(file_format, 'openexr')
 
     if expand_tokens:
         filePath = string_utils.expand_string(filePath,
