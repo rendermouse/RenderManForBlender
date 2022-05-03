@@ -367,8 +367,9 @@ class RmanSpool(object):
 
         job.addChild(parent_task)                                
 
-        # Don't denoise if we're baking
-        if rm.hider_type == 'RAYTRACE':
+        # Don't generate denoise tasks if we're baking
+        # or using the Blender compositor
+        if rm.hider_type == 'RAYTRACE' and (not rm.use_bl_compositor or not scene.use_nodes):
             parent_task = self.generate_denoise_tasks(frame_begin, frame_end, by)                               
             job.addChild(parent_task)
         
