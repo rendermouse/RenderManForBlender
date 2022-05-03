@@ -464,9 +464,13 @@ class RmanRender(object):
         if not self._check_prman_license():
             return False        
 
+        use_compositor = scene_utils.should_use_bl_compositor(self.bl_scene)
         if for_background:
             self.rman_render_into = ''
             is_external = True
+            if use_compositor:
+                self.rman_render_into = 'blender'
+                is_external = False
             self.rman_callbacks.clear()
             ec = rman.EventCallbacks.Get()
             ec.RegisterCallback("Render", render_cb, self)
@@ -614,36 +618,33 @@ class RmanRender(object):
                 if self.bl_engine:
                     self.bl_engine.end_result(result) 
 
-                # Try to save out the displays out to disk. This matches
-                # Cycles behavior
-                for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
-                    filepath = dspy_dict['displays'][dspy_nm]['filePath']
-                    buffer = self._get_buffer(width, height, image_num=i, as_flat=True)
-                    if buffer is None:
-                        continue
+                # check if we should write out the AOVs
+                if use_compositor and rm.use_bl_compositor_write_aovs:
+                    for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
+                        filepath = dspy_dict['displays'][dspy_nm]['filePath']
+                        buffer = self._get_buffer(width, height, image_num=i, as_flat=True)
+                        if buffer is None:
+                            continue
 
-                    if i == 0:
-                        # if this is the beauty, add the substring 'beauty_raw'
-                        # to indicate this is the "raw" beauty 
-                        # i.e.: it does not include the result of the Blender
-                        # compositor
-                        toks = os.path.splitext(filepath)
-                        filepath = '%s_%s' % (toks[0], 'beauty_raw.exr')
-
-                    bl_image = bpy.data.images.new(dspy_nm, width, height)
-                    try:
-                        if isinstance(buffer, numpy.ndarray):
-                            buffer = buffer.tolist()
-                        bl_image.use_generated_float = True
-                        bl_image.filepath_raw = filepath                            
-                        bl_image.pixels.foreach_set(buffer)
-                        bl_image.file_format = 'OPEN_EXR'
-                        bl_image.update()
-                        bl_image.save()
-                    except:
-                        pass
-                    finally:
-                        bpy.data.images.remove(bl_image)      
+                        if i == 0:
+                            # write out the beauty with a 'raw' substring
+                            toks = os.path.splitext(filepath)
+                            filepath = '%s_beauty_raw.exr' % (toks[0])
+ 
+                        bl_image = bpy.data.images.new(dspy_nm, width, height)
+                        try:
+                            if isinstance(buffer, numpy.ndarray):
+                                buffer = buffer.tolist()
+                            bl_image.use_generated_float = True
+                            bl_image.filepath_raw = filepath                            
+                            bl_image.pixels.foreach_set(buffer)
+                            bl_image.file_format = 'OPEN_EXR'
+                            bl_image.update()
+                            bl_image.save()
+                        except:
+                            pass
+                        finally:
+                            bpy.data.images.remove(bl_image)      
 
             if not was_connected and self.stats_mgr.is_connected():
                 # if stats were not started before rendering, disconnect

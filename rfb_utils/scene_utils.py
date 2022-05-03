@@ -45,6 +45,26 @@ def get_renderman_layer(context):
 
     return rm_rl    
 
+def should_use_bl_compositor(bl_scene):
+    '''
+    Check if we should use the Blender compositor
+
+    Args:
+        bl_scene (bpy.types.Scene) - the Blender scene
+
+    Returns:
+        (bool) - true if we should use the compositor; false if not
+    '''
+    if not bpy.app.background:
+        return True
+
+    rm = bl_scene.renderman
+    if not rm.use_bl_compositor:
+        # explicitiy turned off
+        return False
+    
+    return bl_scene.use_nodes
+
 def any_areas_shading():           
     '''
     Loop through all of the windows/areas and return True if any of

@@ -1297,12 +1297,53 @@
         {
             "panel": "RENDER_PT_renderman_spooling_export_options",
             "page": "",
+            "name": "use_bl_compositor",
+            "label": "Use Blender Compositor",
+            "type": "int",
+            "default": 1,
+            "widget": "checkbox",
+            "help": "Only applies to Blender Batch. When enabled, all of the RenderMan Display settings are ignored, and one final image from the Blender compositor is written out. When using RIB, the Blender compositor cannot be used.",
+            "conditionalVisOps": {
+                "conditionalVisOp": "equalTo",
+                "conditionalVisPath": "spool_style",
+                "conditionalVisValue": "batch"
+            }                   
+        },     
+        {
+            "panel": "RENDER_PT_renderman_spooling_export_options",
+            "page": "",
+            "name": "use_bl_compositor_write_aovs",
+            "label": "Blender Batch AOVs",
+            "type": "int",
+            "default": 0,
+            "widget": "checkbox",
+            "help": "Only applies to Blender Batch. If on, and Use Blender Compositor is also turned on, all AOVs will be written out as OpenEXR files.",
+            "conditionalVisOps": {
+                "conditionalVis1Path": "spool_style",
+                "conditionalVis2Op": "equalTo",
+                "conditionalVis1Value": "batch",
+                "conditionalVisOp": "and",
+                "conditionalVis1Op": "equalTo",
+                "conditionalVisLeft": "conditionalVis1",
+                "conditionalVisRight": "conditionalVis2",
+                "conditionalVis2Path": "use_bl_compositor",
+                "conditionalVis2Value": "1"     
+            }      
+        },             
+        {
+            "panel": "RENDER_PT_renderman_spooling_export_options",
+            "page": "",
             "name": "recover",
             "label": "Enable Recovery",
             "type": "int",
             "default": 0,
             "widget": "checkbox",
-            "help": "Attempt to resume render from a previous checkpoint (if possible)."
+            "help": "Attempt to resume render from a previous checkpoint (if possible). This is only avaliable for RIB renders.",
+            "conditionalVisOps": {
+                "conditionalVisOp": "equalTo",
+                "conditionalVisPath": "spool_style",
+                "conditionalVisValue": "rib"
+            }               
         },                 
         {
             "panel": "RENDER_PT_renderman_spooling_export_options",

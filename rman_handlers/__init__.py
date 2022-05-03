@@ -45,21 +45,23 @@ def render_pre(bl_scene):
     '''
     render_pre handler that changes the Blender filepath attribute
     to match our filename output format. In the case of background
-    mode, set it to a temporary filename. The temporary filename will
-    get removed in the render_post handler.
+    mode, and use_bl_compositor is off, set it to a temporary filename. 
+    The temporary filename will get removed in the render_post handler.
     '''
     global __ORIGINAL_BL_FILEPATH__
     global __ORIGINAL_BL_FILE_FORMAT__
     global __BL_TMP_FILE__
     global __BL_TMP_DIR__
     from ..rfb_utils import display_utils
+    from ..rfb_utils import scene_utils
 
     __ORIGINAL_BL_FILEPATH__ = bl_scene.render.filepath
     __ORIGINAL_BL_FILE_FORMAT__ = bl_scene.render.image_settings.file_format    
-    if not bpy.app.background:
+    write_comp = scene_utils.should_use_bl_compositor(bl_scene)
+    if write_comp:
         filePath = display_utils.get_beauty_filepath(bl_scene, use_blender_frame=True, expand_tokens=True)
         bl_scene.render.filepath = filePath
-        bl_scene.render.image_settings.file_format = 'OPEN_EXR'
+        bl_scene.render.image_settings.file_format = 'OPEN_EXR'   
     else:
         __BL_TMP_FILE__ = os.path.join(__BL_TMP_DIR__, '####.png')
         bl_scene.render.filepath = __BL_TMP_FILE__
