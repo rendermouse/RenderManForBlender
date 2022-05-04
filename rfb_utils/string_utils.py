@@ -164,6 +164,10 @@ def get_var(nm):
     converter_validity_check()
     return __SCENE_STRING_CONVERTER__.get_token(nm)
 
+def update_frame_token(frame):
+    converter_validity_check()
+    __SCENE_STRING_CONVERTER__.expr.set_frame_context(frame)
+
 def get_tokenized_openvdb_file(frame_filepath, grids_frame):
     openvdb_file = filepath_utils.get_real_path(frame_filepath)
     f = os.path.basename(frame_filepath)
@@ -212,6 +216,17 @@ def update_blender_tokens_cb(bl_scene):
             user_token.name = nm
 
     __SCENE_STRING_CONVERTER__.update(bl_scene=scene)
+
+def check_frame_sensitive(s):
+    # check if the sting has any frame token
+    # ex: <f>, <f4>, <F4> etc.
+    # if it does, it means we need to issue a material
+    # update if the frame changes
+    pat = re.compile(r'<[f|F]\d*>')
+    m = pat.search(s)
+    if m:
+        return True
+    return False    
 
 def _format_time_(seconds):
     hours = seconds // (60 * 60)

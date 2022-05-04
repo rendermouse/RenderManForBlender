@@ -515,14 +515,7 @@ class OBJECT_PT_renderman_object_geometry_rib_archive(Panel, CollectionPanel):
         col = layout.column()
         col.enabled = not rman_interactive_running        
         col = layout.column(align = True)   
-        _draw_ui_from_rman_config('rman_properties_object', 'OBJECT_PT_renderman_object_geometry_rib_archive', context, layout, rm)                     
-        col.prop(anim, "animated_sequence")
-        if anim.animated_sequence:
-            col = layout.column(align = True)
-            col.prop(anim, "blender_start")
-            col.prop(anim, "sequence_in")
-            col.prop(anim, "sequence_out")
-
+        _draw_ui_from_rman_config('rman_properties_object', 'OBJECT_PT_renderman_object_geometry_rib_archive', context, layout, rm)
 class OBJECT_PT_renderman_object_geometry_points(Panel, CollectionPanel):
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'

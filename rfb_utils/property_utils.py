@@ -480,17 +480,6 @@ def vstruct_conditional(node, param):
         new_tokens.extend(['else', 'False'])
     return eval(" ".join(new_tokens))
 
-def check_frame_sensitive(prop):
-    # check if the prop value has any frame token
-    # ex: <f>, <f4>, <F4> etc.
-    # if it does, it means we need to issue a material
-    # update if the frame changes
-    pat = re.compile(r'<[f|F]\d*>')
-    m = pat.search(prop)
-    if m:
-        return True
-    return False
-
 def set_dspymeta_params(node, prop_name, params):
     if node.plugin_name not in ['openexr', 'deepexr']:
         # for now, we only accept openexr an deepexr
@@ -796,7 +785,7 @@ def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group
 
             elif param_type == 'string':
                 if not is_frame_sensitive:
-                    is_frame_sensitive = check_frame_sensitive(prop)
+                    is_frame_sensitive = string_utils.check_frame_sensitive(prop)
 
                 val = string_utils.expand_string(prop)
                 options = meta['options']

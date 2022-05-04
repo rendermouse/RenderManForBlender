@@ -3,6 +3,7 @@ from .rfb_utils import object_utils
 from .rfb_utils import texture_utils
 from .rfb_utils import scene_utils
 from .rfb_utils.timer_utils import time_this
+from .rfb_utils import string_utils
 
 from .rfb_logger import rfb_log
 from .rman_sg_nodes.rman_sg_lightfilter import RmanSgLightFilter
@@ -99,6 +100,7 @@ class RmanSceneSync(object):
             # are marked as frame sensitive
             rfb_log().debug("Frame changed: %d -> %d" % (self.rman_scene.bl_frame_current, self.rman_scene.bl_scene.frame_current))
             self.rman_scene.bl_frame_current = self.rman_scene.bl_scene.frame_current
+            string_utils.update_frame_token(self.rman_scene.bl_frame_current)
             self.frame_number_changed = True
 
             # check for frame sensitive objects
@@ -338,6 +340,7 @@ class RmanSceneSync(object):
 
     def batch_update_scene(self, context, depsgraph):
         self.rman_scene.bl_frame_current = self.rman_scene.bl_scene.frame_current
+        string_utils.update_frame_token(self.rman_scene.bl_frame_current)
 
         self.rman_updates = dict()
         self.num_instances_changed = False
@@ -360,24 +363,7 @@ class RmanSceneSync(object):
         for obj in reversed(depsgraph.updates):
             ob = obj.id
 
-            if isinstance(obj.id, bpy.types.Camera):
-                rfb_log().debug("Camera updated: %s" % obj.id.name)
-                if self.rman_scene.is_viewport_render:
-                    if self.rman_scene.bl_scene.camera.data != obj.id:
-                        continue
-                    rman_sg_camera = self.rman_scene.main_camera
-                    translator = self.rman_scene.rman_translators['CAMERA']
-                    with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
-                        translator.update_viewport_cam(self.rman_scene.bl_scene.camera, rman_sg_camera, force_update=True)       
-                else:
-                    translator = self.rman_scene.rman_translators['CAMERA']                 
-                    with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
-                        for ob, rman_sg_camera in self.rman_scene.rman_cameras.items():     
-                            if ob.original.name != obj.id.name:
-                                continue
-                            translator._update_render_cam(ob.original, rman_sg_camera)
-
-            elif isinstance(obj.id, bpy.types.ParticleSettings):
+            if isinstance(obj.id, bpy.types.ParticleSettings):
                 rfb_log().debug("ParticleSettings updated: %s" % obj.id.name)
                 for o in self.rman_scene.bl_scene.objects:
                     psys = None
@@ -466,8 +452,7 @@ class RmanSceneSync(object):
             rfb_log().debug("Set check_all_instances to True")
             self.check_all_instances = True
                          
-        if self.check_all_instances or self.rman_updates:
-            self.check_instances_batch()
+        self.check_instances_batch()
 
         # update any materials
         material_translator = self.rman_scene.rman_translators['MATERIAL']
@@ -524,6 +509,7 @@ class RmanSceneSync(object):
                 if ob_key not in self.rman_updates:
                     if rman_sg_node.is_frame_sensitive:
                         rman_update = RmanUpdate()
+                        rman_update.is_updated_geometry = True
                         rman_update.is_updated_shading = True
                         rman_update.is_updated_transform = True
                         self.rman_updates[ob_key] = rman_update  
@@ -809,6 +795,7 @@ class RmanSceneSync(object):
                     rman_update = self.rman_updates.get(ob_key, None)
                     if not rman_update:
                         rman_update = RmanUpdate()
+                        rman_update.is_updated_geometry = True
                         rman_update.is_updated_shading = True
                         rman_update.is_updated_transform = True
                         self.rman_updates[ob_key] = rman_update    

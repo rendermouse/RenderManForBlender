@@ -22,6 +22,10 @@ class RmanDraTranslator(RmanTranslator):
 
     def update(self, ob, rman_sg_dra):
         rm = ob.renderman
+        if string_utils.check_frame_sensitive(rm.path_archive):  
+            rman_sg_dra.is_frame_sensitive = True           
+        else:
+            rman_sg_dra.is_frame_sensitive = False
         path_archive = string_utils.expand_string(rm.path_archive)
         bounds = (-100000, 100000, -100000, 100000, -100000, 100000 )
 

@@ -57,9 +57,10 @@ class RmanOpenVDBTranslator(RmanTranslator):
         openvdb_file = filepath_utils.get_real_path(db.filepath)
         if db.is_sequence:
             # if we have a sequence, get the current frame filepath from the grids
-            openvdb_file = filepath_utils.get_real_path(grids.frame_filepath)     
-
-        #openvdb_file = texture_utils.get_txmanager().get_output_vdb(ob)
+            openvdb_file = filepath_utils.get_real_path(grids.frame_filepath)  
+            rman_sg_openvdb.is_frame_sensitive = True
+        else:
+            rman_sg_openvdb.is_frame_sensitive = False
 
         openvdb_attrs = dict()
         openvdb_attrs['filterWidth'] = getattr(rm, 'openvdb_filterwidth')

@@ -35,7 +35,9 @@ class RmanAlembicTranslator(RmanTranslator):
         abc_frame = rm.abc_frame
         if rm.abc_use_scene_frame:
             rman_sg_alembic.is_frame_sensitive = True
-            abc_frame = float(self.rman_scene.bl_frame_current)       
+            abc_frame = float(self.rman_scene.bl_frame_current)    
+        elif string_utils.check_frame_sensitive(abc_filepath):  
+            rman_sg_alembic.is_frame_sensitive = True 
         else:
             rman_sg_alembic.is_frame_sensitive = False
 

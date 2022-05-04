@@ -249,24 +249,6 @@ class RendermanArrayGroup(bpy.types.PropertyGroup):
     value_normal: FloatVectorProperty(name="Value", default=(0.0,0.0,0.0), size=3, subtype="NONE")
     value_point: FloatVectorProperty(name="Value", default=(0.0,0.0,0.0), size=3, subtype="XYZ")                                                            
 
-class RendermanAnimSequenceSettings(bpy.types.PropertyGroup):
-    animated_sequence: BoolProperty(
-        name="Animated Sequence",
-        description="Interpret this archive as an animated sequence (converts #### in file path to frame number)",
-        default=False)
-    sequence_in: IntProperty(
-        name="Sequence In Point",
-        description="The first numbered file to use",
-        default=1)
-    sequence_out: IntProperty(
-        name="Sequence Out Point",
-        description="The last numbered file to use",
-        default=24)
-    blender_start: IntProperty(
-        name="Blender Start Frame",
-        description="The frame in Blender to begin playing back the sequence",
-        default=1)
-
 class Tab_CollectionGroup(bpy.types.PropertyGroup):
 
     #################
@@ -325,7 +307,6 @@ classes = [
     LightLinking,
     RendermanMeshPrimVar,   
     RendermanReferencePosePrimVars,
-    RendermanAnimSequenceSettings,
     Tab_CollectionGroup,
     RENDERMAN_UL_Array_List,
     RendermanArrayGroup

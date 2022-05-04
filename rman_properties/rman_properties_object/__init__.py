@@ -4,7 +4,6 @@ from bpy.props import PointerProperty, StringProperty, BoolProperty, \
 
 from ... import rman_config
 from ...rman_config import RmanBasePropertyGroup
-from ..rman_properties_misc import RendermanAnimSequenceSettings 
 from ..rman_properties_misc import RendermanLightPointer
 from ...rfb_utils import shadergraph_utils
 from ...rfb_utils import object_utils
@@ -43,11 +42,7 @@ class RendermanObjectSettings(RmanBasePropertyGroup, bpy.types.PropertyGroup):
 
     rman_config_name: StringProperty(name='rman_config_name',
                                     default='rman_properties_object')
-
-    archive_anim_settings: PointerProperty(
-        type=RendermanAnimSequenceSettings,
-        name="Animation Sequence Settings")    
-
+ 
     hide_primitive_type: BoolProperty(
         name="Hide Primitive Type",
         default=False
