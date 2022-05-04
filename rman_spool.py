@@ -82,7 +82,7 @@ class RmanSpool(object):
         task.addCommand(command)
         parentTask.addChild(task)            
 
-    def add_blender_render_task(self, frame, parentTask, title, bl_filename, img):
+    def add_blender_render_task(self, frame, parentTask, title, bl_filename, img, chunk=None):
         rm = self.bl_scene.renderman
 
         task = author.Task()
@@ -97,16 +97,19 @@ class RmanSpool(object):
 
         command.argv.append('-b')
         command.argv.append('%%D(%s)' % bl_filename)
-        command.argv.append('-f')
-        command.argv.append(str(frame))
+        if chunk:
+            command.argv.append('-f')
+            command.argv.append('%s..%s' % (str(frame), str(frame+(chunk))))
+        else:
+            command.argv.append('-f')
+            command.argv.append(str(frame))            
 
         task.addCommand(command)
         parentTask.addChild(task)
 
     def generate_blender_batch_tasks(self, anim, parent_task, tasktitle,
-                                start, last, by, bl_filename): 
+                                start, last, by, chunk, bl_filename): 
 
-        rm = self.bl_scene.renderman
         self.any_denoise = display_utils.any_dspys_denoise(self.rman_scene.bl_view_layer)
         img = None
         if not self.any_denoise:
@@ -137,13 +140,25 @@ class RmanSpool(object):
                                     (str(self.depsgraph.view_layer.name)))
             renderframestask.title = renderframestasktitle
 
-            for iframe in range(int(start), int(last + 1), int(by)):
+            if chunk > 1 and by < 2 and (start+chunk < last+1):               
+                iframe = start
+                while (iframe < last+1):
+                    diff = chunk
+                    if ((iframe + chunk) > last+1):
+                        diff = (last) - iframe
+                    prmantasktitle = ("%s Frames: (%d-%d) (blender)" %
+                                    (tasktitle, iframe, iframe+diff))
 
-                prmantasktitle = ("%s Frame: %d (blender)" %
-                                (tasktitle, int(iframe)))
+                    self.add_blender_render_task(iframe, renderframestask, prmantasktitle,
+                                        bl_filename, None, chunk=diff) 
+                    iframe += diff+1
+            else:
+                for iframe in range(start, last + 1, by):
+                    prmantasktitle = ("%s Frame: %d (blender)" %
+                                    (tasktitle, int(iframe)))
 
-                self.add_blender_render_task(iframe, renderframestask, prmantasktitle,
-                                      bl_filename, img)
+                    self.add_blender_render_task(iframe, renderframestask, prmantasktitle,
+                                        bl_filename, img)
 
             parent_task.addChild(renderframestask)                                 
 
@@ -326,6 +341,7 @@ class RmanSpool(object):
         frame_begin = self.bl_scene.frame_start
         frame_end = self.bl_scene.frame_end
         by = self.bl_scene.frame_step     
+        chunk = rm.bl_batch_frame_chunk-1
 
         # update variables
         string_utils.set_var('scene', self.bl_scene.name)
@@ -363,7 +379,7 @@ class RmanSpool(object):
         anim = (frame_begin != frame_end)
 
         self.generate_blender_batch_tasks(anim, parent_task, tasktitle,
-                                frame_begin, frame_end, by, bl_filename)
+                                frame_begin, frame_end, by, chunk, bl_filename)
 
         job.addChild(parent_task)                                
 

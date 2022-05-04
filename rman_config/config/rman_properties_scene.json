@@ -1305,7 +1305,23 @@
             "widget": "mapper",
             "options": "LocalQueue:lq|Tractor:tractor|None:none",
             "help": "System to spool to. None will generate RIB files, but not spool a render."
-        },       
+        },      
+        {
+            "panel": "RENDER_PT_renderman_spooling_export_options",
+            "page": "",
+            "name": "bl_batch_frame_chunk",
+            "label": "Frame Chunking",
+            "type": "int",
+            "default": 1,
+            "min": 1,
+            "max": 10,
+            "help": "Frame chunking. Determines how many frames each Blender batch task will render.",
+            "conditionalVisOps": {
+                "conditionalVisOp": "equalTo",
+                "conditionalVisPath": "spool_style",
+                "conditionalVisValue": "batch"
+            }        
+        },           
         {
             "panel": "RENDER_PT_renderman_spooling_export_options",
             "page": "",
@@ -1341,7 +1357,7 @@
                 "conditionalVis2Path": "use_bl_compositor",
                 "conditionalVis2Value": "1"     
             }      
-        },             
+        },        
         {
             "panel": "RENDER_PT_renderman_spooling_export_options",
             "page": "",
