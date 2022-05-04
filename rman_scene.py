@@ -794,7 +794,9 @@ class RmanScene(object):
         motion_steps = sorted(list(self.motion_steps))
 
         first_sample = False
-        delta = -motion_steps[0]
+        delta = 0.0
+        if len(motion_steps) > 0:
+            delta = -motion_steps[0]
         psys_translator = self.rman_translators['PARTICLES']
         rman_group_translator = self.rman_translators['GROUP']
         for samp, seg in enumerate(motion_steps):

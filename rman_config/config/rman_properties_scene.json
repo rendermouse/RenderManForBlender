@@ -144,8 +144,20 @@
             "widget": "mapper",
             "options": "Off:OFF|In Alpha:ALPHA|Separate AOV:AOV",    
             "help": "Render a holdout matte."
-
-        },          
+        },      
+        {
+            "panel": "RENDER_PT_renderman_render",
+            "page": "",
+            "name": "do_persistent_data",
+            "label": "Persistent Data",
+            "type": "int",
+            "default": 0,
+            "widget": "checkbox",
+            "help": "Keep render data around for faster animation renders, at the cost of increased memory usage. May not work in all cases.",
+            "editable": false,
+            "update_function_name": "update_do_persistent_data",
+            "update_function": "def update_do_persistent_data(self, context):\n    scene = context.scene\n    scene.render.use_persistent_data = self.do_persistent_data"            
+        },             
         {
             "panel": "RENDER_PT_renderman_sampling",
             "page": "IPR Sampling",

@@ -678,34 +678,78 @@ class RmanRender(object):
 
         if rm.external_animation:
             original_frame = bl_scene.frame_current
-            rfb_log().debug("Writing to RIB...")             
-            for frame in range(bl_scene.frame_start, bl_scene.frame_end + 1):
-                bl_view_layer = depsgraph.view_layer
-                config = rman.Types.RtParamList()
-                render_config = rman.Types.RtParamList()
+            do_persistent_data = rm.do_persistent_data
+            rfb_log().debug("Writing to RIB...")     
+            time_start = time.time()
 
-                self.sg_scene = self.sgmngr.CreateScene(config, render_config, self.stats_mgr.rman_stats_session) 
-                try:
-                    self.bl_engine.frame_set(frame, subframe=0.0)
-                    rfb_log().debug("Frame: %d" % frame)
-                    self.rman_is_exporting = True
-                    self.rman_scene.export_for_final_render(depsgraph, self.sg_scene, bl_view_layer, is_external=True)
-                    self.rman_is_exporting = False
-                    rib_output = string_utils.expand_string(rm.path_rib_output, 
-                                                            frame=frame, 
-                                                            asFilePath=True)                                                                            
-                    self.sg_scene.Render("rib %s %s" % (rib_output, rib_options))
+            if do_persistent_data:
+                        
+                for frame in range(bl_scene.frame_start, bl_scene.frame_end + 1):
+                    bl_view_layer = depsgraph.view_layer
+                    config = rman.Types.RtParamList()
+                    render_config = rman.Types.RtParamList()
+
+                    if self.sg_scene is None:
+                        self.sg_scene = self.sgmngr.CreateScene(config, render_config, self.stats_mgr.rman_stats_session) 
+                    try:
+                        self.bl_engine.frame_set(frame, subframe=0.0)
+                        rfb_log().debug("Frame: %d" % frame)
+                        if frame == bl_scene.frame_start:
+                            self.rman_is_exporting = True
+                            self.rman_scene.export_for_final_render(depsgraph, self.sg_scene, bl_view_layer, is_external=True)
+                            self.rman_is_exporting = False
+                        else:
+                            self.rman_scene_sync.batch_update_scene(bpy.context, depsgraph)
+                            
+                        rib_output = string_utils.expand_string(rm.path_rib_output, 
+                                                                frame=frame, 
+                                                                asFilePath=True)
+                        self.sg_scene.Render("rib %s %s" % (rib_output, rib_options))                
+
+                    except Exception as e:      
+                        self.bl_engine.report({'ERROR'}, 'Export failed: %s' % str(e))
+                        rfb_log().error('Export Failed:\n%s' % traceback.format_exc())
+                        self.stop_render(stop_draw_thread=False)
+                        self.del_bl_engine()
+                        return False         
+
+                self.sgmngr.DeleteScene(self.sg_scene) 
+                self.sg_scene = None   
+                self.rman_scene.reset()       
+            else:     
+                for frame in range(bl_scene.frame_start, bl_scene.frame_end + 1):
+                    bl_view_layer = depsgraph.view_layer
+                    config = rman.Types.RtParamList()
+                    render_config = rman.Types.RtParamList()
+
+                    self.sg_scene = self.sgmngr.CreateScene(config, render_config, self.stats_mgr.rman_stats_session) 
+                    try:
+                        self.bl_engine.frame_set(frame, subframe=0.0)
+                        rfb_log().debug("Frame: %d" % frame)
+                        self.rman_is_exporting = True
+                        self.rman_scene.export_for_final_render(depsgraph, self.sg_scene, bl_view_layer, is_external=True)
+                        self.rman_is_exporting = False
+                            
+                        rib_output = string_utils.expand_string(rm.path_rib_output, 
+                                                                frame=frame, 
+                                                                asFilePath=True)
+                        self.sg_scene.Render("rib %s %s" % (rib_output, rib_options))
+                        self.sgmngr.DeleteScene(self.sg_scene) 
+                        self.sg_scene = None   
+                        self.rman_scene.reset()                     
+
+                    except Exception as e:      
+                        self.bl_engine.report({'ERROR'}, 'Export failed: %s' % str(e))
+                        rfb_log().error('Export Failed:\n%s' % traceback.format_exc())
+                        self.stop_render(stop_draw_thread=False)
+                        self.del_bl_engine()
+                        return False         
+
+                if self.sg_scene:
                     self.sgmngr.DeleteScene(self.sg_scene) 
                     self.sg_scene = None   
-                    self.rman_scene.reset()                     
-
-                except Exception as e:      
-                    self.bl_engine.report({'ERROR'}, 'Export failed: %s' % str(e))
-                    rfb_log().error('Export Failed:\n%s' % traceback.format_exc())
-                    self.stop_render(stop_draw_thread=False)
-                    self.del_bl_engine()
-                    return False                       
-
+                    self.rman_scene.reset()                                            
+            rfb_log().info("Finished parsing scene. Total time: %s" % string_utils._format_time_(time.time() - time_start))
             self.bl_engine.frame_set(original_frame, subframe=0.0)
             
 
