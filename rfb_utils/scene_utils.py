@@ -63,7 +63,7 @@ def should_use_bl_compositor(bl_scene):
         # explicitiy turned off
         return False
     
-    return bl_scene.use_nodes
+    return bl_scene.use_nodes and bl_scene.render.use_compositing
 
 def any_areas_shading():           
     '''
