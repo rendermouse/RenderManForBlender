@@ -101,7 +101,6 @@ class OBJECT_PT_renderman_object_geometry(Panel, CollectionPanel):
     def draw_props(self, layout, context):
         ob = context.object
         rm = ob.renderman
-        anim = rm.archive_anim_settings
         active = context.active_object
         rman_type = object_utils._detect_primitive_(active)
 
@@ -698,7 +697,6 @@ class OBJECT_PT_renderman_object_geometry_attributes(Panel, CollectionPanel):
         layout = self.layout        
         ob = context.object
         rm = ob.renderman
-        anim = rm.archive_anim_settings
         active = context.active_object
         rman_type = object_utils._detect_primitive_(active)
 

@@ -460,18 +460,22 @@ class RmanCameraTranslator(RmanTranslator):
                     rman_sg_camera.use_focus_object = cam_rm.rman_focus_object
                     if cam_rm.rman_focus_object:
                         dof_focal_distance = (ob.location - cam_rm.rman_focus_object.location).length
+                        rman_sg_camera.bl_cam_props.dof_focal_length = dof_focal_distance
                         rman_sg_node = self.rman_scene.get_rman_prototype(object_utils.prototype_key(cam_rm.rman_focus_object))
                         if rman_sg_node:
                             rman_sg_camera.rman_focus_object = rman_sg_node                        
                     else:
                         dof_focal_distance = cam_rm.rman_focus_distance
+                        rman_sg_camera.bl_cam_props.dof_focal_length = dof_focal_distance
                         rman_sg_camera.rman_focus_object = None
                     if dof_focal_distance > 0.0:
                         dof_focal_length = (cam.lens * 0.001)
+                        rman_sg_camera.bl_cam_props.dof_focal_length = dof_focal_distance
                         projparams.SetFloat(self.rman_scene.rman.Tokens.Rix.k_fStop, cam_rm.rman_aperture_fstop)
                         projparams.SetFloat(self.rman_scene.rman.Tokens.Rix.k_focalLength, dof_focal_length)
                     projparams.SetFloat(self.rman_scene.rman.Tokens.Rix.k_focalDistance, dof_focal_distance)                       
                 else:
+                    rman_sg_camera.bl_cam_props.dof_focal_length = -1
                     rman_sg_camera.use_focus_object = False
                     rman_sg_camera.rman_focus_object = None                    
 

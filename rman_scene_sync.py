@@ -151,20 +151,20 @@ class RmanSceneSync(object):
         for ob in object_list:
             ob.update_tag()
 
-    def material_updated(self, obj):
+    def material_updated(self, obj, rman_sg_material=None):
         if isinstance(obj, bpy.types.DepsgraphUpdate):
             mat = obj.id
         else:
             mat = obj
-        rman_sg_material = self.rman_scene.rman_materials.get(mat.original, None)
+        if rman_sg_material is None:
+            rman_sg_material = self.rman_scene.rman_materials.get(mat.original, None)
         translator = self.rman_scene.rman_translators["MATERIAL"]         
         db_name = object_utils.get_db_name(mat)
         if not rman_sg_material:
             # Double check if we can't find the material because of an undo
             rman_sg_material = self.update_materials_dict(mat)
 
-        with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):   
-            mat = obj.id              
+        with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):              
             if not rman_sg_material:
                 rfb_log().debug("New material: %s" % mat.name)
                 db_name = object_utils.get_db_name(mat)
@@ -182,11 +182,12 @@ class RmanSceneSync(object):
         with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):              
             rman_group_translator.update_transform(ob, rman_sg_lightfilter)
 
-    def light_filter_updated(self, obj, input_ob=None):
-        if input_ob:
-            ob = input_ob.evaluated_get(self.rman_scene.depsgraph)
-        else:
+    def light_filter_updated(self, obj, force_update=False):
+        if isinstance(obj, bpy.types.DepsgraphUpdate):
             ob = obj.id.evaluated_get(self.rman_scene.depsgraph)
+        else:            
+            ob = obj.evaluated_get(self.rman_scene.depsgraph)
+
         proto_key = object_utils.prototype_key(ob)
         rman_sg_lightfilter = self.rman_scene.get_rman_prototype(proto_key)
         if not rman_sg_lightfilter:
@@ -197,10 +198,10 @@ class RmanSceneSync(object):
             rman_update.is_updated_transform = obj.is_updated_transform
             self.rman_updates[ob.original] = rman_update               
             return
-        if obj.is_updated_transform or obj.is_updated_shading:
+        if force_update or obj.is_updated_transform or obj.is_updated_shading:
             rfb_log().debug("\tLight Filter: %s Transform Updated" % ob.name)
             self.light_filter_transform_updated(ob, rman_sg_lightfilter)
-        if obj.is_updated_geometry or obj.is_updated_shading:
+        if force_update or obj.is_updated_geometry:
             rfb_log().debug("\tLight Filter: %s Shading Updated" % ob.name)
             with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):                
                 self.rman_scene.rman_translators['LIGHTFILTER'].update(ob, rman_sg_lightfilter)
@@ -213,8 +214,11 @@ class RmanSceneSync(object):
                         rman_update.is_updated_transform = True
                         self.rman_updates[light_ob.original] = rman_update                        
 
-    def camera_updated(self, ob_update):
-        ob = ob_update.id.evaluated_get(self.rman_scene.depsgraph)
+    def camera_updated(self, ob_update, force_update=False):
+        if isinstance(ob_update, bpy.types.DepsgraphUpdate):
+            ob = ob_update.id.evaluated_get(self.rman_scene.depsgraph)
+        else:
+            ob = ob_update
         with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
             rman_sg_camera = self.rman_scene.rman_cameras.get(ob.original)
             translator = self.rman_scene.rman_translators['CAMERA']
@@ -229,14 +233,14 @@ class RmanSceneSync(object):
                 self.rman_scene.sg_scene.Root().AddCoordinateSystem(rman_sg_camera.sg_node)
                 return
 
-            if ob_update.is_updated_geometry:
+            if force_update or ob_update.is_updated_geometry:
                 rfb_log().debug("\tUpdated Camera: %s" % ob.name)
                 if not self.rman_scene.is_viewport_render:
                     translator.update(ob, rman_sg_camera)  
                 else:
                     translator.update_viewport_cam(ob, rman_sg_camera, force_update=True)              
 
-            if ob_update.is_updated_transform:
+            if force_update or ob_update.is_updated_transform:
                 # we deal with main camera transforms in view_draw
                 if rman_sg_camera == self.rman_scene.main_camera:
                     return
@@ -343,6 +347,89 @@ class RmanSceneSync(object):
         for portal in scene_utils.get_all_portals(ob):
            portal.original.update_tag()
 
+    def check_light_datablock(self, obj):
+        if isinstance(obj, bpy.types.DepsgraphUpdate):
+            ob = obj.id.original
+        else:
+            ob = obj.original
+        users = self.rman_scene.context.blend_data.user_map(subset={ob}, value_types={'OBJECT'})
+        for o in users[ob]:
+            rman_type = object_utils._detect_primitive_(o)
+            if rman_type == 'LIGHTFILTER':
+                self.light_filter_updated(o, force_update=True)
+            elif o.original not in self.rman_updates:
+                rman_update = RmanUpdate()
+                rman_update.is_updated_geometry = True
+                rman_update.is_updated_shading = True
+                self.rman_updates[o.original] = rman_update 
+
+    def check_focus_object(self, ob):
+        for camera in bpy.data.cameras:
+            rm = camera.renderman
+            if rm.rman_focus_object and rm.rman_focus_object.original == ob.original:
+                users = self.rman_scene.context.blend_data.user_map(subset={camera})
+                for o in users[camera]:
+                    self.camera_updated(o.original, force_update=True)    
+
+    def check_object_datablock(self, obj): 
+        ob_eval = obj.id.evaluated_get(self.rman_scene.depsgraph)
+        rman_type = object_utils._detect_primitive_(ob_eval)
+
+        if ob_eval.type in ('ARMATURE'):
+            return
+        
+        # These types need special handling                
+        if rman_type == 'EMPTY':
+            self.update_empty(obj)                     
+        elif rman_type == 'LIGHTFILTER':
+            self.light_filter_updated(obj)            
+        elif rman_type == 'CAMERA':
+            self.camera_updated(obj) 
+        else:                                    
+            rfb_log().debug("\tObject: %s Updated" % obj.id.name)
+            rfb_log().debug("\t    is_updated_geometry: %s" % str(obj.is_updated_geometry))
+            rfb_log().debug("\t    is_updated_shading: %s" % str(obj.is_updated_shading))
+            rfb_log().debug("\t    is_updated_transform: %s" % str(obj.is_updated_transform))                
+
+            if obj.id.original not in self.rman_updates:
+                rman_update = RmanUpdate()
+                rman_update.is_updated_geometry = obj.is_updated_geometry
+                rman_update.is_updated_shading = obj.is_updated_shading
+                rman_update.is_updated_transform = obj.is_updated_transform
+                self.rman_updates[obj.id.original] = rman_update
+
+        # Check if this object is the focus object the camera. If it is
+        # we need to update the camera
+        if obj.is_updated_transform:
+            self.check_focus_object(ob_eval)           
+
+    def check_shader_nodetree(self, obj):
+        if obj.id.name in bpy.data.node_groups:
+            if len(obj.id.nodes) < 1:
+                return
+            if not obj.id.name.startswith(rman_constants.RMAN_FAKE_NODEGROUP):
+                return
+            # this is one of our fake node groups with ramps
+            # update all of the users of this node tree
+            rfb_log().debug("ShaderNodeTree updated: %s" % obj.id.name)
+            users = self.rman_scene.context.blend_data.user_map(subset={obj.id.original})
+            for o in users[obj.id.original]:
+                if self.rman_scene.is_interactive:
+                    if hasattr(o, 'rman_nodetree'):
+                        o.rman_nodetree.update_tag()
+                    elif isinstance(o, bpy.types.Material):
+                        self.update_material(o)                         
+                    elif isinstance(o, bpy.types.Light):                    
+                        self.check_light_datablock(o)
+                    elif hasattr(o, 'node_tree'):
+                        o.node_tree.update_tag()                         
+                else:
+                    if isinstance(o, bpy.types.Light):
+                        self.check_light_datablock(o)
+                    elif isinstance(o, bpy.types.Material):
+                        rman_update = RmanUpdate()
+                        self.rman_updates[o.original] = rman_update        
+
     def batch_update_scene(self, context, depsgraph):
         self.rman_scene.bl_frame_current = self.rman_scene.bl_scene.frame_current
         string_utils.update_frame_token(self.rman_scene.bl_frame_current)
@@ -354,6 +441,7 @@ class RmanSceneSync(object):
         self.rman_scene.bl_scene = depsgraph.scene_eval
         self.rman_scene.context = context     
 
+        # updat the frame number
         options = self.rman_scene.sg_scene.GetOptions()
         options.SetInteger(self.rman.Tokens.Rix.k_Ri_Frame, self.rman_scene.bl_frame_current) 
         self.rman_scene.sg_scene.SetOptions(options)     
@@ -394,52 +482,21 @@ class RmanSceneSync(object):
                         self.rman_updates[o.original] = rman_update  
 
             elif isinstance(obj.id, bpy.types.Light):
-                users = context.blend_data.user_map(subset={obj.id.original}, value_types={'OBJECT'})
-                for o in users[obj.id.original]:
-                    rman_type = object_utils._detect_primitive_(o)
-                    if rman_type == 'LIGHTFILTER':
-                        self.light_filter_updated(obj, input_ob=o.original)
-                    elif o.original not in self.rman_updates:
-                        rman_update = RmanUpdate()
-                        rman_update.is_updated_geometry = True
-                        rman_update.is_updated_shading = True
-                        self.rman_updates[o.original] = rman_update                             
+                self.check_light_datablock(obj)
 
             elif isinstance(obj.id, bpy.types.Material):
                 rfb_log().debug("Material updated: %s" % obj.id.name)
-                rman_update = RmanUpdate()
-                self.rman_updates[o.original] = rman_update
+                ob = obj.id
+                if ob.original not in self.rman_updates:
+                    rman_update = RmanUpdate()
+                    self.rman_updates[ob.original] = rman_update
+
+            elif isinstance(obj.id, bpy.types.ShaderNodeTree):
+                self.check_shader_nodetree(obj)
 
             elif isinstance(obj.id, bpy.types.Object):                
-                ob_eval = obj.id.evaluated_get(depsgraph)
-                rman_type = object_utils._detect_primitive_(ob_eval)
-
-                if ob.type in ('ARMATURE'):
-                    continue
-                
-                # These types need special handling              
-                if rman_type == 'EMPTY':
-                    self.update_empty(obj)   
-                    continue 
-                if rman_type == 'LIGHTFILTER':
-                    self.light_filter_updated(obj)
-                    continue
-                if rman_type == 'CAMERA':
-                    self.camera_updated(obj)
-                    continue  
-
-                rfb_log().debug("\tObject: %s Updated" % obj.id.name)
-                rfb_log().debug("\t    is_updated_geometry: %s" % str(obj.is_updated_geometry))
-                rfb_log().debug("\t    is_updated_shading: %s" % str(obj.is_updated_shading))
-                rfb_log().debug("\t    is_updated_transform: %s" % str(obj.is_updated_transform))                
-
-                if obj.id.original not in self.rman_updates:
-                    rman_update = RmanUpdate()
-                    rman_update.is_updated_geometry = obj.is_updated_geometry
-                    rman_update.is_updated_shading = obj.is_updated_shading
-                    rman_update.is_updated_transform = obj.is_updated_transform
-                    self.rman_updates[obj.id.original] = rman_update
-
+                self.check_object_datablock(obj)
+                                
         if not self.rman_updates and self.num_instances_changed:
             # The number of instances changed, but we are not able
             # to determine what changed. We are forced to check
@@ -450,11 +507,10 @@ class RmanSceneSync(object):
         self.check_instances_batch()
 
         # update any materials
-        material_translator = self.rman_scene.rman_translators['MATERIAL']
         for id, rman_sg_material in self.rman_scene.rman_materials.items():              
             if rman_sg_material.is_frame_sensitive or id.original in self.rman_updates:
                 mat = id.original
-                material_translator.update(mat, rman_sg_material)    
+                self.material_updated(mat, rman_sg_material)    
                                                 
         self.rman_scene.export_integrator()
         self.rman_scene.export_samplefilters()
@@ -551,7 +607,6 @@ class RmanSceneSync(object):
                    
     @time_this
     def update_scene(self, context, depsgraph):
-        ## FIXME: this function is waaayyy too big and is doing too much stuff
 
         self.rman_updates = dict()
         self.num_instances_changed = False
@@ -607,40 +662,9 @@ class RmanSceneSync(object):
 
             elif isinstance(obj.id, bpy.types.Mesh):
                 rfb_log().debug("Mesh updated: %s" % obj.id.name)
-                '''
-                # Experimental code path. We can use context.blend_data.user_map to ask
-                # what objects use this mesh. We can then loop thru and call object_update on these
-                # objects.
-                # We could also try doing the same thing when we add a new Material. i.e.:
-                # use user_map to figure out what objects are using this material; however, that would require
-                # two loops thru user_map
-                users = context.blend_data.user_map(subset={obj.id.original}, value_types={'OBJECT'})
-                translator = self.rman_scene.rman_translators['MESH']
-                with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
-                    for o in users[obj.id.original]:
-                        rman_type = object_utils._detect_primitive_(o)
-                        if rman_type != 'MESH':
-                            continue
-                        rman_sg_node = self.rman_scene.rman_objects.get(o.original, None)
-                        translator.update(o, rman_sg_node)
-                        # material slots could have changed, so we need to double
-                        # check that too
-                        for k,v in rman_sg_node.instances.items():
-                            self.rman_scene.attach_material(o, v)                
-                return
-                '''
 
-            elif isinstance(obj.id, bpy.types.PointLight) or isinstance(obj.id, bpy.types.AreaLight):
-                users = context.blend_data.user_map(subset={obj.id.original}, value_types={'OBJECT'})
-                for o in users[obj.id.original]:
-                    rman_type = object_utils._detect_primitive_(o)
-                    if rman_type == 'LIGHTFILTER':
-                        self.light_filter_updated(obj, input_ob=o.original)
-                    elif o.original not in self.rman_updates:
-                        rman_update = RmanUpdate()
-                        rman_update.is_updated_geometry = True
-                        rman_update.is_updated_shading = True
-                        self.rman_updates[o.original] = rman_update                         
+            elif isinstance(obj.id, bpy.types.Light):
+                self.check_light_datablock(obj)                    
 
             elif isinstance(obj.id, bpy.types.ParticleSettings):
                 rfb_log().debug("ParticleSettings updated: %s" % obj.id.name)
@@ -670,60 +694,11 @@ class RmanSceneSync(object):
                             self.rman_updates[o.original] = rman_update                         
                         
             elif isinstance(obj.id, bpy.types.ShaderNodeTree):
-                if obj.id.name in bpy.data.node_groups:
-                    if len(obj.id.nodes) < 1:
-                        continue
-                    if not obj.id.name.startswith(rman_constants.RMAN_FAKE_NODEGROUP):
-                        continue
-                    # this is one of our fake node groups with ramps
-                    # update all of the users of this node tree
-                    rfb_log().debug("ShaderNodeTree updated: %s" % obj.id.name)
-                    users = context.blend_data.user_map(subset={obj.id.original})
-                    for o in users[obj.id.original]:
-                        if hasattr(o, 'rman_nodetree'):
-                            o.rman_nodetree.update_tag()
-                        elif hasattr(o, 'node_tree'):
-                            o.node_tree.update_tag()                
+                self.check_shader_nodetree(obj)
                                             
             elif isinstance(obj.id, bpy.types.Object):                
-                ob_eval = obj.id.evaluated_get(depsgraph)
-                rman_type = object_utils._detect_primitive_(ob_eval)
+                self.check_object_datablock(obj)                     
 
-                if ob.type in ('ARMATURE'):
-                    continue
-                
-                # These types need special handling                
-                if rman_type == 'EMPTY':
-                    self.update_empty(obj)   
-                    continue             
-                if rman_type == 'LIGHTFILTER':
-                    self.light_filter_updated(obj)
-                    continue                
-                if ob.type in ['CAMERA']:
-                    self.camera_updated(obj)                       
-                    continue         
-                
-                rfb_log().debug("\tObject: %s Updated" % obj.id.name)
-                rfb_log().debug("\t    is_updated_geometry: %s" % str(obj.is_updated_geometry))
-                rfb_log().debug("\t    is_updated_shading: %s" % str(obj.is_updated_shading))
-                rfb_log().debug("\t    is_updated_transform: %s" % str(obj.is_updated_transform))                
-
-                if obj.id.original not in self.rman_updates:
-                    rman_update = RmanUpdate()
-                    rman_update.is_updated_geometry = obj.is_updated_geometry
-                    rman_update.is_updated_shading = obj.is_updated_shading
-                    rman_update.is_updated_transform = obj.is_updated_transform
-                    self.rman_updates[obj.id.original] = rman_update
-
-                # Check if this object is the focus object the camera. If it is
-                # we need to update the camera
-                if obj.is_updated_transform:
-                    for camera in bpy.data.cameras:
-                        rm = camera.renderman
-                        if rm.rman_focus_object and rm.rman_focus_object.original == ob_eval.original:
-                            camera.update_tag()
-
-                    
             elif isinstance(obj.id, bpy.types.Collection):
                 rfb_log().debug("Collection updated: %s" % obj.id.name)
                 #self.update_collection(obj.id)

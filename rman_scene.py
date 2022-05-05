@@ -296,6 +296,7 @@ class RmanScene(object):
         string_utils.set_var('layer', self.bl_view_layer.name.replace(' ', '_'))
 
         self.bl_frame_current = self.bl_scene.frame_current
+        string_utils.update_frame_token(self.bl_frame_current)
 
         rfb_log().debug("Creating root scene graph node")
         self.export_root_sg_node()        
