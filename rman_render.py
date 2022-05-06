@@ -242,6 +242,119 @@ def preload_xpu():
         rfb_log().debug('Failed to preload xpu: {0}'.format(error))
         return None
 
+class BlRenderResultHelper:
+    def __init__(self, rman_render, dspy_dict):
+        self.rman_render = rman_render
+        self.dspy_dict = dspy_dict
+        self.width = -1
+        self.height = -1
+        self.size_x = -1
+        self.size_y = -1
+        self.bl_result = None
+        self.bl_image_rps = dict()
+        self.render = None
+        self.render_view = None
+        self.image_scale = -1
+        self.write_aovs = False
+
+    def register_passes(self):
+        self.render = self.rman_render.rman_scene.bl_scene.render
+        self.render_view = self.rman_render.bl_engine.active_view_get()
+        self.image_scale = self.render.resolution_percentage / 100.0
+        self.width = int(self.render.resolution_x * self.image_scale)
+        self.height = int(self.render.resolution_y * self.image_scale)
+
+        # register any AOV's as passes
+        for i, dspy_nm in enumerate(self.dspy_dict['displays'].keys()):
+            if i == 0:
+                continue     
+
+            num_channels = -1
+            while num_channels == -1:
+                num_channels = self.rman_render.get_numchannels(i)    
+
+            dspy = self.dspy_dict['displays'][dspy_nm]
+            dspy_chan = dspy['params']['displayChannels'][0]
+            chan_info = self.dspy_dict['channels'][dspy_chan]
+            chan_type = chan_info['channelType']['value']                        
+
+            if num_channels == 4:
+                self.rman_render.bl_engine.add_pass(dspy_nm, 4, 'RGBA')
+            elif num_channels == 3:
+                if chan_type == 'color':
+                    self.rman_render.bl_engine.add_pass(dspy_nm, 3, 'RGB')
+                else:
+                    self.rman_render.bl_engine.add_pass(dspy_nm, 3, 'XYZ')
+            elif num_channels == 2:
+                self.rman_render.bl_engine.add_pass(dspy_nm, 2, 'XY')                        
+            else:
+                self.rman_render.bl_engine.add_pass(dspy_nm, 1, 'X')
+
+        self.size_x = self.width
+        self.size_y = self.height
+        if self.render.use_border:
+            self.size_x = int(self.width * (self.render.border_max_x - self.render.border_min_x))
+            self.size_y = int(self.height * (self.render.border_max_y - self.render.border_min_y))     
+
+        self.bl_result = self.rman_render.bl_engine.begin_result(0, 0,
+                                    self.size_x,
+                                    self.size_y,
+                                    view=self.render_view)                        
+
+        for i, dspy_nm in enumerate(self.dspy_dict['displays'].keys()):
+            if i == 0:
+                render_pass = self.bl_result.layers[0].passes.find_by_name("Combined", self.render_view)
+            else:
+                render_pass = self.bl_result.layers[0].passes.find_by_name(dspy_nm, self.render_view)
+            self.bl_image_rps[i] = render_pass           
+
+    def update_passes(self): 
+        for i, rp in self.bl_image_rps.items():
+            buffer = self.rman_render._get_buffer(self.width, self.height, image_num=i, 
+                                        num_channels=rp.channels, 
+                                        as_flat=False, 
+                                        back_fill=False,
+                                        render=self.render)
+            if buffer is None:
+                continue
+            rp.rect = buffer
+
+        if self.rman_render.bl_engine:
+            self.rman_render.bl_engine.update_result(self.bl_result)
+
+    def finish_passes(self):           
+        if self.bl_result:
+            if self.rman_render.bl_engine:
+                self.rman_render.bl_engine.end_result(self.bl_result) 
+
+            # check if we should write out the AOVs
+            if self.write_aovs:
+                for i, dspy_nm in enumerate(self.dspy_dict['displays'].keys()):
+                    filepath = self.dspy_dict['displays'][dspy_nm]['filePath']
+                    buffer = self.rman_render._get_buffer(self.width, self.height, image_num=i, as_flat=True)
+                    if buffer is None:
+                        continue
+
+                    if i == 0:
+                        # write out the beauty with a 'raw' substring
+                        toks = os.path.splitext(filepath)
+                        filepath = '%s_beauty_raw.exr' % (toks[0])
+
+                    bl_image = bpy.data.images.new(dspy_nm, self.width, self.height)
+                    try:
+                        if isinstance(buffer, numpy.ndarray):
+                            buffer = buffer.tolist()
+                        bl_image.use_generated_float = True
+                        bl_image.filepath_raw = filepath                            
+                        bl_image.pixels.foreach_set(buffer)
+                        bl_image.file_format = 'OPEN_EXR'
+                        bl_image.update()
+                        bl_image.save()
+                    except:
+                        pass
+                    finally:
+                        bpy.data.images.remove(bl_image)            
+
 class RmanRender(object):
     '''
     RmanRender class. This class is responsible for starting and stopping
@@ -505,6 +618,7 @@ class RmanRender(object):
         self.rman_is_xpu = (rendervariant == 'xpu')
 
         boot_strapping = False
+        bl_rr_helper = None
         if self.sg_scene is None:
             boot_strapping = True
             self.sg_scene = self.sgmngr.CreateScene(config, render_config, self.stats_mgr.rman_stats_session) 
@@ -556,111 +670,17 @@ class RmanRender(object):
             self.sg_scene.Render(render_cmd)
         if self.rman_render_into == 'blender':  
             dspy_dict = display_utils.get_dspy_dict(self.rman_scene, include_holdouts=False)
-            
-            render = self.rman_scene.bl_scene.render
-            render_view = self.bl_engine.active_view_get()
-            image_scale = render.resolution_percentage / 100.0
-            width = int(render.resolution_x * image_scale)
-            height = int(render.resolution_y * image_scale)
-
-            bl_image_rps= dict()
-
-            # register any AOV's as passes
-            for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
-                if i == 0:
-                    continue     
-
-                num_channels = -1
-                while num_channels == -1:
-                    num_channels = self.get_numchannels(i)    
-
-                dspy = dspy_dict['displays'][dspy_nm]
-                dspy_chan = dspy['params']['displayChannels'][0]
-                chan_info = dspy_dict['channels'][dspy_chan]
-                chan_type = chan_info['channelType']['value']                        
-
-                if num_channels == 4:
-                    self.bl_engine.add_pass(dspy_nm, 4, 'RGBA')
-                elif num_channels == 3:
-                    if chan_type == 'color':
-                        self.bl_engine.add_pass(dspy_nm, 3, 'RGB')
-                    else:
-                        self.bl_engine.add_pass(dspy_nm, 3, 'XYZ')
-                elif num_channels == 2:
-                    self.bl_engine.add_pass(dspy_nm, 2, 'XY')                        
-                else:
-                    self.bl_engine.add_pass(dspy_nm, 1, 'X')
-
-            size_x = width
-            size_y = height
-            if render.use_border:
-                size_x = int(width * (render.border_max_x - render.border_min_x))
-                size_y = int(height * (render.border_max_y - render.border_min_y))     
-
-            result = self.bl_engine.begin_result(0, 0,
-                                        size_x,
-                                        size_y,
-                                        view=render_view)                        
-
-            for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
-                if i == 0:
-                    render_pass = result.layers[0].passes.find_by_name("Combined", render_view)           
-                else:
-                    render_pass = result.layers[0].passes.find_by_name(dspy_nm, render_view)
-                bl_image_rps[i] = render_pass            
-            
-            self.start_stats_thread()
-            while self.bl_engine and not self.bl_engine.test_break() and self.rman_is_live_rendering:
-                time.sleep(0.01)
-                for i, rp in bl_image_rps.items():
-                    buffer = self._get_buffer(width, height, image_num=i, 
-                                                num_channels=rp.channels, 
-                                                as_flat=False, 
-                                                back_fill=False,
-                                                render=render)
-                    if buffer is None:
-                        continue
-                    rp.rect = buffer
-        
-                if self.bl_engine:
-                    self.bl_engine.update_result(result)        
-        
-            if result:
-                if self.bl_engine:
-                    self.bl_engine.end_result(result) 
-
-                # check if we should write out the AOVs
-                if use_compositor and rm.use_bl_compositor_write_aovs:
-                    for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
-                        filepath = dspy_dict['displays'][dspy_nm]['filePath']
-                        buffer = self._get_buffer(width, height, image_num=i, as_flat=True)
-                        if buffer is None:
-                            continue
-
-                        if i == 0:
-                            # write out the beauty with a 'raw' substring
-                            toks = os.path.splitext(filepath)
-                            filepath = '%s_beauty_raw.exr' % (toks[0])
- 
-                        bl_image = bpy.data.images.new(dspy_nm, width, height)
-                        try:
-                            if isinstance(buffer, numpy.ndarray):
-                                buffer = buffer.tolist()
-                            bl_image.use_generated_float = True
-                            bl_image.filepath_raw = filepath                            
-                            bl_image.pixels.foreach_set(buffer)
-                            bl_image.file_format = 'OPEN_EXR'
-                            bl_image.update()
-                            bl_image.save()
-                        except:
-                            pass
-                        finally:
-                            bpy.data.images.remove(bl_image)      
+            bl_rr_helper = BlRenderResultHelper(self, dspy_dict)
+            bl_rr_helper.write_aovs = (use_compositor and rm.use_bl_compositor_write_aovs)
+            bl_rr_helper.register_passes()
                               
-        else:
-            self.start_stats_thread()
-            while self.bl_engine and not self.bl_engine.test_break() and self.rman_is_live_rendering:
-                time.sleep(0.01)      
+        self.start_stats_thread()
+        while self.bl_engine and not self.bl_engine.test_break() and self.rman_is_live_rendering:
+            time.sleep(0.01)      
+            if bl_rr_helper:
+                bl_rr_helper.update_passes()
+        if bl_rr_helper:
+            bl_rr_helper.finish_passes()
 
         if not was_connected and self.stats_mgr.is_connected():
             # if stats was not started before rendering, disconnect
