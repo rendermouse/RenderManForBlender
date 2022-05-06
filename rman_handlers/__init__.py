@@ -79,7 +79,6 @@ def render_post(bl_scene):
     global __ORIGINAL_BL_FILEPATH__
     global __ORIGINAL_BL_FILE_FORMAT__
     global __BL_TMP_FILE__
-    from ..rfb_utils import display_utils
 
     bl_scene.render.filepath = __ORIGINAL_BL_FILEPATH__
     bl_scene.render.image_settings.file_format = __ORIGINAL_BL_FILE_FORMAT__

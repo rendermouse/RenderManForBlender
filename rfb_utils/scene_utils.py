@@ -55,10 +55,10 @@ def should_use_bl_compositor(bl_scene):
     Returns:
         (bool) - true if we should use the compositor; false if not
     '''
-    if not bpy.app.background:
-        return True
-
     rm = bl_scene.renderman
+    if not bpy.app.background:
+        return (rm.render_into == 'blender')
+
     if not rm.use_bl_compositor:
         # explicitiy turned off
         return False

@@ -242,7 +242,7 @@ class RmanSceneSync(object):
 
             if force_update or ob_update.is_updated_transform:
                 # we deal with main camera transforms in view_draw
-                if rman_sg_camera == self.rman_scene.main_camera:
+                if self.rman_scene.is_viewport_render:
                     return
                 if translator._update_render_cam_transform(ob, rman_sg_camera):
                     rfb_log().debug("\tCamera Transform Updated: %s" % ob.name)
