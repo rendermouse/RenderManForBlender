@@ -471,8 +471,6 @@ class RmanRender(object):
             if use_compositor:
                 self.rman_render_into = 'blender'
                 is_external = False
-            else:
-                do_persistent_data = False
             self.rman_callbacks.clear()
             ec = rman.EventCallbacks.Get()
             ec.RegisterCallback("Render", render_cb, self)
@@ -480,8 +478,7 @@ class RmanRender(object):
             if envconfig().getenv('RFB_BATCH_NO_PROGRESS') is None:  
                 ec.RegisterCallback("Progress", batch_progress_cb, self)
                 self.rman_callbacks["Progress"] = batch_progress_cb               
-            rman.Dspy.DisableDspyServer()    
-            rman.Dspy.EnableDspyServer()      
+            rman.Dspy.DisableDspyServer()       
         else:
 
             self.rman_render_into = rm.render_into
@@ -552,7 +549,7 @@ class RmanRender(object):
         
         # Start the render
         render_cmd = "prman"
-        if self.rman_render_into == 'blender':
+        if self.rman_render_into == 'blender' or do_persistent_data:
             render_cmd = "prman -live"
         render_cmd = self._append_render_cmd(render_cmd)
         if boot_strapping:

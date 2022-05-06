@@ -121,11 +121,12 @@ def register():
     if render_post not in bpy.app.handlers.render_post:
         bpy.app.handlers.render_post.append(render_post) 
 
-    if render_stop not in bpy.app.handlers.render_complete:
-        bpy.app.handlers.render_complete.append(render_stop)
+    if not bpy.app.background:
+        if render_stop not in bpy.app.handlers.render_complete:
+            bpy.app.handlers.render_complete.append(render_stop)
 
-    if render_stop not in bpy.app.handlers.render_cancel:
-        bpy.app.handlers.render_cancel.append(render_stop)
+        if render_stop not in bpy.app.handlers.render_cancel:
+            bpy.app.handlers.render_cancel.append(render_stop)
 
 def unregister():
 
