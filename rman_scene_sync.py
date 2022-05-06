@@ -430,6 +430,7 @@ class RmanSceneSync(object):
                         rman_update = RmanUpdate()
                         self.rman_updates[o.original] = rman_update        
 
+    @time_this
     def batch_update_scene(self, context, depsgraph):
         self.rman_scene.bl_frame_current = self.rman_scene.bl_scene.frame_current
         string_utils.update_frame_token(self.rman_scene.bl_frame_current)
@@ -453,72 +454,73 @@ class RmanSceneSync(object):
             self.num_instances_changed = True
             self.rman_scene.num_object_instances = len(depsgraph.object_instances)
 
-        for obj in reversed(depsgraph.updates):
-            ob = obj.id
-
-            if isinstance(obj.id, bpy.types.ParticleSettings):
-                rfb_log().debug("ParticleSettings updated: %s" % obj.id.name)
-                for o in self.rman_scene.bl_scene.objects:
-                    psys = None
-                    ob = o.evaluated_get(depsgraph)
-                    for ps in ob.particle_systems:
-                        if ps.settings.original == obj.id.original:
-                            psys = ps
-                            break
-                    if not psys:
-                        continue
-                    if object_utils.is_particle_instancer(psys):
-                        #self.check_particle_instancer(obj, psys)
-                        pass
-                    else:
-                        self.update_particle_emitter(ob, psys)
-
-                    if o.original not in self.rman_updates:
-                        rman_update = RmanUpdate()
-
-                        rman_update.is_updated_geometry = obj.is_updated_geometry
-                        rman_update.is_updated_shading = obj.is_updated_shading
-                        rman_update.is_updated_transform = obj.is_updated_transform   
-                        self.rman_updates[o.original] = rman_update  
-
-            elif isinstance(obj.id, bpy.types.Light):
-                self.check_light_datablock(obj)
-
-            elif isinstance(obj.id, bpy.types.Material):
-                rfb_log().debug("Material updated: %s" % obj.id.name)
+        with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):  
+            for obj in reversed(depsgraph.updates):
                 ob = obj.id
-                if ob.original not in self.rman_updates:
-                    rman_update = RmanUpdate()
-                    self.rman_updates[ob.original] = rman_update
 
-            elif isinstance(obj.id, bpy.types.ShaderNodeTree):
-                self.check_shader_nodetree(obj)
+                if isinstance(obj.id, bpy.types.ParticleSettings):
+                    rfb_log().debug("ParticleSettings updated: %s" % obj.id.name)
+                    for o in self.rman_scene.bl_scene.objects:
+                        psys = None
+                        ob = o.evaluated_get(depsgraph)
+                        for ps in ob.particle_systems:
+                            if ps.settings.original == obj.id.original:
+                                psys = ps
+                                break
+                        if not psys:
+                            continue
+                        if object_utils.is_particle_instancer(psys):
+                            #self.check_particle_instancer(obj, psys)
+                            pass
+                        else:
+                            self.update_particle_emitter(ob, psys)
 
-            elif isinstance(obj.id, bpy.types.Object):                
-                self.check_object_datablock(obj)
-                                
-        if not self.rman_updates and self.num_instances_changed:
-            # The number of instances changed, but we are not able
-            # to determine what changed. We are forced to check
-            # all instances.
-            rfb_log().debug("Set check_all_instances to True")
-            self.check_all_instances = True
-                         
-        self.check_instances_batch()
+                        if o.original not in self.rman_updates:
+                            rman_update = RmanUpdate()
 
-        # update any materials
-        for id, rman_sg_material in self.rman_scene.rman_materials.items():              
-            if rman_sg_material.is_frame_sensitive or id.original in self.rman_updates:
-                mat = id.original
-                self.material_updated(mat, rman_sg_material)    
-                                                
-        self.rman_scene.export_integrator()
-        self.rman_scene.export_samplefilters()
-        self.rman_scene.export_displayfilters()
-        self.rman_scene.export_displays()
-        
-        if self.rman_scene.do_motion_blur and self.rman_scene.moving_objects:
-            self.rman_scene.export_instances_motion()
+                            rman_update.is_updated_geometry = obj.is_updated_geometry
+                            rman_update.is_updated_shading = obj.is_updated_shading
+                            rman_update.is_updated_transform = obj.is_updated_transform   
+                            self.rman_updates[o.original] = rman_update  
+
+                elif isinstance(obj.id, bpy.types.Light):
+                    self.check_light_datablock(obj)
+
+                elif isinstance(obj.id, bpy.types.Material):
+                    rfb_log().debug("Material updated: %s" % obj.id.name)
+                    ob = obj.id
+                    if ob.original not in self.rman_updates:
+                        rman_update = RmanUpdate()
+                        self.rman_updates[ob.original] = rman_update
+
+                elif isinstance(obj.id, bpy.types.ShaderNodeTree):
+                    self.check_shader_nodetree(obj)
+
+                elif isinstance(obj.id, bpy.types.Object):                
+                    self.check_object_datablock(obj)
+                                    
+            if not self.rman_updates and self.num_instances_changed:
+                # The number of instances changed, but we are not able
+                # to determine what changed. We are forced to check
+                # all instances.
+                rfb_log().debug("Set check_all_instances to True")
+                self.check_all_instances = True
+                            
+            self.check_instances_batch()
+
+            # update any materials
+            for id, rman_sg_material in self.rman_scene.rman_materials.items():              
+                if rman_sg_material.is_frame_sensitive or id.original in self.rman_updates:
+                    mat = id.original
+                    self.material_updated(mat, rman_sg_material)    
+                                                    
+            self.rman_scene.export_integrator()
+            self.rman_scene.export_samplefilters()
+            self.rman_scene.export_displayfilters()
+            self.rman_scene.export_displays()
+            
+            if self.rman_scene.do_motion_blur and self.rman_scene.moving_objects:
+                self.rman_scene.export_instances_motion()
 
     @time_this
     def check_instances_batch(self):
@@ -588,7 +590,7 @@ class RmanSceneSync(object):
 
             if rman_type in object_utils._RMAN_NO_INSTANCES_:
                 continue                         
-     
+    
             # clear all instances for this prototype, if
             # we have not already done so
             if instance_parent:
@@ -604,7 +606,7 @@ class RmanSceneSync(object):
                 clear_instances.append(rman_sg_node) 
 
             self.rman_scene.export_instance(ob_eval, instance, rman_sg_node, rman_type, instance_parent, psys)                
-                   
+                
     @time_this
     def update_scene(self, context, depsgraph):
 

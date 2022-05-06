@@ -14,7 +14,7 @@ import re
 __BLENDER_TO_RMAN_DSPY__ = { 'TIFF': 'tiff', 'TARGA': 'targa', 'TARGA_RAW': 'targa', 'OPEN_EXR': 'openexr', 'PNG': 'png'}
 __RMAN_TO_BLENDER__ = { 'tiff': 'TIFF', 'targa': 'TARGA', 'openexr':'OPEN_EXR', 'png':'PNG'}
 
-def get_beauty_filepath(bl_scene, use_blender_frame=False, expand_tokens=False):
+def get_beauty_filepath(bl_scene, use_blender_frame=False, expand_tokens=False, no_ext=False):
     view_layer = bpy.context.view_layer
     rm_rl = None
     if view_layer.renderman.use_renderman:
@@ -27,6 +27,8 @@ def get_beauty_filepath(bl_scene, use_blender_frame=False, expand_tokens=False):
     filePath = rm.path_beauty_image_output
     if use_blender_frame:
         filePath = re.sub(r'<[f|F]\d*>', '####', filePath)
+    if no_ext:
+        filePath = filePath.replace('<ext>', '')
     if rm_rl:
         aov = rm_rl.custom_aovs[0]
         display_driver = aov.displaydriver

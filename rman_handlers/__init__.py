@@ -1,3 +1,4 @@
+from ..rfb_logger import rfb_log
 from ..rfb_utils import texture_utils
 from ..rfb_utils import string_utils
 from ..rfb_utils import shadergraph_utils
@@ -59,7 +60,7 @@ def render_pre(bl_scene):
     __ORIGINAL_BL_FILE_FORMAT__ = bl_scene.render.image_settings.file_format    
     write_comp = scene_utils.should_use_bl_compositor(bl_scene)
     if write_comp:
-        filePath = display_utils.get_beauty_filepath(bl_scene, use_blender_frame=True, expand_tokens=True)
+        filePath = display_utils.get_beauty_filepath(bl_scene, use_blender_frame=True, expand_tokens=True, no_ext=True)
         bl_scene.render.filepath = filePath
         bl_scene.render.image_settings.file_format = 'OPEN_EXR'   
     else:
@@ -88,6 +89,14 @@ def render_post(bl_scene):
             os.remove(filePath)
         __BL_TMP_FILE__ = None
 
+@persistent
+def render_stop(bl_scene):
+    from .. import rman_render
+    rr = rman_render.RmanRender.get_rman_render()
+    if rr.is_regular_rendering():
+        rfb_log().debug("Render stop handler called. Try to stop the renderer.")
+        rr.stop_render()
+
 def register():
 
     # load_post handler
@@ -110,7 +119,13 @@ def register():
         bpy.app.handlers.render_pre.append(render_pre)
 
     if render_post not in bpy.app.handlers.render_post:
-        bpy.app.handlers.render_post.append(render_post)        
+        bpy.app.handlers.render_post.append(render_post) 
+
+    if render_stop not in bpy.app.handlers.render_complete:
+        bpy.app.handlers.render_complete.append(render_stop)
+
+    if render_stop not in bpy.app.handlers.render_cancel:
+        bpy.app.handlers.render_cancel.append(render_stop)
 
 def unregister():
 
@@ -131,6 +146,12 @@ def unregister():
 
     if render_post in bpy.app.handlers.render_post:
         bpy.app.handlers.render_post.remove(render_post)            
+
+    if render_stop in bpy.app.handlers.render_complete:
+        bpy.app.handlers.render_complete.remove(render_stop)
+
+    if render_stop in bpy.app.handlers.render_cancel:
+        bpy.app.handlers.render_cancel.remove(render_stop)
 
     from . import rman_it_handlers
     rman_it_handlers.remove_ipr_to_it_handlers()                

@@ -306,7 +306,6 @@ class RmanRender(object):
     def _start_prman_begin(self):
         argv = []
         argv.append("prman") 
-        #argv.append("-Progress")  
         argv.append("-dspyserver")
         argv.append("%s" % envconfig().rman_it_path)
 
@@ -464,6 +463,7 @@ class RmanRender(object):
         if not self._check_prman_license():
             return False        
 
+        do_persistent_data = rm.do_persistent_data
         use_compositor = scene_utils.should_use_bl_compositor(self.bl_scene)
         if for_background:
             self.rman_render_into = ''
@@ -471,6 +471,8 @@ class RmanRender(object):
             if use_compositor:
                 self.rman_render_into = 'blender'
                 is_external = False
+            else:
+                do_persistent_data = False
             self.rman_callbacks.clear()
             ec = rman.EventCallbacks.Get()
             ec.RegisterCallback("Render", render_cb, self)
@@ -478,7 +480,8 @@ class RmanRender(object):
             if envconfig().getenv('RFB_BATCH_NO_PROGRESS') is None:  
                 ec.RegisterCallback("Progress", batch_progress_cb, self)
                 self.rman_callbacks["Progress"] = batch_progress_cb               
-            rman.Dspy.DisableDspyServer()          
+            rman.Dspy.DisableDspyServer()    
+            rman.Dspy.EnableDspyServer()      
         else:
 
             self.rman_render_into = rm.render_into
@@ -504,27 +507,36 @@ class RmanRender(object):
         scene_utils.set_render_variant_config(self.bl_scene, config, render_config)
         self.rman_is_xpu = (rendervariant == 'xpu')
 
-        self.sg_scene = self.sgmngr.CreateScene(config, render_config, self.stats_mgr.rman_stats_session) 
+        boot_strapping = False
+        if self.sg_scene is None:
+            boot_strapping = True
+            self.sg_scene = self.sgmngr.CreateScene(config, render_config, self.stats_mgr.rman_stats_session) 
         was_connected = self.stats_mgr.is_connected()
-        if self.rman_is_xpu:
-            if not was_connected:
-                # force the stats to start in the case of XPU
-                # this is so that we can get a progress percentage
-                # if we can't get it to start, abort
-                self.stats_mgr.attach(force=True)
-                time.sleep(0.5) # give it a second to attach
-                if not self.stats_mgr.is_connected():
-                    self.bl_engine.report({'ERROR'}, 'Cannot start live stats. Aborting XPU render')
-                    self.stop_render(stop_draw_thread=False)
-                    self.del_bl_engine()
-                    return False            
+        if self.rman_is_xpu and not was_connected:
+            # force the stats to start in the case of XPU
+            # this is so that we can get a progress percentage
+            # if we can't get it to start, abort
+            self.stats_mgr.attach(force=True)
+            time.sleep(0.5) # give it a second to attach
+            if not self.stats_mgr.is_connected():
+                self.bl_engine.report({'ERROR'}, 'Cannot start live stats. Aborting XPU render')
+                self.stop_render(stop_draw_thread=False)
+                self.del_bl_engine()
+                return False            
 
+        # Export the scene
         try:
             bl_layer = depsgraph.view_layer
             self.rman_is_exporting = True
             self.rman_running = True
             self.start_export_stats_thread()
-            self.rman_scene.export_for_final_render(depsgraph, self.sg_scene, bl_layer, is_external=is_external)
+            if boot_strapping:
+                # This is our first time exporting
+                self.rman_scene.export_for_final_render(depsgraph, self.sg_scene, bl_layer, is_external=is_external)
+            else:   
+                # Scene still exists, which means we're in persistent data mode
+                # Try to get the scene diffs.                    
+                self.rman_scene_sync.batch_update_scene(bpy.context, depsgraph)
             self.rman_is_exporting = False
             self.stats_mgr.reset_progress()
 
@@ -538,11 +550,13 @@ class RmanRender(object):
             self.del_bl_engine()
             return False            
         
+        # Start the render
         render_cmd = "prman"
         if self.rman_render_into == 'blender':
             render_cmd = "prman -live"
         render_cmd = self._append_render_cmd(render_cmd)
-        self.sg_scene.Render(render_cmd)
+        if boot_strapping:
+            self.sg_scene.Render(render_cmd)
         if self.rman_render_into == 'blender':  
             dspy_dict = display_utils.get_dspy_dict(self.rman_scene, include_holdouts=False)
             
@@ -645,17 +659,22 @@ class RmanRender(object):
                             pass
                         finally:
                             bpy.data.images.remove(bl_image)      
-
-            if not was_connected and self.stats_mgr.is_connected():
-                # if stats were not started before rendering, disconnect
-                self.stats_mgr.disconnect()                                 
+                              
         else:
             self.start_stats_thread()
             while self.bl_engine and not self.bl_engine.test_break() and self.rman_is_live_rendering:
-                time.sleep(0.01)        
+                time.sleep(0.01)      
+
+        if not was_connected and self.stats_mgr.is_connected():
+            # if stats was not started before rendering, disconnect
+            self.stats_mgr.disconnect()                     
 
         self.del_bl_engine()
-        self.stop_render()                          
+        if not do_persistent_data:
+            # If we're not in persistent data mode, stop the renderer immediately
+            # If we are in persistent mode, we rely on the render_complete and
+            # render_cancel handlers to stop the renderer (see rman_handlers/__init__.py)
+            self.stop_render()
 
         return True   
 
