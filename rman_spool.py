@@ -140,7 +140,7 @@ class RmanSpool(object):
                                     (str(self.depsgraph.view_layer.name)))
             renderframestask.title = renderframestasktitle
 
-            if chunk > 1 and by < 2 and (start+chunk < last+1):               
+            if (chunk+1) > 1 and by < 2 and (start+chunk < last+1):               
                 iframe = start
                 while (iframe < last+1):
                     diff = chunk
@@ -341,7 +341,7 @@ class RmanSpool(object):
         frame_begin = self.bl_scene.frame_start
         frame_end = self.bl_scene.frame_end
         by = self.bl_scene.frame_step     
-        chunk = rm.bl_batch_frame_chunk-1
+        chunk = min(rm.bl_batch_frame_chunk, frame_end)-1
 
         # update variables
         string_utils.set_var('scene', self.bl_scene.name)
