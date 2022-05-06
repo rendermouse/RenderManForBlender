@@ -501,7 +501,7 @@ def _set_rman_dspy_dict(rm_rl, dspys_dict, dspy_drv, rman_scene, expandTokens, d
                 'params': dspy_params,
                 'dspyDriverParams': None}  
 
-def _set_rman_holdouts_dspy_dict(dspys_dict, dspy_drv, rman_scene, expandTokens):
+def _set_rman_holdouts_dspy_dict(dspys_dict, dspy_drv, rman_scene, expandTokens, include_holdouts=True):
 
     rm = rman_scene.bl_scene.renderman
     display_driver = dspy_drv
@@ -512,24 +512,28 @@ def _set_rman_holdouts_dspy_dict(dspys_dict, dspy_drv, rman_scene, expandTokens)
         if display_driver == 'openexr':
             param_list.SetInteger('asrgba', 1)
 
-    dspy_params = {}                        
-    dspy_params['displayChannels'] = []
-    d = _default_dspy_params()
-    occluded_src = "color lpe:holdouts;C[DS]+<L.>"
-    d[u'channelSource'] = {'type': u'string', 'value': occluded_src}
-    d[u'channelType'] = { 'type': u'string', 'value': 'color'}       
-    dspys_dict['channels']['occluded'] = d
-    dspy_params['displayChannels'].append('occluded')
+    if include_holdouts:
+        dspy_params = {}                        
+        dspy_params['displayChannels'] = []
+        d = _default_dspy_params()
+        occluded_src = "color lpe:holdouts;C[DS]+<L.>"
+        d[u'channelSource'] = {'type': u'string', 'value': occluded_src}
+        d[u'channelType'] = { 'type': u'string', 'value': 'color'}       
+        dspys_dict['channels']['occluded'] = d
+        dspy_params['displayChannels'].append('occluded')
 
-    dspys_dict['displays']['occluded'] = {
-        'driverNode': 'null',
-        'filePath': 'occluded',
-        'denoise': False,
-        'denoise_mode': 'singleframe',   
-        'camera': None,  
-        'bake_mode': None,                   
-        'params': dspy_params,
-        'dspyDriverParams': None}        
+        dspys_dict['displays']['occluded'] = {
+            'driverNode': 'null',
+            'filePath': 'occluded',
+            'denoise': False,
+            'denoise_mode': 'singleframe',   
+            'camera': None,  
+            'bake_mode': None,                   
+            'params': dspy_params,
+            'dspyDriverParams': None}      
+
+    if rm.do_holdout_matte != "AOV" and not include_holdouts:
+        return  
 
     dspy_params = {}                        
     dspy_params['displayChannels'] = []
@@ -664,8 +668,8 @@ def get_dspy_dict(rman_scene, expandTokens=True, include_holdouts=True):
         # We're using blender's layering system
         _set_blender_dspy_dict(layer, dspys_dict, display_driver, rman_scene, expandTokens, do_optix_denoise=do_optix_denoise)       
 
-    if rm.do_holdout_matte != "OFF" and include_holdouts:
-        _set_rman_holdouts_dspy_dict(dspys_dict, display_driver, rman_scene, expandTokens)  
+    if rm.do_holdout_matte != "OFF":
+        _set_rman_holdouts_dspy_dict(dspys_dict, display_driver, rman_scene, expandTokens, include_holdouts=include_holdouts)  
 
     return dspys_dict
 

@@ -95,7 +95,7 @@ class PRMAN_MT_Viewport_Channel_Sel_Menu(Menu):
         layout = self.layout
         rman_render = RmanRender.get_rman_render()
         rman_render.rman_scene._find_renderman_layer()
-        dspys_dict = display_utils.get_dspy_dict(rman_render.rman_scene)
+        dspys_dict = display_utils.get_dspy_dict(rman_render.rman_scene, include_holdouts=False)
         for chan_name, chan_params in dspys_dict['channels'].items():
             layout.operator_context = 'EXEC_DEFAULT'
             op = layout.operator('renderman_viewport.channel_selector', text=chan_name)
