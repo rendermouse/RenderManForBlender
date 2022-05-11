@@ -248,7 +248,7 @@ def get_txmanager():
         __RFB_TXMANAGER__ = RfBTxManager()
     return __RFB_TXMANAGER__    
 
-def update_texture(node, ob=None, check_exists=False):
+def update_texture(node, ob=None, check_exists=False, is_library=False):
     bl_idname = getattr(node, 'bl_idname', '')
     if bl_idname == "PxrOSLPatternNode":
         for input_name, input in node.inputs.items():
@@ -284,8 +284,13 @@ def update_texture(node, ob=None, check_exists=False):
             if get_txmanager().does_nodeid_exists(nodeID):
                 continue
 
+        fpath = bl_prop_info.prop
+        if is_library:
+            # if this is coming from a library, replace <blend_dir> with the full path
+            fpath = fpath.replace('<blend_dir>', os.path.dirname(ob.library.filepath))
+
         category = getattr(node, 'renderman_node_type', 'pattern') 
-        get_txmanager().add_texture(node, ob, prop_name, bl_prop_info.prop, node_type=node_type, category=category)        
+        get_txmanager().add_texture(node, ob, prop_name, fpath, node_type=node_type, category=category)        
 
 def generate_node_name(node, prop_name, ob=None, nm=None):
     node_name = ''
@@ -310,7 +315,7 @@ def generate_node_id(node, prop_name, ob=None):
     plug_uuid = get_txmanager().txmanager.get_plug_id(node_name, prop_name)
     return plug_uuid
 
-def get_textures(id, check_exists=False, mat=None):
+def get_textures(id, check_exists=False, mat=None, is_library=False):
     if id is None or not id.node_tree:
         return
 
@@ -320,7 +325,7 @@ def get_textures(id, check_exists=False, mat=None):
     nodes_list = list()
     shadergraph_utils.gather_all_textured_nodes(ob, nodes_list)
     for node in nodes_list:
-        update_texture(node, ob=ob, check_exists=check_exists)
+        update_texture(node, ob=ob, check_exists=check_exists, is_library=is_library)
 
 def get_blender_image_path(bl_image):
     if bl_image.packed_file:
@@ -459,20 +464,20 @@ def check_node_rename(id):
         
 def link_file_handler(id):
     if isinstance(id, bpy.types.Material):
-        get_textures(id, check_exists=True)
+        get_textures(id, check_exists=True, is_library=True)
 
     elif isinstance(id, bpy.types.Object):
         if id.type == 'CAMERA':
             node = shadergraph_utils.find_projection_node(id) 
             if node:
-                update_texture(node, ob=id, check_exists=True)
+                update_texture(node, ob=id, check_exists=True, is_library=True)
 
         elif id.type == 'LIGHT':
             nodes_list = list()
             ob = id.original
             shadergraph_utils.gather_all_textured_nodes(ob, nodes_list)
             for node in nodes_list:
-                update_texture(node, ob=ob, check_exists=True)           
+                update_texture(node, ob=ob, check_exists=True, is_library=True)
 
 def txmake_all(blocking=True):
     get_txmanager().txmake_all(blocking=blocking)        
