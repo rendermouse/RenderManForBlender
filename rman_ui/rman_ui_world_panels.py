@@ -57,7 +57,7 @@ class DATA_PT_renderman_world_integrators(ShaderPanel, Panel):
         rm = world.renderman
         nt = world.node_tree
 
-        draw_nodes_properties_ui(layout, context, nt, input_name='Integrator', output_node_type='integrators_output')
+        draw_nodes_properties_ui(layout, context, nt, input_name='integrator_in', output_node_type='integrators_output')
 
 class DATA_PT_renderman_world_display_filters(ShaderPanel, Panel):
     bl_label = "Display Filters"

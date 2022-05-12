@@ -326,29 +326,29 @@ def generate_node_type(node_desc, is_oso=False):
     def init(self, context):
         # add input/output sockets to nodes, based on type
         if self.renderman_node_type == 'bxdf':
-            self.outputs.new('RendermanNodeSocketBxdf', "Bxdf")
+            self.outputs.new('RendermanNodeSocketBxdf', "bxdf_out", identifier="Bxdf")
             node_add_inputs(self, name, self.prop_names)
             node_add_outputs(self)
         elif self.renderman_node_type == 'light':
             node_add_inputs(self, name, self.prop_names)
-            self.outputs.new('RendermanNodeSocketLight', "Light")
+            self.outputs.new('RendermanNodeSocketLight', "light_out", identifier="Light")
         elif self.renderman_node_type == 'lightfilter':
             node_add_inputs(self, name, self.prop_names)
-            self.outputs.new('RendermanNodeSocketLightFilter', "LightFilter")            
+            self.outputs.new('RendermanNodeSocketLightFilter', "lightfilter_out", idenitifer="LightFilter")            
         elif self.renderman_node_type == 'displace':
-            self.outputs.new('RendermanNodeSocketDisplacement', "Displacement")
+            self.outputs.new('RendermanNodeSocketDisplacement', "displace_out", identifier="Displacement")
             node_add_inputs(self, name, self.prop_names)
         elif self.renderman_node_type == 'displayfilter':
-            self.outputs.new('RendermanNodeSocketDisplayFilter', "DisplayFilter")
+            self.outputs.new('RendermanNodeSocketDisplayFilter', "displayfilter_out", identifier="DisplayFilter")
             node_add_inputs(self, name, self.prop_names)            
         elif self.renderman_node_type == 'samplefilter':
-            self.outputs.new('RendermanNodeSocketSampleFilter', "SampleFilter")
+            self.outputs.new('RendermanNodeSocketSampleFilter', "samplefilter_out", identifier="SampleFilter")
             node_add_inputs(self, name, self.prop_names)    
         elif self.renderman_node_type == 'integrator':
-            self.outputs.new('RendermanNodeSocketIntegrator', "Integrator")
+            self.outputs.new('RendermanNodeSocketIntegrator', "integrator_out", identifier="Integrator")
             node_add_inputs(self, name, self.prop_names)     
         elif self.renderman_node_type == 'projection':
-            self.outputs.new('RendermanNodeSocketProjection', "Projection")
+            self.outputs.new('RendermanNodeSocketProjection', "projection_out", identifier="Projection")
             node_add_inputs(self, name, self.prop_names)                                   
         elif name == "PxrOSL":
             self.outputs.clear()

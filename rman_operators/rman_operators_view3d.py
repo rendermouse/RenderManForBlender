@@ -105,7 +105,7 @@ class PRMAN_OT_RM_Add_RenderMan_Geometry(bpy.types.Operator):
                 mat = shadergraph_utils.create_bxdf('PxrVolume')
                 ob.active_material = mat
                 output = shadergraph_utils.find_node(mat, 'RendermanOutputNode')
-                bxdf = output.inputs['Bxdf'].links[0].from_node
+                bxdf = output.inputs['bxdf_in'].links[0].from_node
                 bxdf.densityFloatPrimVar = 'density'           
 
         if self.properties.rman_open_filebrowser:

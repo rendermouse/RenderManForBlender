@@ -22,10 +22,77 @@ def upgrade_243(scene):
                 elem.name = '%s[%d]' % (prop_name, len(collection)-1)  
                 elem.type = param_array_type
 
+def upgrade_250(scene):
+    '''
+    Rename input/output sockets:
+        Bxdf -> bxdf_in/bxdf_out
+        Light -> light_in/light_out
+        Displacement -> displace_in/displace_out
+        LightFilter -> lightfilter_in/lightfilter_out
+        Integrator -> integrator_in/integrator_out
+        Projection -> projection_in/projection_out
+        DisplayFilter -> displayfilter_in/displayfilter_out
+        SampleFilter -> samplefilter_in/samplefilter_out
+    '''
+    for node in shadergraph_utils.get_all_shading_nodes(scene=scene):
+        renderman_node_type = getattr(node, 'renderman_node_type', '')
+        if renderman_node_type in ['bxdf', 'projection', 'light', 'integrator']:
+            old_name = renderman_node_type.capitalize()
+            if old_name in node.outputs:
+                node.outputs[old_name].name = '%s_out' % renderman_node_type
+        elif renderman_node_type in ['displace', 'displacement']:
+            node.outputs['Displacement'].name = 'displace_out'
+        elif renderman_node_type == 'lightfilter':
+            if 'LightFilter' in node.outputs:
+                node.outputs['LightFilter'].name = '%s_out' % renderman_node_type
+        elif renderman_node_type == 'samplefilter':
+            if 'SampleFilter' in node.outputs:
+                node.outputs['SampleFilter'].name = '%s_out' % renderman_node_type
+        elif renderman_node_type == 'displayfilter':
+            if 'DisplayFilter' in node.outputs:
+                node.outputs['DisplayFilter'].name = '%s_out' % renderman_node_type
+    
+    for mat in bpy.data.materials:
+        output = shadergraph_utils.find_node(mat, 'RendermanOutputNode')
+        if output:
+            output.inputs['Bxdf'].name = 'bxdf_in'
+            output.inputs['Light'].name = 'light_in'
+            output.inputs['Displacement'].name = 'displace_in'
+            output.inputs['LightFilter'].name = 'lightfilter_in'
+
+    for light in bpy.data.lights:
+        output = shadergraph_utils.is_renderman_nodetree(light)
+        if output:
+            output.inputs['Light'].name = 'light_in'
+            output.inputs['LightFilter'].name = 'lightfilter_in'
+
+    for world in bpy.data.worlds:
+        output = shadergraph_utils.find_node(world, 'RendermanIntegratorsOutputNode')
+        if output:
+            output.inputs['Integrator'].name = 'integrator_in'
+
+        output = shadergraph_utils.find_node(world, 'RendermanSamplefiltersOutputNode')
+        if output:
+            for i, o in enumerate(output.inputs):
+                o.name = 'samplefilter_in[%d]' % i
+
+        output = shadergraph_utils.find_node(world, 'RendermanDisplayfiltersOutputNode')
+        if output:
+            for i, o in enumerate(output.inputs):
+                o.name = 'displayfilter_in[%d]' % i            
+
+    for camera in bpy.data.cameras:
+        nt = camera.renderman.rman_nodetree
+        if nt:
+            output = shadergraph_utils.find_node_from_nodetree(nt, 'RendermanProjectionsOutputNode')
+            output.inputs['Projection'].name = 'projection_in'
+            
+
 __RMAN_SCENE_UPGRADE_FUNCTIONS__ = OrderedDict()
     
 __RMAN_SCENE_UPGRADE_FUNCTIONS__['24.2'] = upgrade_242
 __RMAN_SCENE_UPGRADE_FUNCTIONS__['24.3'] = upgrade_243
+__RMAN_SCENE_UPGRADE_FUNCTIONS__['25.0'] = upgrade_250
 
 def upgrade_scene(bl_scene):
     global __RMAN_SCENE_UPGRADE_FUNCTIONS__

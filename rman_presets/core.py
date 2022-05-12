@@ -578,26 +578,26 @@ def export_material_preset(mat, nodes_to_convert, renderman_output_node, Asset):
                     nodeClass, rmanNode,
                     externalosl=False)
 
-    if renderman_output_node.inputs['Bxdf'].is_linked:
+    if renderman_output_node.inputs['bxdf_in'].is_linked:
         infodict = {}
         infodict['name'] = 'rman__surface'
         infodict['type'] = 'reference float3'
         infodict['value'] = None
         Asset.addParam(nodeName, nodeType, 'rman__surface', infodict)   
 
-        from_node = renderman_output_node.inputs['Bxdf'].links[0].from_node
+        from_node = renderman_output_node.inputs['bxdf_in'].links[0].from_node
         srcPlug = "%s.%s" % (fix_blender_name(from_node.name), 'outColor')
         dstPlug = "%s.%s" % (nodeName, 'rman__surface')    
         Asset.addConnection(srcPlug, dstPlug)                                     
 
-    if renderman_output_node.inputs['Displacement'].is_linked:
+    if renderman_output_node.inputs['displacement_input'].is_linked:
         infodict = {}
         infodict['name'] = 'rman__displacement'
         infodict['type'] = 'reference float3'
         infodict['value'] = None
         Asset.addParam(nodeName, nodeType, 'rman__displacement', infodict)              
 
-        from_node = renderman_output_node.inputs['Displacement'].links[0].from_node
+        from_node = renderman_output_node.inputs['displacement_input'].links[0].from_node
         srcPlug = "%s.%s" % (fix_blender_name(from_node.name), 'outColor')
         dstPlug = "%s.%s" % (nodeName, 'rman__displacement')   
         Asset.addConnection(srcPlug, dstPlug) 
@@ -1272,8 +1272,8 @@ def import_light_rig(Asset):
 
 def connectNodes(Asset, nt, nodeDict):
     output = shadergraph_utils.find_node_from_nodetree(nt, 'RendermanOutputNode')
-    bxdf_socket = output.inputs['Bxdf']
-    displace_socket = output.inputs['Displacement']
+    bxdf_socket = output.inputs['bxdf_in']
+    displace_socket = output.inputs['displace_in']
 
     for con in Asset.connectionList():
         #print('+ %s.%s -> %s.%s' % (nodeDict[con.srcNode()](), con.srcParam(),
@@ -1298,12 +1298,12 @@ def connectNodes(Asset, nt, nodeDict):
         elif output == dstNode:        
             # check if this is a root node connection
             if dstSocket == 'surfaceShader' or dstSocket == 'rman__surface':
-                nt.links.new(srcNode.outputs['Bxdf'], output.inputs['Bxdf'])
+                nt.links.new(srcNode.outputs['bxdf_out'], output.inputs['bxdf_in'])
             elif dstSocket == 'displacementShader' or dstSocket == 'rman__displacement':           
-                nt.links.new(srcNode.outputs['Displacement'], output.inputs['Displacement'])
+                nt.links.new(srcNode.outputs['displace_out'], output.inputs['displace_in'])
         elif renderman_node_type == 'bxdf':         
             # this is a regular upstream bxdf connection
-            nt.links.new(srcNode.outputs['Bxdf'], dstNode.inputs[dstSocket])  
+            nt.links.new(srcNode.outputs['bxdf_out'], dstNode.inputs[dstSocket])  
         else:            
             rfb_log().debug('error connecting %s.%s to %s.%s' % (srcNode.name,srcSocket, dstNode.name, dstSocket))
 
@@ -1315,16 +1315,16 @@ def connectNodes(Asset, nt, nodeDict):
         for node in nt.nodes:
             renderman_node_type = getattr(node, 'renderman_node_type', '')             
             if renderman_node_type == 'bxdf':                
-                if not node.outputs['Bxdf'].is_linked:
+                if not node.outputs['bxdf_out'].is_linked:
                     bxdf_candidate = node
             elif renderman_node_type == 'displace':
                 displace_candidate = node
 
         if bxdf_candidate:
-            nt.links.new(bxdf_candidate.outputs['Bxdf'], output.inputs['Bxdf'])
+            nt.links.new(bxdf_candidate.outputs['bxdf_out'], output.inputs['bxdf_in'])
 
         if not displace_socket.is_linked and displace_candidate:
-            nt.links.new(displace_candidate.outputs['Displacement'], output.inputs['Displacement'])
+            nt.links.new(displace_candidate.outputs['displace_out'], output.inputs['displace_in'])
 
 
 def create_displayfilter_nodes(Asset):
@@ -1350,7 +1350,7 @@ def create_displayfilter_nodes(Asset):
         created_node.name = node_id
         created_node.label = node_id        
         output.add_input()    
-        nt.links.new(created_node.outputs['DisplayFilter'], output.inputs[-1])
+        nt.links.new(created_node.outputs['displayfilter_out'], output.inputs[-1])
         nodeDict[node_id] = created_node.name
         setParams(Asset, created_node, df_node.paramsDict())
 

@@ -83,9 +83,9 @@ def convert_cycles_node(nt, node, location=None):
             rman_node1 = convert_cycles_bsdf(nt, add, node1, 0)
             rman_node2 = convert_cycles_bsdf(nt, add, node2, 1)
 
-            nt.links.new(rman_node1.outputs["Bxdf"],
+            nt.links.new(rman_node1.outputs["bxdf_out"],
                         add.inputs['material1'])        
-            nt.links.new(rman_node2.outputs["Bxdf"],
+            nt.links.new(rman_node2.outputs["bxdf_out"],
                         add.inputs['material2'])   
 
             setattr(add, "weight1", 0.5)    
@@ -106,9 +106,9 @@ def convert_cycles_node(nt, node, location=None):
             rman_node1 = convert_cycles_bsdf(nt, mixer, node1, 0)
             rman_node2 = convert_cycles_bsdf(nt, mixer, node2, 1)
 
-            nt.links.new(rman_node1.outputs["Bxdf"],
+            nt.links.new(rman_node1.outputs["bxdf_out"],
                         mixer.inputs['material1'])        
-            nt.links.new(rman_node2.outputs["Bxdf"],
+            nt.links.new(rman_node2.outputs["bxdf_out"],
                         mixer.inputs['material2'])          
 
             return mixer        
@@ -122,7 +122,7 @@ def convert_cycles_node(nt, node, location=None):
             rman_node = nt.nodes.new(node_name)            
             return rman_node
 
-        node_name = __BL_NODES_MAP__.get(bxdf_name)
+        node_name = __BL_NODES_MAP__.get(rman_name)
         rman_node = nt.nodes.new(node_name)
         convert_func(nt, node, rman_node)
         converted_nodes[node.name] = rman_node.name
@@ -470,8 +470,8 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     diff_sss_mix_node.name = 'mix_sss'
     nodes_list.append(diff_sss_mix_node)        
 
-    nt.links.new(diffuse_node.outputs["Bxdf"], diff_sss_mix_node.inputs["material1"])
-    nt.links.new(sss_node.outputs["Bxdf"], diff_sss_mix_node.inputs["material2"])
+    nt.links.new(diffuse_node.outputs["bxdf_out"], diff_sss_mix_node.inputs["material1"])
+    nt.links.new(sss_node.outputs["bxdf_out"], diff_sss_mix_node.inputs["material2"])
     nt.links.new(rman_node.outputs["out_sssMix"], diff_sss_mix_node.inputs["mix"])    
 
     # sheen
@@ -488,8 +488,8 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     diff_sheen_add_node.name = 'plus_sheen'
     nodes_list.append(diff_sheen_add_node)       
 
-    nt.links.new(diff_sss_mix_node.outputs["Bxdf"], diff_sheen_add_node.inputs["material1"])
-    nt.links.new(sheen_node.outputs["Bxdf"], diff_sheen_add_node.inputs["material2"])
+    nt.links.new(diff_sss_mix_node.outputs["bxdf_out"], diff_sheen_add_node.inputs["material1"])
+    nt.links.new(sheen_node.outputs["bxdf_out"], diff_sheen_add_node.inputs["material2"])
     nt.links.new(rman_node.outputs["out_sheenWeight"], diff_sheen_add_node.inputs["weight2"])  
 
     # specular
@@ -510,8 +510,8 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     sheen_spec_add_node.name = 'plus_spec'
     nodes_list.append(sheen_spec_add_node)       
 
-    nt.links.new(diff_sheen_add_node.outputs["Bxdf"], sheen_spec_add_node.inputs["material1"])
-    nt.links.new(specular_node.outputs["Bxdf"], sheen_spec_add_node.inputs["material2"])
+    nt.links.new(diff_sheen_add_node.outputs["bxdf_out"], sheen_spec_add_node.inputs["material1"])
+    nt.links.new(specular_node.outputs["bxdf_out"], sheen_spec_add_node.inputs["material2"])
     nt.links.new(rman_node.outputs["out_diffuseWeight"], sheen_spec_add_node.inputs["weight1"])  
     nt.links.new(rman_node.outputs["out_specularWeight"], sheen_spec_add_node.inputs["weight2"])  
 
@@ -532,8 +532,8 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     spec_transmission_add_node.name = 'plus_transmission'
     nodes_list.append(spec_transmission_add_node)
 
-    nt.links.new(sheen_spec_add_node.outputs["Bxdf"], spec_transmission_add_node.inputs["material1"])
-    nt.links.new(transmission_node.outputs["Bxdf"], spec_transmission_add_node.inputs["material2"])
+    nt.links.new(sheen_spec_add_node.outputs["bxdf_out"], spec_transmission_add_node.inputs["material1"])
+    nt.links.new(transmission_node.outputs["bxdf_out"], spec_transmission_add_node.inputs["material2"])
     nt.links.new(rman_node.outputs["out_finalTransmission"], spec_transmission_add_node.inputs["weight2"])  
 
     # coat
@@ -551,8 +551,8 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     transmission_coat_add_node.name = 'plus_coat'
     nodes_list.append(transmission_coat_add_node)
 
-    nt.links.new(spec_transmission_add_node.outputs["Bxdf"], transmission_coat_add_node.inputs["material1"])
-    nt.links.new(coat_node.outputs["Bxdf"], transmission_coat_add_node.inputs["material2"])
+    nt.links.new(spec_transmission_add_node.outputs["bxdf_out"], transmission_coat_add_node.inputs["material1"])
+    nt.links.new(coat_node.outputs["bxdf_out"], transmission_coat_add_node.inputs["material2"])
     nt.links.new(rman_node.outputs["out_clearcoat"], transmission_coat_add_node.inputs["weight2"])     
 
     # emission
@@ -563,8 +563,8 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     nt.links.new(rman_node.outputs["out_emissionColor"], emission_node.inputs["color"])   
 
     # final mix node
-    nt.links.new(transmission_coat_add_node.outputs["Bxdf"], final_mix_node.inputs["material1"]) 
-    nt.links.new(emission_node.outputs["Bxdf"], final_mix_node.inputs["material2"])   
+    nt.links.new(transmission_coat_add_node.outputs["bxdf_out"], final_mix_node.inputs["material1"]) 
+    nt.links.new(emission_node.outputs["bxdf_out"], final_mix_node.inputs["material2"])   
     nt.links.new(rman_node.outputs["out_emissionMix"], final_mix_node.inputs["mix"])   
 
     # close ui_open connections

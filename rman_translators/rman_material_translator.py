@@ -115,7 +115,7 @@ class RmanMaterialTranslator(RmanTranslator):
                             return True
 
                 # bxdf
-                socket = out.inputs['Bxdf']
+                socket = out.inputs['bxdf_in']
                 if socket.is_linked and len(socket.links) > 0:
                     linked_node = get_root_node(socket.links[0].from_node, type='bxdf')
                     if linked_node:
@@ -139,7 +139,7 @@ class RmanMaterialTranslator(RmanTranslator):
                     self.create_pxrdiffuse_node(rman_sg_material, handle)
 
                 # light
-                socket = out.inputs['Light']
+                socket = out.inputs['light_in']
                 if socket.is_linked and len(socket.links) > 0:
                     linked_node = get_root_node(socket.links[0].from_node, type='light')
                     if linked_node:
@@ -158,7 +158,7 @@ class RmanMaterialTranslator(RmanTranslator):
                             rman_sg_material.sg_node.SetLight(lightNodesList)                                   
 
                 # displacement
-                socket = out.inputs['Displacement']
+                socket = out.inputs['displace_in']
                 if socket.is_linked and len(socket.links) > 0:
                     linked_node = get_root_node(socket.links[0].from_node, type='displace')
                     if linked_node:                    

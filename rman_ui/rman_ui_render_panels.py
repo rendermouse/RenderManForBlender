@@ -131,7 +131,7 @@ class RENDER_PT_renderman_world_integrators(PRManButtonsPanel, Panel):
         rm = world.renderman
         nt = world.node_tree
 
-        draw_nodes_properties_ui(layout, context, nt, input_name='Integrator', output_node_type='integrators_output')
+        draw_nodes_properties_ui(layout, context, nt, input_name='integrator_in', output_node_type='integrators_output')
 
 class RENDER_PT_renderman_world_display_filters(PRManButtonsPanel, Panel):
     bl_label = "Display Filters"
@@ -174,7 +174,7 @@ class RENDER_PT_renderman_world_display_filters(PRManButtonsPanel, Panel):
             op = col.operator("node.rman_remove_displayfilter_node_socket", text="", icon="REMOVE")
             op.index = i                      
             col = row.column()
-            col.label(text=socket.name)
+            col.label(text=socket.identifier)
 
             if socket.is_linked:
                 col = row.column()
@@ -247,7 +247,7 @@ class RENDER_PT_renderman_world_sample_filters(PRManButtonsPanel, Panel):
             op = col.operator("node.rman_remove_samplefilter_node_socket", text="", icon="REMOVE")
             op.index = i               
             col = row.column()
-            col.label(text=socket.name)       
+            col.label(text=socket.identifier)       
 
             if socket.is_linked:
                 col = row.column()

@@ -28,7 +28,7 @@ class RendermanShadingNode(bpy.types.ShaderNode):
     prev_hidden: BoolProperty(default=False, description="Whether or not this node was previously hidden.")
 
     def update_mat(self, mat):
-        if self.renderman_node_type == 'bxdf' and self.outputs['Bxdf'].is_linked:
+        if self.renderman_node_type == 'bxdf' and self.outputs['bxdf_out'].is_linked:
             mat.specular_color = [1, 1, 1]
             mat.diffuse_color = [1, 1, 1, 1]
             mat.specular_intensity = 0
@@ -685,13 +685,13 @@ class RendermanOutputNode(RendermanShadingNode):
         self._init_inputs()   
 
     def _init_inputs(self):
-        input = self.inputs.new('RendermanNodeSocketBxdf', 'Bxdf')
+        input = self.inputs.new('RendermanNodeSocketBxdf', 'bxdf_in', identifier='Bxdf')
         input.hide_value = True
-        input = self.inputs.new('RendermanNodeSocketLight', 'Light')
+        input = self.inputs.new('RendermanNodeSocketLight', 'light_in', identifier='Light')
         input.hide_value = True
-        input = self.inputs.new('RendermanNodeSocketDisplacement', 'Displacement')
+        input = self.inputs.new('RendermanNodeSocketDisplacement', 'displace_in', identifier='Displacement')
         input.hide_value = True
-        input = self.inputs.new('RendermanNodeSocketLightFilter', 'LightFilter')
+        input = self.inputs.new('RendermanNodeSocketLightFilter', 'lightfilter_in', identifier='LightFilter')
         input.hide_value = True    
 
     def draw_buttons(self, context, layout):
@@ -741,7 +741,7 @@ class RendermanIntegratorsOutputNode(RendermanShadingNode):
     new_links = []
 
     def init(self, context):
-        input = self.inputs.new('RendermanNodeSocketIntegrator', 'Integrator')
+        input = self.inputs.new('RendermanNodeSocketIntegrator', 'integrator_in', identifier='Integrator')
 
     def draw_buttons(self, context, layout):
         return
@@ -781,11 +781,12 @@ class RendermanSamplefiltersOutputNode(RendermanShadingNode):
     new_links = []
 
     def init(self, context):
-        input = self.inputs.new('RendermanNodeSocketSampleFilter', 'samplefilter[0]')
+        input = self.inputs.new('RendermanNodeSocketSampleFilter', 'samplefilter_in[0]', identifier='samplefilter[0]')
         input.hide_value = True
 
     def add_input(self):
-        input = self.inputs.new('RendermanNodeSocketSampleFilter', 'samplefilter[%d]' % (len(self.inputs)))
+        size = len(self.inputs)
+        input = self.inputs.new('RendermanNodeSocketSampleFilter', 'samplefilter_in[%d]' % size, identifier='samplefilter[%d]' % size)
         input.hide_value = True
 
     def remove_input(self):
@@ -846,11 +847,12 @@ class RendermanDisplayfiltersOutputNode(RendermanShadingNode):
     new_links = []
 
     def init(self, context):
-        input = self.inputs.new('RendermanNodeSocketDisplayFilter', 'displayfilter[0]')
+        input = self.inputs.new('RendermanNodeSocketDisplayFilter', 'displayfilter_in[0]', identifier='displayflter[0]')
         input.hide_value = True
 
     def add_input(self):
-        input = self.inputs.new('RendermanNodeSocketDisplayFilter', 'displayfilter[%d]' % (len(self.inputs)))
+        size = len(self.inputs)
+        input = self.inputs.new('RendermanNodeSocketDisplayFilter', 'displayfilter_in[%d]' % size, identifier='displayfilter[%d]' % size)
         input.hide_value = True
 
     def remove_input(self):
@@ -914,7 +916,7 @@ class RendermanProjectionsOutputNode(RendermanShadingNode):
         return ntree.bl_idname == 'ShaderNodeTree'
         
     def init(self, context):
-        input = self.inputs.new('RendermanNodeSocketProjection', 'Projection')
+        input = self.inputs.new('RendermanNodeSocketProjection', 'projection_in', identifier='Projection')
 
     def draw_buttons(self, context, layout):
         return

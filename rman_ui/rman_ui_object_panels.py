@@ -233,14 +233,15 @@ class MATERIAL_PT_renderman_object_shader_surface(Panel, CollectionPanel):
                     col = split.column()                                
                 
                 layout.separator()
-                if not rman_output_node.inputs['Bxdf'].is_linked:
+                input_name = 'bxdf_input'
+                if not rman_output_node.inputs[input_name].is_linked:
                     panel_node_draw(layout, context, mat,
                                     'RendermanOutputNode', 'Bxdf')  
                 elif not filter_parameters or filter_method == 'NONE':
                     panel_node_draw(layout, context, mat,
                                     'RendermanOutputNode', 'Bxdf')                      
                 elif filter_method == 'STICKY':
-                    bxdf_node = rman_output_node.inputs['Bxdf'].links[0].from_node
+                    bxdf_node = rman_output_node.inputs[input_name].links[0].from_node
                     nodes = gather_nodes(bxdf_node)
                     for node in nodes:
                         prop_names = getattr(node, 'prop_names', list())
@@ -249,7 +250,7 @@ class MATERIAL_PT_renderman_object_shader_surface(Panel, CollectionPanel):
                     expr = rman_output_node.bxdf_match_expression
                     if expr == '':
                         return
-                    bxdf_node = rman_output_node.inputs['Bxdf'].links[0].from_node
+                    bxdf_node = rman_output_node.inputs[input_name].links[0].from_node
                     nodes = gather_nodes(bxdf_node)
                     for node in nodes:
                         prop_names = getattr(node, 'prop_names', list())
@@ -339,14 +340,15 @@ class MATERIAL_PT_renderman_object_shader_displacement(Panel, CollectionPanel):
                     col = split.column()
 
             shader_type = 'Displacement'
-            if not rman_output_node.inputs['Displacement'].is_linked:
+            input_name = 'displacement_input'
+            if not rman_output_node.inputs[input_name].is_linked:
                 draw_nodes_properties_ui(
-                    layout, context, nt, input_name=shader_type)
+                    layout, context, nt, input_name=input_name)
             elif not filter_parameters or filter_method == 'NONE':
                 draw_nodes_properties_ui(
-                    layout, context, nt, input_name=shader_type)                 
+                    layout, context, nt, input_name=input_name)                 
             elif filter_method == 'STICKY':
-                disp_node = rman_output_node.inputs['Displacement'].links[0].from_node
+                disp_node = rman_output_node.inputs[input_name].links[0].from_node
                 nodes = gather_nodes(disp_node)
                 for node in nodes:
                     prop_names = getattr(node, 'prop_names', list())
@@ -355,7 +357,7 @@ class MATERIAL_PT_renderman_object_shader_displacement(Panel, CollectionPanel):
                 expr = rman_output_node.disp_match_expression
                 if expr == '':
                     return                
-                disp_node = rman_output_node.inputs['Displacement'].links[0].from_node
+                disp_node = rman_output_node.inputs[input_name].links[0].from_node
                 nodes = gather_nodes(disp_node)
                 for node in nodes:
                     prop_names = getattr(node, 'prop_names', list())
@@ -363,7 +365,7 @@ class MATERIAL_PT_renderman_object_shader_displacement(Panel, CollectionPanel):
                                         prop_names, context, nt)
             else:
                 draw_nodes_properties_ui(
-                    layout, context, nt, input_name=shader_type)                  
+                    layout, context, nt, input_name=input_name)                  
 
 class OBJECT_PT_renderman_object_geometry_quadric(Panel, CollectionPanel):
     bl_space_type = 'PROPERTIES'

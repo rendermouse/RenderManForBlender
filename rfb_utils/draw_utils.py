@@ -475,7 +475,7 @@ def panel_node_draw(layout, context, id_data, output_type, input_name):
 
     return True
 
-def draw_nodes_properties_ui(layout, context, nt, input_name='Bxdf',
+def draw_nodes_properties_ui(layout, context, nt, input_name='bxdf_in',
                              output_node_type="output"):
     output_node = next((n for n in nt.nodes
                         if hasattr(n, 'renderman_node_type') and n.renderman_node_type == output_node_type), None)
@@ -489,9 +489,9 @@ def draw_nodes_properties_ui(layout, context, nt, input_name='Bxdf',
     layout.context_pointer_set("node", output_node)
     layout.context_pointer_set("socket", socket)
 
-    if input_name not in ['Light', 'LightFilter']:
+    if input_name not in ['light_in', 'lightfilter_in']:
         split = layout.split(factor=0.35)
-        split.label(text=socket.name + ':')
+        split.label(text=socket.identifier + ':')
 
         split.context_pointer_set("socket", socket)
         split.context_pointer_set("node", output_node)
