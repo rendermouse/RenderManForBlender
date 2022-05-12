@@ -41,7 +41,8 @@ def upgrade_250(scene):
             if old_name in node.outputs:
                 node.outputs[old_name].name = '%s_out' % renderman_node_type
         elif renderman_node_type in ['displace', 'displacement']:
-            node.outputs['Displacement'].name = 'displace_out'
+            if 'Displacement' in node.outputs:
+                node.outputs['Displacement'].name = 'displace_out'
         elif renderman_node_type == 'lightfilter':
             if 'LightFilter' in node.outputs:
                 node.outputs['LightFilter'].name = '%s_out' % renderman_node_type
@@ -55,21 +56,28 @@ def upgrade_250(scene):
     for mat in bpy.data.materials:
         output = shadergraph_utils.find_node(mat, 'RendermanOutputNode')
         if output:
-            output.inputs['Bxdf'].name = 'bxdf_in'
-            output.inputs['Light'].name = 'light_in'
-            output.inputs['Displacement'].name = 'displace_in'
-            output.inputs['LightFilter'].name = 'lightfilter_in'
+            if 'Bxdf' in output.inputs:
+                output.inputs['Bxdf'].name = 'bxdf_in'
+            if 'Light' in output.inputs:
+                output.inputs['Light'].name = 'light_in'
+            if 'Displacement' in output.inputs:
+                output.inputs['Displacement'].name = 'displace_in'
+            if 'LightFilter' in output.inputs:
+                output.inputs['LightFilter'].name = 'lightfilter_in'
 
     for light in bpy.data.lights:
         output = shadergraph_utils.is_renderman_nodetree(light)
         if output:
-            output.inputs['Light'].name = 'light_in'
-            output.inputs['LightFilter'].name = 'lightfilter_in'
+            if 'Light' in output.inputs:
+                output.inputs['Light'].name = 'light_in'
+            if 'LightFilter' in output.inputs:                
+                output.inputs['LightFilter'].name = 'lightfilter_in'
 
     for world in bpy.data.worlds:
         output = shadergraph_utils.find_node(world, 'RendermanIntegratorsOutputNode')
         if output:
-            output.inputs['Integrator'].name = 'integrator_in'
+            if 'Integrator' in output.inputs:
+                output.inputs['Integrator'].name = 'integrator_in'
 
         output = shadergraph_utils.find_node(world, 'RendermanSamplefiltersOutputNode')
         if output:
@@ -85,7 +93,8 @@ def upgrade_250(scene):
         nt = camera.renderman.rman_nodetree
         if nt:
             output = shadergraph_utils.find_node_from_nodetree(nt, 'RendermanProjectionsOutputNode')
-            output.inputs['Projection'].name = 'projection_in'
+            if 'Projection' in output.inputs:
+                output.inputs['Projection'].name = 'projection_in'
             
 
 __RMAN_SCENE_UPGRADE_FUNCTIONS__ = OrderedDict()
