@@ -1,6 +1,7 @@
 import time
 import os
 import rman
+import ice
 import bpy
 import sys
 from .rman_constants import RFB_VIEWPORT_MAX_BUCKETS, RMAN_RENDERMAN_BLUE
@@ -329,31 +330,42 @@ class BlRenderResultHelper:
 
             # check if we should write out the AOVs
             if self.write_aovs:
+                use_ice = hasattr(ice, 'FromArray')
                 for i, dspy_nm in enumerate(self.dspy_dict['displays'].keys()):
                     filepath = self.dspy_dict['displays'][dspy_nm]['filePath']
-                    buffer = self.rman_render._get_buffer(self.width, self.height, image_num=i, as_flat=True)
-                    if buffer is None:
-                        continue
 
                     if i == 0:
                         # write out the beauty with a 'raw' substring
                         toks = os.path.splitext(filepath)
                         filepath = '%s_beauty_raw.exr' % (toks[0])
+                    
+                    if use_ice:
+                        buffer = self.rman_render._get_buffer(self.width, self.height, image_num=i, raw_buffer=True, as_flat=True)
+                        if buffer is None:
+                            continue
 
-                    bl_image = bpy.data.images.new(dspy_nm, self.width, self.height)
-                    try:
-                        if isinstance(buffer, numpy.ndarray):
-                            buffer = buffer.tolist()
-                        bl_image.use_generated_float = True
-                        bl_image.filepath_raw = filepath                            
-                        bl_image.pixels.foreach_set(buffer)
-                        bl_image.file_format = 'OPEN_EXR'
-                        bl_image.update()
-                        bl_image.save()
-                    except:
-                        pass
-                    finally:
-                        bpy.data.images.remove(bl_image)            
+                        # use ice to save out the image
+                        img = ice.FromArray(buffer)
+                        img = img.Flip(False, True, False)
+                        img.Save(filepath, ice.constants.FMT_EXRFLOAT)          
+                    else:              
+                        buffer = self.rman_render._get_buffer(self.width, self.height, image_num=i, as_flat=True)
+                        if buffer is None:
+                            continue
+                        bl_image = bpy.data.images.new(dspy_nm, self.width, self.height)
+                        try:
+                            if isinstance(buffer, numpy.ndarray):
+                                buffer = buffer.tolist()
+                            bl_image.use_generated_float = True
+                            bl_image.filepath_raw = filepath                            
+                            bl_image.pixels.foreach_set(buffer)
+                            bl_image.file_format = 'OPEN_EXR'
+                            bl_image.update()
+                            bl_image.save()
+                        except:
+                            pass
+                        finally:
+                            bpy.data.images.remove(bl_image)            
 
 class RmanRender(object):
     '''
@@ -1339,7 +1351,7 @@ class RmanRender(object):
         num_channels = dspy_plugin.GetNumberOfChannels(ctypes.c_size_t(image_num))
         return num_channels
 
-    def _get_buffer(self, width, height, image_num=0, num_channels=-1, back_fill=True, as_flat=True, render=None):
+    def _get_buffer(self, width, height, image_num=0, num_channels=-1, raw_buffer=False, back_fill=True, as_flat=True, render=None):
         dspy_plugin = self.get_blender_dspy_plugin()
         if num_channels == -1:
             num_channels = self.get_numchannels(image_num)
@@ -1352,7 +1364,12 @@ class RmanRender(object):
         f.restype = ctypes.POINTER(ArrayType)
 
         try:
-            buffer = numpy.array(f(ctypes.c_size_t(image_num)).contents)
+            buffer = numpy.array(f(ctypes.c_size_t(image_num)).contents, dtype=numpy.float32)
+
+            if raw_buffer:
+                if not as_flat:
+                    buffer.shape = (height, width, num_channels)
+                return buffer
 
             if as_flat:
                 if (num_channels == 4) or not back_fill:
@@ -1436,18 +1453,31 @@ class RmanRender(object):
         width = int(self.viewport_res_x * res_mult)
         height = int(self.viewport_res_y * res_mult)
 
-        pixels = self._get_buffer(width, height)
-        if pixels is None:
-            rfb_log().error("Could not save snapshot.")
-            return
-
-        nm = 'rman_viewport_snapshot_<F4>_%d' % len(bpy.data.images)
+        nm = 'rman_viewport_snapshot_<F4>_%d.exr' % len(bpy.data.images)
         nm = string_utils.expand_string(nm, frame=frame)
-        img = bpy.data.images.new(nm, width, height, float_buffer=True, alpha=True) 
-        if isinstance(pixels, numpy.ndarray):
-            pixels = pixels.tolist()               
-        img.pixels.foreach_set(pixels)
-        img.update()
+        if hasattr(ice, 'FromArray'):
+            buffer = self._get_buffer(width, height, as_flat=False, raw_buffer=True)  
+            if buffer is None:
+                rfb_log().error("Could not save snapshot.")
+                return                  
+            img = ice.FromArray(buffer)
+            img = img.Flip(False, True, False)
+            filepath = os.path.join(bpy.app.tempdir, nm)
+            img.Save(filepath, ice.constants.FMT_EXRFLOAT)
+            bpy.ops.image.open('EXEC_DEFAULT', filepath=filepath)
+            bpy.data.images[-1].pack()
+            os.remove(filepath)
+        else:
+            buffer = self._get_buffer(width, height)
+            if buffer is None:
+                rfb_log().error("Could not save snapshot.")
+                return
+
+            img = bpy.data.images.new(nm, width, height, float_buffer=True, alpha=True) 
+            if isinstance(buffer, numpy.ndarray):
+                buffer = buffer.tolist()               
+            img.pixels.foreach_set(buffer)
+            img.update()            
        
     def update_scene(self, context, depsgraph):
         if self.rman_interactive_running:
