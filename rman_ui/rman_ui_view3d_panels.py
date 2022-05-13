@@ -237,7 +237,8 @@ class PRMAN_PT_Renderman_UI_Panel(bpy.types.Panel, _RManPanelHeader):
         layout.label(text='Utilities:')
         box = layout.box()
         rman_addon_prefs = rfb_icons.get_icon('rman_loadplugin')
-        box.operator("renderman.open_addon_preferences", icon_value=rman_addon_prefs.icon_id)
+        op = box.operator("preferences.addon_show", text="Addon Preferences", icon_value=rman_addon_prefs.icon_id)
+        op.module = "RenderManForBlender"
         rman_pack_scene = rfb_icons.get_icon('rman_package_scene')
         box.operator("renderman.scene_package", icon_value=rman_pack_scene.icon_id)
 
