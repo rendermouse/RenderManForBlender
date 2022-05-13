@@ -213,6 +213,8 @@ def convert_cycles_nodetree(id, output_node):
     if cycles_output_node.inputs['Surface'].is_linked:
         begin_cycles_node = cycles_output_node.inputs['Surface'].links[0].from_node
         # if this is an emission use PxrMeshLight
+        begin_cycles_node.hide = True
+        cycles_output_node.hide = True
         if begin_cycles_node.bl_idname == "ShaderNodeEmission":
             node_name = __BL_NODES_MAP__.get('PxrMeshLight')
             meshlight = nt.nodes.new(node_name)
@@ -247,11 +249,12 @@ def convert_cycles_nodetree(id, output_node):
                 if node_name:
                     rman_node = nt.nodes.new(node_name)
 
+                rman_node.location = output_node.location
                 convert_func(nt, begin_cycles_node, rman_node)                    
-                nt.links.new(rman_node.outputs['bxdf_out'], base_surface.inputs["materialFront"])
-                offset_node_location(output_node, base_surface, begin_cycles_node)     
-                rman_node.location = begin_cycles_node.location
-                rman_node.location[0] -= 500      
+                nt.links.new(rman_node.outputs['bxdf_out'], base_surface.inputs["materialFront"])   
+                base_surface.location = output_node.location
+                base_surface.location[0] -= 160.0      
+                rman_node.location[0] -= 320.0      
 
                 output_node.bxdf_filter_parameters = True
                 output_node.bxdf_match_on = 'NODE_TYPE'
