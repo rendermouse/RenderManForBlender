@@ -149,7 +149,15 @@ class RmanEnvConfig(object):
         sys.path.append(rman_packages)        
         sys.path.append(os.path.join(self.rmantree, 'bin'))
         pythonbindings = os.path.join(self.rmantree, 'bin', 'pythonbindings')
-        sys.path.append(pythonbindings)          
+        sys.path.append(pythonbindings)   
+
+        if platform.system() == 'Windows':
+            # apparently, we need to do this for windows app versions
+            # of Blender, otherwise the rman python modules don't load
+            os.add_dll_directory(rman_packages)
+            os.add_dll_directory(os.path.join(self.rmantree, 'bin'))
+            os.add_dll_directory(pythonbindings)
+            os.add_dll_directory(os.path.join(self.rmantree, 'lib'))               
 
     def _append_to_path(self, path):        
         if path is not None:
