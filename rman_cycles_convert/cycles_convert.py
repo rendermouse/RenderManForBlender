@@ -425,6 +425,8 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
 
     node_name = __BL_NODES_MAP__.get('PxrBlenderPrincipledInputs', None)
     rman_node = nt.nodes.new(node_name)     
+    rman_node.location = final_mix_node.location
+    rman_node.location[0] -= 1440.0    
 
     convert_cycles_input(nt, inputs['Base Color'], rman_node, "BaseColor")
     convert_cycles_input(nt, inputs['Subsurface'], rman_node, "Subsurface")
@@ -449,6 +451,8 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     node_name = __BL_NODES_MAP__.get('LamaDiffuse', None)
     diffuse_node = nt.nodes.new(node_name) 
     diffuse_node.name = 'Diffuse'
+    diffuse_node.location = final_mix_node.location
+    diffuse_node.location[0] -= 1280.0
     nodes_list.append(diffuse_node)
     
     nt.links.new(rman_node.outputs["out_baseColor"], diffuse_node.inputs["color"])
@@ -458,6 +462,9 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     # subsurface
     node_name = __BL_NODES_MAP__.get('LamaSSS', None)
     sss_node = nt.nodes.new(node_name) 
+    sss_node.location = final_mix_node.location
+    sss_node.location[0] -= 1280.0    
+    sss_node.location[1] -= 240.0 
     nodes_list.append(sss_node)    
     
     nt.links.new(rman_node.outputs["out_sssColor"], sss_node.inputs["color"])
@@ -468,6 +475,8 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     node_name = __BL_NODES_MAP__.get('LamaMix', None)
     diff_sss_mix_node = nt.nodes.new(node_name) 
     diff_sss_mix_node.name = 'mix_sss'
+    diff_sss_mix_node.location = final_mix_node.location
+    diff_sss_mix_node.location[0] -= 1120.0      
     nodes_list.append(diff_sss_mix_node)        
 
     nt.links.new(diffuse_node.outputs["Bxdf"], diff_sss_mix_node.inputs["material1"])
@@ -477,6 +486,9 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     # sheen
     node_name = __BL_NODES_MAP__.get('LamaSheen', None)
     sheen_node = nt.nodes.new(node_name) 
+    sheen_node.location = final_mix_node.location
+    sheen_node.location[0] -= 1120.0    
+    sheen_node.location[1] -= 240.0     
     nodes_list.append(sheen_node)
 
     nt.links.new(rman_node.outputs["out_sheenColor"], sheen_node.inputs["color"])
@@ -486,6 +498,8 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     node_name = __BL_NODES_MAP__.get('LamaAdd', None)
     diff_sheen_add_node = nt.nodes.new(node_name) 
     diff_sheen_add_node.name = 'plus_sheen'
+    diff_sheen_add_node.location = final_mix_node.location
+    diff_sheen_add_node.location[0] -= 960.0  
     nodes_list.append(diff_sheen_add_node)       
 
     nt.links.new(diff_sss_mix_node.outputs["Bxdf"], diff_sheen_add_node.inputs["material1"])
@@ -496,6 +510,8 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     node_name = __BL_NODES_MAP__.get('LamaConductor', None)
     specular_node = nt.nodes.new(node_name)   
     specular_node.name = 'Specular'
+    specular_node.location = final_mix_node.location
+    specular_node.location[0] -= 960.0        
     nodes_list.append(specular_node)       
 
     nt.links.new(rman_node.outputs["out_specF0"], specular_node.inputs["reflectivity"])  
@@ -508,6 +524,8 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     node_name = __BL_NODES_MAP__.get('LamaAdd', None)
     sheen_spec_add_node = nt.nodes.new(node_name) 
     sheen_spec_add_node.name = 'plus_spec'
+    sheen_spec_add_node.location = final_mix_node.location
+    sheen_spec_add_node.location[0] -= 800.0    
     nodes_list.append(sheen_spec_add_node)       
 
     nt.links.new(diff_sheen_add_node.outputs["Bxdf"], sheen_spec_add_node.inputs["material1"])
@@ -520,6 +538,9 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     node_name = __BL_NODES_MAP__.get('LamaDielectric', None)
     transmission_node = nt.nodes.new(node_name) 
     transmission_node.name = 'Transmission'
+    transmission_node.location = final_mix_node.location
+    transmission_node.location[0] -= 800.0    
+    transmission_node.location[1] -= 240.0      
     nodes_list.append(transmission_node)   
 
     nt.links.new(rman_node.outputs["out_baseColor"], transmission_node.inputs["transmissionTint"])
@@ -530,6 +551,8 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     node_name = __BL_NODES_MAP__.get('LamaAdd', None)
     spec_transmission_add_node = nt.nodes.new(node_name) 
     spec_transmission_add_node.name = 'plus_transmission'
+    spec_transmission_add_node.location = final_mix_node.location
+    spec_transmission_add_node.location[0] -= 640.0      
     nodes_list.append(spec_transmission_add_node)
 
     nt.links.new(sheen_spec_add_node.outputs["Bxdf"], spec_transmission_add_node.inputs["material1"])
@@ -540,6 +563,9 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     node_name = __BL_NODES_MAP__.get('LamaDielectric', None)
     coat_node = nt.nodes.new(node_name)   
     coat_node.name = 'Clearcoat'
+    coat_node.location = final_mix_node.location
+    coat_node.location[0] -= 640.0    
+    coat_node.location[1] -= 240.0     
     nodes_list.append(coat_node)
 
     nt.links.new(rman_node.outputs["out_clearcoatRoughness"], coat_node.inputs["roughness"])
@@ -549,6 +575,8 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     node_name = __BL_NODES_MAP__.get('LamaAdd', None)
     transmission_coat_add_node = nt.nodes.new(node_name) 
     transmission_coat_add_node.name = 'plus_coat'
+    transmission_coat_add_node.location = final_mix_node.location
+    transmission_coat_add_node.location[0] -= 480.0       
     nodes_list.append(transmission_coat_add_node)
 
     nt.links.new(spec_transmission_add_node.outputs["Bxdf"], transmission_coat_add_node.inputs["material1"])
@@ -558,6 +586,9 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     # emission
     node_name = __BL_NODES_MAP__.get('LamaEmission', None)
     emission_node = nt.nodes.new(node_name) 
+    emission_node.location = final_mix_node.location
+    emission_node.location[0] -= 480.0    
+    emission_node.location[1] -= 240.0       
     nodes_list.append(emission_node)
 
     nt.links.new(rman_node.outputs["out_emissionColor"], emission_node.inputs["color"])   
