@@ -511,7 +511,8 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     specular_node = nt.nodes.new(node_name)   
     specular_node.name = 'Specular'
     specular_node.location = final_mix_node.location
-    specular_node.location[0] -= 960.0        
+    specular_node.location[0] -= 960.0
+    specular_node.location[1] -= 240.0        
     nodes_list.append(specular_node)       
 
     nt.links.new(rman_node.outputs["out_specF0"], specular_node.inputs["reflectivity"])  
