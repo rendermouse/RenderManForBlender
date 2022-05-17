@@ -1143,9 +1143,13 @@ class RmanScene(object):
             if primvar_t == '':
                 primvar_t = 't'
             invert_t = rm.rman_bake_illum_invertT
+            udim_stride = rm.rman_bake_illum_bakeudimstride
+            udim_offset = rm.rman_bake_illum_bakeudimoffset
             options.SetString(self.rman.Tokens.Rix.k_hider_bakemode, bakemode)
             options.SetStringArray(self.rman.Tokens.Rix.k_hider_primvar, (primvar_s, primvar_t), 2) 
             options.SetInteger(self.rman.Tokens.Rix.k_hider_invert, invert_t)
+            options.SetInteger(self.rman.Tokens.Rix.k_hider_bakeudimstride, udim_stride)
+            options.SetInteger(self.rman.Tokens.Rix.k_hider_bakeudimoffset, udim_offset)
         else:
             pv = rm.ri_pixelVariance
 
