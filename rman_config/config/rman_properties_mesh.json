@@ -87,6 +87,23 @@
             }
         },
         {
+            "panel": "MESH_PT_renderman_mesh_attrs",
+            "name": "rman_holesFaceMap",
+            "label": "Holes Face Map",
+            "type": "string",
+            "default": "",
+            "page": "Subdivision Mesh",
+            "editable": true,
+            "widget": "propSearch",
+            "options": "prop_parent:context.object|prop_name:face_maps",            
+            "help": "You can select a face map to act as holes for your subdiv.",
+            "conditionalVisOps": {
+                "conditionalVisOp": "notEqualTo",
+                "conditionalVisPath": "rman_subdiv_scheme",
+                "conditionalVisValue": "none"
+            }            
+        },        
+        {
             "panel": "MESH_PT_renderman_prim_vars",
             "name": "export_default_uv",
             "label": "Export Default UV",

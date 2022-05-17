@@ -8,6 +8,7 @@ from ..rfb_logger import rfb_log
 
 import bpy
 import math
+import bmesh
 import numpy as np
 
 def _get_mats_faces_(nverts, material_ids):
@@ -242,6 +243,7 @@ class RmanMeshTranslator(RmanTranslator):
 
     def _get_subd_tags_(self, ob, mesh, primvar):
         creases = []
+        rm = mesh.renderman
 
         # only do creases 1 edge at a time for now,
         # detecting chains might be tricky..
@@ -265,6 +267,30 @@ class RmanMeshTranslator(RmanTranslator):
                 nargs.extend([2, 1, 0])
                 intargs.extend([c[0], c[1]])
                 floatargs.append(c[2])           
+
+        holes_facemap = getattr(rm, 'rman_holesFaceMap', '')
+        if holes_facemap != '' and holes_facemap in ob.face_maps:
+            # use this facemap for face edit holes
+            holes_idx = ob.face_maps[holes_facemap].index
+            bm = bmesh.new()
+            bm.from_mesh(mesh)
+            fm = bm.faces.layers.face_map.verify()
+
+            holes = []
+            for face in bm.faces:
+                face_idx = face.index
+                map_idx = face[fm]  
+                if map_idx == holes_idx:
+                    holes.append(face_idx)
+            if holes:
+                tags.append('faceedit')
+                num_holes = len(holes)
+                for h in holes:
+                    intargs.extend([1, h])
+                nargs.extend([num_holes*2, 0, num_holes])
+                stringargs.extend(['hole'] * num_holes)
+
+            bm.free()
 
         primvar.SetStringArray(self.rman_scene.rman.Tokens.Rix.k_Ri_subdivtags, tags, len(tags))
         primvar.SetIntegerArray(self.rman_scene.rman.Tokens.Rix.k_Ri_subdivtagnargs, nargs, len(nargs))
