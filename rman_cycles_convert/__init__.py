@@ -53,7 +53,8 @@ def convert_cycles_bsdf(nt, rman_parent, node, input_index):
                              rman_parent.inputs[input_index])                                          
 
         elif node.bl_idname == 'ShaderNodeAddShader':
-
+            node1.hide = True
+            node2.hide = True
             node_name = __BL_NODES_MAP__.get('LamaAdd')
             add = nt.nodes.new(node_name)
             if rman_parent.bl_label == 'LamaSurface':
@@ -79,6 +80,8 @@ def convert_cycles_bsdf(nt, rman_parent, node, input_index):
             return add                      
 
         elif node.bl_idname == 'ShaderNodeMixShader': 
+            node1.hide = True
+            node2.hide = True            
 
             node_name = __BL_NODES_MAP__.get('LamaMix')
             mixer = nt.nodes.new(node_name)
@@ -273,6 +276,8 @@ def convert_cycles_nodetree(id, output_node):
             base_surface.update_mat(id)
         has_bxdf = True
     elif cycles_output_node.inputs['Volume'].is_linked:
+        begin_cycles_node.hide = True
+        cycles_output_node.hide = True        
         begin_cycles_node = cycles_output_node.inputs['Volume'].links[0].from_node
         node_type = begin_cycles_node.bl_idname
         bxdf_name, convert_func = _BSDF_MAP_.get(node_type, (None, None))

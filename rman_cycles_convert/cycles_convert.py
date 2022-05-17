@@ -33,6 +33,7 @@ __CURRENT_MATERIAL__ = None
 
 def convert_cycles_node(nt, node, location=None):    
     node_type = node.bl_idname
+    node.hide = True
     if node.name in converted_nodes:
         return nt.nodes[converted_nodes[node.name]]
 
@@ -73,6 +74,8 @@ def convert_cycles_node(nt, node, location=None):
         node2 = node.inputs[
             1 + i].links[0].from_node if node.inputs[1 + i].is_linked else None
 
+        node1.hide = True
+        node2.hide = True
         if node.bl_idname == 'ShaderNodeAddShader':      
             node_name = __BL_NODES_MAP__.get('LamaAdd')  
             add = nt.nodes.new(node_name)
@@ -157,6 +160,7 @@ def convert_linked_node(nt, socket, rman_node, param_name):
         (socket.node.location - socket.links[0].from_node.location)
     node = convert_cycles_node(nt, socket.links[0].from_node, location)
     if node:
+        node.hide = True
         out_socket = None
 
         # find the appropriate socket to hook up.

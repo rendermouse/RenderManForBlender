@@ -839,11 +839,27 @@ def has_stylized_pattern_node(ob, node=None):
 
     return False
 
+def hide_cycles_nodes(id):
+    cycles_output_node = None
+    if isinstance(id, bpy.types.Material):
+        cycles_output_node = find_node(id, 'ShaderNodeOutputMaterial')
+    elif isinstance(id, bpy.types.Light):
+        cycles_output_node = find_node(id, 'ShaderNodeOutputLight')
+    elif isinstance(id, bpy.types.World):
+        cycles_output_node = find_node(id, 'ShaderNodeOutputWorld')
+    if not cycles_output_node:
+        return
+    cycles_output_node.hide = True
+    for i in cycles_output_node.inputs:
+        if i.is_linked:
+            i.links[0].from_node.hide = True    
+
+
 def create_bxdf(bxdf):
     mat = bpy.data.materials.new(bxdf)
-
     mat.use_nodes = True
     nt = mat.node_tree
+    hide_cycles_nodes(mat)    
 
     output = nt.nodes.new('RendermanOutputNode')
     default = nt.nodes.new('%sBxdfNode' % bxdf)

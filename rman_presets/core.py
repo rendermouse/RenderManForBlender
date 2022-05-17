@@ -1058,6 +1058,7 @@ def createNodes(Asset):
     mat = bpy.data.materials.new(Asset.label())
     mat.use_nodes = True
     nt = mat.node_tree       
+    shadergraph_utils.hide_cycles_nodes(mat)
 
     # create output node
     output_node = nt.nodes.new('RendermanOutputNode')

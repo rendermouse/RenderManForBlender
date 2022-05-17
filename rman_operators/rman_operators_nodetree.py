@@ -96,6 +96,7 @@ class SHADING_OT_convert_all_renderman_nodetree(bpy.types.Operator):
             light.type = 'POINT'
 
             light.renderman.use_renderman_node = True
+            shadergraph_utils.hide_cycles_nodes(light)
 
             output = nt.nodes.new('RendermanOutputNode')
             node_name = rman_bl_nodes.__BL_NODES_MAP__[light_shader]
@@ -213,6 +214,7 @@ class SHADING_OT_add_renderman_nodetree(bpy.types.Operator):
         nt = idblock.node_tree
 
         if idtype == 'material':
+            shadergraph_utils.hide_cycles_nodes(idblock)
             output = nt.nodes.new('RendermanOutputNode')
             if idblock.grease_pencil:
                 shadergraph_utils.convert_grease_pencil_mat(idblock, nt, output)
@@ -263,6 +265,7 @@ class SHADING_OT_add_renderman_nodetree(bpy.types.Operator):
             light.type = 'POINT'
 
             light.renderman.use_renderman_node = True
+            shadergraph_utils.hide_cycles_nodes(light)
 
             output = nt.nodes.new('RendermanOutputNode')
             default = nt.nodes.new('%sLightNode' %
@@ -283,6 +286,7 @@ class SHADING_OT_add_renderman_nodetree(bpy.types.Operator):
 
         elif idtype == 'world':
             # world
+            shadergraph_utils.hide_cycles_nodes(idblock)
             idblock.renderman.use_renderman_node = True
             if shadergraph_utils.find_node(idblock, 'RendermanIntegratorsOutputNode'):
                 return {'FINISHED'}
@@ -362,6 +366,7 @@ class SHADING_OT_add_integrator_nodetree(bpy.types.Operator):
         world.renderman.use_renderman_node = True
         if shadergraph_utils.find_node(world, 'RendermanIntegratorsOutputNode'):
             return {'FINISHED'}
+        shadergraph_utils.hide_cycles_nodes(world)
         output = nt.nodes.new('RendermanIntegratorsOutputNode')
         node_name = rman_bl_nodes.__BL_NODES_MAP__.get('PxrPathTracer')
         default = nt.nodes.new(node_name)
@@ -395,7 +400,7 @@ class SHADING_OT_add_displayfilters_nodetree(bpy.types.Operator):
         world.renderman.use_renderman_node = True
         if shadergraph_utils.find_node(world, 'RendermanDisplayfiltersOutputNode'):
             return {'FINISHED'}
-
+        shadergraph_utils.hide_cycles_nodes(world)
         df_output = nt.nodes.new('RendermanDisplayfiltersOutputNode')
         df_output.location = df_output.location
         df_output.location[0] -= 300
@@ -430,7 +435,7 @@ class SHADING_OT_world_convert_material(bpy.types.Operator):
         world = context.scene.world
         world.use_nodes = True
         nt = world.node_tree
-
+        shadergraph_utils.hide_cycles_nodes(world)
         output = nt.nodes.new('RendermanIntegratorsOutputNode')
         node_name = rman_bl_nodes.__BL_NODES_MAP__.get('PxrPathTracer')
         default = nt.nodes.new(node_name)
@@ -476,7 +481,7 @@ class SHADING_OT_add_samplefilters_nodetree(bpy.types.Operator):
         world.renderman.use_renderman_node = True
         if shadergraph_utils.find_node(world, 'RendermanSamplefiltersOutputNode'):
             return {'FINISHED'}
-
+        shadergraph_utils.hide_cycles_nodes(world)
         sf_output = nt.nodes.new('RendermanSamplefiltersOutputNode')
         sf_output.location = sf_output.location
         sf_output.location[0] -= 300
@@ -511,7 +516,7 @@ class PRMAN_OT_New_bxdf(bpy.types.Operator):
         ob.active_material = mat
         mat.use_nodes = True
         nt = mat.node_tree
-
+        shadergraph_utils.hide_cycles_nodes(mat)
         output = nt.nodes.new('RendermanOutputNode')
         bxdf_node_name = rman_bl_nodes.__BL_NODES_MAP__[bxdf_name]        
         default = nt.nodes.new(bxdf_node_name)
@@ -572,6 +577,7 @@ class PRMAN_OT_New_Material_Override(bpy.types.Operator):
         ob.renderman.rman_material_override = mat
         mat.use_nodes = True
         nt = mat.node_tree
+        shadergraph_utils.hide_cycles_nodes(mat)
 
         output = nt.nodes.new('RendermanOutputNode')
         output.select = False

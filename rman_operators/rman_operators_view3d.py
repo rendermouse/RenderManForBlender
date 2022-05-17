@@ -202,6 +202,7 @@ class PRMAN_OT_RM_Add_Light(bpy.types.Operator):
         light.renderman.renderman_lock_light_type = True
         light.use_nodes = True
         light.renderman.use_renderman_node = True
+        shadergraph_utils.hide_cycles_nodes(light)
 
         nt = light.node_tree
         output = nt.nodes.new('RendermanOutputNode')                 
@@ -249,6 +250,7 @@ class PRMAN_OT_RM_Add_Light_Filter(bpy.types.Operator):
         light_filter.renderman.renderman_lock_light_type = True
         light_filter.use_nodes = True
         light_filter.renderman.use_renderman_node = True
+        shadergraph_utils.hide_cycles_nodes(light_filter)
 
         nt = light_filter.node_tree
         output = nt.nodes.new('RendermanOutputNode')
@@ -327,9 +329,9 @@ class PRMAN_OT_RM_Create_MeshLight(bpy.types.Operator):
 
     def create_mesh_light_material(self, context):
         mat = bpy.data.materials.new("PxrMeshLight")
-
         mat.use_nodes = True
         nt = mat.node_tree
+        shadergraph_utils.hide_cycles_nodes(mat)
 
         output = nt.nodes.new('RendermanOutputNode')
         geoLight = nt.nodes.new('PxrMeshLightLightNode')
