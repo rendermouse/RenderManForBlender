@@ -14,9 +14,8 @@ def get_bspline_curve(curve):
     nvertices = []
     name = ''
     num_curves = len(curve.splines)
-    index = []
 
-    for i, spline in enumerate(curve.splines):
+    for spline in curve.splines:
 
         npoints = len(spline.points)
         pts = np.zeros(npoints*4, dtype=np.float32)
@@ -29,9 +28,10 @@ def get_bspline_curve(curve):
 
         P.extend(pts[0:, 0:3].tolist())
         widths.append(width.tolist())
-        index.append(i)
-        nvertices.append(len(spline.points))
+        nvertices.append(npoints)
         name = spline.id_data.name
+
+    index = np.arange(num_curves).tolist()
     
     return (P, num_curves, nvertices, widths, index, name)
 
@@ -41,9 +41,8 @@ def get_curve(curve):
     nvertices = []
     name = ''
     num_curves = len(curve.splines)
-    index = []
 
-    for i, spline in enumerate(curve.splines):
+    for spline in curve.splines:
 
         npoints = len(spline.points)
         pts = np.zeros(npoints*4, dtype=np.float32)
@@ -55,11 +54,11 @@ def get_curve(curve):
         width = np.where(width >= 1.0, width*0.01, 0.01)
 
         P.extend(pts[0:, 0:3].tolist())
-
         widths.append(width)
-        index.append(i)
-        nvertices.append(len(spline.points))
+        nvertices.append(npoints)
         name = spline.id_data.name
+
+    index = np.arange(num_curves).tolist()        
     
     return (P, num_curves, nvertices, widths, index, name)
 
