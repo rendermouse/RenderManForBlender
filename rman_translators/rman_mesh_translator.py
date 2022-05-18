@@ -242,17 +242,7 @@ class RmanMeshTranslator(RmanTranslator):
         self.bl_type = 'MESH' 
 
     def _get_subd_tags_(self, ob, mesh, primvar):
-        creases = []
         rm = mesh.renderman
-
-        # only do creases 1 edge at a time for now,
-        # detecting chains might be tricky..
-        for e in mesh.edges:
-            if e.crease > 0.0:
-                creases.append((e.vertices[0], e.vertices[1],
-                                e.crease * e.crease * 10))
-                # squared, to match blender appareance better
-                #: range 0 - 10 (infinitely sharp)
 
         tags = ['interpolateboundary', 'facevaryinginterpolateboundary']
         nargs = [1, 0, 0, 1, 0, 0]
@@ -261,12 +251,30 @@ class RmanMeshTranslator(RmanTranslator):
         floatargs = []
         stringargs = []   
 
-        if len(creases) > 0:
-            for c in creases:
-                tags.append('crease')
-                nargs.extend([2, 1, 0])
-                intargs.extend([c[0], c[1]])
-                floatargs.append(c[2])           
+        # get creases
+        edges_len = len(mesh.edges)
+        creases = np.zeros(edges_len, dtype=np.float32)
+        mesh.edges.foreach_get('crease', creases)
+        if (creases > 0.0).any():
+            # we have edges where their crease is > 0.0
+            # grab only those edges
+            crease_edges = np.zeros(edges_len*2, dtype=np.int)
+            mesh.edges.foreach_get('vertices', crease_edges)
+            crease_edges = np.reshape(crease_edges, (edges_len, 2))
+            crease_edges = crease_edges[creases > 0.0]
+            
+            # squared, to match blender appareance better
+            #: range 0 - 10 (infinitely sharp)
+            creases = creases * creases * 10.0
+            
+            creases = creases[creases > 0.0]
+            edges_subset_len = len(creases) 
+
+            tags.extend(['crease'] * edges_subset_len)
+            nargs.extend([2, 1, 0] * edges_subset_len)
+            intargs.extend(crease_edges.flatten().tolist())
+            floatargs.extend(creases.tolist())   
+
 
         holes_facemap = getattr(rm, 'rman_holesFaceMap', '')
         if holes_facemap != '' and holes_facemap in ob.face_maps:
