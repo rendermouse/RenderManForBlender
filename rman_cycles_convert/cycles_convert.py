@@ -371,6 +371,21 @@ def convert_math_node(nt, cycles_node, rman_node):
 
     return
 
+def convert_wireframe_node(nt, cycles_node, rman_node):
+
+    tmp = [rman_node.wireColor[0], rman_node.wireColor[1], rman_node.wireColor[2]]
+    rman_node.wireColor = [rman_node.backColor[0], rman_node.backColor[1], rman_node.backColor[2]]
+    rman_node.backColor = [tmp[0], tmp[1], tmp[2]]
+
+    input = cycles_node.inputs['Size']
+    if input.is_linked:
+        convert_linked_node(nt, input, rman_node, input.name)
+    else:
+        val = input.default_value
+        rman_node.wireWidth = val * 100.0
+
+    return    
+
 # this needs a special case to init the stuff
 
 
@@ -778,5 +793,6 @@ _NODE_MAP_ = {
     'ShaderNodeMath': ('', convert_math_node),
     'ShaderNodeRGB': ('PxrHSL', convert_rgb_node),
     'ShaderNodeValue': ('PxrToFloat', convert_node_value),
-    'ShaderNodeAttribute': ('PxrPrimvar', convert_attribute_node)
+    'ShaderNodeAttribute': ('PxrPrimvar', convert_attribute_node),
+    'ShaderNodeWireframe': ('PxrWireframe', convert_wireframe_node)
 }
