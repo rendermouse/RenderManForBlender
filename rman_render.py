@@ -566,6 +566,7 @@ class RmanRender(object):
             # FIXME: for now, add a 1 second delay before starting the stats thread
             # for some reason, XPU doesn't seem to reset the progress between renders
             time.sleep(1.0)        
+        self.stats_mgr.reset()
         __RMAN_STATS_THREAD__.start()         
 
     def reset(self):

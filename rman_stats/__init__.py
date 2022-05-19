@@ -19,6 +19,7 @@ __RFB_STATS_MANAGER__ = None
 
 __LIVE_METRICS__ = [
     ["/system.processMemory", "Memory"],
+    ["/rman/renderer@isRendering", None],
     ["/rman/renderer@progress", None],
     ['/rman@iterationComplete', None],
     ["/rman.timeToFirstRaytrace", "First Ray"],
@@ -110,6 +111,7 @@ class RfBStatsManager(object):
         self._prevTotalRays = 0
         self._progress = 0
         self._prevTotalRaysValid = True
+        self._isRendering = False
 
         for name,label in __LIVE_METRICS__:
             if name:
@@ -157,7 +159,8 @@ class RfBStatsManager(object):
         self._progress = 0
         self._prevTotalRaysValid = True      
         self.export_stat_label = ''
-        self.export_stat_progress = 0.0              
+        self.export_stat_progress = 0.0
+        self._isRendering = True              
 
     def create_stats_manager(self): 
         if self.mgr:
@@ -355,6 +358,9 @@ class RfBStatsManager(object):
                     self.render_live_stats["Total Rays"] = currentTotalRays
                     self._prevTotalRaysValid = True
                     self._prevTotalRays = currentTotalRays    
+                elif name == "/rman/renderer@isRendering":
+                    is_rendering = dat['payload']
+                    self._isRendering = is_rendering                    
                 elif name == "/rman@iterationComplete":
                     itr = dat['payload'][0]
                     self._iterations = itr  
