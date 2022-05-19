@@ -1,6 +1,7 @@
 from .rman_translator import RmanTranslator
 from ..rman_sg_nodes.rman_sg_mesh import RmanSgMesh
 from ..rfb_utils import object_utils
+from ..rfb_utils import mesh_utils
 from ..rfb_utils import string_utils
 from ..rfb_utils import property_utils
 from ..rfb_utils import scenegraph_utils
@@ -324,7 +325,7 @@ class RmanMeshTranslator(RmanTranslator):
         if not sg_node:
             sg_node = rman_sg_mesh.sg_node
         primvar = sg_node.GetPrimVars()
-        P = object_utils._get_mesh_points_(mesh)
+        P = mesh_utils.get_mesh_points_(mesh)
         npoints = len(P)
 
         if rman_sg_mesh.npoints != npoints:
@@ -365,7 +366,7 @@ class RmanMeshTranslator(RmanTranslator):
         rman_sg_mesh.is_subdiv = object_utils.is_subdmesh(ob)
         use_smooth_normals = getattr(ob.data.renderman, 'rman_smoothnormals', False)
         get_normals = (rman_sg_mesh.is_subdiv == 0 and not use_smooth_normals)
-        (nverts, verts, P, N) = object_utils._get_mesh_(mesh, get_normals=get_normals)
+        (nverts, verts, P, N) = mesh_utils.get_mesh(mesh, get_normals=get_normals)
         
         # if this is empty continue:
         if nverts == []:

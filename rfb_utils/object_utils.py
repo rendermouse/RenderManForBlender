@@ -1,5 +1,4 @@
 import bpy
-import numpy as np
 from .prefs_utils import get_pref
 from . import string_utils
 
@@ -268,42 +267,3 @@ def _get_used_materials_(ob):
         return [mesh.materials[i] for i in mat_ids]
     else:
         return [ob.active_material]     
-
-def _get_mesh_points_(mesh):
-    nvertices = len(mesh.vertices)
-    P = np.zeros(nvertices*3, dtype=np.float32)
-    mesh.vertices.foreach_get('co', P)
-    P = np.reshape(P, (nvertices, 3))
-    return P.tolist()
-
-def _get_mesh_(mesh, get_normals=False):
-
-    P = _get_mesh_points_(mesh)
-    N = []    
-
-    npolygons = len(mesh.polygons)
-    fastnvertices = np.zeros(npolygons, dtype=np.int)
-    mesh.polygons.foreach_get('loop_total', fastnvertices)
-    nverts = fastnvertices.tolist()
-
-    loops = len(mesh.loops)
-    fastvertices = np.zeros(loops, dtype=np.int)
-    mesh.loops.foreach_get('vertex_index', fastvertices)
-    verts = fastvertices.tolist()
-
-    if get_normals:
-        fastsmooth = np.zeros(npolygons, dtype=np.int)
-        mesh.polygons.foreach_get('use_smooth', fastsmooth)
-        if mesh.use_auto_smooth or True in fastsmooth:
-            mesh.calc_normals_split()
-            fastnormals = np.zeros(loops*3, dtype=np.float32)
-            mesh.loops.foreach_get('normal', fastnormals)
-            fastnormals = np.reshape(fastnormals, (loops, 3))
-            N = fastnormals.tolist()            
-        else:            
-            fastnormals = np.zeros(npolygons*3, dtype=np.float32)
-            mesh.polygons.foreach_get('normal', fastnormals)
-            fastnormals = np.reshape(fastnormals, (npolygons, 3))
-            N = fastnormals.tolist()
-
-    return (nverts, verts, P, N)
