@@ -154,13 +154,96 @@ def set_color_space(nt, socket, rman_node, node, param_name, in_socket):
     if node.bl_label in ['PxrTexture'] and shadergraph_utils.is_socket_float_type(in_socket):
         setattr(node, 'filename_colorspace', 'data')    
 
+def convert_new_geometry_node(nt, socket, cycles_node, rman_node, param_name):
+    socket_nm = socket.links[0].from_socket.name
+    in_socket = rman_node.inputs[param_name]
+    if socket_nm == 'Backfacing':
+        node_name = __BL_NODES_MAP__.get('PxrShadedSide', None)
+        convert_node = nt.nodes.new(node_name)       
+        convert_node.invert = 1     
+        nt.links.new(convert_node.outputs['resultF'], in_socket)        
+    elif socket_nm == 'Incoming':
+        node_name = __BL_NODES_MAP__.get('PxrPrimvar', None)
+        convert_node = nt.nodes.new(node_name)            
+        convert_node.variable = 'Vn'
+        convert_node.type = 'vector'
+        nt.links.new(convert_node.outputs['resultP'], in_socket)
+    elif socket_nm == 'Normal':
+        # The Blender docs says this also includes bump mapping
+        # Have to think about how to wire the result of any PxrBumps in the network
+        # to here
+        node_name = __BL_NODES_MAP__.get('PxrPrimvar', None)
+        convert_node = nt.nodes.new(node_name)            
+        convert_node.variable = 'Nn'
+        convert_node.type = 'normal'
+        nt.links.new(convert_node.outputs['resultP'], in_socket)
+    elif socket_nm == 'Parametric':
+        # From the Blender docs:
+        #
+        # "Parametric coordinates of the shading point on the surface. 
+        # To area lights it outputs its UV coordinates in planar mapping and 
+        # in spherical coordinates to point lights."
+        #
+        #
+        node_name = __BL_NODES_MAP__.get('PxrPrimvar', None)
+        convert_node = nt.nodes.new(node_name)            
+        convert_node.variable = 'uvw'
+        convert_node.type = 'vector'
+        nt.links.new(convert_node.outputs['resultP'], in_socket)
+    elif socket_nm == 'Pointiness':
+        # From the Blender docs:
+        #
+        # "An approximation of the curvature of the mesh per vertex. Lighter 
+        # values indicate convex angles, darker values indicate concave angles. 
+        # It allows you to do effects like dirt maps and wear-off effects."      
+        node_name = __BL_NODES_MAP__.get('PxrPrimvar', None)
+        convert_node = nt.nodes.new(node_name)            
+        convert_node.variable = 'curvature'
+        convert_node.type = 'float'
+        nt.links.new(convert_node.outputs['resultF'], in_socket)
+    elif socket_nm == 'Position':
+        node_name = __BL_NODES_MAP__.get('PxrPrimvar', None)
+        convert_node = nt.nodes.new(node_name)            
+        convert_node.variable = 'P'
+        convert_node.type = 'point'
+        nt.links.new(convert_node.outputs['resultP'], in_socket)
+    elif socket_nm == 'Random Per Island':
+        # From the Blender docs:
+        #
+        # "A random value for each connected component (island) of the mesh. 
+        # It is useful to add variations to meshes composed of separated units like 
+        # tree leaves, wood planks, or curves of multiple splines."
+        #
+        # Not exactly sure how to convert this. For now, we'll just use PxrVary.
+        # PxrVary doesn't have a float output, so we'll just use resultR
+        node_name = __BL_NODES_MAP__.get('PxrVary', None)
+        convert_node = nt.nodes.new(node_name)            
+        nt.links.new(convert_node.outputs['resultR'], in_socket)
+    elif socket_nm == 'Tangent':
+        # Tangent at the surface.
+        node_name = __BL_NODES_MAP__.get('PxrPrimvar', None)
+        convert_node = nt.nodes.new(node_name)            
+        convert_node.variable = 'Tn'
+        convert_node.type = 'vector'
+        nt.links.new(convert_node.outputs['resultP'], in_socket)
+    elif socket_nm == 'True Normal':
+        # Geometry or flat normal of the surface.
+        node_name = __BL_NODES_MAP__.get('PxrPrimvar', None)
+        convert_node = nt.nodes.new(node_name)            
+        convert_node.variable = 'Ngn'
+        convert_node.type = 'normal'
+        nt.links.new(convert_node.outputs['resultP'], in_socket)
 
 def convert_linked_node(nt, socket, rman_node, param_name):
     location = rman_node.location - \
         (socket.node.location - socket.links[0].from_node.location)
-    node = convert_cycles_node(nt, socket.links[0].from_node, location)
+    from_node = socket.links[0].from_node
+    if from_node.bl_idname == 'ShaderNodeNewGeometry':
+        # this node needs special handling
+        return convert_new_geometry_node(nt, socket, from_node, rman_node, param_name)
+
+    node = convert_cycles_node(nt, from_node, location)
     if node:
-        node.hide = True
         out_socket = None
 
         # find the appropriate socket to hook up.
