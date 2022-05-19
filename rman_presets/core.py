@@ -590,14 +590,14 @@ def export_material_preset(mat, nodes_to_convert, renderman_output_node, Asset):
         dstPlug = "%s.%s" % (nodeName, 'rman__surface')    
         Asset.addConnection(srcPlug, dstPlug)                                     
 
-    if renderman_output_node.inputs['displacement_input'].is_linked:
+    if renderman_output_node.inputs['displace_in'].is_linked:
         infodict = {}
         infodict['name'] = 'rman__displacement'
         infodict['type'] = 'reference float3'
         infodict['value'] = None
         Asset.addParam(nodeName, nodeType, 'rman__displacement', infodict)              
 
-        from_node = renderman_output_node.inputs['displacement_input'].links[0].from_node
+        from_node = renderman_output_node.inputs['displace_in'].links[0].from_node
         srcPlug = "%s.%s" % (fix_blender_name(from_node.name), 'outColor')
         dstPlug = "%s.%s" % (nodeName, 'rman__displacement')   
         Asset.addConnection(srcPlug, dstPlug) 

@@ -233,7 +233,7 @@ class MATERIAL_PT_renderman_object_shader_surface(Panel, CollectionPanel):
                     col = split.column()                                
                 
                 layout.separator()
-                input_name = 'bxdf_input'
+                input_name = 'bxdf_in'
                 if not rman_output_node.inputs[input_name].is_linked:
                     panel_node_draw(layout, context, mat,
                                     'RendermanOutputNode', 'Bxdf')  
@@ -340,7 +340,7 @@ class MATERIAL_PT_renderman_object_shader_displacement(Panel, CollectionPanel):
                     col = split.column()
 
             shader_type = 'Displacement'
-            input_name = 'displacement_input'
+            input_name = 'displace_in'
             if not rman_output_node.inputs[input_name].is_linked:
                 draw_nodes_properties_ui(
                     layout, context, nt, input_name=input_name)
