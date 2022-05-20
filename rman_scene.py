@@ -594,7 +594,7 @@ class RmanScene(object):
 
         return True    
 
-    def export_instance(self, ob_eval, ob_inst, rman_sg_node, rman_type, instance_parent, psys):
+    def export_instance(self, ob_eval, ob_inst, rman_sg_node, rman_type, instance_parent, psys, foo=True):
         rman_group_translator = self.rman_translators['GROUP']
         group_db_name = object_utils.get_group_db_name(ob_inst) 
         rman_sg_group = rman_group_translator.export(ob_eval, group_db_name)
@@ -639,11 +639,11 @@ class RmanScene(object):
             rman_parent_node = self.get_rman_prototype(object_utils.prototype_key(instance_parent), ob=instance_parent, create=True)
             if rman_parent_node:
                 if group_db_name in rman_parent_node.instances:
-                    del rman_parent_node[group_db_name]
+                    del rman_parent_node.instances[group_db_name]
                 rman_parent_node.instances[group_db_name] = rman_sg_group
         else:
             if group_db_name in rman_sg_node.instances:
-                del rman_sg_node[group_db_name]            
+                del rman_sg_node.instances[group_db_name]            
             rman_sg_node.instances[group_db_name] = rman_sg_group                      
 
         if rman_type == "META":

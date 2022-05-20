@@ -798,15 +798,16 @@ class RmanSceneSync(object):
                         if rman_sg_node.is_frame_sensitive and self.frame_number_changed:
                             rman_update.is_updated_geometry = True                              
                         self.rman_updates[ob_key] = rman_update  
-                else:                        
-                    if ob_key not in self.rman_updates:
-                        if not instance_parent:
-                            continue
-                        if instance_parent.original not in self.rman_updates:
-                            continue
-                        rman_update = self.rman_updates[instance_parent.original]
-                    else:
-                        rman_update = self.rman_updates[ob_key]                     
+                elif ob_key in self.rman_updates:
+                    rman_update = self.rman_updates[ob_key] 
+                else:                       
+                    # check if the instance_parent was the thing that 
+                    # changed
+                    if not instance_parent:
+                        continue
+                    if instance_parent.original not in self.rman_updates:
+                        continue
+                    rman_update = self.rman_updates[instance_parent.original]          
 
                 if rman_sg_node and not is_new_object and not instance.is_instance:
                     if rman_update.is_updated_geometry and proto_key not in already_udpated:
@@ -828,10 +829,13 @@ class RmanSceneSync(object):
                     parent_proto_key = object_utils.prototype_key(instance_parent)
                     rman_parent_node = self.rman_scene.get_rman_prototype(parent_proto_key, ob=instance_parent)
                     if rman_parent_node and rman_parent_node not in clear_instances:
-                        rfb_log().debug("\tClearing parent instances: %s" % parent_proto_key)
-                        rman_parent_node.clear_instances()
-                        clear_instances.append(rman_parent_node) 
-                elif rman_sg_node not in clear_instances:
+                        pass
+                        ## Not sure if we need to do this?
+
+                        #rfb_log().debug("\tClearing parent instances: %s" % parent_proto_key)
+                        #rman_parent_node.clear_instances()
+                        #clear_instances.append(rman_parent_node) 
+                if rman_sg_node not in clear_instances:
                     rfb_log().debug("\tClearing instances: %s" % proto_key)
                     rman_sg_node.clear_instances()
                     clear_instances.append(rman_sg_node) 
@@ -841,7 +845,7 @@ class RmanSceneSync(object):
                     # add an instance of it
                     continue
 
-                self.rman_scene.export_instance(ob_eval, instance, rman_sg_node, rman_type, instance_parent, psys)
+                self.rman_scene.export_instance(ob_eval, instance, rman_sg_node, rman_type, instance_parent, psys, foo=False)
 
                 if rman_type == 'LIGHT':
                     # We are dealing with a light. Check if it's a solo light, or muted
