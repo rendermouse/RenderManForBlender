@@ -88,7 +88,8 @@ class RmanTranslator(object):
         if not rman_sg_node.sg_node:
             return        
         name = ob.name_full
-        if ob_inst.is_instance:
+        is_instance = ob_inst.is_instance
+        if is_instance:
             name = ob_inst.parent.name
         attrs = rman_sg_node.sg_node.GetAttributes()
         rman_type = object_utils._detect_primitive_(ob)
@@ -109,7 +110,13 @@ class RmanTranslator(object):
                 ]:
                 id = int(hashlib.sha1(rman_sg_node.db_name.encode()).hexdigest(), 16) % 10**8
                 procprimid = float(id)
-                attrs.SetFloat('user:procprimid', procprimid)  
+                attrs.SetFloat('user:procprimid', procprimid) 
+
+        if is_instance:
+            attrs.SetFloat('user:blender_is_instance', 1)
+            attrs.SetFloatArray('user:blender_instance_uv', ob_inst.uv, 2)
+        else:
+            attrs.SetFloat('user:blender_is_instance', 0)
 
         rman_sg_node.sg_node.SetAttributes(attrs)     
 
