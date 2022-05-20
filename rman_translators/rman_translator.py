@@ -84,7 +84,10 @@ class RmanTranslator(object):
         rm_scene = self.rman_scene.bl_scene.renderman
         property_utils.set_primvar_bl_props(primvars, rm, inherit_node=rm_scene)
 
-    def export_object_id(self, ob, rman_sg_node, ob_inst):
+    def export_instance_attributes(self, ob, rman_sg_node, ob_inst):
+        '''
+        Export attributes that should vary between each instance
+        '''
         if not rman_sg_node.sg_node:
             return        
         name = ob.name_full
@@ -196,8 +199,7 @@ class RmanTranslator(object):
             if conditionalVisOps:
                 # check conditionalVisOps to see if this riattr applies
                 # to this object
-                expr = conditionalVisOps.get('expr', None)
-                node = rm              
+                expr = conditionalVisOps.get('expr', None)       
                 if expr and not eval(expr):
                     continue            
 
@@ -206,7 +208,6 @@ class RmanTranslator(object):
             if 'inheritable' in meta:
                 cond = meta['inherit_true_value']
                 if isinstance(cond, str):
-                    node = rm
                     if exec(cond):
                         if remove:
                             attrs.Remove(ri_name)

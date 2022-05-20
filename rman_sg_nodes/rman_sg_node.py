@@ -11,7 +11,7 @@ class RmanSgNode(object):
         db_name (str) - unique datablock name for this node
         instances (dict) - instances that uses this sg_node
         motion_steps (list) - the full list of motion time samples that are required for this Blender object
-        motion_steps (list) - the full list of deformation time samples that are required for this Blender object        
+        deform_motion_steps (list) - the full list of deformation time samples that are required for this Blender object        
         is_transforming (bool) - if this object is moving
         is_deforming (bool) - if this object is deforming
         rman_type (str) - the renderman type for this object
@@ -19,6 +19,7 @@ class RmanSgNode(object):
         is_meshlight (bool) - if this object is a mesh light.
         is_hidden (bool) - whether this object is considered hidden
         is_frame_sensitive (bool) - indicates that the sg_node should be updated on frame changes
+        shared_attrs (RtParamList) - attributes that should be shared between all instances
  
     '''
     def __init__(self, rman_scene, sg_node, db_name):
@@ -50,11 +51,11 @@ class RmanSgNode(object):
         # in texture paths
         self.is_frame_sensitive = False
 
-        # objects that this node creates as part of instancing
-        self.objects_instanced = set()
-
         # psys
         self.bl_psys_settings = None
+
+        # attributes that should be shared with all instances
+        self.shared_attrs = rman_scene.rman.Types.ParamList()
 
     def __del__(self):
         if self.rman_scene.rman_render.rman_running and self.rman_scene.rman_render.sg_scene:

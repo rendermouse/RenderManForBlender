@@ -582,6 +582,7 @@ class RmanSceneSync(object):
                     translator =  self.rman_scene.rman_translators.get(rman_type, None)
                     rfb_log().debug("\tUpdating Object: %s" % proto_key)
                     translator.update(ob_eval, rman_sg_node)  
+                    rman_sg_node.shared_attrs.Clear()                    
                     self.update_particle_emitters(ob_eval)
                     already_udpated.append(proto_key)   
 
@@ -817,6 +818,7 @@ class RmanSceneSync(object):
                         translator =  self.rman_scene.rman_translators.get(rman_type, None)
                         rfb_log().debug("\tUpdating Object: %s" % proto_key)
                         translator.update(ob_eval, rman_sg_node)  
+                        rman_sg_node.shared_attrs.Clear()
                         self.update_particle_emitters(ob_eval)
                         already_udpated.append(proto_key)   
 

@@ -606,10 +606,19 @@ class RmanScene(object):
         # Object attrs     
         translator =  self.rman_translators.get(rman_type, None)  
         if translator:
-            translator.export_object_attributes(ob_eval, rman_sg_group)
+            if rman_sg_node.shared_attrs.GetNumParams() == 0:
+                # export the attributes for this object
+                translator.export_object_attributes(ob_eval, rman_sg_group)
+                rman_sg_node.shared_attrs.Inherit(rman_sg_group.sg_node.GetAttributes())
+            else:
+                # the attributes of this object have already been exported
+                # just call SetAttributes
+                rman_sg_group.sg_node.SetAttributes(rman_sg_node.shared_attrs)
+
             if is_empty_instancer:
                 translator.export_object_attributes(instance_parent, rman_sg_group, remove=False)
-            translator.export_object_id(ob_eval, rman_sg_group, ob_inst)       
+                
+            translator.export_instance_attributes(ob_eval, rman_sg_group, ob_inst)       
 
         # Add any particles necessary
         if rman_sg_node.rman_sg_particle_group_node:
