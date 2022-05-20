@@ -597,9 +597,12 @@ class RmanSceneSync(object):
                 parent_proto_key = object_utils.prototype_key(instance_parent)
                 rman_parent_node = self.rman_scene.get_rman_prototype(parent_proto_key, ob=instance_parent)
                 if rman_parent_node and rman_parent_node not in clear_instances:
-                    rfb_log().debug("\tClearing parent instances: %s" % parent_proto_key)
-                    rman_parent_node.clear_instances()
-                    clear_instances.append(rman_parent_node) 
+                    pass
+                    ## Not sure if we need to do this?
+
+                    #rfb_log().debug("\tClearing parent instances: %s" % parent_proto_key)
+                    #rman_parent_node.clear_instances()
+                    #clear_instances.append(rman_parent_node) 
             elif rman_sg_node not in clear_instances:
                 rfb_log().debug("\tClearing instances: %s" % proto_key)
                 rman_sg_node.clear_instances()
