@@ -850,7 +850,7 @@ class RmanSceneSync(object):
                     # add an instance of it
                     continue
 
-                self.rman_scene.export_instance(ob_eval, instance, rman_sg_node, rman_type, instance_parent, psys, foo=False)
+                self.rman_scene.export_instance(ob_eval, instance, rman_sg_node, rman_type, instance_parent, psys)
 
                 if rman_type == 'LIGHT':
                     # We are dealing with a light. Check if it's a solo light, or muted

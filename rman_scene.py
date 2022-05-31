@@ -594,7 +594,7 @@ class RmanScene(object):
 
         return True    
 
-    def export_instance(self, ob_eval, ob_inst, rman_sg_node, rman_type, instance_parent, psys, foo=True):
+    def export_instance(self, ob_eval, ob_inst, rman_sg_node, rman_type, instance_parent, psys):
         rman_group_translator = self.rman_translators['GROUP']
         group_db_name = object_utils.get_group_db_name(ob_inst) 
         rman_sg_group = rman_group_translator.export(ob_eval, group_db_name)
