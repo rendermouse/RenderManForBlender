@@ -953,12 +953,12 @@ class RmanScene(object):
         rman_sg_node = self.export_data_block(proto_key, ob)
         return rman_sg_node
 
-    def get_rman_particles(self, proto_key, psys, ob):
+    def get_rman_particles(self, proto_key, psys, ob, create=True):
         psys_translator = self.rman_translators['PARTICLES']
         group_translator = self.rman_translators['GROUP']
         ob_psys = self.rman_particles.get(proto_key, dict())
         rman_sg_particles = ob_psys.get(psys.settings.original, None)
-        if not rman_sg_particles:
+        if not rman_sg_particles and create:
             psys_db_name = '%s' % psys.name
             rman_sg_particles = psys_translator.export(ob, psys, psys_db_name)
             ob_psys[psys.settings.original] = rman_sg_particles

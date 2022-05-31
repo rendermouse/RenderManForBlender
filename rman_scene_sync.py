@@ -269,11 +269,12 @@ class RmanSceneSync(object):
                 rman_update.is_updated_transform = ob_update.is_updated_transform
                 self.rman_updates[col_obj.original] = rman_update                      
 
-    def update_particle_emitter(self, ob, psys):
+    def update_particle_emitter(self, ob, psys, delete=False):
         psys_translator = self.rman_scene.rman_translators['PARTICLES']
         proto_key = object_utils.prototype_key(ob)
-        rman_sg_particles = self.rman_scene.get_rman_particles(proto_key, psys, ob)
-        psys_translator.update(ob, psys, rman_sg_particles)
+        rman_sg_particles = self.rman_scene.get_rman_particles(proto_key, psys, ob, create=delete)
+        if rman_sg_particles:
+            psys_translator.update(ob, psys, rman_sg_particles)
 
     def update_particle_emitters(self, ob):
         for psys in ob.particle_systems:
@@ -385,23 +386,53 @@ class RmanSceneSync(object):
             self.light_filter_updated(obj)            
         elif rman_type == 'CAMERA':
             self.camera_updated(obj) 
-        else:                                    
-            rfb_log().debug("\tObject: %s Updated" % obj.id.name)
-            rfb_log().debug("\t    is_updated_geometry: %s" % str(obj.is_updated_geometry))
-            rfb_log().debug("\t    is_updated_shading: %s" % str(obj.is_updated_shading))
-            rfb_log().debug("\t    is_updated_transform: %s" % str(obj.is_updated_transform))                
-
+        else:                                          
             if obj.id.original not in self.rman_updates:
+                rfb_log().debug("\tObject: %s Updated" % obj.id.name)
+                rfb_log().debug("\t    is_updated_geometry: %s" % str(obj.is_updated_geometry))
+                rfb_log().debug("\t    is_updated_shading: %s" % str(obj.is_updated_shading))
+                rfb_log().debug("\t    is_updated_transform: %s" % str(obj.is_updated_transform))                         
                 rman_update = RmanUpdate()
                 rman_update.is_updated_geometry = obj.is_updated_geometry
                 rman_update.is_updated_shading = obj.is_updated_shading
                 rman_update.is_updated_transform = obj.is_updated_transform
                 self.rman_updates[obj.id.original] = rman_update
 
+            for psys in ob_eval.particle_systems:
+                if object_utils.is_particle_instancer(psys):
+                    self.check_particle_instancer(obj, psys)
+                                       
         # Check if this object is the focus object the camera. If it is
         # we need to update the camera
         if obj.is_updated_transform:
-            self.check_focus_object(ob_eval)           
+            self.check_focus_object(ob_eval)       
+
+    def check_particle_settings(self, obj):    
+        rfb_log().debug("ParticleSettings updated: %s" % obj.id.name)             
+
+        with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
+            users = self.rman_scene.context.blend_data.user_map(subset={obj.id.original}, value_types={'OBJECT'})
+            for o in users[obj.id.original]:
+                ob = o.evaluated_get(self.rman_scene.depsgraph)
+                psys = None
+                for ps in ob.particle_systems:
+                    if ps.settings.original == obj.id.original:
+                        psys = ps
+                        break 
+                if not psys:
+                    continue                                                   
+                if object_utils.is_particle_instancer(psys):
+                    # if this particle system was changed to an instancer
+                    # make sure any old emitters/hair is removed
+                    self.update_particle_emitter(ob, psys, delete=True)
+                else:
+                    self.update_particle_emitter(ob, psys)
+
+                if o.original not in self.rman_updates:
+                    rman_update = RmanUpdate()
+                    rman_update.is_updated_shading = obj.is_updated_shading
+                    rman_update.is_updated_transform = obj.is_updated_transform   
+                    self.rman_updates[o.original] = rman_update             
 
     def check_shader_nodetree(self, obj):
         if obj.id.name in bpy.data.node_groups:
@@ -459,29 +490,7 @@ class RmanSceneSync(object):
                 ob = obj.id
 
                 if isinstance(obj.id, bpy.types.ParticleSettings):
-                    rfb_log().debug("ParticleSettings updated: %s" % obj.id.name)
-                    for o in self.rman_scene.bl_scene.objects:
-                        psys = None
-                        ob = o.evaluated_get(depsgraph)
-                        for ps in ob.particle_systems:
-                            if ps.settings.original == obj.id.original:
-                                psys = ps
-                                break
-                        if not psys:
-                            continue
-                        if object_utils.is_particle_instancer(psys):
-                            #self.check_particle_instancer(obj, psys)
-                            pass
-                        else:
-                            self.update_particle_emitter(ob, psys)
-
-                        if o.original not in self.rman_updates:
-                            rman_update = RmanUpdate()
-
-                            rman_update.is_updated_geometry = obj.is_updated_geometry
-                            rman_update.is_updated_shading = obj.is_updated_shading
-                            rman_update.is_updated_transform = obj.is_updated_transform   
-                            self.rman_updates[o.original] = rman_update  
+                    self.check_particle_settings(obj)
 
                 elif isinstance(obj.id, bpy.types.Light):
                     self.check_light_datablock(obj)
@@ -673,31 +682,7 @@ class RmanSceneSync(object):
                 self.check_light_datablock(obj)                    
 
             elif isinstance(obj.id, bpy.types.ParticleSettings):
-                rfb_log().debug("ParticleSettings updated: %s" % obj.id.name)
-
-                with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
-                    for o in self.rman_scene.bl_scene.objects:
-                        psys = None
-                        ob = o.evaluated_get(depsgraph)
-                        for ps in ob.particle_systems:
-                            if ps.settings.original == obj.id.original:
-                                psys = ps
-                                break
-                        if not psys:
-                            continue
-                        if object_utils.is_particle_instancer(psys):
-                            #self.check_particle_instancer(obj, psys)
-                            pass
-                        else:
-                            self.update_particle_emitter(ob, psys)
-
-                        if o.original not in self.rman_updates:
-                            rman_update = RmanUpdate()
-
-                            rman_update.is_updated_geometry = obj.is_updated_geometry
-                            rman_update.is_updated_shading = obj.is_updated_shading
-                            rman_update.is_updated_transform = obj.is_updated_transform   
-                            self.rman_updates[o.original] = rman_update                         
+                self.check_particle_settings(obj)                         
                         
             elif isinstance(obj.id, bpy.types.ShaderNodeTree):
                 self.check_shader_nodetree(obj)
