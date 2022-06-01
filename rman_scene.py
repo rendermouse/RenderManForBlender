@@ -594,11 +594,36 @@ class RmanScene(object):
 
         return True    
 
+    def get_rman_sg_instance(self, ob_inst, rman_sg_node, instance_parent, psys, create=True):  
+        group_db_name = object_utils.get_group_db_name(ob_inst) 
+        rman_parent_node = None
+        if psys and instance_parent:
+            rman_parent_node = self.get_rman_prototype(object_utils.prototype_key(instance_parent), ob=instance_parent, create=True)
+            if rman_parent_node:
+                if group_db_name in rman_parent_node.instances:
+                    return rman_parent_node.instances[group_db_name]
+        else:
+            if group_db_name in rman_sg_node.instances:
+                return rman_sg_node.instances[group_db_name]
+
+        rman_sg_group = None
+        if create:
+            rman_group_translator = self.rman_translators['GROUP']
+            rman_sg_group = rman_group_translator.export(None, group_db_name)
+            rman_sg_group.sg_node.AddChild(rman_sg_node.sg_node)       
+
+            if rman_parent_node:
+                # this is an instance that comes from a particle system
+                # add this instance to the rman_sg_node that owns the particle system                
+                rman_parent_node.instances[group_db_name] = rman_sg_group
+            else:       
+                rman_sg_node.instances[group_db_name] = rman_sg_group                   
+
+        return rman_sg_group        
+
     def export_instance(self, ob_eval, ob_inst, rman_sg_node, rman_type, instance_parent, psys):
         rman_group_translator = self.rman_translators['GROUP']
-        group_db_name = object_utils.get_group_db_name(ob_inst) 
-        rman_sg_group = rman_group_translator.export(ob_eval, group_db_name)
-        rman_sg_group.sg_node.AddChild(rman_sg_node.sg_node)
+        rman_sg_group = self.get_rman_sg_instance(ob_inst, rman_sg_node, instance_parent, psys, create=True)
         is_empty_instancer = False
         if instance_parent and object_utils._detect_primitive_(instance_parent) == 'EMPTY_INSTANCER': 
             is_empty_instancer = True
@@ -644,23 +669,12 @@ class RmanScene(object):
         else:              
             self.get_root_sg_node().AddChild(rman_sg_group.sg_node)
             
-        if instance_parent:
-            rman_parent_node = self.get_rman_prototype(object_utils.prototype_key(instance_parent), ob=instance_parent, create=True)
-            if rman_parent_node:
-                if group_db_name in rman_parent_node.instances:
-                    del rman_parent_node.instances[group_db_name]
-                rman_parent_node.instances[group_db_name] = rman_sg_group
-        else:
-            if group_db_name in rman_sg_node.instances:
-                del rman_sg_node.instances[group_db_name]            
-            rman_sg_node.instances[group_db_name] = rman_sg_group                      
-
         if rman_type == "META":
             # meta/blobbies are already in world space. Their instances don't need to
             # set a transform.
             return rman_sg_group           
                 
-        rman_group_translator.update_transform(ob_inst, rman_sg_group)        
+        rman_group_translator.update_transform(ob_inst, rman_sg_group)
         return rman_sg_group
         
             
