@@ -296,7 +296,7 @@ class RmanMaterialTranslator(RmanTranslator):
             param_type = 'float'
             if input.is_linked:
                 link = input.links[0]
-                val = property_utils.get_output_param_str(
+                val = property_utils.get_output_param_str(rman_sg_material,
                     link.from_node, mat_name, link.from_socket, input)
 
                 property_utils.set_rix_param(params, param_type, param_name, val, is_reference=True)                
