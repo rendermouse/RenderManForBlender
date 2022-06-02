@@ -587,13 +587,14 @@ class RmanSceneSync(object):
                 # The current space doesn't seem to be the shader editor. 
                 # Fallback to looking for the active object
                 ob = context.view_layer.objects.active
-                if hasattr(ob, 'active_material'):
-                    ob.active_material.node_tree.update_tag()   
-                elif hasattr(ob, 'rman_nodetree'):
-                    ob.rman_nodetree.update_tag()
-                elif ob.type == 'LIGHT':
-                    ob.data.node_tree.update_tag()
-                    
+                if ob:
+                    if hasattr(ob, 'active_material') and ob.active_material:
+                        ob.active_material.node_tree.update_tag()   
+                    elif hasattr(ob, 'rman_nodetree'):
+                        ob.rman_nodetree.update_tag()
+                    elif ob.type == 'LIGHT':
+                        ob.data.node_tree.update_tag()
+
             rfb_log().debug("------End update scene----------")                      
 
         rfb_log().debug("------Start update scene--------")    
