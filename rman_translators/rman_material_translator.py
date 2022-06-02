@@ -41,7 +41,6 @@ class RmanMaterialTranslator(RmanTranslator):
 
     def update(self, mat, rman_sg_material, time_sample=0):
 
-        mat = mat.original
         rm = mat.renderman
         succeed = False
 

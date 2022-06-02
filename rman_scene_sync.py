@@ -546,7 +546,7 @@ class RmanSceneSync(object):
             # update any materials
             for id, rman_sg_material in self.rman_scene.rman_materials.items():              
                 if rman_sg_material.is_frame_sensitive or id.original in self.rman_updates:
-                    mat = id.original
+                    mat = id.evaluated_get(self.rman_scene.depsgraph)
                     self.material_updated(mat, rman_sg_material)    
                                                     
             self.rman_scene.export_integrator()
