@@ -569,7 +569,7 @@ class RmanSceneSync(object):
         self.rman_scene.bl_scene = depsgraph.scene
         self.rman_scene.context = context       
 
-        if len(depsgraph.updates) < 1:
+        if len(depsgraph.updates) < 1 and depsgraph.id_type_updated('NODETREE'):
             # Updates is empty?! This seems like a Blender bug.
             # We seem to get into this situation when ramps are being edited, but the scene
             # has not been saved since the ramp was added.
