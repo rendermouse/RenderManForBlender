@@ -164,11 +164,11 @@ class RmanSceneSync(object):
         for ob in object_list:
             ob.update_tag()
 
-    def material_updated(self, obj, rman_sg_material=None):
-        if isinstance(obj, bpy.types.DepsgraphUpdate):
-            mat = obj.id
+    def material_updated(self, ob_update, rman_sg_material=None):
+        if isinstance(ob_update, bpy.types.DepsgraphUpdate):
+            mat = ob_update.id
         else:
-            mat = obj
+            mat = ob_update
         if rman_sg_material is None:
             rman_sg_material = self.rman_scene.rman_materials.get(mat.original, None)
         translator = self.rman_scene.rman_translators["MATERIAL"]         
@@ -195,26 +195,31 @@ class RmanSceneSync(object):
         with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):              
             rman_group_translator.update_transform(ob, rman_sg_lightfilter)
 
-    def light_filter_updated(self, obj, force_update=False):
-        if isinstance(obj, bpy.types.DepsgraphUpdate):
-            ob = obj.id.evaluated_get(self.rman_scene.depsgraph)
+    def light_filter_updated(self, ob_update, force_update=False):
+        if isinstance(ob_update, bpy.types.DepsgraphUpdate):
+            ob = ob_update.id.evaluated_get(self.rman_scene.depsgraph)
         else:            
-            ob = obj.evaluated_get(self.rman_scene.depsgraph)
+            ob = ob_update.evaluated_get(self.rman_scene.depsgraph)
 
         proto_key = object_utils.prototype_key(ob)
         rman_sg_lightfilter = self.rman_scene.get_rman_prototype(proto_key)
         if not rman_sg_lightfilter:
             # Light filter needs to be added
             rman_update = RmanUpdate()
-            rman_update.is_updated_geometry = obj.is_updated_geometry
-            rman_update.is_updated_shading = obj.is_updated_shading
-            rman_update.is_updated_transform = obj.is_updated_transform
+            if isinstance(ob_update, bpy.types.DepsgraphUpdate):
+                rman_update.is_updated_geometry = ob_update.is_updated_geometry
+                rman_update.is_updated_shading = ob_update.is_updated_shading
+                rman_update.is_updated_transform = ob_update.is_updated_transform
+            else:
+                rman_update.is_updated_geometry = True
+                rman_update.is_updated_shading = True
+                rman_update.is_updated_transform = True
             self.rman_updates[ob.original] = rman_update               
             return
-        if force_update or obj.is_updated_transform or obj.is_updated_shading:
+        if force_update or ob_update.is_updated_transform or ob_update.is_updated_shading:
             rfb_log().debug("\tLight Filter: %s Transform Updated" % ob.name)
             self.light_filter_transform_updated(ob, rman_sg_lightfilter)
-        if force_update or obj.is_updated_geometry:
+        if force_update or ob_update.is_updated_geometry:
             rfb_log().debug("\tLight Filter: %s Shading Updated" % ob.name)
             with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):                
                 self.rman_scene.rman_translators['LIGHTFILTER'].update(ob, rman_sg_lightfilter)
@@ -295,7 +300,10 @@ class RmanSceneSync(object):
                 self.update_particle_emitter(ob, psys)
                             
     def update_empty(self, ob_update, rman_sg_node=None):
-        ob = ob_update.id
+        if isinstance(ob_update, bpy.types.DepsgraphUpdate):
+            ob = ob_update.id
+        else:            
+            ob = ob_update.evaluated_get(self.rman_scene.depsgraph)        
         rfb_log().debug("Update empty: %s" % ob.name)
         if ob.is_instancer:
             rfb_log().debug("\tEmpty is an instancer")
@@ -307,9 +315,14 @@ class RmanSceneSync(object):
                     if col_obj.original in self.rman_updates:
                         continue
                     rman_update = RmanUpdate()
-                    rman_update.is_updated_geometry = ob_update.is_updated_geometry
-                    rman_update.is_updated_shading = ob_update.is_updated_shading
-                    rman_update.is_updated_transform = ob_update.is_updated_transform
+                    if isinstance(ob_update, bpy.types.DepsgraphUpdate):
+                        rman_update.is_updated_geometry = ob_update.is_updated_geometry
+                        rman_update.is_updated_shading = ob_update.is_updated_shading
+                        rman_update.is_updated_transform = ob_update.is_updated_transform
+                    else:
+                        rman_update.is_updated_geometry = True
+                        rman_update.is_updated_shading = True
+                        rman_update.is_updated_transform = True                        
                     self.rman_updates[col_obj.original] = rman_update
         else:
             rfb_log().debug("\tRegular empty")
@@ -361,11 +374,11 @@ class RmanSceneSync(object):
         for portal in scene_utils.get_all_portals(ob):
            portal.original.update_tag()
 
-    def check_light_datablock(self, obj):
-        if isinstance(obj, bpy.types.DepsgraphUpdate):
-            ob = obj.id.original
+    def check_light_datablock(self, ob_update):
+        if isinstance(ob_update, bpy.types.DepsgraphUpdate):
+            ob = ob_update.id.original
         else:
-            ob = obj.original
+            ob = ob_update.original
         users = self.rman_scene.context.blend_data.user_map(subset={ob}, value_types={'OBJECT'})
         for o in users[ob]:
             rman_type = object_utils._detect_primitive_(o)
@@ -385,8 +398,8 @@ class RmanSceneSync(object):
                 for o in users[camera]:
                     self.camera_updated(o.original, force_update=True)    
 
-    def check_object_datablock(self, obj): 
-        ob_eval = obj.id.evaluated_get(self.rman_scene.depsgraph)
+    def check_object_datablock(self, dps_update): 
+        ob_eval = dps_update.id.evaluated_get(self.rman_scene.depsgraph)
         rman_type = object_utils._detect_primitive_(ob_eval)
 
         if ob_eval.type in ('ARMATURE'):
@@ -394,44 +407,44 @@ class RmanSceneSync(object):
         
         # These types need special handling                
         if rman_type == 'EMPTY':
-            self.update_empty(obj)                     
+            self.update_empty(dps_update)                     
         elif rman_type == 'LIGHTFILTER':
-            self.light_filter_updated(obj)            
+            self.light_filter_updated(dps_update)            
         elif rman_type == 'CAMERA':
-            self.camera_updated(obj) 
+            self.camera_updated(dps_update) 
         else:     
-            rfb_log().debug("\tObject: %s Updated" % obj.id.name)
-            rfb_log().debug("\t    is_updated_geometry: %s" % str(obj.is_updated_geometry))
-            rfb_log().debug("\t    is_updated_shading: %s" % str(obj.is_updated_shading))
-            rfb_log().debug("\t    is_updated_transform: %s" % str(obj.is_updated_transform))                                                  
-            if obj.id.original not in self.rman_updates:                        
+            rfb_log().debug("\tObject: %s Updated" % dps_update.id.name)
+            rfb_log().debug("\t    is_updated_geometry: %s" % str(dps_update.is_updated_geometry))
+            rfb_log().debug("\t    is_updated_shading: %s" % str(dps_update.is_updated_shading))
+            rfb_log().debug("\t    is_updated_transform: %s" % str(dps_update.is_updated_transform))                                                  
+            if dps_update.id.original not in self.rman_updates:                        
                 rman_update = RmanUpdate()
-                rman_update.is_updated_geometry = obj.is_updated_geometry
-                rman_update.is_updated_shading = obj.is_updated_shading
-                rman_update.is_updated_transform = obj.is_updated_transform
+                rman_update.is_updated_geometry = dps_update.is_updated_geometry
+                rman_update.is_updated_shading = dps_update.is_updated_shading
+                rman_update.is_updated_transform = dps_update.is_updated_transform
                 if not rman_update.is_updated_geometry:
                     rman_update.do_clear_instances = False
-                self.rman_updates[obj.id.original] = rman_update
+                self.rman_updates[dps_update.id.original] = rman_update
 
             for psys in ob_eval.particle_systems:
                 if object_utils.is_particle_instancer(psys):
-                    self.check_particle_instancer(obj, psys)
+                    self.check_particle_instancer(dps_update, psys)
                                        
         # Check if this object is the focus object the camera. If it is
         # we need to update the camera
-        if obj.is_updated_transform:
+        if dps_update.is_updated_transform:
             self.check_focus_object(ob_eval)       
 
-    def check_particle_settings(self, obj):    
-        rfb_log().debug("ParticleSettings updated: %s" % obj.id.name)             
+    def check_particle_settings(self, dps_update):    
+        rfb_log().debug("ParticleSettings updated: %s" % dps_update.id.name)             
 
         with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
-            users = self.rman_scene.context.blend_data.user_map(subset={obj.id.original}, value_types={'OBJECT'})
-            for o in users[obj.id.original]:
+            users = self.rman_scene.context.blend_data.user_map(subset={dps_update.id.original}, value_types={'OBJECT'})
+            for o in users[dps_update.id.original]:
                 ob = o.evaluated_get(self.rman_scene.depsgraph)
                 psys = None
                 for ps in ob.particle_systems:
-                    if ps.settings.original == obj.id.original:
+                    if ps.settings.original == dps_update.id.original:
                         psys = ps
                         break 
                 if not psys:
@@ -445,21 +458,21 @@ class RmanSceneSync(object):
 
                 if o.original not in self.rman_updates:
                     rman_update = RmanUpdate()
-                    rman_update.is_updated_shading = obj.is_updated_shading
-                    rman_update.is_updated_transform = obj.is_updated_transform   
+                    rman_update.is_updated_shading = dps_update.is_updated_shading
+                    rman_update.is_updated_transform = dps_update.is_updated_transform   
                     self.rman_updates[o.original] = rman_update             
 
-    def check_shader_nodetree(self, obj):
-        if obj.id.name in bpy.data.node_groups:
-            if len(obj.id.nodes) < 1:
+    def check_shader_nodetree(self, dps_update):
+        if dps_update.id.name in bpy.data.node_groups:
+            if len(dps_update.id.nodes) < 1:
                 return
-            if not obj.id.name.startswith(rman_constants.RMAN_FAKE_NODEGROUP):
+            if not dps_update.id.name.startswith(rman_constants.RMAN_FAKE_NODEGROUP):
                 return
             # this is one of our fake node groups with ramps
             # update all of the users of this node tree
-            rfb_log().debug("ShaderNodeTree updated: %s" % obj.id.name)
-            users = self.rman_scene.context.blend_data.user_map(subset={obj.id.original})
-            for o in users[obj.id.original]:
+            rfb_log().debug("ShaderNodeTree updated: %s" % dps_update.id.name)
+            users = self.rman_scene.context.blend_data.user_map(subset={dps_update.id.original})
+            for o in users[dps_update.id.original]:
                 if self.rman_scene.is_interactive:
                     if hasattr(o, 'rman_nodetree'):
                         o.rman_nodetree.update_tag()
@@ -501,27 +514,25 @@ class RmanSceneSync(object):
             self.rman_scene.num_object_instances = len(depsgraph.object_instances)
 
         with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):  
-            for obj in reversed(depsgraph.updates):
-                ob = obj.id
+            for dps_update in reversed(depsgraph.updates):
+                if isinstance(dps_update.id, bpy.types.ParticleSettings):
+                    self.check_particle_settings(dps_update)
 
-                if isinstance(obj.id, bpy.types.ParticleSettings):
-                    self.check_particle_settings(obj)
+                elif isinstance(dps_update.id, bpy.types.Light):
+                    self.check_light_datablock(dps_update)
 
-                elif isinstance(obj.id, bpy.types.Light):
-                    self.check_light_datablock(obj)
-
-                elif isinstance(obj.id, bpy.types.Material):
-                    rfb_log().debug("Material updated: %s" % obj.id.name)
-                    ob = obj.id
+                elif isinstance(dps_update.id, bpy.types.Material):
+                    rfb_log().debug("Material updated: %s" % dps_update.id.name)
+                    ob = dps_update.id
                     if ob.original not in self.rman_updates:
                         rman_update = RmanUpdate()
                         self.rman_updates[ob.original] = rman_update
 
-                elif isinstance(obj.id, bpy.types.ShaderNodeTree):
-                    self.check_shader_nodetree(obj)
+                elif isinstance(dps_update.id, bpy.types.ShaderNodeTree):
+                    self.check_shader_nodetree(dps_update)
 
-                elif isinstance(obj.id, bpy.types.Object):                
-                    self.check_object_datablock(obj)
+                elif isinstance(dps_update.id, bpy.types.Object):                
+                    self.check_object_datablock(dps_update)
                                     
             if not self.rman_updates and self.num_instances_changed:
                 # The number of instances changed, but we are not able
@@ -567,23 +578,21 @@ class RmanSceneSync(object):
             self.num_instances_changed = True
             self.rman_scene.num_object_instances = len(depsgraph.object_instances)
 
-        for obj in reversed(depsgraph.updates):
-            ob = obj.id
-
-            if isinstance(obj.id, bpy.types.Scene):
+        for dps_update in reversed(depsgraph.updates):
+            if isinstance(dps_update.id, bpy.types.Scene):
                 self.scene_updated()
 
-            elif isinstance(obj.id, bpy.types.World):
+            elif isinstance(dps_update.id, bpy.types.World):
                 with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene): 
                     self.rman_scene.export_integrator()
                     self.rman_scene.export_samplefilters()
                     self.rman_scene.export_displayfilters()
                     self.rman_scene.export_viewport_stats()
 
-            elif isinstance(obj.id, bpy.types.Camera):
-                rfb_log().debug("Camera updated: %s" % obj.id.name)
+            elif isinstance(dps_update.id, bpy.types.Camera):
+                rfb_log().debug("Camera updated: %s" % dps_update.id.name)
                 if self.rman_scene.is_viewport_render:
-                    if self.rman_scene.bl_scene.camera.data != obj.id:
+                    if self.rman_scene.bl_scene.camera.data != dps_update.id:
                         continue
                     rman_sg_camera = self.rman_scene.main_camera
                     translator = self.rman_scene.rman_translators['CAMERA']
@@ -593,35 +602,35 @@ class RmanSceneSync(object):
                     translator = self.rman_scene.rman_translators['CAMERA']                 
                     with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
                         for ob, rman_sg_camera in self.rman_scene.rman_cameras.items():     
-                            if ob.original.name != obj.id.name:
+                            if ob.original.name != dps_update.id.name:
                                 continue
                             translator._update_render_cam(ob.original, rman_sg_camera)
 
-            elif isinstance(obj.id, bpy.types.Material):
-                rfb_log().debug("Material updated: %s" % obj.id.name)
-                self.material_updated(obj)    
+            elif isinstance(dps_update.id, bpy.types.Material):
+                rfb_log().debug("Material updated: %s" % dps_update.id.name)
+                self.material_updated(dps_update)    
 
-            elif isinstance(obj.id, bpy.types.Mesh):
-                rfb_log().debug("Mesh updated: %s" % obj.id.name)
+            elif isinstance(dps_update.id, bpy.types.Mesh):
+                rfb_log().debug("Mesh updated: %s" % dps_update.id.name)
 
-            elif isinstance(obj.id, bpy.types.Light):
-                self.check_light_datablock(obj)                    
+            elif isinstance(dps_update.id, bpy.types.Light):
+                self.check_light_datablock(dps_update)                    
 
-            elif isinstance(obj.id, bpy.types.ParticleSettings):
-                self.check_particle_settings(obj)                         
+            elif isinstance(dps_update.id, bpy.types.ParticleSettings):
+                self.check_particle_settings(dps_update)                         
                         
-            elif isinstance(obj.id, bpy.types.ShaderNodeTree):
-                self.check_shader_nodetree(obj)
+            elif isinstance(dps_update.id, bpy.types.ShaderNodeTree):
+                self.check_shader_nodetree(dps_update)
                                             
-            elif isinstance(obj.id, bpy.types.Object):                
-                self.check_object_datablock(obj)                     
+            elif isinstance(dps_update.id, bpy.types.Object):                
+                self.check_object_datablock(dps_update)                     
 
-            elif isinstance(obj.id, bpy.types.Collection):
-                rfb_log().debug("Collection updated: %s" % obj.id.name)
-                #self.update_collection(obj.id)
+            elif isinstance(dps_update.id, bpy.types.Collection):
+                rfb_log().debug("Collection updated: %s" % dps_update.id.name)
+                #self.update_collection(dps_update.id)
 
             else:
-                rfb_log().debug("Not handling %s update: %s" % (str(type(obj.id)), obj.id.name))
+                rfb_log().debug("Not handling %s update: %s" % (str(type(dps_update.id)), dps_update.id.name))
 
         if not self.rman_updates and self.num_instances_changed:
             # The number of instances changed, but we are not able
@@ -659,15 +668,11 @@ class RmanSceneSync(object):
                     ob_key = instance.instance_object.original      
                     psys = instance.particle_system
                     instance_parent = instance.parent 
-                    is_empty_instancer = (object_utils._detect_primitive_(instance_parent) == 'EMPTY_INSTANCER')
+                    is_empty_instancer = object_utils.is_empty_instancer(instance_parent)
                     
-                if not batch_mode and proto_key in deleted_obj_keys:
+                if proto_key in deleted_obj_keys:
                     deleted_obj_keys.remove(proto_key) 
-
-                if batch_mode and self.rman_scene.do_motion_blur:
-                    if ob_key.name_full in self.rman_scene.moving_objects:
-                        continue                        
-
+               
                 rman_type = object_utils._detect_primitive_(ob_eval)
                 
                 rman_sg_node = self.rman_scene.get_rman_prototype(proto_key)
@@ -682,6 +687,7 @@ class RmanSceneSync(object):
                     del self.rman_scene.rman_prototypes[proto_key]
                     rman_sg_node = None
 
+                rman_update = self.rman_updates.get(ob_key, None)
                 if not rman_sg_node:
                     # this is a new object.
                     rman_sg_node = self.rman_scene.export_data_block(proto_key, ob_eval)
@@ -699,8 +705,7 @@ class RmanSceneSync(object):
                         continue
 
                     is_new_object = True
-                    rman_update = self.rman_updates.get(ob_key, None)
-                    if not rman_update:
+                    if rman_update is None:
                         rman_update = RmanUpdate()
                         rman_update.is_updated_geometry = True
                         rman_update.is_updated_shading = True
@@ -708,27 +713,26 @@ class RmanSceneSync(object):
                         self.rman_updates[ob_key] = rman_update    
                     rman_update.is_updated_geometry = False
                     clear_instances.append(rman_sg_node)
-                                
+                                                                
                 if self.check_all_instances:
                     # check all instances in the scene
-                    rman_update = self.rman_updates.get(ob_key, None)
-                    if not rman_update:                  
+                    # build an RmanUpdate instance if it doesn't exist
+                    if rman_update is None:
                         rman_update = RmanUpdate()
                         rman_update.is_updated_shading = True
                         rman_update.is_updated_transform = True
                         if rman_sg_node.is_frame_sensitive and self.frame_number_changed:
                             rman_update.is_updated_geometry = True                              
                         self.rman_updates[ob_key] = rman_update  
-                elif ob_key in self.rman_updates:
-                    rman_update = self.rman_updates[ob_key] 
-                else:                       
+                elif rman_update is None:                       
                     # check if the instance_parent was the thing that 
                     # changed
                     if not instance_parent:
                         continue
-                    if instance_parent.original not in self.rman_updates:
+                    rman_update = self.rman_updates.get(instance_parent.original, None)
+                    if rman_update is None:
                         continue
-                    rman_update = self.rman_updates[instance_parent.original]          
+                    rfb_log().debug("\t%s parent updated (%s)" % (ob_eval.name, instance_parent.name))
 
                 if rman_sg_node and not is_new_object and not instance.is_instance:
                     if rman_update.is_updated_geometry and proto_key not in already_udpated:
@@ -739,10 +743,9 @@ class RmanSceneSync(object):
                         self.update_particle_emitters(ob_eval)
                         already_udpated.append(proto_key)   
 
-                if rman_type == 'EMPTY':
-                    self.rman_scene._export_hidden_instance(ob_eval, rman_sg_node)                   
-
                 if rman_type in object_utils._RMAN_NO_INSTANCES_:
+                    if rman_type == 'EMPTY':
+                        self.rman_scene._export_hidden_instance(ob_eval, rman_sg_node)
                     continue                         
 
                 if rman_update.do_clear_instances:
@@ -808,7 +811,7 @@ class RmanSceneSync(object):
                             del ob_psys[k]
                                                                                             
             # delete objects
-            if not batch_mode and deleted_obj_keys:
+            if deleted_obj_keys:
                 self.delete_objects(deleted_obj_keys)        
                      
     @time_this

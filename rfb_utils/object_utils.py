@@ -63,6 +63,9 @@ def is_portal_light(ob):
     rm = ob.data.renderman
     return (rm.renderman_light_role == 'RMAN_LIGHT' and rm.get_light_node_name() == 'PxrPortalLight')
 
+def is_empty_instancer(ob):
+    return (_detect_primitive_(ob) == 'EMPTY_INSTANCER')
+
 def is_particle_instancer(psys, particle_settings=None):
     psys_settings = particle_settings
     if not psys_settings:

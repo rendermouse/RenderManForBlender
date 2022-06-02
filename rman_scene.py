@@ -625,8 +625,8 @@ class RmanScene(object):
         rman_group_translator = self.rman_translators['GROUP']
         rman_sg_group = self.get_rman_sg_instance(ob_inst, rman_sg_node, instance_parent, psys, create=True)
         is_empty_instancer = False
-        if instance_parent and object_utils._detect_primitive_(instance_parent) == 'EMPTY_INSTANCER': 
-            is_empty_instancer = True
+        if instance_parent: 
+            is_empty_instancer = object_utils.is_empty_instancer(instance_parent)
 
         # Object attrs     
         translator =  self.rman_translators.get(rman_type, None)  
