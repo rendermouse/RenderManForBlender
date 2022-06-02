@@ -569,6 +569,33 @@ class RmanSceneSync(object):
         self.rman_scene.bl_scene = depsgraph.scene
         self.rman_scene.context = context       
 
+        if len(depsgraph.updates) < 1:
+            # Updates is empty?! This seems like a Blender bug.
+            # We seem to get into this situation when ramps are being edited, but the scene
+            # has not been saved since the ramp was added.
+            space = getattr(bpy.context, 'space_data', None)
+            rfb_log().debug("------Start update scene--------")    
+            rfb_log().debug("DepsgraphUpdates is empty. Assume this is a material edit.")
+            node_tree = None
+            if space and space.type == 'NODE_EDITOR':
+                node_tree = space.node_tree
+                if isinstance(node_tree, bpy.types.ShaderNodeTree):
+                    node_tree.update_tag()
+                else:
+                    node_tree = None
+            if node_tree is None and context.view_layer:
+                # The current space doesn't seem to be the shader editor. 
+                # Fallback to looking for the active object
+                ob = context.view_layer.objects.active
+                if hasattr(ob, 'active_material'):
+                    ob.active_material.node_tree.update_tag()   
+                elif hasattr(ob, 'rman_nodetree'):
+                    ob.rman_nodetree.update_tag()
+                elif ob.type == 'LIGHT':
+                    ob.data.node_tree.update_tag()
+                    
+            rfb_log().debug("------End update scene----------")                      
+
         rfb_log().debug("------Start update scene--------")    
        
         # Check the number of instances. If we differ, an object may have been
