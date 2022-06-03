@@ -240,6 +240,9 @@ class RmanSceneSync(object):
         with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
             rman_sg_camera = self.rman_scene.rman_cameras.get(ob.original)
             translator = self.rman_scene.rman_translators['CAMERA']
+                     
+            rman_update = RmanUpdate()     
+            self.rman_updates[ob.original] = rman_update      
 
             if not rman_sg_camera:
                 rfb_log().debug("\tNew Camera: %s" % ob.name)
@@ -260,7 +263,7 @@ class RmanSceneSync(object):
 
             if force_update or ob_update.is_updated_transform:
                 # we deal with main camera transforms in view_draw
-                if self.rman_scene.is_viewport_render:
+                if self.rman_scene.is_viewport_render and self.rman_scene.main_camera == rman_sg_camera:
                     return
                 if translator._update_render_cam_transform(ob, rman_sg_camera):
                     rfb_log().debug("\tCamera Transform Updated: %s" % ob.name)
@@ -501,7 +504,7 @@ class RmanSceneSync(object):
         self.rman_scene.bl_scene = depsgraph.scene_eval
         self.rman_scene.context = context     
 
-        # updat the frame number
+        # update the frame number
         options = self.rman_scene.sg_scene.GetOptions()
         options.SetInteger(self.rman.Tokens.Rix.k_Ri_Frame, self.rman_scene.bl_frame_current) 
         self.rman_scene.sg_scene.SetOptions(options)     
