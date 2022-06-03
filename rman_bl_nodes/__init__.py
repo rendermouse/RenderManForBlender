@@ -266,6 +266,10 @@ def class_generate_properties(node, parent_name, node_desc):
             output_prop_meta['vstruct'] = True
         if hasattr(node_desc_param, 'struct_name'):
             output_prop_meta['struct_name'] = node_desc_param.struct_name            
+        if node_desc_param.is_array():
+            output_prop_meta['arraySize'] = node_desc_param.size
+        else:
+            output_prop_meta['arraySize'] = -1
         output_prop_meta['name'] = node_desc_param.name
         output_meta[prop_name] = output_prop_meta
         output_meta[prop_name]['renderman_type'] = renderman_type       

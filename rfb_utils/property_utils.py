@@ -645,12 +645,14 @@ def set_array_rixparams(node, rman_sg_node, mat_name, bl_prop_info, prop_name, p
     param_type = bl_prop_info.renderman_array_type
     param_name = bl_prop_info.renderman_name     
     collection = getattr(node, coll_nm)
-
-    for i in range(len(collection)):
+    any_connections = False
+    inputs = getattr(node, 'inputs', dict())
+    input_array_size = len(collection)    
+    for i in range(input_array_size):
         elem = collection[i]
         nm = '%s[%d]' % (prop_name, i)
-        if hasattr(node, 'inputs')  and nm in node.inputs and \
-            node.inputs[nm].is_linked:
+        if nm in node.inputs and inputs[nm].is_linked:
+            any_connections = True
             to_socket = node.inputs[nm]
             from_socket = to_socket.links[0].from_socket
             from_node = to_socket.links[0].from_node
@@ -658,15 +660,29 @@ def set_array_rixparams(node, rman_sg_node, mat_name, bl_prop_info, prop_name, p
             val = get_output_param_str(rman_sg_node,
                 from_node, mat_name, from_socket, to_socket, param_type)
             if val:
-                val_ref_array.append(val)
+                if getattr(from_socket, 'is_array', False):      
+                    # the socket from the incoming connection is an array
+                    # clear val_ref_array so far and resize it to this
+                    # socket's array size                    
+                    array_size = from_socket.array_size
+                    val_ref_array.clear()
+                    for i in range(array_size):        
+                        cnx_val = '%s[%d]' % (val, i)
+                        val_ref_array.append(cnx_val)
+                    break
+                val_ref_array.append(val)            
+            else:
+                val_ref_array.append("")            
         else:
             prop = getattr(elem, 'value_%s' % param_type)
             val = string_utils.convert_val(prop, type_hint=param_type)
             if param_type in RFB_FLOAT3:
                 val_array.extend(val)
             else:
-                val_array.append(val)  
-    if val_ref_array:
+                val_array.append(val)
+            val_ref_array.append("")
+
+    if any_connections:
         set_rix_param(params, param_type, param_name, val_ref_array, is_reference=True, is_array=True, array_len=len(val_ref_array))
     else:
         set_rix_param(params, param_type, param_name, val_array, is_reference=False, is_array=True, array_len=len(val_array))                               

@@ -249,6 +249,11 @@ class RendermanSocket:
             pass
         elif self.hide_value:
             layout.label(text=self.get_pretty_name(node))
+        elif self.is_output:
+            if self.is_array:
+                layout.label(text='%s[]' % (self.get_pretty_name(node)))
+            else:
+                layout.label(text=self.get_pretty_name(node))
         elif self.is_linked or self.is_output:
             layout.label(text=self.get_pretty_name(node))
         elif node.bl_idname in __CYCLES_GROUP_NODES__ or node.bl_idname == "PxrOSLPatternNode":
@@ -348,6 +353,9 @@ def register_socket_classes():
         ann_dict = socket_info[5]
         for k, v in ann_dict.items():
             ntype.__annotations__[k] = v
+        ntype.__annotations__['is_array'] = BoolProperty(default=False)
+        ntype.__annotations__['array_size'] = IntProperty(default=-1)
+        ntype.__annotations__['array_elem'] = IntProperty(default=-1)
 
         classes.append(ntype)
 
