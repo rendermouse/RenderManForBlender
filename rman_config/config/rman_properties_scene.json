@@ -529,7 +529,25 @@
             ],
             "widget": false,
             "help": "Intended exposure Bracket [min max] in post-production to help inform the adaptive sampling."
-        },                            
+        },
+        {
+            "panel": "RENDER_PT_renderman_sampling",
+            "name": "hider_sampleoffset",
+            "riopt": "hider:sampleoffset",
+            "label": "Sample Offset",
+            "type": "int",
+            "default": 0,
+            "help": "This allows several images to be rendered in parallel (with different sampleoffset values) and then combined. <br><br>With non-adaptive sampling:<br> Let's say you render four images with 256 samples each, with sampleoffsets 0, 256, 512, and 768. If you combine those four images, you'll get exactly the same image as if you had rendered a single image with 1024 samples.<br><br> With adaptive sampling:<br> Let's say you again render four images, each with 'maxsamples' 256, with sampleoffsets 0, 256, 512, and 768. Let's say that due to adaptive sampling, some given pixel only gets 64 pixel samples in each of the four images. Then the combined image has been rendered with sample numbers 0-63, 256-319, 512-575, and 768-831. Due to the stratification of the samples, this is not quite as good as if you had rendered a single image with 256 consecutive samples.  However, it is still better than rendering a single image with only 64 samples."
+        },       
+        {
+            "panel": "RENDER_PT_renderman_sampling",
+            "name": "hider_samplestride",
+            "riopt": "hider:samplestride",
+            "label": "Sample Stride",
+            "type": "int",
+            "default": 1,
+            "help": "This facilitates rendering several images in parallel (with the same samplestride but different sampleoffset) and then combine them incrementally during interactive rendering.  Default value is 1. <br><br>With non-adaptive sampling:<br>Let's say you render four images with 256 samples each, with samplestride 4 and sampleoffsets 0, 1, 2, and 3.  If you combine those four images, you'll get exactly the same image as if you had rendered a single image with 1024 samples, and during incremental/interactive rendering you'll get the benefit of best use of the stratified progressive sample sequences.  If you can 'assemble' images with samples 0-3, 4-7, 8-12, etc during interactive rendering, you've got the benefits of faster rendering without jumping to high samples early on.<br><br>With adaptive sampling:<br>Let's say you again render four images, each with 'maxsamples' 256, with samplestride 4 and sampleoffsets 0, 1, 2, and 3.  This time with adaptive sampling (PixelVariance > 0).  Since each of the four images is more noisy than the combined image, the adaptive sampling will use more samples before deciding that the image error is acceptable than if it had been rendered as a single image. So the PixelVariance setting may need to be adjusted."
+        },                                      
         {
             "panel": "RENDER_PT_renderman_sampling",
             "name": "hider_incremental",
