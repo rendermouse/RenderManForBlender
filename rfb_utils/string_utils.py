@@ -238,28 +238,43 @@ def _format_time_(seconds):
 def convert_val(v, type_hint=None):
     import mathutils
 
+    converted_val = v
+
     # float, int
     if type_hint == 'color':
-        return list(v)[:3]
+        converted_val = list(v)[:3]
 
     if type(v) in (mathutils.Vector, mathutils.Color) or\
             v.__class__.__name__ == 'bpy_prop_array'\
             or v.__class__.__name__ == 'Euler':
         # BBM modified from if to elif
-        return list(v)
+        converted_val = list(v)
+
+    elif type(v) == str and v.startswith('['):
+        converted_val = eval(v)
+
+    elif type(v) == list:
+        converted_val = v
 
     # matrix
     elif type(v) == mathutils.Matrix:
-        return [v[0][0], v[1][0], v[2][0], v[3][0],
+        converted_val = [v[0][0], v[1][0], v[2][0], v[3][0],
                 v[0][1], v[1][1], v[2][1], v[3][1],
                 v[0][2], v[1][2], v[2][2], v[3][2],
                 v[0][3], v[1][3], v[2][3], v[3][3]]
     elif type_hint == 'int':
-        return int(v)
+        converted_val = int(v)
     elif type_hint == 'float':
-        return float(v)
-    else:
-        return v
+        converted_val = float(v)
+
+    if type_hint == 'string':
+        if isinstance(converted_val, list):
+            for i in range(len(converted_val)):
+                converted_val[i] = expand_string(converted_val[i], asFilePath=True)
+        else:
+            converted_val = expand_string(converted_val, asFilePath=True)
+    
+    return converted_val
 
 def getattr_recursive(ptr, attrstring):
     for attr in attrstring.split("."):

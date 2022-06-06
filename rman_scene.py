@@ -519,10 +519,9 @@ class RmanScene(object):
             array_len = -1
             if 'arraySize' in meta:
                 is_array = True
-                array_len = meta['arraySize']
-                if type(val) == str and val.startswith('['):
-                    val = eval(val)                
-            param_type = meta['renderman_type']         
+                array_len = meta['arraySize']       
+            param_type = meta['renderman_type'] 
+            val = string_utils.convert_val(val, type_hint=param_type)                         
             property_utils.set_rix_param(attrs, param_type, ri_name, val, is_reference=False, is_array=is_array, array_len=array_len, node=rm, prop_name=prop_name)
 
         if rm.invert_light_linking:
@@ -1146,12 +1145,8 @@ class RmanScene(object):
             if 'arraySize' in meta:
                 is_array = True
                 array_len = meta['arraySize']
-                if type(val) == str and val.startswith('['):
-                    val = eval(val)
-
             param_type = meta['renderman_type']
-            if param_type == "string":
-                val = string_utils.expand_string(val, asFilePath=True)
+            val = string_utils.convert_val(val, type_hint=param_type)
             property_utils.set_rix_param(options, param_type, ri_name, val, is_reference=False, is_array=is_array, array_len=array_len, node=rm, prop_name=prop_name)
 
         # threads
