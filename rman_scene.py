@@ -1135,19 +1135,7 @@ class RmanScene(object):
 
         # set any properties marked riopt in the config file
         for prop_name, meta in rm.prop_meta.items():
-            if 'riopt' not in meta:
-                continue
-            
-            val = getattr(rm, prop_name)
-            ri_name = meta['riopt']
-            is_array = False
-            array_len = -1
-            if 'arraySize' in meta:
-                is_array = True
-                array_len = meta['arraySize']
-            param_type = meta['renderman_type']
-            val = string_utils.convert_val(val, type_hint=param_type)
-            property_utils.set_rix_param(options, param_type, ri_name, val, is_reference=False, is_array=is_array, array_len=array_len, node=rm, prop_name=prop_name)
+            property_utils.set_rioption_bl_prop(options, prop_name, meta, rm)
 
         # threads
         if not self.external_render:

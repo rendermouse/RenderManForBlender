@@ -18,10 +18,10 @@ def update_sg_integrator(context):
     rr = rman_render.RmanRender.get_rman_render()
     rr.rman_scene_sync.update_integrator(context)            
 
-def update_sg_options(context):
+def update_sg_options(prop_name, context):
     from .. import rman_render
     rr = rman_render.RmanRender.get_rman_render()
-    rr.rman_scene_sync.update_global_options(context)   
+    rr.rman_scene_sync.update_global_options(prop_name, context)   
 
 def update_sg_root_node(context):
     from .. import rman_render

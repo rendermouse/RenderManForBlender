@@ -138,10 +138,8 @@ class PRMAN_OT_Viewport_Refinement(bpy.types.Operator):
                                     )
 
     def execute(self, context):
-        rman_render = RmanRender.get_rman_render()
         rm = context.scene.renderman
         rm.hider_decidither = int(self.viewport_hider_decidither)
-        rman_render.rman_scene_sync.update_global_options(context)
 
         return {"FINISHED"}
 

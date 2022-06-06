@@ -209,8 +209,8 @@ def update_integrator_func(self, context):
     update_conditional_visops(node)
     scenegraph_utils.update_sg_integrator(context)           
 
-def update_options_func(self, context):
-    scenegraph_utils.update_sg_options(context)
+def update_options_func(self, s, context):
+    scenegraph_utils.update_sg_options(s, context)
 
 def update_root_node_func(self, context):
     scenegraph_utils.update_sg_root_node(context)

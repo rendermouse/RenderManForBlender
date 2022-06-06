@@ -266,6 +266,21 @@ def set_primvar_bl_props(primvars, rm, inherit_node=None):
         param_type = meta['renderman_type']
         set_rix_param(primvars, param_type, ri_name, val, is_reference=False, is_array=is_array, array_len=array_len, node=rm, prop_name=prop_name)                
 
+def set_rioption_bl_prop(options, prop_name, meta, rm):     
+    if 'riopt' not in meta:
+        return
+    
+    val = getattr(rm, prop_name)
+    ri_name = meta['riopt']
+    is_array = False
+    array_len = -1
+    if 'arraySize' in meta:
+        is_array = True
+        array_len = meta['arraySize']
+    param_type = meta['renderman_type']
+    val = string_utils.convert_val(val, type_hint=param_type)
+    set_rix_param(options, param_type, ri_name, val, is_reference=False, is_array=is_array, array_len=array_len, node=rm, prop_name=prop_name)
+
 def build_output_param_str(rman_sg_node, mat_name, from_node, from_socket, convert_socket=False, param_type=''):
     nodes_to_blnodeinfo = getattr(rman_sg_node, 'nodes_to_blnodeinfo', dict())
     if from_node in nodes_to_blnodeinfo:
