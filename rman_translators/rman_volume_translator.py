@@ -2,6 +2,7 @@ from .rman_translator import RmanTranslator
 from ..rman_sg_nodes.rman_sg_volume import RmanSgVolume
 from ..rfb_utils import scenegraph_utils
 from ..rfb_utils import transform_utils
+from ..rfb_utils import property_utils
 from ..rfb_logger import rfb_log
 
 import bpy
@@ -21,6 +22,11 @@ class RmanVolumeTranslator(RmanTranslator):
 
     def export_deform_sample(self, rman_sg_volume, ob, time_sample):
         pass
+
+    def update_primvar(self, ob, rman_sg_volume, prop_name):
+        primvars = rman_sg_volume.sg_node.GetPrimVars()
+        super().update_object_primvar(ob, primvars, prop_name)
+        rman_sg_volume.sg_node.SetPrimVars(primvars)    
 
     def update(self, ob, rman_sg_volume):       
         rman_sg_volume.sg_node.Define(0,0,0)

@@ -665,6 +665,7 @@
             "type": "float",
             "editable": true,
             "default": 0.1,
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'rman_displacementBound', c)",
             "page": "Displacement"
         },
         {
@@ -678,6 +679,7 @@
             "widget": "popup",
             "options": "world|object",
             "page": "Displacement",
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'rman_displacementCoordSys', c)",            
             "help": "Coordinate system of the displacement bound.  For example, a scaled up ground plane may want the displacement bound in world space, while a character would typically specify the value in object space."
         },
         {
@@ -692,6 +694,7 @@
             "inherit_true_value": -1.0,
             "page": "Dicing",
             "help": "Micropolygon distance in raster space for 'instanceprojection' dicing. Values are expressed in pixel size.",
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'rman_micropolygonlength', c)",            
             "conditionalVisOps": {
                 "conditionalVis1Path": "bl_object_type",
                 "conditionalVis2Op": "notEqualTo",
@@ -714,6 +717,7 @@
             "editable": true,
             "always_write": true,
             "page": "Dicing",
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'rman_micropolygonlength_volume', c)",            
             "help": "Micropolygon distance in raster space for 'instanceprojection' dicing. Values are expressed in pixel size.",
             "conditionalVisOps": {
                 "conditionalVis1Path": "bl_object_type",
@@ -737,6 +741,7 @@
             "label": "Dicing Strategy",
             "default": "instanceprojection",
             "widget": "popup",
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'rman_diceStrategy', c)",                        
             "options": "instanceprojection|worlddistance|objectdistance",
             "help": "Dicing method of objects within the viewing frustum.<br>instanceprojection: Use object size in screen space.<br>worlddistance: Use object size in world space<br>objectdistance: Use object size in object space."
         },
@@ -747,7 +752,8 @@
             "primvar": "dice:minlength",
             "label": "Min Length",
             "type": "float",
-            "editable": true,            
+            "editable": true,      
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'rman_minlength', c)",                        
             "default": 1
         },
         {
@@ -760,6 +766,7 @@
             "default": "world",
             "widget": "popup",
             "editable": true,
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'rman_minlengthspace', c)",              
             "options": "world|object|camera"
         },
 
@@ -773,6 +780,7 @@
             "default": 1,
             "widget": "checkbox",
             "page": "Dicing",
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'rman_rasterorient', c)",            
             "help": "Changes micropolygon size based on the viewing angle of an object.<br>When rasterorient is on, surfaces are diced more coarsely at a glancing angle.<br>It may be useful to turn off for instances as their geometry is seen from different angles<br>or for objects where displacement details are lost.",
             "conditionalVisOps": {
                 "conditionalVisOp": "equalTo",
@@ -785,6 +793,7 @@
             "page": "Dicing",
             "name": "rman_diceDistanceLength",
             "primvar": "dice:worlddistancelength",
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'rman_diceDistanceLength', c)",            
             "type": "float",
             "editable": true,
             "label": "Dicing Distance Length",
@@ -820,6 +829,7 @@
             "editable": true,
             "widget": "bl_scenegraphLocation",
             "options": "nodeType:bpy.types.Camera",
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'dice_referenceCamera', c)",            
             "default": "",
             "conditionalVisOps": {
                 "conditionalVisOp": "equalTo",
@@ -849,6 +859,7 @@
                 "conditionalVis2Path": "bl_object_type",
                 "conditionalVis2Value": "RI_VOLUME"
             }, 
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'volume_temporalmethod', c)",            
             "help": "Method of generating temporal data for volume rendering."
         },  
         {
@@ -871,6 +882,7 @@
                 "conditionalVis2Path": "bl_object_type",
                 "conditionalVis2Value": "RI_VOLUME"
             }, 
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'volume_fps', c)",
             "help": "The frames per second for volumetric velocity data. The velocity data will be divided by this quantity to derive the velocity for the frame."
         },         
         {
@@ -893,6 +905,7 @@
                 "conditionalVis2Path": "bl_object_type",
                 "conditionalVis2Value": "RI_VOLUME"
             }, 
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'volume_shutteroffset', c)",
             "help": "The shutter offset used to interpret volumetric velocity. A value of 1 will use the current position of the object and the position of the object on the next frame as the time interval to use for motion blur. A value of -1 will use the position of the object on the previous frame and the current position of the object as the time. A value of 0 will generate an interval which begins halfway through the previous frame and ends halfway into the next frame."
         },         
         {
@@ -915,6 +928,7 @@
                 "conditionalVis2Path": "bl_object_type",
                 "conditionalVis2Value": "RI_VOLUME"
             }, 
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'volume_velocityshuttercorrection', c)",            
             "help": "The shutter offset used to interpret volumetric velocity. A value of 1 will use the current position of the object and the position of the object on the next frame as the time interval to use for motion blur. A value of -1 will use the position of the object on the previous frame and the current position of the object as the time. A value of 0 will generate an interval which begins halfway through the previous frame and ends halfway into the next frame."
         },                                        
         {

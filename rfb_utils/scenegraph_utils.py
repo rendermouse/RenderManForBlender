@@ -31,7 +31,12 @@ def update_sg_root_node(prop_name, context):
 def update_sg_node_riattr(prop_name, context):
     from .. import rman_render
     rr = rman_render.RmanRender.get_rman_render()
-    rr.rman_scene_sync.update_sg_node_riattr(prop_name, context)      
+    rr.rman_scene_sync.update_sg_node_riattr(prop_name, context)   
+
+def update_sg_node_primvar(prop_name, context):
+    from .. import rman_render
+    rr = rman_render.RmanRender.get_rman_render()
+    rr.rman_scene_sync.update_sg_node_primvar(prop_name, context)         
 
 def export_vol_aggregate(bl_scene, primvar, ob):
     vol_aggregate_group = []

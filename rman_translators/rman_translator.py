@@ -84,6 +84,24 @@ class RmanTranslator(object):
         rm_scene = self.rman_scene.bl_scene.renderman
         property_utils.set_primvar_bl_props(primvars, rm, inherit_node=rm_scene)
 
+    def update_primvar(self, ob, rman_sg_node, prop_name):
+        pass        
+
+    def update_object_primvar(self, ob, primvars, prop_name):
+        '''
+        This method should be called by subclasses of RmanTranslator
+        in their update_primvar() methods.
+
+        Args:
+            ob (bpy.types.Object) - Blender Object
+            primvars (RtPrimVars) - primitive variables
+            prop_name (str) - name of the Blender property that was updated
+        '''
+        rm = ob.renderman
+        rm_scene = self.rman_scene.bl_scene.renderman
+        meta = rm.prop_meta[prop_name]
+        property_utils.set_primvar_bl_prop(primvars, prop_name, meta, rm, inherit_node=rm_scene)        
+
     def export_instance_attributes(self, ob, rman_sg_node, ob_inst):
         '''
         Export attributes that should vary between each instance

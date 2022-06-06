@@ -24,6 +24,18 @@ class RmanOpenVDBTranslator(RmanTranslator):
     def export_deform_sample(self, rman_sg_openvdb, ob, time_sample):
         pass
 
+    def update_primvar(self, ob, rman_sg_openvdb, prop_name):
+        db = ob.data
+        primvars = rman_sg_openvdb.sg_node.GetPrimVars()
+        if prop_name in db.renderman.prop_meta:
+            rm = db.renderman
+            meta = rm.prop_meta[prop_name]
+            rm_scene = self.rman_scene.bl_scene.renderman
+            property_utils.set_primvar_bl_prop(primvars, prop_name, meta, rm, inherit_node=rm_scene)        
+        else:
+            super().update_object_primvar(ob, primvars, prop_name)
+        rman_sg_openvdb.sg_node.SetPrimVars(primvars)
+
     def update(self, ob, rman_sg_openvdb):
         db = ob.data
         rm = db.renderman

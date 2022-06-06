@@ -23,8 +23,8 @@ class RmanUpdate:
         is_updated_transform (bool) - Whether the geometry was transformed
         is_updated_shading (bool) - If the shader on the object has changed
         is_updated_attributes (bool) - Wether an Ri attribute was changed
-        updated_prop_name (str) - The name of the Blender property that was changed, for the 
-                                    is_updated_attributes case
+        updated_prop_name (str) - The name of the Blender property that was changed, for either 
+                                    is_updated_attributes or is_updated_geometry case
         do_clear_instances (bool) - Whether we should clear/delete all instances of the prototype
 
     '''    
@@ -33,7 +33,7 @@ class RmanUpdate:
         self.is_updated_transform = False
         self.is_updated_shading = False
         self.is_updated_attributes = False
-        self.update_prop_name = ''
+        self.updated_prop_name = None
         self.do_clear_instances = True  
 
 class RmanSceneSync(object):
@@ -774,10 +774,14 @@ class RmanSceneSync(object):
                 if rman_sg_node and not is_new_object and not instance.is_instance:
                     if rman_update.is_updated_geometry and proto_key not in already_udpated:
                         translator =  self.rman_scene.rman_translators.get(rman_type, None)
-                        rfb_log().debug("\tUpdating Object: %s" % proto_key)
-                        translator.update(ob_eval, rman_sg_node)  
-                        rman_sg_node.shared_attrs.Clear()
-                        self.update_particle_emitters(ob_eval)
+                        if rman_update.updated_prop_name:
+                            rfb_log().debug("\tUpdating Single Primvar: %s" % proto_key)
+                            translator.update_primvar(ob_eval, rman_sg_node, rman_update.updated_prop_name)
+                        else:
+                            rfb_log().debug("\tUpdating Object: %s" % proto_key)
+                            translator.update(ob_eval, rman_sg_node)  
+                            rman_sg_node.shared_attrs.Clear()
+                            self.update_particle_emitters(ob_eval)
                         already_udpated.append(proto_key)   
 
                 if rman_type in object_utils._RMAN_NO_INSTANCES_:
@@ -975,9 +979,22 @@ class RmanSceneSync(object):
         rman_update = RmanUpdate()
         rman_update.do_clear_instances = False
         rman_update.is_updated_attributes = True
-        rman_update.update_prop_name = prop_name
+        rman_update.updated_prop_name = prop_name
         self.rman_updates[ob.original] = rman_update
-        rfb_log().debug("Updated RiAttribute: %s" % rman_update.update_prop_name)
+        rfb_log().debug("Updated RiAttribute: %s" % rman_update.updated_prop_name)
+
+    def update_sg_node_primvar(self, prop_name, context):
+        if not self.rman_render.rman_interactive_running:
+            return     
+        from .rfb_utils import property_utils               
+        self.rman_scene.bl_scene = context.scene
+        ob = context.object
+        rman_update = RmanUpdate()
+        rman_update.do_clear_instances = False
+        rman_update.is_updated_geometry = True
+        rman_update.updated_prop_name = prop_name
+        self.rman_updates[ob.original] = rman_update
+        rfb_log().debug("Updated primvar: %s" % rman_update.updated_prop_name)        
 
     def update_material(self, mat):
         if not self.rman_render.rman_interactive_running:

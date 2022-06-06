@@ -217,3 +217,6 @@ def update_root_node_func(self, s, context):
 
 def update_riattr_func(self, s, context):
     scenegraph_utils.update_sg_node_riattr(s, context)    
+
+def update_primvar_func(self, s, context):
+    scenegraph_utils.update_sg_node_primvar(s, context)      

@@ -352,6 +352,19 @@ class RmanMeshTranslator(RmanTranslator):
 
         ob.to_mesh_clear()    
 
+    def update_primvar(self, ob, rman_sg_mesh, prop_name):
+        mesh = ob.to_mesh()
+        primvars = rman_sg_mesh.sg_node.GetPrimVars()
+        if prop_name in mesh.renderman.prop_meta:
+            rm = mesh.renderman
+            meta = rm.prop_meta[prop_name]
+            rm_scene = self.rman_scene.bl_scene.renderman
+            property_utils.set_primvar_bl_prop(primvars, prop_name, meta, rm, inherit_node=rm_scene)        
+        else:
+            super().update_object_primvar(ob, primvars, prop_name)
+        rman_sg_mesh.sg_node.SetPrimVars(primvars)
+        ob.to_mesh_clear()
+
     def update(self, ob, rman_sg_mesh, input_mesh=None, sg_node=None):
         rm = ob.renderman
         mesh = input_mesh
