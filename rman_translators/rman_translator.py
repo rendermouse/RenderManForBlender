@@ -192,39 +192,7 @@ class RmanTranslator(object):
 
         # set any properties marked riattr in the config file
         for prop_name, meta in rm.prop_meta.items():
-            if 'riattr' not in meta:
-                continue
-
-            conditionalVisOps = meta.get('conditionalVisOps', None)
-            if conditionalVisOps:
-                # check conditionalVisOps to see if this riattr applies
-                # to this object
-                expr = conditionalVisOps.get('expr', None)       
-                if expr and not eval(expr):
-                    continue            
-
-            ri_name = meta['riattr']            
-            val = getattr(rm, prop_name)
-            if 'inheritable' in meta:
-                cond = meta['inherit_true_value']
-                if isinstance(cond, str):
-                    if exec(cond):
-                        if remove:
-                            attrs.Remove(ri_name)
-                        continue
-                elif float(val) == cond:
-                    if remove:
-                        attrs.Remove(ri_name)
-                    continue
-
-            is_array = False
-            array_len = -1
-            if 'arraySize' in meta:
-                is_array = True
-                array_len = meta['arraySize']            
-            param_type = meta['renderman_type']
-            val = string_utils.convert_val(val, type_hint=param_type)
-            property_utils.set_rix_param(attrs, param_type, ri_name, val, is_reference=False, is_array=is_array, array_len=array_len, node=rm, prop_name=prop_name)
+            property_utils.set_riattr_bl_prop(attrs, prop_name, meta, rm, check_inherit=True, remove=remove)
 
         obj_groups_str = "World"
         obj_groups_str += "," + name

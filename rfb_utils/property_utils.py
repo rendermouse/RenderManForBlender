@@ -236,35 +236,38 @@ def set_rix_param(params, param_type, param_name, val, is_reference=False, is_ar
 def set_primvar_bl_props(primvars, rm, inherit_node=None):
     # set any properties marked primvar in the config file
     for prop_name, meta in rm.prop_meta.items():
-        if 'primvar' not in meta:
-            continue
-            
-        conditionalVisOps = meta.get('conditionalVisOps', None)
-        if conditionalVisOps:
-            # check conditionalVisOps to see if this primvar applies
-            # to this object
-            expr = conditionalVisOps.get('expr', None)
-            node = rm              
-            if expr and not eval(expr):
-                continue
+        set_primvar_bl_prop(primvars, prop_name, meta, rm, inherit_node=inherit_node)
 
-        val = getattr(rm, prop_name)
-        if not val:
-            continue
+def set_primvar_bl_prop(primvars, prop_name, meta, rm, inherit_node):
+    if 'primvar' not in meta:
+        return
+        
+    conditionalVisOps = meta.get('conditionalVisOps', None)
+    if conditionalVisOps:
+        # check conditionalVisOps to see if this primvar applies
+        # to this object
+        expr = conditionalVisOps.get('expr', None)
+        node = rm              
+        if expr and not eval(expr):
+            return
 
-        if 'inheritable' in meta:
-            if float(val) == meta['inherit_true_value']:
-                if inherit_node and hasattr(inherit_node, prop_name):
-                    val = getattr(inherit_node, prop_name)
+    val = getattr(rm, prop_name)
+    if not val:
+        return
 
-        ri_name = meta['primvar']
-        is_array = False
-        array_len = -1
-        if 'arraySize' in meta:
-            is_array = True
-            array_len = meta['arraySize']
-        param_type = meta['renderman_type']
-        set_rix_param(primvars, param_type, ri_name, val, is_reference=False, is_array=is_array, array_len=array_len, node=rm, prop_name=prop_name)                
+    if 'inheritable' in meta:
+        if float(val) == meta['inherit_true_value']:
+            if inherit_node and hasattr(inherit_node, prop_name):
+                val = getattr(inherit_node, prop_name)
+
+    ri_name = meta['primvar']
+    is_array = False
+    array_len = -1
+    if 'arraySize' in meta:
+        is_array = True
+        array_len = meta['arraySize']
+    param_type = meta['renderman_type']
+    set_rix_param(primvars, param_type, ri_name, val, is_reference=False, is_array=is_array, array_len=array_len, node=rm, prop_name=prop_name)                
 
 def set_rioption_bl_prop(options, prop_name, meta, rm):     
     if 'riopt' not in meta:
@@ -280,6 +283,42 @@ def set_rioption_bl_prop(options, prop_name, meta, rm):
     param_type = meta['renderman_type']
     val = string_utils.convert_val(val, type_hint=param_type)
     set_rix_param(options, param_type, ri_name, val, is_reference=False, is_array=is_array, array_len=array_len, node=rm, prop_name=prop_name)
+
+def set_riattr_bl_prop(attrs, prop_name, meta, rm, check_inherit=True, remove=True):
+    if 'riattr' not in meta:
+        return
+
+    conditionalVisOps = meta.get('conditionalVisOps', None)
+    if conditionalVisOps:
+        # check conditionalVisOps to see if this riattr applies
+        # to this object
+        expr = conditionalVisOps.get('expr', None)       
+        if expr and not eval(expr):
+            return          
+
+    val = getattr(rm, prop_name)
+    ri_name = meta['riattr']
+    if check_inherit and 'inheritable' in meta:
+        cond = meta['inherit_true_value']
+        if isinstance(cond, str):
+            if exec(cond):
+                if remove:
+                    attrs.Remove(ri_name)
+                return
+        elif float(val) == cond:
+            if remove:
+                attrs.Remove(ri_name)
+            return
+
+    is_array = False
+    array_len = -1
+    if 'arraySize' in meta:
+        is_array = True
+        array_len = meta['arraySize']       
+    param_type = meta['renderman_type'] 
+    val = string_utils.convert_val(val, type_hint=param_type)                         
+    set_rix_param(attrs, param_type, ri_name, val, is_reference=False, is_array=is_array, array_len=array_len, node=rm, prop_name=prop_name)
+
 
 def build_output_param_str(rman_sg_node, mat_name, from_node, from_socket, convert_socket=False, param_type=''):
     nodes_to_blnodeinfo = getattr(rman_sg_node, 'nodes_to_blnodeinfo', dict())

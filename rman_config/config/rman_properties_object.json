@@ -398,6 +398,7 @@
             "editable": true,
             "inheritable": true,
             "inherit_true_value": -1,
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_matteObject', c)",            
             "page": "Shading",
             "help": "This object is rendered as a black hole"
         },
@@ -413,6 +414,7 @@
             "editable": true,
             "inheritable": true,
             "inherit_true_value": -1,
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_holdout', c)",
             "page": "Shading",
             "help": "Useful in holdout workflow. These objects collect reflections, shadows, and transmission."
         },       
@@ -426,6 +428,7 @@
             "editable": true,
             "inheritable": true,
             "inherit_true_value": -1,
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_indexofrefraction', c)",              
             "page": "Shading",
             "help": "Override material IOR for nested dielectrics."
         },
@@ -437,6 +440,7 @@
             "type": "int",
             "editable": true,
             "default": 1,
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_minsamples', c)",            
             "page": "Shading",
             "help": "Min Pixel Samples.  For fine-tuning adaptive sampling."
         },          
@@ -448,6 +452,7 @@
             "type": "float",
             "editable": true,
             "default": 1,
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_relativepixelvariance', c)",              
             "page": "Shading",
             "help": "PixelVariance multiplier for camera visible objects.  For fine-tuning adaptive sampling."
         },            
@@ -461,6 +466,7 @@
             "inheritable": true,
             "inherit_true_value": -1,
             "editable": true,
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_maxDiffuseDepth', c)",             
             "page": "Trace",
             "help": "Maximum diffuse light bounces."
         },
@@ -474,6 +480,7 @@
             "default": -1,
             "inheritable": true,
             "inherit_true_value": -1,
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_maxSpecularDepth', c)",             
             "page": "Trace",
             "help": "Maximum specular light bounces"
         },
@@ -487,6 +494,7 @@
             "page": "Trace",
             "editable": true,
             "widget": "propSearch",
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_reflectExcludeSubset', c)",             
             "options": "prop_parent:context.scene.renderman|prop_name:object_groups",
             "help": "Exclude object groups from reflections"
         },
@@ -500,6 +508,7 @@
             "page": "Trace",
             "editable": true,
             "widget": "propSearch",
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_reflectSubset', c)",            
             "options": "prop_parent:context.scene.renderman|prop_name:object_groups",            
             "help": "Object groups visible to reflections"
         },
@@ -513,6 +522,7 @@
             "page": "Trace",
             "editable": true,
             "widget": "propSearch",
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_shadowExcludeSubset', c)",              
             "options": "prop_parent:context.scene.renderman|prop_name:object_groups",            
             "help": "Exclude object groups from casting shadows"
         },
@@ -526,6 +536,7 @@
             "page": "Trace",
             "editable": true,
             "widget": "propSearch",
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_shadowSubset', c)",              
             "options": "prop_parent:context.scene.renderman|prop_name:object_groups",            
             "help": "Object groups active in shadows"
         },
@@ -539,6 +550,7 @@
             "page": "Trace",
             "editable": true,
             "widget": "propSearch",
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_transmitExcludeSubset', c)",              
             "options": "prop_parent:context.scene.renderman|prop_name:object_groups",            
             "help": "Exclude object groups from transmission/refractions"
         },
@@ -552,6 +564,7 @@
             "page": "Trace",
             "editable": true,
             "widget": "propSearch",
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_transmitSubset', c)",              
             "options": "prop_parent:context.scene.renderman|prop_name:object_groups",            
             "help": "Object groups visible to transmission/refractions"
         },        
@@ -565,6 +578,7 @@
             "default": 0,
             "min": 0,
             "max": 31,            
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_intersectPriority', c)",             
             "page": "Nested Dielectrics",
             "help": "Raytrace intersection priority for nested dielectrics"
         },
@@ -914,7 +928,8 @@
             "editable": true,
             "options": "Inherit:-1|Yes:1|No:0",
             "inheritable": true,
-            "inherit_true_value": -1,            
+            "inherit_true_value": -1,     
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_visibilityCamera', c)",                    
             "page": "Visibility",
             "help": "Indicates if object is visible to camera rays"
         },
@@ -929,7 +944,8 @@
             "editable": true,
             "options": "Inherit:-1|Yes:1|No:0",
             "inheritable": true,
-            "inherit_true_value": -1,            
+            "inherit_true_value": -1,
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_visibilityIndirect', c)",                        
             "page": "Visibility",
             "help": "Indicates if object is visible to indirect (reflection and specular refraction) rays"
         },
@@ -944,7 +960,8 @@
             "editable": true,
             "options": "Inherit:-1|Yes:1|No:0",
             "inheritable": true,
-            "inherit_true_value": -1,            
+            "inherit_true_value": -1,           
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_visibilityTransmission', c)",             
             "page": "Visibility",
             "help": "Indicates if object is visible to shadow rays"
         },
@@ -960,6 +977,7 @@
                 0,
                 0
             ],
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'user_MatteID0', c)",
             "help": "Matte ID 0 Color, you also need to add the PxrMatteID node to your bxdf"
         },
         {
@@ -974,6 +992,7 @@
                 0,
                 0
             ],
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'user_MatteID1', c)",            
             "help": "Matte ID 1 Color, you also need to add the PxrMatteID node to your bxdf"
         },        
         {
@@ -988,6 +1007,7 @@
                 0,
                 0
             ],
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'user_MatteID2', c)",            
             "help": "Matte ID 2 Color, you also need to add the PxrMatteID node to your bxdf"
         },
         {
@@ -1002,6 +1022,7 @@
                 0,
                 0
             ],
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'user_MatteID3', c)",            
             "help": "Matte ID 2 Color, you also need to add the PxrMatteID node to your bxdf"
         },
         {
@@ -1016,6 +1037,7 @@
                 0,
                 0
             ],
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'user_MatteID4', c)",            
             "help": "Matte ID 4 Color, you also need to add the PxrMatteID node to your bxdf"
         },
         {
@@ -1030,6 +1052,7 @@
                 0,
                 0
             ],
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'user_MatteID5', c)",            
             "help": "Matte ID 5 Color, you also need to add the PxrMatteID node to your bxdf"
         },
         {
@@ -1044,6 +1067,7 @@
                 0,
                 0
             ],
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'user_MatteID6', c)",            
             "help": "Matte ID 6 Color, you also need to add the PxrMatteID node to your bxdf"
         },
         {
@@ -1058,6 +1082,7 @@
                 0,
                 0
             ],
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'user_MatteID7', c)",            
             "help": "Matte ID 7 Color, you also need to add the PxrMatteID node to your bxdf"
         },
         {

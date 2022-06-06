@@ -22,6 +22,9 @@ class RmanUpdate:
                                     considered geometry updates
         is_updated_transform (bool) - Whether the geometry was transformed
         is_updated_shading (bool) - If the shader on the object has changed
+        is_updated_attributes (bool) - Wether an Ri attribute was changed
+        updated_prop_name (str) - The name of the Blender property that was changed, for the 
+                                    is_updated_attributes case
         do_clear_instances (bool) - Whether we should clear/delete all instances of the prototype
 
     '''    
@@ -29,6 +32,8 @@ class RmanUpdate:
         self.is_updated_geometry = False
         self.is_updated_transform = False
         self.is_updated_shading = False
+        self.is_updated_attributes = False
+        self.update_prop_name = ''
         self.do_clear_instances = True  
 
 class RmanSceneSync(object):
@@ -563,7 +568,7 @@ class RmanSceneSync(object):
     @time_this
     def update_scene(self, context, depsgraph):
 
-        self.rman_updates = dict()
+        #self.rman_updates = dict()
         self.num_instances_changed = False
         self.frame_number_changed = False
         self.check_all_instances = False
@@ -674,7 +679,8 @@ class RmanSceneSync(object):
             self.check_instances()
                             
         # call txmake all in case of new textures
-        texture_utils.get_txmanager().txmake_all(blocking=False)                              
+        texture_utils.get_txmanager().txmake_all(blocking=False)      
+        self.rman_updates = dict()                        
         rfb_log().debug("------End update scene----------")    
 
     @time_this
@@ -804,6 +810,17 @@ class RmanSceneSync(object):
                     # simply grab the existing instance and update the transform and/or material
                     rman_sg_group = self.rman_scene.get_rman_sg_instance(instance, rman_sg_node, instance_parent, psys, create=False)
                     if rman_sg_group:
+                        if rman_update.is_updated_attributes:
+                            from .rfb_utils import property_utils
+                            attrs = rman_sg_group.sg_node.GetAttributes()
+                            rm = ob_eval.renderman
+                            if is_empty_instancer:
+                                rm = instance_parent.renderman
+                            meta = rm.prop_meta[rman_update.update_prop_name]
+                            
+                            property_utils.set_riattr_bl_prop(attrs, rman_update.update_prop_name, meta, rm, check_inherit=True)
+                            rman_sg_group.sg_node.SetAttributes(attrs)                             
+
                         if rman_update.is_updated_transform:
                             rman_group_translator = self.rman_scene.rman_translators['GROUP']
                             rman_group_translator.update_transform(instance, rman_sg_group) 
@@ -929,18 +946,39 @@ class RmanSceneSync(object):
         with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
             options = self.rman_scene.sg_scene.GetOptions()
             meta = rm.prop_meta[prop_name]
+            rfb_log().debug("Update RiOption: %s" % prop_name)
             property_utils.set_rioption_bl_prop(options, prop_name, meta, rm)
             self.rman_scene.sg_scene.SetOptions(options)
         self.rman_scene.export_viewport_stats()            
 
 
-    def update_root_node_func(self, context):
+    def update_root_node_func(self, prop_name, context):
         if not self.rman_render.rman_interactive_running:
-            return        
+            return     
+        from .rfb_utils import property_utils               
         self.rman_scene.bl_scene = context.scene
-        with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
-            self.rman_scene.export_root_sg_node()         
- 
+        rm = self.rman_scene.bl_scene.renderman
+        with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):     
+            root_sg = self.rman_scene.get_root_sg_node()
+            attrs = root_sg.GetAttributes()
+            meta = rm.prop_meta[prop_name]
+            rfb_log().debug("Update root node attribute: %s" % prop_name)
+            property_utils.set_riattr_bl_prop(attrs, prop_name, meta, rm, check_inherit=False)
+            root_sg.SetAttributes(attrs)
+
+    def update_sg_node_riattr(self, prop_name, context):
+        if not self.rman_render.rman_interactive_running:
+            return     
+        from .rfb_utils import property_utils               
+        self.rman_scene.bl_scene = context.scene
+        ob = context.object
+        rman_update = RmanUpdate()
+        rman_update.do_clear_instances = False
+        rman_update.is_updated_attributes = True
+        rman_update.update_prop_name = prop_name
+        self.rman_updates[ob.original] = rman_update
+        rfb_log().debug("Updated RiAttribute: %s" % rman_update.update_prop_name)
+
     def update_material(self, mat):
         if not self.rman_render.rman_interactive_running:
             return        

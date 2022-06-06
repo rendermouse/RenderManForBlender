@@ -212,5 +212,8 @@ def update_integrator_func(self, context):
 def update_options_func(self, s, context):
     scenegraph_utils.update_sg_options(s, context)
 
-def update_root_node_func(self, context):
-    scenegraph_utils.update_sg_root_node(context)
+def update_root_node_func(self, s, context):
+    scenegraph_utils.update_sg_root_node(s, context)
+
+def update_riattr_func(self, s, context):
+    scenegraph_utils.update_sg_node_riattr(s, context)    

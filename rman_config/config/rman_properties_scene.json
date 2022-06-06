@@ -566,7 +566,7 @@
             "label": "Max Specular Depth",
             "type": "int",
             "editable": true,
-            "update_function_name": "update_root_node_func",               
+            "update_function_name": "lambda s, c: update_root_node_func(s, 'ri_maxSpecularDepth', c)",              
             "default": 4,
             "min": 0,
             "slidermax": 15
@@ -579,7 +579,7 @@
             "label": "Max Diffuse Depth",
             "type": "int",
             "editable": true,
-            "update_function_name": "update_root_node_func",               
+            "update_function_name": "lambda s, c: update_root_node_func(s, 'ri_maxDiffuseDepth', c)",
             "default": 1,
             "min": 0,
             "slidermax": 15

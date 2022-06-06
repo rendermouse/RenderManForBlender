@@ -510,19 +510,7 @@ class RmanScene(object):
 
         # set any properties marked riattr in the config file
         for prop_name, meta in rm.prop_meta.items():
-            if 'riattr' not in meta:
-                continue
-            
-            val = getattr(rm, prop_name)
-            ri_name = meta['riattr']
-            is_array = False
-            array_len = -1
-            if 'arraySize' in meta:
-                is_array = True
-                array_len = meta['arraySize']       
-            param_type = meta['renderman_type'] 
-            val = string_utils.convert_val(val, type_hint=param_type)                         
-            property_utils.set_rix_param(attrs, param_type, ri_name, val, is_reference=False, is_array=is_array, array_len=array_len, node=rm, prop_name=prop_name)
+            property_utils.set_riattr_bl_prop(attrs, prop_name, meta, rm, check_inherit=False, remove=False)
 
         if rm.invert_light_linking:
             all_lights = [string_utils.sanitize_node_name(l.name) for l in scene_utils.get_all_lights(self.bl_scene, include_light_filters=False)]
