@@ -114,8 +114,11 @@ class RmanMaterialTranslator(RmanTranslator):
                             return True
 
                 # bxdf
-                socket = out.inputs['bxdf_in']
-                if socket.is_linked and len(socket.links) > 0:
+                socket = out.inputs.get('bxdf_in', None)
+                if socket is None:
+                    # try old name
+                    socket = out.inputs.get('Bxdf', None)
+                if socket and socket.is_linked and len(socket.links) > 0:
                     linked_node = get_root_node(socket.links[0].from_node, type='bxdf')
                     if linked_node:
                         bxdfList = []
@@ -138,8 +141,11 @@ class RmanMaterialTranslator(RmanTranslator):
                     self.create_pxrdiffuse_node(rman_sg_material, handle)
 
                 # light
-                socket = out.inputs['light_in']
-                if socket.is_linked and len(socket.links) > 0:
+                socket = out.inputs.get('light_in', None)
+                if socket is None:
+                    # try old name
+                    socket = out.inputs.get('Light', None)
+                if socket and socket.is_linked and len(socket.links) > 0:
                     linked_node = get_root_node(socket.links[0].from_node, type='light')
                     if linked_node:
                         lightNodesList = []
@@ -157,8 +163,11 @@ class RmanMaterialTranslator(RmanTranslator):
                             rman_sg_material.sg_node.SetLight(lightNodesList)                                   
 
                 # displacement
-                socket = out.inputs['displace_in']
-                if socket.is_linked and len(socket.links) > 0:
+                socket = out.inputs.get('displace_in', None)
+                if socket is None:
+                    # use old name
+                    socket = out.inputs.get('Displacement', None)                
+                if socket and socket.is_linked and len(socket.links) > 0:
                     linked_node = get_root_node(socket.links[0].from_node, type='displace')
                     if linked_node:                    
                         dispList = []
@@ -261,7 +270,8 @@ class RmanMaterialTranslator(RmanTranslator):
         bxdf_name = '%s_PxrDisneyBsdf' % name
         sg_node = self.rman_scene.rman.SGManager.RixSGShader("Bxdf", "PxrDisneyBsdf", bxdf_name)
         rix_params = sg_node.params
-        rix_params.SetColor('baseColor', string_utils.convert_val(mat.diffuse_color, 'color'))
+        diffuse_color = string_utils.convert_val(mat.diffuse_color, type_hint='color')
+        rix_params.SetColor('baseColor', diffuse_color)
         rix_params.SetFloat('metallic', mat.metallic )
         rix_params.SetFloat('roughness', mat.roughness)
         rix_params.SetFloat('specReflectScale', mat.metallic )
