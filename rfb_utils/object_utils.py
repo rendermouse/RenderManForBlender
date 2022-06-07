@@ -160,15 +160,15 @@ def prototype_key(ob):
     if isinstance(ob, bpy.types.DepsgraphObjectInstance):
         if ob.is_instance:
             if ob.object.data:
-                return '%s-DATA' % ob.object.data.name
+                return '%s-DATA' % ob.object.data.name_full
             else:
-                return '%s-OBJECT' % ob.object.name
+                return '%s-OBJECT' % ob.object.name_full
         if ob.object.data:
-            return '%s-DATA' % ob.object.data.name
-        return '%s-OBJECT' % ob.object.original.name
+            return '%s-DATA' % ob.object.data.name_full
+        return '%s-OBJECT' % ob.object.original.name_full
     elif ob.data:
-        return '%s-DATA' % ob.original.data.original.name
-    return '%s-OBJECT' % ob.original.name
+        return '%s-DATA' % ob.original.data.original.name_full
+    return '%s-OBJECT' % ob.original.name_full
 
 def curve_is_mesh(ob):
     '''
