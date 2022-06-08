@@ -512,7 +512,6 @@ class PRMAN_OT_Renderman_open_stats(bpy.types.Operator):
         scene = context.scene
         rm = scene.renderman        
         output_dir = string_utils.expand_string(rm.path_rib_output, 
-                                                frame=scene.frame_current, 
                                                 asFilePath=True)  
         output_dir = os.path.dirname(output_dir)            
         bpy.ops.wm.url_open(

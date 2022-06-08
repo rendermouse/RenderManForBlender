@@ -509,6 +509,7 @@ class RmanRender(object):
             args.append(ptc_file)
             args.append(bkm_file)
             subprocess.run(args)   
+        string_utils.update_frame_token(self.bl_scene.frame_current)
 
     def _check_prman_license(self):
         if not envconfig().is_valid_license:
@@ -751,7 +752,6 @@ class RmanRender(object):
                             self.rman_scene_sync.batch_update_scene(bpy.context, depsgraph)
                             
                         rib_output = string_utils.expand_string(rm.path_rib_output, 
-                                                                frame=frame, 
                                                                 asFilePath=True)
                         self.sg_scene.Render("rib %s %s" % (rib_output, rib_options))                
 
@@ -780,7 +780,6 @@ class RmanRender(object):
                         self.rman_is_exporting = False
                             
                         rib_output = string_utils.expand_string(rm.path_rib_output, 
-                                                                frame=frame, 
                                                                 asFilePath=True)
                         self.sg_scene.Render("rib %s %s" % (rib_output, rib_options))
                         self.sgmngr.DeleteScene(self.sg_scene) 
@@ -816,7 +815,6 @@ class RmanRender(object):
                 self.rman_scene.export_for_final_render(depsgraph, self.sg_scene, bl_view_layer, is_external=True)
                 self.rman_is_exporting = False
                 rib_output = string_utils.expand_string(rm.path_rib_output, 
-                                                        frame=bl_scene.frame_current, 
                                                         asFilePath=True)            
 
                 rfb_log().debug("Writing to RIB: %s..." % rib_output)
@@ -931,7 +929,6 @@ class RmanRender(object):
                     self.rman_scene.export_for_bake_render(depsgraph, self.sg_scene, bl_view_layer, is_external=True)
                     self.rman_is_exporting = False
                     rib_output = string_utils.expand_string(rm.path_rib_output, 
-                                                            frame=frame, 
                                                             asFilePath=True)                                                                            
                     self.sg_scene.Render("rib %s %s" % (rib_output, rib_options))
                 except Exception as e:      
@@ -961,7 +958,6 @@ class RmanRender(object):
                 self.rman_scene.export_for_bake_render(depsgraph, self.sg_scene, bl_view_layer, is_external=True)
                 self.rman_is_exporting = False
                 rib_output = string_utils.expand_string(rm.path_rib_output, 
-                                                        frame=bl_scene.frame_current, 
                                                         asFilePath=True)            
 
                 rfb_log().debug("Writing to RIB: %s..." % rib_output)
@@ -1153,7 +1149,6 @@ class RmanRender(object):
                     self.rman_scene.export_for_rib_selection(context, self.sg_scene)
                     self.rman_is_exporting = False
                     rib_output = string_utils.expand_string(rib_path, 
-                                                        frame=frame, 
                                                         asFilePath=True) 
                     cmd = 'rib ' + rib_output + ' -archive'                                                        
                     cmd = cmd + ' -bbox ' + transform_utils.get_world_bounding_box(context.selected_objects)
@@ -1177,7 +1172,6 @@ class RmanRender(object):
                 self.rman_scene.export_for_rib_selection(context, self.sg_scene)
                 self.rman_is_exporting = False
                 rib_output = string_utils.expand_string(rib_path, 
-                                                    frame=bl_scene.frame_current, 
                                                     asFilePath=True) 
                 cmd = 'rib ' + rib_output + ' -archive'
                 cmd = cmd + ' -bbox ' + transform_utils.get_world_bounding_box(context.selected_objects)
@@ -1447,7 +1441,7 @@ class RmanRender(object):
             return None                                     
 
     @time_this
-    def save_viewport_snapshot(self, frame=1):
+    def save_viewport_snapshot(self):
         if not self.rman_is_viewport_rendering:
             return
 
@@ -1456,7 +1450,7 @@ class RmanRender(object):
         height = int(self.viewport_res_y * res_mult)
 
         nm = 'rman_viewport_snapshot_<F4>_%d.exr' % len(bpy.data.images)
-        nm = string_utils.expand_string(nm, frame=frame)
+        nm = string_utils.expand_string(nm)
         if hasattr(ice, 'FromArray'):
             buffer = self._get_buffer(width, height, as_flat=False, raw_buffer=True)  
             if buffer is None:

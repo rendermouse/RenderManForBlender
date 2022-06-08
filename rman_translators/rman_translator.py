@@ -243,7 +243,6 @@ class RmanTranslator(object):
                     if tokens[1] != '':
                         filePath = tokens[0]
                 filePath = string_utils.expand_string(filePath,
-                                                frame=self.rman_scene.bl_frame_current,
                                                 asFilePath=True)                
                 attrs.SetString('user:bake_filename_attr', filePath)
 

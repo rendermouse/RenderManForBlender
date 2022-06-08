@@ -118,7 +118,6 @@ class RmanSceneSync(object):
             # are marked as frame sensitive
             rfb_log().debug("Frame changed: %d -> %d" % (self.rman_scene.bl_frame_current, self.rman_scene.bl_scene.frame_current))
             self.rman_scene.bl_frame_current = self.rman_scene.bl_scene.frame_current
-            string_utils.update_frame_token(self.rman_scene.bl_frame_current)
             self.frame_number_changed = True
 
             # check for frame sensitive objects
@@ -500,7 +499,6 @@ class RmanSceneSync(object):
     @time_this
     def batch_update_scene(self, context, depsgraph):
         self.rman_scene.bl_frame_current = self.rman_scene.bl_scene.frame_current
-        string_utils.update_frame_token(self.rman_scene.bl_frame_current)
 
         self.rman_updates = dict()
         self.num_instances_changed = False

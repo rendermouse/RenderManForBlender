@@ -190,7 +190,7 @@ class PRMAN_OT_Viewport_Snapshot(bpy.types.Operator):
     def execute(self, context):
         rman_render = RmanRender.get_rman_render()
         scene = context.scene
-        rman_render.save_viewport_snapshot(frame=scene.frame_current)
+        rman_render.save_viewport_snapshot()
 
         return {"FINISHED"}
 

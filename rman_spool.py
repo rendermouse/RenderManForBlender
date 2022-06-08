@@ -340,6 +340,7 @@ class RmanSpool(object):
         rm = scene.renderman
         frame_begin = self.bl_scene.frame_start
         frame_end = self.bl_scene.frame_end
+        frame_current = self.bl_scene.frame_current
         by = self.bl_scene.frame_step     
         chunk = min(rm.bl_batch_frame_chunk, frame_end)-1
 
@@ -420,6 +421,7 @@ class RmanSpool(object):
             return
 
         self.spool(job, jobfile)
+        string_utils.update_frame_token(frame_current)
 
     
     def batch_render(self):
@@ -428,6 +430,7 @@ class RmanSpool(object):
         rm = scene.renderman
         frame_begin = self.bl_scene.frame_start
         frame_end = self.bl_scene.frame_end
+        frame_current = self.bl_scene.frame_current        
         by = self.bl_scene.frame_step        
 
         if not rm.external_animation:
@@ -492,6 +495,7 @@ class RmanSpool(object):
             return
 
         self.spool(job, jobfile)
+        string_utils.update_frame_token(frame_current)
 
     def spool(self, job, jobfile):
 

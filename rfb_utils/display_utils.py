@@ -128,7 +128,6 @@ def _add_stylized_channels(dspys_dict, dspy_drv, rman_scene, expandTokens):
         if expandTokens:      
             filePath = string_utils.expand_string(filePath,
                                                 display=display_driver, 
-                                                frame=rman_scene.bl_frame_current,
                                                 asFilePath=True)            
 
         dspys_dict['displays'][dspy_name] = {
@@ -205,7 +204,6 @@ def _set_blender_dspy_dict(layer, dspys_dict, dspy_drv, rman_scene, expandTokens
     if expandTokens:
         filePath = string_utils.expand_string(filePath,
                                             display=display_driver, 
-                                            frame=rman_scene.bl_frame_current,
                                             asFilePath=True)
     dspys_dict['displays']['beauty'] = {
         'driverNode': display_driver,
@@ -245,7 +243,6 @@ def _set_blender_dspy_dict(layer, dspys_dict, dspy_drv, rman_scene, expandTokens
             token_dict = {'aov': name}
             filePath = string_utils.expand_string(filePath, 
                                                 display=display_driver, 
-                                                frame=rman_scene.bl_frame_current,
                                                 token_dict=token_dict,
                                                 asFilePath=True)
         if doit:
@@ -397,7 +394,6 @@ def _set_rman_dspy_dict(rm_rl, dspys_dict, dspy_drv, rman_scene, expandTokens, d
                 token_dict = {'aov': aov.name}
                 filePath = string_utils.expand_string(filePath, 
                                                 display=display_driver, 
-                                                frame=rman_scene.bl_frame_current,
                                                 token_dict=token_dict,
                                                 asFilePath=True)     
 
@@ -414,7 +410,6 @@ def _set_rman_dspy_dict(rm_rl, dspys_dict, dspy_drv, rman_scene, expandTokens, d
                 if expandTokens:
                     filePath = string_utils.expand_string(filePath,
                                                     display=display_driver, 
-                                                    frame=rman_scene.bl_frame_current,
                                                     asFilePath=True)
             else:
                 filePath = rm.path_aov_image_output
@@ -422,7 +417,6 @@ def _set_rman_dspy_dict(rm_rl, dspys_dict, dspy_drv, rman_scene, expandTokens, d
                     token_dict = {'aov': aov.name}
                     filePath = string_utils.expand_string(filePath, 
                                                     display=display_driver, 
-                                                    frame=rman_scene.bl_frame_current,
                                                     token_dict=token_dict,
                                                     asFilePath=True)
 
@@ -552,7 +546,6 @@ def _set_rman_holdouts_dspy_dict(dspys_dict, dspy_drv, rman_scene, expandTokens,
         if expandTokens:      
             filePath = string_utils.expand_string(filePath,
                                                 display=display_driver, 
-                                                frame=rman_scene.bl_frame_current,
                                                 asFilePath=True)
 
         dspys_dict['displays']['holdoutMatte'] = {
@@ -740,7 +733,6 @@ def export_metadata(scene, params, camera_name=None):
     rm = scene.renderman
     world = scene.world         
     output_dir = string_utils.expand_string(rm.path_rib_output, 
-                                            frame=scene.frame_current, 
                                             asFilePath=True)  
     output_dir = os.path.dirname(output_dir)
     statspath=os.path.join(output_dir, 'stats.%04d.xml' % scene.frame_current)

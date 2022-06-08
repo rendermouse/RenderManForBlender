@@ -38,8 +38,14 @@ def rman_save_post(bl_scene):
     texture_utils.txmanager_pre_save_cb(bl_scene)
 
 @persistent
-def texture_despgraph_handler(bl_scene, depsgraph):
-    texture_utils.depsgraph_handler(bl_scene, depsgraph)   
+def frame_change_post(bl_scene):
+    # update frame number
+    string_utils.update_frame_token(bl_scene.frame_current)        
+
+@persistent
+def despgraph_post_handler(bl_scene, depsgraph):        
+    for update in depsgraph.updates:
+        texture_utils.depsgraph_handler(update, depsgraph)
 
 @persistent
 def render_pre(bl_scene):
@@ -110,9 +116,12 @@ def register():
     if rman_save_post not in bpy.app.handlers.save_post:
         bpy.app.handlers.save_post.append(rman_save_post)      
 
-    # texture_depsgraph_update_post handler
-    if texture_despgraph_handler not in bpy.app.handlers.depsgraph_update_post:
-        bpy.app.handlers.depsgraph_update_post.append(texture_despgraph_handler)
+    # depsgraph_update_post handler
+    if despgraph_post_handler not in bpy.app.handlers.depsgraph_update_post:
+        bpy.app.handlers.depsgraph_update_post.append(despgraph_post_handler)
+
+    if frame_change_post not in bpy.app.handlers.frame_change_post:
+        bpy.app.handlers.frame_change_post.append(frame_change_post)        
 
     if render_pre not in bpy.app.handlers.render_pre:
         bpy.app.handlers.render_pre.append(render_pre)
@@ -138,8 +147,11 @@ def unregister():
     if rman_save_post in bpy.app.handlers.save_post:
         bpy.app.handlers.save_post.remove(rman_save_post)
 
-    if texture_despgraph_handler in bpy.app.handlers.depsgraph_update_post:
-        bpy.app.handlers.depsgraph_update_post.remove(texture_despgraph_handler)     
+    if despgraph_post_handler in bpy.app.handlers.depsgraph_update_post:
+        bpy.app.handlers.depsgraph_update_post.remove(despgraph_post_handler)     
+
+    if frame_change_post in bpy.app.handlers.frame_change_post:
+        bpy.app.handlers.frame_change_post.remove(frame_change_post)
 
     if render_pre in bpy.app.handlers.render_pre:
         bpy.app.handlers.render_pre.remove(render_pre)
