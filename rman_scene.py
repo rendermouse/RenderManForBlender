@@ -599,11 +599,7 @@ class RmanScene(object):
         # This is incredibly wasteful when these don't apply. We could try and detect this case and
         # create a shareable geometry.
 
-        obj = bpy.data.objects.get(db_ob.name, None)
-        if not obj and self.is_swatch_render:
-            obj = db_ob
-        elif obj.type != db_ob.type:
-            obj = db_ob
+        obj = db_ob
 
         if obj and obj.type not in ('ARMATURE', 'CAMERA'):
             ob = obj.evaluated_get(self.depsgraph)            
