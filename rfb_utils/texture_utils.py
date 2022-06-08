@@ -26,11 +26,13 @@ def get_nodeid(node):
     Returns None if the attribute doesn't exist."""
     try:
         tokens = node.split('|')
-        if len(tokens) < 2:
+        if len(tokens) < 3:
             return ""
         node_tree = tokens[0]
         node_name = tokens[1]
-        node, ob = scene_utils.find_node_by_name(node_name, node_tree)
+        prop_name = tokens[2]
+        library = tokens[3]
+        node, ob = scene_utils.find_node_by_name(node_name, node_tree, library=library)
         if node is None:
             return None
         txm_id = getattr(node, 'txm_id')
@@ -43,11 +45,13 @@ def set_nodeid(node, node_id):
     """Set a node's 'txm_id' attribute with node_id. If the attribute doesn't
     exist yet, it will be created."""
     tokens = node.split('|')
-    if len(tokens) < 2:
+    if len(tokens) < 3:
         return ""
     node_tree = tokens[0]
     node_name = tokens[1]
-    node, ob = scene_utils.find_node_by_name(node_name, node_tree) 
+    prop_name = tokens[2]
+    library = tokens[3]
+    node, ob = scene_utils.find_node_by_name(node_name, node_tree, library=library) 
     if node:
         try:
             setattr(node, 'txm_id', node_id)
@@ -183,7 +187,7 @@ class RfBTxManager(object):
 
     def add_texture(self, node, ob, param_name, file_path, node_type='PxrTexture', category='pattern'):
         node_name = generate_node_name(node, param_name, ob=ob)
-        plug_uuid = self.txmanager.get_plug_id(node_name, param_name)        
+        plug_uuid = self.txmanager.get_plug_id(node_name, param_name)  
 
         if file_path == "":
             txfile = self.txmanager.get_txfile_from_id(plug_uuid)
@@ -297,9 +301,15 @@ def generate_node_name(node, prop_name, ob=None, nm=None):
     if not nm:
         nm = shadergraph_utils.get_nodetree_name(node)
     if nm:        
-        node_name = '%s|%s|' %  (nm, node.name)
+        node_name = '%s|%s|%s|' %  (nm, node.name, prop_name)
     elif ob:
-        node_name = '%s|%s|' % (ob.name, node.name)
+        node_name = '%s|%s|%s|' % (ob.name, node.name, prop_name)
+
+    if node_name != '':
+        if ob and ob.library:
+            node_name = '%s%s|' % (node_name, ob.library.name)
+        else:
+            node_name = '%s|' % node_name
     
     if node_name == '':
         prop = ''

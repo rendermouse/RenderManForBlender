@@ -1066,12 +1066,14 @@ class RmanSceneSync(object):
         if nodeID == '':
             return
         tokens = nodeID.split('|')
-        if len(tokens) < 2:
+        if len(tokens) < 3:
             return
 
         ob_name = tokens[0]
         node_name = tokens[1]
-        node, ob = scene_utils.find_node_by_name(node_name, ob_name)
+        prop_name = tokens[2]
+        library = tokens[3]
+        node, ob = scene_utils.find_node_by_name(node_name, ob_name, library=library)
         if ob == None:
             return
 

@@ -248,8 +248,9 @@ class PRMAN_OT_Renderman_txmanager_clear_unused(Operator):
 
             ob_name = tokens[0]
             node_name = tokens[1]
-            param = tokens[2][1:] 
-            node, ob = scene_utils.find_node_by_name(node_name, ob_name)            
+            param = tokens[2]
+            library = tokens[3] 
+            node, ob = scene_utils.find_node_by_name(node_name, ob_name, library=library)
 
             if not node:
                 nodeIDs.append(nodeID)
@@ -396,7 +397,10 @@ class PRMAN_OT_Renderman_txmanager_apply_preset(Operator):
         if len(tokens) < 3:
             return {'FINISHED'}
 
-        node_name,param,ob_name = tokens                              
+        ob_name = tokens[0]
+        node_name = tokens[1]
+        param = tokens[2]
+        library = tokens[3]                             
         prop_colorspace_name = '%s_colorspace' % param
 
         try:
@@ -407,7 +411,7 @@ class PRMAN_OT_Renderman_txmanager_apply_preset(Operator):
                     val = i+1
                     break        
 
-            node, ob = scene_utils.find_node_by_name(node_name, ob_name)
+            node, ob = scene_utils.find_node_by_name(node_name, ob_name, library=library)
             if node:
                 node[prop_colorspace_name] = val    
         except AttributeError:

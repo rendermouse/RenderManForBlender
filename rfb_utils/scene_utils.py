@@ -376,45 +376,77 @@ def find_node_owner(node, context=None):
                 return ob
     return None
 
-def find_node_by_name(node_name, ob_name):
+def find_node_by_name(node_name, ob_name, library=''):
     """ Finder shader node and object by name(s)
 
     Args:
     node_name (str) - name of the node we are trying to find
     ob_name (str) - object name we are trying to look for that has node_name
+    library (str) - the name of the library the object is coming from.
 
     Returns:
     (list) - node and object
     """    
 
-    group_node = bpy.data.node_groups.get(ob_name)
-    if group_node:
-        node = group_node.nodes.get(node_name, None) 
-        if node:
-            return (node, group_node)
+    if library != '':
+        for group_node in bpy.data.node_groups:
+            if group_node.library and group_node.library.name == library and  group_node.name == ob_name:
+                node = group_node.nodes.get(node_name, None) 
+                if node:
+                    return (node, group_node)
 
-    mat = bpy.data.materials.get(ob_name, None)
-    if mat:
-        node = mat.node_tree.nodes.get(node_name, None)
-        if node:
-            return (node, mat)
+        for mat in bpy.data.materials:
+            if mat.library and mat.library.name == library and mat.name == ob_name:
+                node = mat.node_tree.nodes.get(node_name, None)
+                if node:
+                    return (node, mat)
 
-    world = bpy.data.worlds.get(ob_name, None)
-    if world:
-        node = world.node_tree.nodes.get(node_name, None)
-        if node:
-            return (node, world)
+        for world in bpy.data.worlds:
+            if world.library and world.library.name == library and world.name == ob_name:
+                node = world.node_tree.nodes.get(node_name, None)
+                if node:
+                    return (node, world)
 
-    obj = bpy.data.objects.get(ob_name, None)
-    if obj:
-        rman_type = object_utils._detect_primitive_(obj)
-        if rman_type in ['LIGHT', 'LIGHTFILTER']:
-            light_node = shadergraph_utils.get_light_node(obj, include_light_filters=True)
-            return (light_node, obj)
-        elif rman_type == 'CAMERA':
-            node = shadergraph_utils.find_projection_node(obj)
+        for obj in bpy.data.objects:
+            if obj.library and obj.library.name == library and obj.name == ob_name:
+                rman_type = object_utils._detect_primitive_(obj)
+                if rman_type in ['LIGHT', 'LIGHTFILTER']:
+                    light_node = shadergraph_utils.get_light_node(obj, include_light_filters=True)
+                    return (light_node, obj)
+                elif rman_type == 'CAMERA':
+                    node = shadergraph_utils.find_projection_node(obj)
+                    if node:
+                        return (node, obj)        
+
+    else:
+        group_node = bpy.data.node_groups.get(ob_name)
+        if group_node:
+            node = group_node.nodes.get(node_name, None) 
             if node:
-                return (node, obj)
+                return (node, group_node)
+
+        mat = bpy.data.materials.get(ob_name, None)
+        if mat:
+            node = mat.node_tree.nodes.get(node_name, None)
+            if node:
+                return (node, mat)
+
+        world = bpy.data.worlds.get(ob_name, None)
+        if world:
+            node = world.node_tree.nodes.get(node_name, None)
+            if node:
+                return (node, world)
+
+        obj = bpy.data.objects.get(ob_name, None)
+        if obj:
+            rman_type = object_utils._detect_primitive_(obj)
+            if rman_type in ['LIGHT', 'LIGHTFILTER']:
+                light_node = shadergraph_utils.get_light_node(obj, include_light_filters=True)
+                return (light_node, obj)
+            elif rman_type == 'CAMERA':
+                node = shadergraph_utils.find_projection_node(obj)
+                if node:
+                    return (node, obj)
 
     return (None, None)
 
