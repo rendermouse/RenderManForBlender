@@ -53,7 +53,7 @@ class COLLECTION_OT_add_remove(bpy.types.Operator):
         if self.properties.action == 'ADD':
             dflt_name = self.properties.defaultname          
             collection.add()
-            index += 1
+            index = len(collection)-1
             setattr(rm, coll_idx, index)
             if dflt_name != '':
                 for coll in collection:
@@ -107,7 +107,7 @@ class COLLECTION_OT_add_remove_dspymeta(bpy.types.Operator):
         if self.properties.action == 'ADD':
             dflt_name = self.properties.defaultname          
             collection.add()
-            index += 1
+            index = len(collection)-1
             setattr(rm, coll_idx, index)
             i = 0
             if dflt_name != '':
@@ -163,7 +163,7 @@ class COLLECTION_OT_add_remove_user_attributes(bpy.types.Operator):
         if self.properties.action == 'ADD':
             dflt_name = self.properties.defaultname          
             collection.add()
-            index += 1
+            index = len(collection)-1
             setattr(rm, coll_idx, index)
             i = 0
             if dflt_name != '':
@@ -227,7 +227,7 @@ class COLLECTION_OT_meshlight_lightfilter_add_remove(bpy.types.Operator):
                 if coll.name == dflt_name:
                     dflt_name = '%s_NEW' % dflt_name
             collection.add()
-            index += 1
+            index = len(collection)-1
             setattr(rm, coll_idx, index)
             try:
                 collection[-1].name = dflt_name
@@ -285,7 +285,7 @@ class COLLECTION_OT_object_groups_add_remove(bpy.types.Operator):
                 if coll.name == dflt_name:
                     dflt_name = '%s_NEW' % dflt_name
             collection.add()
-            index += 1
+            index = len(collection)-1
             setattr(rm, coll_idx, index)
             collection[-1].name = dflt_name
 
@@ -888,7 +888,7 @@ class PRMAN_OT_Add_Remove_Array_Element(bpy.types.Operator):
             connectable = False
         if self.action == 'ADD':
             elem = collection.add()
-            index += 1
+            index = len(collection)-1
             setattr(node, self.collection_index, index)
             elem.name = '%s[%d]' % (self.param_name, len(collection)-1)  
             elem.type = self.elem_type
