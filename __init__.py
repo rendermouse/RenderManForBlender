@@ -25,7 +25,7 @@
 import bpy
 import bgl
 import blf
-import time
+import addon_utils
 
 from .rfb_utils.prefs_utils import get_pref
 from .rfb_utils import string_utils
@@ -261,6 +261,14 @@ class PRManRender(bpy.types.RenderEngine):
         self.unbind_display_space_shader()
         bgl.glDisable(bgl.GL_BLEND)        
 
+def load_node_arrange():
+    '''
+    Make sure that the node_arrange addon is enabled
+    '''
+
+    if addon_utils.check('node_arrange')[1] is False:
+        addon_utils.enable('node_arrange')
+
 def load_addon():
     global __RMAN_ADDON_LOADED__
 
@@ -303,6 +311,7 @@ def register():
     from . import preferences
     preferences.register()
     load_addon()
+    load_node_arrange()
 
 def unregister():
     global __RMAN_ADDON_LOADED__

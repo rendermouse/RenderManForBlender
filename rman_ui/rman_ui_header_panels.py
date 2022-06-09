@@ -38,6 +38,11 @@ class NODE_MT_renderman_node_editor_menu(bpy.types.Menu):
         rd = context.scene.render
         return rd.engine == 'PRMAN_RENDER'
 
+    def add_arrange_op(self, layout):
+        rman_icon = rfb_icons.get_icon('rman_graph') 
+        layout.operator('node.button', icon_value=rman_icon.icon_id) 
+        layout.operator('node.na_align_nodes', icon_value=rman_icon.icon_id) 
+
     def draw(self, context):
         layout = self.layout
 
@@ -66,13 +71,18 @@ class NODE_MT_renderman_node_editor_menu(bpy.types.Menu):
 
                 if rman_output_node.solo_node_name != '':   
                     op = layout.operator('node.rman_set_node_solo', text='Reset Solo', icon='FILE_REFRESH')
-                    op.refresh_solo = True                                               
+                    op.refresh_solo = True     
+            
+                self.add_arrange_op(layout)                                    
 
         elif type(context.space_data.id) == bpy.types.World:
             if not context.space_data.id.renderman.use_renderman_node:
                 layout.operator(
-                    'material.rman_add_rman_nodetree', text="Add RenderMan Nodes").idtype = "world"        
-
+                    'material.rman_add_rman_nodetree', text="Add RenderMan Nodes").idtype = "world"  
+            else:
+                self.add_arrange_op(layout)                
+        else:
+            self.add_arrange_op(layout)
 
 class NODE_HT_DrawRenderHeaderNode(bpy.types.Header):
     '''
