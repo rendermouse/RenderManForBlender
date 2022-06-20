@@ -52,8 +52,8 @@ import sys
 
 class RmanScene(object):
     '''
-    The RmanScene handles translating the Blender scene. 
-    
+    The RmanScene handles translating the Blender scene.
+
     Attributes:
         rman_render (RmanRender) - pointer back to the current RmanRender object
         rman () - rman python module
@@ -63,7 +63,7 @@ class RmanScene(object):
         bl_scene (bpy.types.Scene) - the current Blender scene object
         bl_frame_current (int) - the current Blender frame
         bl_view_layer (bpy.types.ViewLayer) - the current Blender view layer
-        rm_rl (RendermanRenderLayerSettings) - the current rman layer 
+        rm_rl (RendermanRenderLayerSettings) - the current rman layer
         do_motion_blur (bool) - user requested for motion blur
         rman_bake (bool) - user requested a bake render
         is_interactive (bool) - whether we are in interactive mode
@@ -76,9 +76,9 @@ class RmanScene(object):
         rman_cameras (dict) - dictionary of all cameras in the scene
         obj_hash (dict) - dictionary of hashes to objects ( for object picking )
         moving_objects (dict) - dictionary of objects that are moving/deforming in the scene
-        motion_steps (set) - the full set of motion steps for the scene, including 
+        motion_steps (set) - the full set of motion steps for the scene, including
                             overrides from individual objects
-        main_camera (RmanSgCamera) - pointer to the main scene camera                            
+        main_camera (RmanSgCamera) - pointer to the main scene camera
         rman_root_sg_node (RixSGGroup) - the main root RixSceneGraph node
         render_default_light (bool) - whether to add a "headlight" light when there are no lights in the scene
         world_df_node (RixSGShader) - a display filter shader that represents the world color
@@ -101,7 +101,7 @@ class RmanScene(object):
         self.bl_scene = None
         self.bl_frame_current = None
         self.bl_view_layer = None
-        self.rm_rl = None 
+        self.rm_rl = None
 
         self.do_motion_blur = False
         self.rman_bake = False
@@ -117,7 +117,7 @@ class RmanScene(object):
         self.rman_translators = dict()
         self.rman_particles = dict()
         self.rman_cameras = dict()
-        self.obj_hash = dict() 
+        self.obj_hash = dict()
         self.moving_objects = dict()
         self.rman_prototypes = dict()
 
@@ -136,7 +136,7 @@ class RmanScene(object):
 
         self.ipr_render_into = 'blender'
 
-        self.create_translators()     
+        self.create_translators()
 
 
     def create_translators(self):
@@ -146,8 +146,8 @@ class RmanScene(object):
         self.rman_translators['CAMERA'] = RmanCameraTranslator(rman_scene=self)
         self.rman_translators['LIGHT'] = RmanLightTranslator(rman_scene=self)
         self.rman_translators['LIGHTFILTER'] = RmanLightFilterTranslator(rman_scene=self)
-        self.rman_translators['MATERIAL'] = RmanMaterialTranslator(rman_scene=self)       
-        self.rman_translators['HAIR'] = RmanHairTranslator(rman_scene=self) 
+        self.rman_translators['MATERIAL'] = RmanMaterialTranslator(rman_scene=self)
+        self.rman_translators['HAIR'] = RmanHairTranslator(rman_scene=self)
         self.rman_translators['GROUP'] = RmanGroupTranslator(rman_scene=self)
         self.rman_translators['EMPTY'] = RmanEmptyTranslator(rman_scene=self)
         self.rman_translators['EMPTY_INSTANCER'] = RmanEmptyTranslator(rman_scene=self)
@@ -172,28 +172,28 @@ class RmanScene(object):
     def _find_renderman_layer(self):
         self.rm_rl = None
         if self.bl_view_layer.renderman.use_renderman:
-            self.rm_rl = self.bl_view_layer.renderman  
+            self.rm_rl = self.bl_view_layer.renderman
 
     def reset(self):
         # clear out dictionaries etc.
         self.rman_materials.clear()
         self.rman_particles.clear()
-        self.rman_cameras.clear()        
-        self.obj_hash.clear() 
-        self.motion_steps = set()       
+        self.rman_cameras.clear()
+        self.obj_hash.clear()
+        self.motion_steps = set()
         self.moving_objects.clear()
         self.rman_prototypes.clear()
-  
+
         self.main_camera = None
         self.render_default_light = False
         self.world_df_node = None
         self.default_light = None
-        self.is_xpu = False  
+        self.is_xpu = False
         self.num_object_instances = 0
         self.num_objects_in_viewlayer = 0
         self.objects_in_viewlayer.clear()
 
-        try:                
+        try:
             if self.is_viewport_render:
                 self.viewport_render_res_mult = float(self.context.scene.renderman.viewport_render_res_mult)
             else:
@@ -237,20 +237,20 @@ class RmanScene(object):
         self.sg_scene = sg_scene
         self.context = context
         self.bl_view_layer = context.view_layer
-        self.bl_scene = depsgraph.scene_eval        
+        self.bl_scene = depsgraph.scene_eval
         self._find_renderman_layer()
         self.depsgraph = depsgraph
         self.external_render = False
         self.is_interactive = True
         self.is_viewport_render = False
         self.rman_bake = False
-        
+
         if self.ipr_render_into == 'blender':
             self.is_viewport_render = True
 
         self.do_motion_blur = False
 
-        self.export()         
+        self.export()
 
     def export_for_rib_selection(self, context, sg_scene):
         self.reset()
@@ -260,11 +260,11 @@ class RmanScene(object):
         self.context = context
         self.bl_view_layer = context.view_layer
         self._find_renderman_layer()
-        self.rman_bake = False        
+        self.rman_bake = False
         self.external_render = False
         self.is_interactive = False
-        self.is_viewport_render = False          
-        
+        self.is_viewport_render = False
+
         self.depsgraph = context.evaluated_depsgraph_get()
         self.export_root_sg_node()
         self.export_materials([m for m in self.depsgraph.ids if isinstance(m, bpy.types.Material)])
@@ -299,25 +299,25 @@ class RmanScene(object):
         string_utils.update_frame_token(self.bl_frame_current)
 
         rfb_log().debug("Creating root scene graph node")
-        self.export_root_sg_node()        
+        self.export_root_sg_node()
 
         rfb_log().debug("Calling export_materials()")
         #self.export_materials(bpy.data.materials)
-        self.export_materials([m for m in self.depsgraph.ids if isinstance(m, bpy.types.Material)])  
-                
+        self.export_materials([m for m in self.depsgraph.ids if isinstance(m, bpy.types.Material)])
+
         # tell the texture manager to start converting any unconverted textures
-        # normally textures are converted as they are added to the scene                
+        # normally textures are converted as they are added to the scene
         rfb_log().debug("Calling txmake_all()")
-        texture_utils.get_txmanager().rman_scene = self  
+        texture_utils.get_txmanager().rman_scene = self
         texture_utils.get_txmanager().txmake_all(blocking=True)
 
         self.scene_any_lights = self._scene_has_lights()
-        
+
         rfb_log().debug("Calling export_data_blocks()")
         self.export_data_blocks()
 
-        self.export_searchpaths() 
-        self.export_global_options()     
+        self.export_searchpaths()
+        self.export_global_options()
         self.export_hider()
         self.export_integrator()
 
@@ -326,7 +326,7 @@ class RmanScene(object):
         # export default light
         self.export_defaultlight()
         self.main_camera.sg_node.AddChild(self.default_light)
-        
+
         self.export_displays()
         self.export_samplefilters()
         self.export_displayfilters()
@@ -343,8 +343,8 @@ class RmanScene(object):
 
         if self.is_interactive:
             self.export_viewport_stats()
-        else:            
-            self.export_stats()            
+        else:
+            self.export_stats()
 
     def export_bake_render_scene(self):
         self.reset()
@@ -358,32 +358,32 @@ class RmanScene(object):
         self.export_root_sg_node()
 
         rfb_log().debug("Calling export_materials()")
-        self.export_materials([m for m in self.depsgraph.ids if isinstance(m, bpy.types.Material)]) 
-                
+        self.export_materials([m for m in self.depsgraph.ids if isinstance(m, bpy.types.Material)])
+
         rfb_log().debug("Calling txmake_all()")
-        texture_utils.get_txmanager().rman_scene = self  
+        texture_utils.get_txmanager().rman_scene = self
         texture_utils.get_txmanager().txmake_all(blocking=True)
 
         self.scene_any_lights = self._scene_has_lights()
-        
+
         rm = self.bl_scene.renderman
         rman_root_sg_node = self.get_root_sg_node()
         attrs = rman_root_sg_node.GetAttributes()
         attrs.SetFloat("dice:worlddistancelength", rm.rman_bake_illlum_density)
-        rman_root_sg_node.SetAttributes(attrs)                       
+        rman_root_sg_node.SetAttributes(attrs)
 
         rfb_log().debug("Calling export_data_blocks()")
         self.export_data_blocks()
 
-        self.export_searchpaths() 
-        self.export_global_options()     
+        self.export_searchpaths()
+        self.export_global_options()
         self.export_hider()
         self.export_integrator()
         self.export_cameras([c for c in self.depsgraph.objects if isinstance(c.data, bpy.types.Camera)])
 
         # export default light
         self.export_defaultlight()
-        self.main_camera.sg_node.AddChild(self.default_light)        
+        self.main_camera.sg_node.AddChild(self.default_light)
 
         self.export_bake_displays()
         self.export_samplefilters()
@@ -395,7 +395,7 @@ class RmanScene(object):
 
         options = self.sg_scene.GetOptions()
         bake_resolution = int(rm.rman_bake_illlum_res)
-        options.SetIntegerArray(self.rman.Tokens.Rix.k_Ri_FormatResolution, (bake_resolution, bake_resolution), 2) 
+        options.SetIntegerArray(self.rman.Tokens.Rix.k_Ri_FormatResolution, (bake_resolution, bake_resolution), 2)
         self.sg_scene.SetOptions(options)
 
     def export_bake_brickmap_selected(self):
@@ -412,19 +412,19 @@ class RmanScene(object):
         rfb_log().debug("Calling export_materials()")
         self.export_materials([m for m in self.depsgraph.ids if isinstance(m, bpy.types.Material)])
         rfb_log().debug("Calling txmake_all()")
-        texture_utils.get_txmanager().rman_scene = self  
-        texture_utils.get_txmanager().txmake_all(blocking=True)        
+        texture_utils.get_txmanager().rman_scene = self
+        texture_utils.get_txmanager().txmake_all(blocking=True)
 
-        self.scene_any_lights = self._scene_has_lights()        
-                        
+        self.scene_any_lights = self._scene_has_lights()
+
         rm = self.bl_scene.renderman
         rman_root_sg_node = self.get_root_sg_node()
         attrs = rman_root_sg_node.GetAttributes()
         attrs.SetFloat("dice:worlddistancelength", rm.rman_bake_illlum_density)
-        rman_root_sg_node.SetAttributes(attrs)                            
+        rman_root_sg_node.SetAttributes(attrs)
 
-        self.export_searchpaths() 
-        self.export_global_options()     
+        self.export_searchpaths()
+        self.export_global_options()
         self.export_hider()
         self.export_integrator()
         self.export_cameras([c for c in self.depsgraph.objects if isinstance(c.data, bpy.types.Camera)])
@@ -437,15 +437,15 @@ class RmanScene(object):
         self.export_materials([m for m in self.depsgraph.ids if isinstance(m, bpy.types.Material)])
         objects_needed = [x.original for x in self.bl_scene.objects if object_utils._detect_primitive_(x) == 'LIGHT']
         objects_needed.append(ob.original)
-        self.export_data_blocks(objects_list=objects_needed)  
+        self.export_data_blocks(objects_list=objects_needed)
 
         self.export_samplefilters()
         self.export_displayfilters()
 
         options = self.sg_scene.GetOptions()
         bake_resolution = int(rm.rman_bake_illlum_res)
-        options.SetIntegerArray(self.rman.Tokens.Rix.k_Ri_FormatResolution, (bake_resolution, bake_resolution), 2) 
-        self.sg_scene.SetOptions(options)        
+        options.SetIntegerArray(self.rman.Tokens.Rix.k_Ri_FormatResolution, (bake_resolution, bake_resolution), 2)
+        self.sg_scene.SetOptions(options)
 
         # Display
         display_driver = 'pointcloud'
@@ -456,8 +456,8 @@ class RmanScene(object):
         render_output = string_utils.expand_string(render_output)
         display = self.rman.SGManager.RixSGShader("Display", display_driver, render_output)
         display.params.SetString("mode", 'Ci')
-        self.main_camera.sg_camera_node.SetDisplay(display)         
-                 
+        self.main_camera.sg_camera_node.SetDisplay(display)
+
     def export_swatch_render_scene(self):
         self.reset()
 
@@ -477,11 +477,11 @@ class RmanScene(object):
         self.sg_scene.SetOptions(options)
 
         # searchpaths
-        self.export_searchpaths()      
+        self.export_searchpaths()
 
-        # integrator        
-        integrator_sg = self.rman.SGManager.RixSGShader("Integrator", "PxrDirectLighting", "integrator")         
-        self.sg_scene.SetIntegrator(integrator_sg) 
+        # integrator
+        integrator_sg = self.rman.SGManager.RixSGShader("Integrator", "PxrDirectLighting", "integrator")
+        self.sg_scene.SetIntegrator(integrator_sg)
 
         # camera
         self.export_cameras([c for c in self.depsgraph.objects if isinstance(c.data, bpy.types.Camera)])
@@ -494,16 +494,16 @@ class RmanScene(object):
         self.sg_scene.SetDisplayChannel([dspy_chan_Ci, dspy_chan_a])
         display = self.rman.SGManager.RixSGShader("Display", display_driver, 'blender_preview')
         display.params.SetString("mode", 'Ci,a')
-        self.main_camera.sg_camera_node.SetDisplay(display)          
+        self.main_camera.sg_camera_node.SetDisplay(display)
 
         rfb_log().debug("Calling materials()")
         self.export_materials([m for m in self.depsgraph.ids if isinstance(m, bpy.types.Material)])
         rfb_log().debug("Calling export_data_blocks()")
-        
+
         self.export_data_blocks()
 
     def export_root_sg_node(self):
-        
+
         rm = self.bl_scene.renderman
         root_sg = self.get_root_sg_node()
         attrs = root_sg.GetAttributes()
@@ -524,7 +524,7 @@ class RmanScene(object):
                         all_lights.remove(light_nm)
                 elif light_nm in all_lightfilters:
                     all_lightfilters.remove(light_nm)
-                
+
             if all_lights:
                 attrs.SetString(self.rman.Tokens.Rix.k_lighting_subset, ' '. join(all_lights) )
             else:
@@ -533,35 +533,35 @@ class RmanScene(object):
             if all_lightfilters:
                 attrs.SetString(self.rman.Tokens.Rix.k_lightfilter_subset, ' '. join(all_lightfilters) )
             else:
-                attrs.SetString(self.rman.Tokens.Rix.k_lightfilter_subset, '*')                
-            
+                attrs.SetString(self.rman.Tokens.Rix.k_lightfilter_subset, '*')
+
         root_sg.SetAttributes(attrs)
-        
+
     def get_root_sg_node(self):
         return self.sg_scene.Root()
 
     def export_materials(self, materials):
-        for mat in materials:   
+        for mat in materials:
             db_name = object_utils.get_db_name(mat)
             rman_sg_material = self.rman_translators['MATERIAL'].export(mat.original, db_name)
-            if rman_sg_material:                       
+            if rman_sg_material:
                 self.rman_materials[mat.original] = rman_sg_material
-            
+
     def check_visibility(self, instance):
         if not self.is_interactive:
             return True
         viewport = self.context.space_data
         if viewport is None or viewport.type != 'VIEW_3D':
             return True
-             
-        if instance.is_instance:   
+
+        if instance.is_instance:
             ob_eval = instance.instance_object
-            ob_eval_visible = ob_eval.visible_in_viewport_get(viewport)             
-            parent_visible = instance.parent.visible_in_viewport_get(viewport) 
+            ob_eval_visible = ob_eval.visible_in_viewport_get(viewport)
+            parent_visible = instance.parent.visible_in_viewport_get(viewport)
             return (ob_eval_visible or parent_visible)
 
-        ob_eval = instance.object.evaluated_get(self.depsgraph)  
-        visible = ob_eval.visible_in_viewport_get(viewport) 
+        ob_eval = instance.object.evaluated_get(self.depsgraph)
+        visible = ob_eval.visible_in_viewport_get(viewport)
         return visible
 
     def is_instance_selected(self, instance):
@@ -573,13 +573,13 @@ class RmanScene(object):
         if not ob.original.select_get():
             if parent:
                 if not parent.original.select_get():
-                    return False                
+                    return False
             else:
                 return False
         if parent and not parent.original.select_get():
             return False
 
-        return True    
+        return True
 
     def get_rman_sg_instance(self, ob_inst, rman_sg_node, instance_parent, psys, create=True):  
         group_db_name = object_utils.get_group_db_name(ob_inst) 
@@ -615,8 +615,8 @@ class RmanScene(object):
         if instance_parent: 
             is_empty_instancer = object_utils.is_empty_instancer(instance_parent)
 
-        # Object attrs     
-        translator =  self.rman_translators.get(rman_type, None)  
+        # Object attrs
+        translator =  self.rman_translators.get(rman_type, None)
         if translator:
             if rman_sg_node.shared_attrs.GetNumParams() == 0:
                 # export the attributes for this object
@@ -635,9 +635,9 @@ class RmanScene(object):
         # Add any particles necessary
         if rman_sg_node.rman_sg_particle_group_node:
             if (len(ob_eval.particle_systems) > 0) and ob_inst.show_particles:
-                rman_sg_group.sg_node.AddChild(rman_sg_node.rman_sg_particle_group_node.sg_node)    
+                rman_sg_group.sg_node.AddChild(rman_sg_node.rman_sg_particle_group_node.sg_node)
 
-        # Attach a material       
+        # Attach a material
         if is_empty_instancer and instance_parent.renderman.rman_material_override:
             self.attach_material(instance_parent, rman_sg_group)
         elif psys:
@@ -652,8 +652,8 @@ class RmanScene(object):
             parent_proto_key = object_utils.prototype_key(ob_eval.parent)
             rman_empty_node = self.get_rman_prototype(parent_proto_key, ob=ob_parent_eval, create=True)
             rman_sg_group.sg_node.SetInheritTransform(False) # we don't want to inherit the transform
-            rman_empty_node.sg_node.AddChild(rman_sg_group.sg_node)  
-        else:              
+            rman_empty_node.sg_node.AddChild(rman_sg_group.sg_node)
+        else:
             self.get_root_sg_node().AddChild(rman_sg_group.sg_node)
             
         if rman_type == "META":
@@ -663,8 +663,8 @@ class RmanScene(object):
                 
         rman_group_translator.update_transform(ob_inst, rman_sg_group)
         return rman_sg_group
-        
-            
+
+
     def export_data_blocks(self, selected_objects=False, objects_list=False):
         total = len(self.depsgraph.object_instances)
         for i, ob_inst in enumerate(self.depsgraph.object_instances):
@@ -674,7 +674,7 @@ class RmanScene(object):
             if ob.type in ('ARMATURE', 'CAMERA'):
                 continue
 
-            if selected_objects and not self.is_instance_selected(ob_inst): 
+            if selected_objects and not self.is_instance_selected(ob_inst):
                 continue
 
             # only export these objects
@@ -683,31 +683,31 @@ class RmanScene(object):
 
             if not self.check_visibility(ob_inst):
                 rfb_log().debug("       Object (%s) not visible" % (ob.name))
-                continue     
+                continue
 
             ob_eval = ob.evaluated_get(self.depsgraph)
             psys = None
-            instance_parent = None 
-            proto_key = object_utils.prototype_key(ob_inst)                      
+            instance_parent = None
+            proto_key = object_utils.prototype_key(ob_inst)
             if ob_inst.is_instance:
                 psys = ob_inst.particle_system
-                instance_parent = ob_inst.parent                             
+                instance_parent = ob_inst.parent
 
             rman_type = object_utils._detect_primitive_(ob_eval)
             rman_sg_node = self.get_rman_prototype(proto_key, ob=ob_eval, create=True)
             if not rman_sg_node:
-                continue     
+                continue
 
             if rman_type == 'LIGHT':
-                self.check_solo_light(rman_sg_node, ob_eval)           
-   
+                self.check_solo_light(rman_sg_node, ob_eval)
+
             if rman_type in object_utils._RMAN_NO_INSTANCES_:
-                continue      
+                continue
 
             self.export_instance(ob_eval, ob_inst, rman_sg_node, rman_type, instance_parent, psys)
 
     def export_data_block(self, proto_key, ob):
-        rman_type = object_utils._detect_primitive_(ob)   
+        rman_type = object_utils._detect_primitive_(ob)
 
         if rman_type == "META":
             # only add the meta instance that matches the family name
@@ -716,7 +716,7 @@ class RmanScene(object):
 
         if proto_key in self.rman_prototypes:
             return self.rman_prototypes[proto_key]
-        
+
         translator =  self.rman_translators.get(rman_type, None)
         if not translator:
             return None
@@ -739,27 +739,27 @@ class RmanScene(object):
             mb_deform_segs = self.bl_scene.renderman.deform_motion_segments
             if ob.renderman.motion_segments_override:
                 mb_segs = ob.renderman.motion_segments
-            if mb_segs > 1:                    
+            if mb_segs > 1:
                 subframes = scene_utils._get_subframes_(mb_segs, self.bl_scene)
                 rman_sg_node.motion_steps = subframes
                 self.motion_steps.update(subframes)
 
             if ob.renderman.motion_segments_override:
-                mb_deform_segs = ob.renderman.deform_motion_segments                    
+                mb_deform_segs = ob.renderman.deform_motion_segments
 
-            if mb_deform_segs > 1:                       
+            if mb_deform_segs > 1:
                 subframes = scene_utils._get_subframes_(mb_deform_segs, self.bl_scene)
                 rman_sg_node.deform_motion_steps = subframes
-                self.motion_steps.update(subframes)                         
+                self.motion_steps.update(subframes)
 
         if rman_sg_node.is_transforming or rman_sg_node.is_deforming:
             if mb_segs > 1 or mb_deform_segs > 1:
                 self.moving_objects[ob.name_full] = ob
-            
+
             if mb_segs < 1:
                 rman_sg_node.is_transforming = False
             if mb_deform_segs < 1:
-                rman_sg_node.is_deforming = False       
+                rman_sg_node.is_deforming = False
 
         translator.update(ob, rman_sg_node)
 
@@ -771,28 +771,28 @@ class RmanScene(object):
                 self.motion_steps.update(subframes)
 
             particles_group_db = ''
-            rman_sg_node.rman_sg_particle_group_node = self.rman_translators['GROUP'].export(None, particles_group_db)                 
+            rman_sg_node.rman_sg_particle_group_node = self.rman_translators['GROUP'].export(None, particles_group_db)
 
             psys_translator = self.rman_translators['PARTICLES']
-            for psys in ob.particle_systems:           
+            for psys in ob.particle_systems:
                 psys_db_name = '%s' % psys.name
-                rman_sg_particles = psys_translator.export(ob, psys, psys_db_name)    
+                rman_sg_particles = psys_translator.export(ob, psys, psys_db_name)
                 if not rman_sg_particles:
-                    continue  
-            
+                    continue
+
                 psys_translator.set_motion_steps(rman_sg_particles, subframes)
-                psys_translator.update(ob, psys, rman_sg_particles)      
+                psys_translator.update(ob, psys, rman_sg_particles)
 
                 ob_psys = self.rman_particles.get(proto_key, dict())
                 ob_psys[psys.settings.original] = rman_sg_particles
-                self.rman_particles[proto_key] = ob_psys                 
+                self.rman_particles[proto_key] = ob_psys
                 rman_sg_node.rman_sg_particle_group_node.sg_node.AddChild(rman_sg_particles.sg_node)
 
         if rman_type == 'EMPTY':
             # If this is an empty, just export it as a coordinate system
             # along with any instance attributes/materials necessary
             self._export_hidden_instance(ob, rman_sg_node)
-            return rman_sg_node                                 
+            return rman_sg_node
 
         return rman_sg_node
 
@@ -800,7 +800,7 @@ class RmanScene(object):
         origframe = self.bl_scene.frame_current
 
         mb_segs = self.bl_scene.renderman.motion_segments
-        origframe = self.bl_scene.frame_current      
+        origframe = self.bl_scene.frame_current
 
         motion_steps = sorted(list(self.motion_steps))
 
@@ -815,13 +815,13 @@ class RmanScene(object):
             if seg < 0.0:
                 self.rman_render.bl_engine.frame_set(origframe - 1, subframe=1.0 + seg)
             else:
-                self.rman_render.bl_engine.frame_set(origframe, subframe=seg)  
+                self.rman_render.bl_engine.frame_set(origframe, subframe=seg)
 
             self.depsgraph.update()
             time_samp = seg + delta # get the normlized version of the segment
             total = len(self.depsgraph.object_instances)
             objFound = False
-            
+
             # update camera
             if not first_sample and self.main_camera.is_transforming and seg in self.main_camera.motion_steps:
                 cam_translator =  self.rman_translators['CAMERA']
@@ -833,20 +833,20 @@ class RmanScene(object):
                 cam_translator.update_transform(self.depsgraph.scene_eval.camera, self.main_camera, idx, time_samp)
 
             rfb_log().debug(" Export Sample: %i" % samp)
-            for i, ob_inst in enumerate(self.depsgraph.object_instances):   
-                if selected_objects and not self.is_instance_selected(ob_inst): 
-                    continue               
+            for i, ob_inst in enumerate(self.depsgraph.object_instances):
+                if selected_objects and not self.is_instance_selected(ob_inst):
+                    continue
 
                 if not self.check_visibility(ob_inst):
-                    continue                    
+                    continue
 
                 psys = None
                 ob = ob_inst.object.evaluated_get(self.depsgraph)
                 proto_key = object_utils.prototype_key(ob_inst)
                 rfb_log().debug("   Exported %d/%d motion instances... (%s)" % (i, total, ob.name))
-                self.rman_render.stats_mgr.set_export_stats("Exporting motion instances (%d) " % samp ,i/total)   
+                self.rman_render.stats_mgr.set_export_stats("Exporting motion instances (%d) " % samp ,i/total)
                 instance_parent = None
-                rman_parent_node = None              
+                rman_parent_node = None
                 if ob_inst.is_instance:
                     psys = ob_inst.particle_system
                     instance_parent = ob_inst.parent
@@ -854,11 +854,11 @@ class RmanScene(object):
 
                 rman_type = object_utils._detect_primitive_(ob)
                 if rman_type in object_utils._RMAN_NO_INSTANCES_:
-                    continue                   
+                    continue
 
                 # check particles for motion
                 '''
-                for psys in ob.particle_systems:              
+                for psys in ob.particle_systems:
                     ob_psys = self.rman_particles.get(proto_key, None)
                     if not ob_psys:
                         continue
@@ -871,28 +871,28 @@ class RmanScene(object):
                     for i, s in enumerate(rman_sg_particles.motion_steps):
                         if s == seg:
                             idx = i
-                            break                           
-                    psys_translator.export_deform_sample(rman_sg_particles, ob, psys, idx)                       
+                            break
+                    psys_translator.export_deform_sample(rman_sg_particles, ob, psys, idx)
                 '''
 
                 # object is not moving and not part of a particle system
                 if ob.name_full not in self.moving_objects and not psys:
                     continue
-         
+
                 rman_sg_node = self.get_rman_prototype(proto_key, ob=ob)
                 if not rman_sg_node:
                     continue
-                
+
                 # transformation blur
                 if seg in rman_sg_node.motion_steps:
                     idx = 0
                     for i, s in enumerate(rman_sg_node.motion_steps):
                         if s == seg:
                             idx = i
-                            break                
+                            break
 
                     if rman_sg_node.is_transforming or psys:
-                        group_db_name = object_utils.get_group_db_name(ob_inst) 
+                        group_db_name = object_utils.get_group_db_name(ob_inst)
                         if instance_parent:
                             rman_sg_group = rman_parent_node.instances.get(group_db_name, None)
                         else:
@@ -913,11 +913,11 @@ class RmanScene(object):
                                 if s == seg:
                                     deform_idx = i
                                     break
-                            translator.export_deform_sample(rman_sg_node, ob, deform_idx)                      
+                            translator.export_deform_sample(rman_sg_node, ob, deform_idx)
 
-        self.rman_render.bl_engine.frame_set(origframe, subframe=0)  
+        self.rman_render.bl_engine.frame_set(origframe, subframe=0)
         rfb_log().debug("   Finished exporting motion instances")
-        self.rman_render.stats_mgr.set_export_stats("Finished exporting motion instances", 100)          
+        self.rman_render.stats_mgr.set_export_stats("Finished exporting motion instances", 100)
 
     def export_defaultlight(self):
         # Export a headlight light if needed
@@ -929,7 +929,7 @@ class RmanScene(object):
                     -0.0, -1.0, -0.0, 0.0,
                     0.0, 0.0, -1.0, 0.0,
                     0.0, 0.0, 0.0, 1.0]
-            self.default_light.SetOrientTransform(s_orientPxrLight)  
+            self.default_light.SetOrientTransform(s_orientPxrLight)
 
         if self.render_default_light and not self.scene_any_lights:
             self.default_light.SetHidden(0)
@@ -939,11 +939,11 @@ class RmanScene(object):
     def _scene_has_lights(self):
         # Determine if there are any lights in the scene
         num_lights = len(scene_utils.get_all_lights(self.bl_scene, include_light_filters=False))
-        return num_lights > 0  
+        return num_lights > 0
 
     def get_rman_prototype(self, proto_key, ob=None, create=False):
         if proto_key in self.rman_prototypes:
-            return self.rman_prototypes[proto_key]        
+            return self.rman_prototypes[proto_key]
 
         if not create:
             return None
@@ -963,37 +963,37 @@ class RmanScene(object):
             psys_db_name = '%s' % psys.name
             rman_sg_particles = psys_translator.export(ob, psys, psys_db_name)
             ob_psys[psys.settings.original] = rman_sg_particles
-            self.rman_particles[proto_key] = ob_psys 
-            rman_sg_node = self.get_rman_prototype(proto_key)      
-            if rman_sg_node:          
+            self.rman_particles[proto_key] = ob_psys
+            rman_sg_node = self.get_rman_prototype(proto_key)
+            if rman_sg_node:
                 if not rman_sg_node.rman_sg_particle_group_node:
                     particles_group_db = ''
                     rman_sg_node.rman_sg_particle_group_node = group_translator.export(None, particles_group_db)
-                rman_sg_node.rman_sg_particle_group_node.sg_node.AddChild(rman_sg_particles.sg_node) 
-        return rman_sg_particles       
+                rman_sg_node.rman_sg_particle_group_node.sg_node.AddChild(rman_sg_particles.sg_node)
+        return rman_sg_particles
 
     def _export_hidden_instance(self, ob, rman_sg_node):
         translator = self.rman_translators.get('EMPTY')
-        translator.export_object_attributes(ob, rman_sg_node)  
-        self.attach_material(ob, rman_sg_node)        
+        translator.export_object_attributes(ob, rman_sg_node)
+        self.attach_material(ob, rman_sg_node)
         if object_utils.has_empty_parent(ob):
             parent_proto_key = object_utils.prototype_key(ob.parent)
             ob_parent_eval = ob.parent.evaluated_get(self.depsgraph)
             rman_empty_node = self.get_rman_prototype(parent_proto_key, ob=ob_parent_eval, create=True)
             rman_empty_node.sg_node.AddChild(rman_sg_node.sg_node)
         else:
-            self.get_root_sg_node().AddChild(rman_sg_node.sg_node)          
+            self.get_root_sg_node().AddChild(rman_sg_node.sg_node)
             translator.export_transform(ob, rman_sg_node.sg_node)
             if ob.renderman.export_as_coordsys:
-                self.get_root_sg_node().AddCoordinateSystem(rman_sg_node.sg_node)              
+                self.get_root_sg_node().AddCoordinateSystem(rman_sg_node.sg_node)
 
     def attach_material(self, ob, rman_sg_node):
         mat = object_utils.get_active_material(ob)
         if mat:
             rman_sg_material = self.rman_materials.get(mat.original, None)
-            if rman_sg_material and rman_sg_material.sg_node:              
+            if rman_sg_material and rman_sg_material.sg_node:
                 scenegraph_utils.set_material(rman_sg_node.sg_node, rman_sg_material.sg_node)
-                rman_sg_node.is_meshlight = rman_sg_material.has_meshlight 
+                rman_sg_node.is_meshlight = rman_sg_material.has_meshlight
 
     def attach_particle_material(self, psys_settings, parent, ob, group):
         # This function should only be used by particle instancing.
@@ -1009,22 +1009,22 @@ class RmanScene(object):
                 mat = parent.material_slots[mat_idx].material
                 rman_sg_material = self.rman_materials.get(mat.original, None)
                 if rman_sg_material:
-                    scenegraph_utils.set_material(group.sg_node, rman_sg_material.sg_node)    
+                    scenegraph_utils.set_material(group.sg_node, rman_sg_material.sg_node)
         else:
             mat = object_utils.get_active_material(ob)
             if mat:
                 rman_sg_material = self.rman_materials.get(mat.original, None)
                 if rman_sg_material and rman_sg_material.sg_node:
                     scenegraph_utils.set_material(group.sg_node, rman_sg_material.sg_node)
-                    group.is_meshlight = rman_sg_material.has_meshlight 
+                    group.is_meshlight = rman_sg_material.has_meshlight
 
     def check_light_local_view(self, ob, rman_sg_node):
         if self.is_interactive and self.context.space_data:
-            if not ob.visible_in_viewport_get(self.context.space_data):  
+            if not ob.visible_in_viewport_get(self.context.space_data):
                 rman_sg_node.sg_node.SetHidden(1)
                 return True
 
-        return False       
+        return False
 
 
     def check_solo_light(self, rman_sg_node, ob):
@@ -1037,13 +1037,13 @@ class RmanScene(object):
             if rm.solo:
                 rman_sg_node.sg_node.SetHidden(0)
             else:
-                rman_sg_node.sg_node.SetHidden(1)           
+                rman_sg_node.sg_node.SetHidden(1)
 
     def export_searchpaths(self):
-        # TODO 
+        # TODO
         # RMAN_ARCHIVEPATH,
         # RMAN_DISPLAYPATH, RMAN_PROCEDURALPATH, and RMAN_DSOPATH (combines procedurals and displays)
-        
+
         # get cycles shader directory
         cycles_shader_dir = filepath_utils.get_cycles_shader_path()
 
@@ -1080,7 +1080,7 @@ class RmanScene(object):
             udim_stride = rm.rman_bake_illum_bakeudimstride
             udim_offset = rm.rman_bake_illum_bakeudimoffset
             options.SetString(self.rman.Tokens.Rix.k_hider_bakemode, bakemode)
-            options.SetStringArray(self.rman.Tokens.Rix.k_hider_primvar, (primvar_s, primvar_t), 2) 
+            options.SetStringArray(self.rman.Tokens.Rix.k_hider_primvar, (primvar_s, primvar_t), 2)
             options.SetInteger(self.rman.Tokens.Rix.k_hider_invert, invert_t)
             options.SetInteger(self.rman.Tokens.Rix.k_hider_bakeudimstride, udim_stride)
             options.SetInteger(self.rman.Tokens.Rix.k_hider_bakeudimoffset, udim_offset)
@@ -1096,7 +1096,7 @@ class RmanScene(object):
                 options.SetInteger(self.rman.Tokens.Rix.k_hider_minsamples, rm.ipr_hider_minSamples)
                 options.SetInteger(self.rman.Tokens.Rix.k_hider_maxsamples, rm.ipr_hider_maxSamples)
                 pv = rm.ipr_ri_pixelVariance
-            
+
             # force incremental when checkpointing
             if rm.enable_checkpoint:
                 options.SetInteger(self.rman.Tokens.Rix.k_hider_incremental, 1)
@@ -1115,7 +1115,7 @@ class RmanScene(object):
             if anyDenoise:
                 options.SetString(self.rman.Tokens.Rix.k_hider_pixelfiltermode, 'importance')
 
-        self.sg_scene.SetOptions(options)  
+        self.sg_scene.SetOptions(options)
 
     def export_global_options(self):
         rm = self.bl_scene.renderman
@@ -1143,8 +1143,8 @@ class RmanScene(object):
                 options.SetString(self.rman.Tokens.Rix.k_checkpoint_exitat, rm.checkpoint_exitat)
 
             options.SetInteger(self.rman.Tokens.Rix.k_checkpoint_asfinal, int(rm.checkpoint_asfinal))
-        
-        # Set frame number 
+
+        # Set frame number
         options.SetInteger(self.rman.Tokens.Rix.k_Ri_Frame, self.bl_scene.frame_current)
 
         # Always turn off xml stats when in interactive
@@ -1156,13 +1156,13 @@ class RmanScene(object):
         bucket_orderorigin = []
         if rm.enable_checkpoint and not self.is_interactive:
             bucket_order = 'horizontal'
-        
+
         elif rm.opt_bucket_order == 'spiral':
             settings = self.bl_scene.render
 
             if rm.opt_bucket_sprial_x <= settings.resolution_x and rm.opt_bucket_sprial_y <= settings.resolution_y:
                 if rm.opt_bucket_sprial_x == -1:
-                    halfX = settings.resolution_x / 2                    
+                    halfX = settings.resolution_x / 2
                     bucket_orderorigin = [int(halfX), rm.opt_bucket_sprial_y]
 
                 elif rm.opt_bucket_sprial_y == -1:
@@ -1170,7 +1170,7 @@ class RmanScene(object):
                     bucket_orderorigin = [rm.opt_bucket_sprial_y, int(halfY)]
                 else:
                     bucket_orderorigin = [rm.opt_bucket_sprial_x, rm.opt_bucket_sprial_y]
-        
+
         options.SetString(self.rman.Tokens.Rix.k_bucket_order, bucket_order)
         if bucket_orderorigin:
             options.SetFloatArray(self.rman.Tokens.Rix.k_bucket_orderorigin, bucket_orderorigin, 2)
@@ -1187,8 +1187,8 @@ class RmanScene(object):
             elif rm.shutter_timing == 'FRAME_OPEN':
                 shutter_open, shutter_close = 0, shutter_interval
             '''
-            shutter_open, shutter_close = 0, shutter_interval   
-            options.SetFloatArray(self.rman.Tokens.Rix.k_Ri_Shutter, (shutter_open, shutter_close), 2)        
+            shutter_open, shutter_close = 0, shutter_interval
+            options.SetFloatArray(self.rman.Tokens.Rix.k_Ri_Shutter, (shutter_open, shutter_close), 2)
 
         # dirmaps
         dirmaps = ''
@@ -1204,8 +1204,9 @@ class RmanScene(object):
         ociocolorspacename = color_manager_blender.get_colorspace_name()
         options.SetString('user:ocioconfigpath', ocioconfig)
         options.SetString('user:ociocolorspacename', ociocolorspacename)
+        options.SetInteger('user:ocioenabled', 1 if ocioconfig else 0)
 
-        self.sg_scene.SetOptions(options)        
+        self.sg_scene.SetOptions(options)
 
     def export_integrator(self):
         world = self.bl_scene.world
@@ -1219,14 +1220,14 @@ class RmanScene(object):
         else:
             integrator_sg = self.rman.SGManager.RixSGShader("Integrator", "PxrPathTracer", "integrator")
 
-        self.sg_scene.SetIntegrator(integrator_sg) 
+        self.sg_scene.SetIntegrator(integrator_sg)
 
 
     def export_cameras(self, bl_cameras):
 
         main_cam = self.depsgraph.scene_eval.camera
         cam_translator =  self.rman_translators['CAMERA']
-       
+
         if self.is_viewport_render:
             db_name = 'main_camera'
             self.main_camera = cam_translator.export(None, db_name)
@@ -1235,20 +1236,20 @@ class RmanScene(object):
 
             # add camera so we don't mistake it for a new obj
             if main_cam:
-                self.rman_cameras[main_cam.original] = self.main_camera     
+                self.rman_cameras[main_cam.original] = self.main_camera
         else:
             if self.is_interactive:
                 main_cam = self.context.space_data.camera
             db_name = object_utils.get_db_name(main_cam)
             rman_sg_camera = cam_translator.export(main_cam, db_name)
-            self.main_camera = rman_sg_camera     
-            if main_cam:    
-                self.rman_cameras[main_cam.original] = rman_sg_camera            
-            
+            self.main_camera = rman_sg_camera
+            if main_cam:
+                self.rman_cameras[main_cam.original] = rman_sg_camera
+
                 # resolution
-                cam_translator._update_render_resolution(main_cam, self.main_camera)            
-                
-            self.sg_scene.Root().AddChild(rman_sg_camera.sg_node)            
+                cam_translator._update_render_resolution(main_cam, self.main_camera)
+
+            self.sg_scene.Root().AddChild(rman_sg_camera.sg_node)
 
         # export all other scene cameras
         for cam in bl_cameras:
@@ -1257,20 +1258,20 @@ class RmanScene(object):
                 continue
             if cam == main_cam:
                 if self.main_camera.is_transforming:
-                    self.motion_steps.update(self.main_camera.motion_steps)   
+                    self.motion_steps.update(self.main_camera.motion_steps)
                 continue
-            
+
             db_name = object_utils.get_db_name(ob)
             rman_sg_camera = cam_translator._export_render_cam(ob, db_name)
 
             self.rman_cameras[cam.original] = rman_sg_camera
-            
+
             self.sg_scene.Root().AddChild(rman_sg_camera.sg_node)
             self.sg_scene.Root().AddCoordinateSystem(rman_sg_camera.sg_node)
 
         # For now, make the main camera the 'primary' dicing camera
         self.main_camera.sg_camera_node.SetRenderable(1)
-        self.sg_scene.Root().AddCoordinateSystem(self.main_camera.sg_node)        
+        self.sg_scene.Root().AddCoordinateSystem(self.main_camera.sg_node)
 
     def export_displayfilters(self):
         rm = self.bl_scene.renderman
@@ -1286,7 +1287,7 @@ class RmanScene(object):
                 self.world_df_node = self.rman.SGManager.RixSGShader("DisplayFilter", "PxrBackgroundDisplayFilter", "__rman_world_df")
             params = self.world_df_node.params
             params.SetColor("backgroundColor", self.bl_scene.world.color[:3])
-            self.sg_scene.SetDisplayFilter([self.world_df_node])            
+            self.sg_scene.SetDisplayFilter([self.world_df_node])
             return
 
         for bl_df_node in shadergraph_utils.find_displayfilter_nodes(world):
@@ -1303,7 +1304,7 @@ class RmanScene(object):
             rman_sg_node = RmanSgNode(self, rman_df_node, "")
             property_utils.property_group_to_rixparams(bl_df_node, rman_sg_node, rman_df_node, ob=world)
             display_filter_names.append(df_name)
-            displayfilters_list.append(rman_df_node)    
+            displayfilters_list.append(rman_df_node)
 
         if len(display_filter_names) > 1:
             df_name = "rman_displayfilter_combiner"
@@ -1312,11 +1313,11 @@ class RmanScene(object):
             params.SetDisplayFilterReferenceArray("filter", display_filter_names, len(display_filter_names))
             displayfilters_list.append(df_node)
 
-        self.sg_scene.SetDisplayFilter(displayfilters_list)        
+        self.sg_scene.SetDisplayFilter(displayfilters_list)
 
     def export_samplefilters(self, sel_chan_name=None):
         rm = self.bl_scene.renderman
-        sample_filter_names = []        
+        sample_filter_names = []
         samplefilters_list = list()
 
         if rm.do_holdout_matte != "OFF":
@@ -1330,7 +1331,7 @@ class RmanScene(object):
                 params.SetString("shadowAov", "holdoutMatte")
 
             sample_filter_names.append("rm_PxrShadowFilter_shadows")
-            samplefilters_list.append(sf_node)          
+            samplefilters_list.append(sf_node)
 
         world = self.bl_scene.world
 
@@ -1343,15 +1344,15 @@ class RmanScene(object):
             rman_sg_node = RmanSgNode(self, rman_sf_node, "")
             property_utils.property_group_to_rixparams(bl_sf_node, rman_sg_node, rman_sf_node, ob=world)
             sample_filter_names.append(sf_name)
-            samplefilters_list.append(rman_sf_node)                    
+            samplefilters_list.append(rman_sf_node)
 
         if sel_chan_name:
             sf_name = '__RMAN_VIEWPORT_CHANNEL_SELECT__'
             rman_sel_chan_node = self.rman.SGManager.RixSGShader("SampleFilter", "PxrCopyAOVSampleFilter", sf_name)
             params = rman_sel_chan_node.params
-            params.SetString("readAov", sel_chan_name)            
+            params.SetString("readAov", sel_chan_name)
             sample_filter_names.append(sf_name)
-            samplefilters_list.append(rman_sel_chan_node)             
+            samplefilters_list.append(rman_sel_chan_node)
 
 
         if len(sample_filter_names) > 1:
@@ -1362,7 +1363,7 @@ class RmanScene(object):
 
             samplefilters_list.append(sf_node)
 
-        self.sg_scene.SetSampleFilter(samplefilters_list) 
+        self.sg_scene.SetSampleFilter(samplefilters_list)
 
     def export_bake_displays(self):
         rm = self.bl_scene.renderman
@@ -1372,7 +1373,7 @@ class RmanScene(object):
         cams_to_dspys = dict()
 
         dspys_dict = display_utils.get_dspy_dict(self)
-        
+
         for chan_name, chan_params in dspys_dict['channels'].items():
             chan_type = chan_params['channelType']['value']
             chan_source = chan_params['channelSource']['value']
@@ -1386,7 +1387,7 @@ class RmanScene(object):
             displaychannel = self.rman.SGManager.RixSGDisplayChannel(chan_type, chan_name)
             if chan_source:
                 if "lpe" in chan_source:
-                    displaychannel.params.SetString(self.rman.Tokens.Rix.k_source, '%s %s' % (chan_type, chan_source))                                
+                    displaychannel.params.SetString(self.rman.Tokens.Rix.k_source, '%s %s' % (chan_type, chan_source))
                 else:
                     displaychannel.params.SetString(self.rman.Tokens.Rix.k_source, chan_source)
 
@@ -1398,7 +1399,7 @@ class RmanScene(object):
                 displaychannel.params.SetFloatArray("filterwidth", chan_filterwidth, 2 )
 
             if chan_statistics and chan_statistics != 'none':
-                displaychannel.params.SetString("statistics", chan_statistics)                               
+                displaychannel.params.SetString("statistics", chan_statistics)
             displaychannels.append(displaychannel)
 
         # baking requires we only do one channel per display. So, we create a new display
@@ -1412,12 +1413,12 @@ class RmanScene(object):
             if not dspy_params['bake_mode']:
                 # if bake is off for this aov, just render to the null display driver
                 dspy_file_name = dspy_params['filePath']
-                display = self.rman.SGManager.RixSGShader("Display", "null", dspy_file_name)                
+                display = self.rman.SGManager.RixSGShader("Display", "null", dspy_file_name)
                 channels = ','.join(channels)
                 display.params.SetString("mode", channels)
                 cam_dspys = cams_to_dspys.get(self.main_camera, list())
                 cam_dspys.append(display)
-                cams_to_dspys[self.main_camera] = cam_dspys                
+                cams_to_dspys[self.main_camera] = cam_dspys
 
             else:
                 for chan in channels:
@@ -1431,7 +1432,7 @@ class RmanScene(object):
                         tokens = os.path.splitext(dspy_file_name)
                         if tokens[1] == '':
                             token_dict = {'aov': dspy}
-                            dspy_file_name = string_utils.expand_string('%s.<ext>' % dspy_file_name, 
+                            dspy_file_name = string_utils.expand_string('%s.<ext>' % dspy_file_name,
                                                                         display=display_driver,
                                                                         token_dict=token_dict
                                                                         )
@@ -1448,7 +1449,7 @@ class RmanScene(object):
                     if display_driver in ['deepexr', 'openexr']:
                         if rm.use_metadata:
                             display_utils.export_metadata(self.bl_scene, display.params)
-                        
+
                     camera = dspy_params['camera']
                     if camera is None:
                         cam_dspys = cams_to_dspys.get(self.main_camera, list())
@@ -1474,7 +1475,7 @@ class RmanScene(object):
                 cam_sg_node.sg_camera_node.SetRenderable(2)
             cam_sg_node.sg_camera_node.SetDisplay(cam_dspys)
 
-        self.sg_scene.SetDisplayChannel(displaychannels)          
+        self.sg_scene.SetDisplayChannel(displaychannels)
 
     def export_displays(self):
         rm = self.bl_scene.renderman
@@ -1500,7 +1501,7 @@ class RmanScene(object):
             displaychannel = self.rman.SGManager.RixSGDisplayChannel(chan_type, chan_name)
             if chan_source and chan_source != '':
                 if "lpe" in chan_source:
-                    displaychannel.params.SetString(self.rman.Tokens.Rix.k_source, '%s %s' % (chan_type, chan_source))                                
+                    displaychannel.params.SetString(self.rman.Tokens.Rix.k_source, '%s %s' % (chan_type, chan_source))
                 else:
                     displaychannel.params.SetString(self.rman.Tokens.Rix.k_source, '%s' % (chan_source))
 
@@ -1513,7 +1514,7 @@ class RmanScene(object):
                 displaychannel.params.SetFloatArray("filterwidth", chan_filterwidth, 2 )
 
             if chan_statistics and chan_statistics != 'none':
-                displaychannel.params.SetString("statistics", chan_statistics)                               
+                displaychannel.params.SetString("statistics", chan_statistics)
             displaychannels.append(displaychannel)
 
         for dspy,dspy_params in dspys_dict['displays'].items():
@@ -1531,7 +1532,7 @@ class RmanScene(object):
                 dspy_callback = "dspyRender"
                 if self.is_interactive:
                     dspy_callback = "dspyIPR"
-                display.params.SetString("dspyParams", 
+                display.params.SetString("dspyParams",
                                         "%s -port %d -crop 1 0 1 0 -notes %s" % (dspy_callback, port, dspy_info))
 
             cam_sg_node = self.main_camera
@@ -1547,8 +1548,8 @@ class RmanScene(object):
 
             cam_dspys = cams_to_dspys.get(cam_sg_node, list())
             cam_dspys.append(display)
-            cams_to_dspys[cam_sg_node] = cam_dspys                    
-                
+            cams_to_dspys[cam_sg_node] = cam_dspys
+
         for cam_sg_node,cam_dspys in cams_to_dspys.items():
             #cam = self.rman_cameras.get(db_name, None)
             if not cam_sg_node:
@@ -1557,7 +1558,7 @@ class RmanScene(object):
                 cam_sg_node.sg_camera_node.SetRenderable(2)
             cam_sg_node.sg_camera_node.SetDisplay(cam_dspys)
 
-        self.sg_scene.SetDisplayChannel(displaychannels)  
+        self.sg_scene.SetDisplayChannel(displaychannels)
 
     def export_stats(self):
 
@@ -1572,7 +1573,7 @@ class RmanScene(object):
             integrator = bl_integrator_node.bl_label
         stats_mgr._integrator = integrator
         #stats_mgr._minSamples = rm.hider_minSamples
-        stats_mgr._maxSamples = rm.hider_maxSamples    
+        stats_mgr._maxSamples = rm.hider_maxSamples
 
     def export_viewport_stats(self, integrator=''):
 
