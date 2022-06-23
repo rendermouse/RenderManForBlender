@@ -829,6 +829,7 @@
             "type": "string",
             "default": "gaussian",
             "widget": "popup",
+            "help": "The filter for rendered pixels. The box, triangle, disk, gaussian, and blackman-harris are softening filters while catmull-rom, sinc, mitchell, separable-catmull-rom, lanczos and bessel are sharpening filters. Separable-catmull-rom is a good compromise.",
             "options": "box|triangle|catmull-rom|sinc|gaussian|mitchell|separable-catmull-rom|blackman-harris|lanczos|bessel|disk"
         },
         {
@@ -842,6 +843,7 @@
                 2,
                 2
             ],
+            "help": "The width of the pixel filter. Typically from 1 to 6.",
             "connectable": false
         },
         {
@@ -910,6 +912,7 @@
                 16
             ],
             "widget": "mapper",
+            "help": "Specify the size of the buckets. Larger buckets will require more memory to render. Conversely, smaller buckets are less efficient for shading, but will use less memory during rendering. If your scene is using a lot of memory, you may want to try setting this field down to 8 by 8 or even 4 by 4 buckets, but most likely you will not change this.",
             "options": "4x4:[4,4]|8x8:[8,8]|16x16:[16,16]|32x32:[32,32]|64x64:[64,64]",
             "connectable": false           
         },                 
@@ -921,6 +924,7 @@
             "type": "string",
             "default": "circle",
             "widget": "popup",
+            "help": "RenderMan subdivides the output image into small rectangular regions called buckets, and renders a single bucket at a time. This allows a small portion of the image to be in memory at any one time. Note that only some bucket orders are supported for checkpointing and recovery.",
             "options": "horizontal|vertical|zigzag-x|zigzag-y|spiral|spacefill|circle"
         },
         {
