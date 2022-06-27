@@ -1079,11 +1079,16 @@ class RmanScene(object):
             invert_t = rm.rman_bake_illum_invertT
             udim_stride = rm.rman_bake_illum_bakeudimstride
             udim_offset = rm.rman_bake_illum_bakeudimoffset
+            bbox_min = rm.rman_bake_illum_bakebboxmin
+            bbox_max = rm.rman_bake_illum_bakebboxmax
+
             options.SetString(self.rman.Tokens.Rix.k_hider_bakemode, bakemode)
             options.SetStringArray(self.rman.Tokens.Rix.k_hider_primvar, (primvar_s, primvar_t), 2)
             options.SetInteger(self.rman.Tokens.Rix.k_hider_invert, invert_t)
             options.SetInteger(self.rman.Tokens.Rix.k_hider_bakeudimstride, udim_stride)
             options.SetInteger(self.rman.Tokens.Rix.k_hider_bakeudimoffset, udim_offset)
+            options.SetPoint(self.rman.Tokens.Rix.k_hider_bakebboxmin, bbox_min)
+            options.SetPoint(self.rman.Tokens.Rix.k_hider_bakebboxmax, bbox_max)
         else:
             pv = rm.ri_pixelVariance
 

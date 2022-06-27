@@ -425,7 +425,35 @@
                 "conditionalVisPath": "rman_bake_mode",
                 "conditionalVisValue": "pattern"
             } 
-        },                                                              
+        },         
+        {
+            "panel": "RENDER_PT_renderman_baking",
+            "page": "Illumination",
+            "name": "rman_bake_illum_bakebboxmin",
+            "label": "Baking bbox min",
+            "type": "point",
+            "default": [-1e30, -1e30, -1e30],  
+            "help": "Bounding box min for baking 3D point clouds.  In world space.",
+            "conditionalVisOps": {
+                "conditionalVisOp": "notEqualTo",
+                "conditionalVisPath": "rman_bake_mode",
+                "conditionalVisValue": "pattern"
+            } 
+        },             
+        {
+            "panel": "RENDER_PT_renderman_baking",
+            "page": "Illumination",
+            "name": "rman_bake_illum_bakebboxmax",
+            "label": "Baking bbox max",
+            "type": "point",
+            "default": [1e30, 1e30, 1e30],  
+            "help": "Bounding box max for baking 3D point clouds.  In world space.",
+            "conditionalVisOps": {
+                "conditionalVisOp": "notEqualTo",
+                "conditionalVisPath": "rman_bake_mode",
+                "conditionalVisValue": "pattern"
+            } 
+        },                                                           
         {
             "panel": "RENDER_PT_renderman_sampling",
             "page": "",
