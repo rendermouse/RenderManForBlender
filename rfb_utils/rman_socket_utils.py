@@ -36,7 +36,7 @@ def node_add_input(node, param_type, param_name, meta, param_label):
         __RMAN_SOCKET_MAP__[param_type], param_name, identifier=param_label)
     socket.link_limit = 1
 
-    if param_type in ['struct', 'normal', 'vector', 'vstruct', 'void']:
+    if param_type in ['struct',  'vstruct', 'void']:
         socket.hide_value = True
         if param_type == 'struct':
             struct_name = meta.get('struct_name', 'Manifold')
