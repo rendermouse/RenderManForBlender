@@ -568,7 +568,8 @@ def _set_rman_holdouts_dspy_dict(dspys_dict, dspy_drv, rman_scene, expandTokens,
             'params': dspy_params,
             'dspyDriverParams': None}           
 
-def any_dspys_denoise(view_layer):         
+def any_dspys_denoise(view_layer):    
+    rm_rl = None     
     if view_layer.renderman.use_renderman:
         rm_rl = view_layer.renderman  
     if rm_rl:     
