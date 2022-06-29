@@ -714,6 +714,11 @@
             "channelSource": "NPRPtriplanar",
             "group": "NPR"
         },
+        "NPRNtriplanar": {
+            "channelType": "color",
+            "channelSource": "NPRNtriplanar",
+            "group": "NPR"
+        },        
         "NPRalbedo": {
             "channelType": "color",
             "channelSource": "NPRalbedo",
