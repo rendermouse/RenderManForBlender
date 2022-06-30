@@ -1027,7 +1027,7 @@
             "riopt": "limits:texturememory",
             "label": "Texture",
             "type": "int",
-            "default": 2097152,
+            "default": 4194304,
             "min": 0,
             "widget": false,
             "help": "Texture cache size in kB"
@@ -1039,7 +1039,7 @@
             "riopt": "limits:geocachememory",
             "label": "Geometry",
             "type": "int",            
-            "default": 2097152,
+            "default": 4194304,
             "min": 0,            
             "widget": false,
             "help": "Geometry cache size in kB."
@@ -1051,7 +1051,7 @@
             "riopt": "limits:opacitycachememory",
             "label": "Opacity",
             "type": "int",
-            "default": 1048576,
+            "default": 2097152,
             "min": 0,            
             "widget": false,
             "help": "Opacity cache in kB"

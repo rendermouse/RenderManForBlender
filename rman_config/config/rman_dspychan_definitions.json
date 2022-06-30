@@ -694,11 +694,6 @@
             "channelSource": "NPRlineWidth",
             "group": "NPR"
         },
-        "NPRoriginalBeauty": {
-            "channelType": "color",
-            "channelSource": "NPRoriginalBeauty",
-            "group": "NPR"
-        },
         "NPRallLinesAlpha": {
             "channelType": "color",
             "channelSource": "NPRallLinesAlpha",
@@ -807,7 +802,7 @@
                 "NPRalbedo",
                 "NPRtextureCoords",
                 "NPRPtriplanar",
-                "NPRoriginalBeauty"
+                "NPRNtriplanar"
             ]
         }        
     }

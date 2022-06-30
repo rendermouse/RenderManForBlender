@@ -651,16 +651,16 @@ def get_dspy_dict(rman_scene, expandTokens=True, include_holdouts=True):
         # render_into is set to
         display_driver = rm.render_into
         do_optix_denoise = rm.blender_optix_denoiser
-
-    if rm.render_rman_stylized:
-        _add_stylized_channels(dspys_dict, display_driver, rman_scene, expandTokens)        
-       
+           
     if rm_rl:     
         _set_rman_dspy_dict(rm_rl, dspys_dict, display_driver, rman_scene, expandTokens, do_optix_denoise=do_optix_denoise)        
 
     else:
         # We're using blender's layering system
         _set_blender_dspy_dict(layer, dspys_dict, display_driver, rman_scene, expandTokens, do_optix_denoise=do_optix_denoise)       
+
+    if rm.render_rman_stylized:
+        _add_stylized_channels(dspys_dict, display_driver, rman_scene, expandTokens)           
 
     if rm.do_holdout_matte != "OFF":
         _set_rman_holdouts_dspy_dict(dspys_dict, display_driver, rman_scene, expandTokens, include_holdouts=include_holdouts)  
