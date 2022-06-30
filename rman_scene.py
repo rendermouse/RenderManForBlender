@@ -1303,7 +1303,7 @@ class RmanScene(object):
             if bl_df_node.bl_label in rman_constants.RMAN_STYLIZED_FILTERS and not rm.render_rman_stylized:
                 continue
 
-            df_name = bl_df_node.name
+            df_name = bl_df_node.name.replace('.', '_')
 
             rman_df_node = self.rman.SGManager.RixSGShader("DisplayFilter", bl_df_node.bl_label, df_name)
             rman_sg_node = RmanSgNode(self, rman_df_node, "")
@@ -1343,7 +1343,7 @@ class RmanScene(object):
         for bl_sf_node in shadergraph_utils.find_samplefilter_nodes(world):
             if not bl_sf_node.is_active:
                 continue
-            sf_name = bl_sf_node.name
+            sf_name = bl_sf_node.name.replace('.', '_')
 
             rman_sf_node = self.rman.SGManager.RixSGShader("SampleFilter", bl_sf_node.bl_label, sf_name)
             rman_sg_node = RmanSgNode(self, rman_sf_node, "")
