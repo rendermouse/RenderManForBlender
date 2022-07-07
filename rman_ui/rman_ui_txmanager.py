@@ -797,8 +797,9 @@ def unregister():
             rfb_log().debug('Could not unregister class: %s' % str(cls))
             pass  
 
-    try:
-        from . import rman_ui_txmanager_qt
-        rman_ui_txmanager_qt.unregister()
-    except:
-        pass        
+    if get_pref('rman_ui_framework') == 'QT':
+        try:
+            from . import rman_ui_txmanager_qt
+            rman_ui_txmanager_qt.unregister()
+        except:
+            pass        

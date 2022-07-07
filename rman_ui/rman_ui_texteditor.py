@@ -1,4 +1,5 @@
 from ..rman_constants import RFB_ADDON_PATH
+from ..rfb_logger import rfb_log
 import bpy
 import os
 
