@@ -323,9 +323,6 @@ def generate_property(node, sp, update_function=None, set_function=None):
                                 description=param_help, set=set_function, update=update_function)            
         else:
             param_default = int(param_default) if param_default else 0
-            # make invertT default 0
-            if param_name == 'invertT':
-                param_default = 0
 
             if param_widget in ['checkbox', 'switch']:
                 prop = BoolProperty(name=param_label,
