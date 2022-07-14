@@ -1113,18 +1113,14 @@ class RmanRender(object):
                                     view=render_view)
         layer = result.layers[0].passes.find_by_name("Combined", render_view)        
         while not self.bl_engine.test_break() and self.rman_is_live_rendering:
-            time.sleep(0.001)
+            time.sleep(0.01)
             if layer:
-                buffer = self._get_buffer(width, height, image_num=0, as_flat=False)
-                if buffer:
+                buffer = self._get_buffer(width, height, image_num=0, num_channels=4, as_flat=False)
+                if buffer is None:
+                    break
+                else:
                     layer.rect = buffer
                     self.bl_engine.update_result(result)
-        # try to get the buffer one last time before exiting
-        if layer:
-            buffer = self._get_buffer(width, height, image_num=0, as_flat=False)
-            if buffer:
-                layer.rect = buffer
-                self.bl_engine.update_result(result)        
         self.stop_render()              
         self.bl_engine.end_result(result)  
         self.del_bl_engine()         

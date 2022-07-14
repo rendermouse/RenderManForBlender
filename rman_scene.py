@@ -480,7 +480,7 @@ class RmanScene(object):
         self.export_searchpaths()
 
         # integrator
-        integrator_sg = self.rman.SGManager.RixSGShader("Integrator", "PxrDirectLighting", "integrator")
+        integrator_sg = self.rman.SGManager.RixSGShader("Integrator", "PxrPathTracer", "integrator")
         self.sg_scene.SetIntegrator(integrator_sg)
 
         # camera
