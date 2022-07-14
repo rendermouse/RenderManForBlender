@@ -293,6 +293,7 @@ def set_riattr_bl_prop(attrs, prop_name, meta, rm, check_inherit=True, remove=Tr
         # check conditionalVisOps to see if this riattr applies
         # to this object
         expr = conditionalVisOps.get('expr', None)       
+        node = rm
         if expr and not eval(expr):
             return          
 

@@ -114,6 +114,14 @@ class RendermanObjectSettings(RmanBasePropertyGroup, bpy.types.PropertyGroup):
         get=get_object_type
     )
 
+    def get_bake_mode(self):
+        scene = bpy.context.scene
+        return scene.renderman.rman_bake_mode
+
+    rman_bake_mode: StringProperty(
+        get=get_bake_mode
+    )
+
 rman_config_classes = [
     RendermanObjectSettings
 ]
