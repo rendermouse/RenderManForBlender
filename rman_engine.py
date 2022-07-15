@@ -20,13 +20,11 @@ class PRManRender(bpy.types.RenderEngine):
         from . import rman_render
         self.rman_render = rman_render.RmanRender.get_rman_render()
         self.export_failed = None
-        if self.is_preview and self.rman_render.rman_swatch_render_running:
-            # if a preview render is requested and a swatch render is 
-            # already in progress, ignore this render request
-            return
+        self.ipr_already_running = False
         if self.rman_render.rman_interactive_running:
-            # If IPR is already running, just return. 
-            # We report an error in render() if this is a render attempt
+            # If IPR is already running, just flag it
+            # and don't do anything in the update methods
+            self.ipr_already_running = True
             return 
 
     def __del__(self):
@@ -67,6 +65,9 @@ class PRManRender(bpy.types.RenderEngine):
         if self.export_failed:
             return            
 
+        if self.ipr_already_running:
+            return
+
         if self.rman_render.is_ipr_to_it():
             # if we are already IPRing to "it", stop the render
             self.rman_render.stop_render(stop_draw_thread=False)
@@ -91,6 +92,10 @@ class PRManRender(bpy.types.RenderEngine):
         '''
         if self.export_failed:
             return
+        if self.ipr_already_running:
+            self.draw_viewport_message(context, 'Multiple viewport rendering not supported.')
+            return
+
         if self.rman_render.rman_interactive_running and not self.rman_render.rman_license_failed:               
             self.rman_render.update_view(context, depsgraph)
 
@@ -119,6 +124,9 @@ class PRManRender(bpy.types.RenderEngine):
 
         if self.rman_render.rman_render_into != 'blender':
             return
+
+        if self.ipr_already_running:
+            return            
 
         self.rman_render.rman_scene.bl_scene = scene
         dspy_dict = display_utils.get_dspy_dict(self.rman_render.rman_scene, include_holdouts=False)
@@ -189,27 +197,31 @@ class PRManRender(bpy.types.RenderEngine):
             if not for_background:
                 self._increment_version_tokens(external_render=False)
 
-    def _draw_pixels(self, context, depsgraph):     
+    def draw_viewport_message(self, context, msg):
+        w = context.region.width     
+
+        pos_x = w / 2 - 100
+        pos_y = 20
+        blf.enable(0, blf.SHADOW)
+        blf.shadow_offset(0, 1, -1)
+        blf.shadow(0, 5, 0.0, 0.0, 0.0, 0.8)
+        blf.size(0, 32, 36)
+        blf.position(0, pos_x, pos_y, 0)
+        blf.color(0, 1.0, 0.0, 0.0, 1.0)
+        blf.draw(0, "%s" % (msg))
+        blf.disable(0, blf.SHADOW)   
+
+    def _draw_pixels(self, context, depsgraph):         
+
+        if self.rman_render.rman_license_failed:
+            self.draw_viewport_message(context, self.rman_render.rman_license_failed_message)
+
+        if not self.rman_render.rman_is_viewport_rendering:
+            return       
 
         scene = depsgraph.scene
         w = context.region.width
-        h = context.region.height          
-
-        if self.rman_render.rman_license_failed:
-            pos_x = w / 2 - 100
-            pos_y = 20
-            blf.enable(0, blf.SHADOW)
-            blf.shadow_offset(0, 1, -1)
-            blf.shadow(0, 5, 0.0, 0.0, 0.0, 0.8)
-            blf.size(0, 32, 36)
-            blf.position(0, pos_x, pos_y, 0)
-            blf.color(0, 1.0, 0.0, 0.0, 1.0)
-            blf.draw(0, "%s" % (self.rman_render.rman_license_failed_message))
-            blf.disable(0, blf.SHADOW)   
-            return
-
-        if not self.rman_render.rman_is_viewport_rendering:
-            return             
+        h = context.region.height                       
 
         # Bind shader that converts from scene linear to display space,
         bgl.glEnable(bgl.GL_BLEND)

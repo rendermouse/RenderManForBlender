@@ -800,6 +800,8 @@ def draw_rman_viewport_props(self, context):
         view = context.space_data
         rman_render = RmanRender.get_rman_render()
         if view.shading.type == 'RENDERED' or rman_render.is_ipr_to_it():
+            if not rman_render.rman_running:
+                return
             rman_rerender_controls = rfb_icons.get_icon("rman_ipr_cancel")
             row.operator('renderman.stop_ipr', text="",
                             icon_value=rman_rerender_controls.icon_id)
