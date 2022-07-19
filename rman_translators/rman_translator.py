@@ -183,10 +183,14 @@ class RmanTranslator(object):
             exclude_subset = []
             lightfilter_subset = []
             for subset in rm.rman_lighting_excludesubset:
+                if subset.light_ob is None:
+                    continue
                 nm = string_utils.sanitize_node_name(subset.light_ob.name)
                 exclude_subset.append(nm)
 
             for subset in rm.rman_lightfilter_subset:
+                if subset.light_ob is None:
+                    continue                
                 nm = string_utils.sanitize_node_name(subset.light_ob.name)
                 lightfilter_subset.append(nm)            
 
