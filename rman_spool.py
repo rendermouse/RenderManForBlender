@@ -327,8 +327,8 @@ class RmanSpool(object):
         by = self.bl_scene.frame_step     
 
         # update variables
-        string_utils.set_var('scene', self.bl_scene.name)
-        string_utils.set_var('layer', self.rman_scene.bl_view_layer.name)           
+        string_utils.set_var('scene', self.bl_scene.name.replace(' ', '_'))
+        string_utils.set_var('layer', self.rman_scene.bl_view_layer.name.replace(' ', '_'))      
 
         if not rm.external_animation:
             frame_begin = self.bl_scene.frame_current
