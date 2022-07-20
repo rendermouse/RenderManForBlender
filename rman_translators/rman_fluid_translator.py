@@ -7,8 +7,10 @@ from ..rfb_utils import scenegraph_utils
 from ..rfb_utils import particles_utils
 from ..rfb_utils import object_utils
 from ..rfb_logger import rfb_log
+from mathutils import Matrix
 import bpy
 import os
+import gzip
 
 def locate_openVDB_cache(cache_dir, frameNum):
     if not bpy.data.is_saved:
@@ -22,7 +24,7 @@ def locate_openVDB_cache(cache_dir, frameNum):
         if 'density' in f and "%04d" % frameNum in f:
             return os.path.join(cacheDir, f)
 
-    return None
+    return None   
 
 def find_fluid_modifier(ob):
     fluid_modifier = None
@@ -81,6 +83,19 @@ class RmanFluidTranslator(RmanTranslator):
             
             self.update_fluid(ob, rman_sg_fluid, fluid_data)
             rman_sg_fluid.sg_node.AddChild(rman_sg_fluid.rman_sg_volume_node)
+        elif fluid_data.use_mesh:
+            rman_sg_fluid.rman_sg_volume_node = None
+            psys = None
+            for sys in ob.particle_systems:
+                if sys.settings.type == 'FLIP':
+                    psys = sys
+                    break
+            if not psys:
+                return
+
+            rman_sg_fluid.rman_sg_liquid_node = self.rman_scene.sg_scene.CreateMesh('%s-MESH' % rman_sg_fluid.db_name)                
+            self.update_fluid_mesh(ob, rman_sg_fluid, psys, fluid_data)
+            rman_sg_fluid.sg_node.AddChild(rman_sg_fluid.rman_sg_liquid_node)            
         else:
             rman_sg_fluid.rman_sg_volume_node = None
             psys = None
@@ -94,6 +109,37 @@ class RmanFluidTranslator(RmanTranslator):
             rman_sg_fluid.rman_sg_liquid_node = self.rman_scene.sg_scene.CreatePoints('%s-POINTS' % rman_sg_fluid.db_name)                
             self.update_fluid_particles(ob, rman_sg_fluid, psys, fluid_data)
             rman_sg_fluid.sg_node.AddChild(rman_sg_fluid.rman_sg_liquid_node)
+
+    def update_fluid_mesh(self, ob, rman_sg_fluid, psys, fluid_data):
+        sg_node = rman_sg_fluid.rman_sg_liquid_node
+        mesh = ob.data
+        (nverts, verts, P, N) = object_utils._get_mesh_(mesh, get_normals=True)
+        npolys = len(nverts) 
+        npoints = len(P)
+        numnverts = len(verts)
+
+        sg_node.Define( npolys, npoints, numnverts )
+        primvar = sg_node.GetPrimVars() 
+        primvar.SetPointDetail(self.rman_scene.rman.Tokens.Rix.k_P, P, "vertex")
+        primvar.SetIntegerDetail(self.rman_scene.rman.Tokens.Rix.k_Ri_nvertices, nverts, "uniform")
+        primvar.SetIntegerDetail(self.rman_scene.rman.Tokens.Rix.k_Ri_vertices, verts, "facevarying")  
+        if N:
+            if len(N) == numnverts:
+                primvar.SetNormalDetail(self.rman_scene.rman.Tokens.Rix.k_N, N, "facevarying")         
+            elif len(N) == npoints:
+                primvar.SetNormalDetail(self.rman_scene.rman.Tokens.Rix.k_N, N, "vertex")
+        sg_node.SetPrimVars(primvar)
+
+        # Attach material
+        mat_idx = psys.settings.material - 1
+        if mat_idx < len(ob.material_slots):
+            mat = ob.material_slots[mat_idx].material
+            material_sg_node = None
+            if mat:
+                rman_sg_material = self.rman_scene.rman_materials.get(mat.original, None)
+                if rman_sg_material:
+                    material_sg_node = rman_sg_material.sg_node
+            scenegraph_utils.set_material(sg_node, material_sg_node)         
 
     def update_fluid_particles(self, ob, rman_sg_fluid, psys, fluid_data):
         sg_node = rman_sg_fluid.rman_sg_liquid_node
@@ -141,7 +187,7 @@ class RmanFluidTranslator(RmanTranslator):
     def update_fluid_openvdb(self, ob, rman_sg_fluid, fluid_data):
         cacheFile = locate_openVDB_cache(fluid_data.cache_directory, self.rman_scene.bl_frame_current)
         if not cacheFile:
-            rfb_log().debug('error', "Please save and export OpenVDB files before rendering.")
+            rfb_log().error("Please save and export OpenVDB files before rendering.")
             return
 
         primvar = rman_sg_fluid.rman_sg_volume_node.GetPrimVars()
