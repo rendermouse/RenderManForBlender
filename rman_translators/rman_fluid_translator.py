@@ -6,6 +6,7 @@ from ..rfb_utils import string_utils
 from ..rfb_utils import scenegraph_utils
 from ..rfb_utils import particles_utils
 from ..rfb_utils import object_utils
+from ..rfb_utils import mesh_utils
 from ..rfb_logger import rfb_log
 from mathutils import Matrix
 import bpy
@@ -113,7 +114,7 @@ class RmanFluidTranslator(RmanTranslator):
     def update_fluid_mesh(self, ob, rman_sg_fluid, psys, fluid_data):
         sg_node = rman_sg_fluid.rman_sg_liquid_node
         mesh = ob.data
-        (nverts, verts, P, N) = object_utils._get_mesh_(mesh, get_normals=True)
+        (nverts, verts, P, N) = mesh_utils.get_mesh(mesh, get_normals=True)
         npolys = len(nverts) 
         npoints = len(P)
         numnverts = len(verts)
