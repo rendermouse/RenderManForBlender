@@ -345,8 +345,8 @@ class RmanSpool(object):
         chunk = min(rm.bl_batch_frame_chunk, frame_end)-1
 
         # update variables
-        string_utils.set_var('scene', self.bl_scene.name)
-        string_utils.set_var('layer', self.rman_scene.bl_view_layer.name)           
+        string_utils.set_var('scene', self.bl_scene.name.replace(' ', '_'))
+        string_utils.set_var('layer', self.rman_scene.bl_view_layer.name.replace(' ', '_'))      
 
         if not rm.external_animation:
             frame_begin = self.bl_scene.frame_current
