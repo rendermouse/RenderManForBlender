@@ -105,6 +105,8 @@ def get_rman_light_properties_group(ob):
     (RendermanLightSettings) - RendermanLightSettings object
     '''
 
+    if ob is None:
+        return None
     if ob.type == 'LIGHT':
         return ob.data.renderman
     else:

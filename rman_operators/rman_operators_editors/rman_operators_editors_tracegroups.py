@@ -72,6 +72,7 @@ class PRMAN_OT_Renderman_Open_Groups_Editor(CollectionPanel, bpy.types.Operator)
     selected_obj_name: EnumProperty(name="", items=obj_list_items, update=updated_object_selected_name)       
 
     def execute(self, context):
+        self.check_tracegroups(context)
         return{'FINISHED'}         
 
     def draw(self, context):
@@ -137,15 +138,32 @@ class PRMAN_OT_Renderman_Open_Groups_Editor(CollectionPanel, bpy.types.Operator)
     def cancel(self, context):
         if self.event and self.event.type == 'LEFTMOUSE':
             bpy.ops.scene.rman_open_groups_editor('INVOKE_DEFAULT')
+        else:
+            self.check_tracegroups(context)
             
     def __init__(self):
-        self.event = None            
+        self.event = None
+
+    def check_tracegroups(self, context):
+        scene = context.scene
+        rm = scene.renderman
+        
+        for lg in rm.object_groups:
+            delete_objs = []
+            for j in range(len(lg.members)-1, -1, -1):
+                member = lg.members[j]
+                if member.ob_pointer is None or member.ob_pointer.name not in scene.objects:
+                    delete_objs.insert(0, j)
+            for j in delete_objs:
+                lg.members.remove(j)
+                lg.members_index -= 1                        
 
     def invoke(self, context, event):
 
         wm = context.window_manager
         width = rfb_config['editor_preferences']['tracesets_editor']['width']
         self.event = event
+        self.check_tracegroups(context)
         return wm.invoke_props_dialog(self, width=width) 
 
 classes = [    
