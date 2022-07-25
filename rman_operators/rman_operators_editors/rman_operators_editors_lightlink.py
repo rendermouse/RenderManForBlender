@@ -12,14 +12,22 @@ import re
 class RENDERMAN_UL_LightLink_Light_List(bpy.types.UIList):
 
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
-        rm = context.scene.renderman
+        scene = context.scene
+        rm = scene.renderman
         op = layout.operator("renderman.remove_light_link", text='', icon='REMOVE') 
         op.group_index = index
         light = item.light_ob
-        light_shader = shadergraph_utils.get_light_node(light)      
-        icon = rfb_icons.get_light_icon(light_shader.bl_label)        
-        label = light.name
-        layout.label(text=label, icon_value=icon.icon_id)     
+        if light is None or light.name not in scene.objects:
+            layout.label(text="%s no longer exists" % item.name)
+            return
+        light_shader = shadergraph_utils.get_light_node(light) 
+        if light_shader:     
+            icon = rfb_icons.get_light_icon(light_shader.bl_label)        
+            label = light.name
+            layout.label(text=label, icon_value=icon.icon_id)     
+        else:
+            label = light.name
+            layout.label(text=label, icon='LIGHT')
 
 class RENDERMAN_UL_LightLink_Object_List(bpy.types.UIList):
 
@@ -55,7 +63,8 @@ class PRMAN_PT_Renderman_Open_Light_Linking(bpy.types.Operator):
         
         lights_in_group = []
         for lg in rm.light_links:
-            lights_in_group.append(lg.light_ob.name)
+            if lg.light_ob and lg.light_ob.name in scene.objects:
+                lights_in_group.append(lg.light_ob.name)
 
         items = []
         light_items = list()
@@ -145,6 +154,7 @@ class PRMAN_PT_Renderman_Open_Light_Linking(bpy.types.Operator):
     selected_obj_name: EnumProperty(name="", items=obj_list_items, update=updated_object_selected_name)                   
 
     def execute(self, context):
+        self.check_light_links(context)
         return{'FINISHED'}         
 
     def draw(self, context):
@@ -251,15 +261,39 @@ class PRMAN_PT_Renderman_Open_Light_Linking(bpy.types.Operator):
     def cancel(self, context):
         if self.event and self.event.type == 'LEFTMOUSE':
             bpy.ops.scene.rman_open_light_linking('INVOKE_DEFAULT')
+        else:
+            self.check_light_links(context)
             
     def __init__(self):
-        self.event = None                     
+        self.event = None     
+
+    def check_light_links(self, context):
+        scene = context.scene
+        rm = scene.renderman
+        delete_any = []
+        for i in range(len(rm.light_links)-1, -1, -1):
+            lg = rm.light_links[i]
+            if lg.light_ob is None or lg.light_ob.name not in scene.objects:
+                delete_any.insert(0, i)
+                continue
+            delete_objs = []
+            for j in range(len(lg.members)-1, -1, -1):
+                member = lg.members[j]
+                if member.ob_pointer is None or member.ob_pointer.name not in scene.objects:
+                    delete_objs.insert(0, j)
+            for j in delete_objs:
+                lg.members.remove(j)
+                lg.members_index -= 1
+
+        for i in delete_any:
+            rm.light_links.remove(i)
+            rm.light_links_index -= 1
 
     def invoke(self, context, event):
-
         wm = context.window_manager
         width = rfb_config['editor_preferences']['lightlink_editor']['width']
         self.event = event
+        self.check_light_links(context)
         return wm.invoke_props_dialog(self, width=width)       
 
 classes = [

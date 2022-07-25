@@ -39,6 +39,8 @@ class RendermanSceneSettings(RmanBasePropertyGroup, bpy.types.PropertyGroup):
             return
         light_links = rm.light_links[rm.light_links_index]
         light_ob = light_links.light_ob
+        if light_ob is None or light_ob.name not in scene.objects:
+            return
                 
         if context.view_layer.objects.active:
             context.view_layer.objects.active.select_set(False)

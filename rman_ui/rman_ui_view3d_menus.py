@@ -253,7 +253,7 @@ class VIEW3D_MT_RM_LightLinking_Menu(bpy.types.Menu):
 
         active_light = context.active_object
         selected_objects = context.selected_objects
-        if active_light.type != 'LIGHT':
+        if active_light and active_light.type != 'LIGHT':
             pass
             '''
             if selected_objects:
@@ -264,6 +264,8 @@ class VIEW3D_MT_RM_LightLinking_Menu(bpy.types.Menu):
             '''
             return
         light_props = shadergraph_utils.get_rman_light_properties_group(active_light)
+        if light_props is None:
+            return
         if light_props.renderman_light_role not in {'RMAN_LIGHTFILTER', 'RMAN_LIGHT'}:
             return
         selected_objects = context.selected_objects
