@@ -33,6 +33,9 @@ def upgrade_250(scene):
         Projection -> projection_in/projection_out
         DisplayFilter -> displayfilter_in/displayfilter_out
         SampleFilter -> samplefilter_in/samplefilter_out
+
+    Add: color ramp to PxrStylizedToon
+
     '''
     for node in shadergraph_utils.get_all_shading_nodes(scene=scene):
         renderman_node_type = getattr(node, 'renderman_node_type', '')
@@ -52,6 +55,12 @@ def upgrade_250(scene):
         elif renderman_node_type == 'displayfilter':
             if 'DisplayFilter' in node.outputs:
                 node.outputs['DisplayFilter'].name = '%s_out' % renderman_node_type
+
+            if node.bl_label == 'PxrStylizedToon':
+                 nt = node.rman_fake_node_group_ptr
+                 n = nt.nodes.new('ShaderNodeValToRGB')             
+                 setattr(node, 'colorRamp', n.name)                 
+
     
     for mat in bpy.data.materials:
         output = shadergraph_utils.find_node(mat, 'RendermanOutputNode')
