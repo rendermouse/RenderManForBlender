@@ -734,7 +734,7 @@ class RmanRender(object):
 
             if do_persistent_data:
                         
-                for frame in range(bl_scene.frame_start, bl_scene.frame_end + 1):
+                for frame in range(bl_scene.frame_start, bl_scene.frame_end + 1, bl_scene.frame_step):
                     bl_view_layer = depsgraph.view_layer
                     config = rman.Types.RtParamList()
                     render_config = rman.Types.RtParamList()
