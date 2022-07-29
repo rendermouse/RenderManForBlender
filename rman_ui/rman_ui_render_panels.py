@@ -87,6 +87,7 @@ class RENDER_PT_renderman_spooling(PRManButtonsPanel, Panel):
         col.enabled = rm.external_animation
         col.prop(scene, "frame_start", text="Start")
         col.prop(scene, "frame_end", text="End")
+        col.prop(scene, "frame_step", text="By")
 
 class RENDER_PT_renderman_spooling_export_options(PRManButtonsPanel, Panel):
     bl_label = "Spool Options"
