@@ -575,9 +575,15 @@ def set_pxrosl_params(node, rman_sg_node, params, ob=None, mat_name=None):
             set_rix_param(params, param_type, param_name, val, is_reference=False)    
 
 def set_ramp_rixparams(node, prop_name, prop, param_type, params):
+    nt = node.rman_fake_node_group_ptr
+    ramp_name =  prop
+    if nt and ramp_name not in nt.nodes:
+        # this shouldn't happen, but sometimes can
+        # try to look at the bpy.data.node_groups version
+        nt = bpy.data.node_groups[node.rman_fake_node_group]    
+        if nt and ramp_name not in nt.nodes:
+            nt = None
     if param_type == 'colorramp':
-        nt = node.rman_fake_node_group_ptr
-        ramp_name =  prop
         if nt:
             color_ramp_node = nt.nodes[ramp_name]                            
             colors = []
@@ -625,9 +631,7 @@ def set_ramp_rixparams(node, prop_name, prop, param_type, params):
             interp = 'catmull-rom'
             params.SetString("%s_Interpolation" % prop_name, interp )                                 
 
-    elif param_type == 'floatramp':
-        nt = node.rman_fake_node_group_ptr
-        ramp_name =  prop
+    elif param_type == 'floatramp':  
         if nt:
             float_ramp_node = nt.nodes[ramp_name]                            
 

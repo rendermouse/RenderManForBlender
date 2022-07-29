@@ -57,9 +57,9 @@ def upgrade_250(scene):
                 node.outputs['DisplayFilter'].name = '%s_out' % renderman_node_type
 
             if node.bl_label == 'PxrStylizedToon':
-                 nt = node.rman_fake_node_group_ptr
-                 n = nt.nodes.new('ShaderNodeValToRGB')             
-                 setattr(node, 'colorRamp', n.name)                 
+                nt = node.rman_fake_node_group_ptr
+                n = nt.nodes.new('ShaderNodeValToRGB')             
+                setattr(node, 'colorRamp', n.name)                 
 
     
     for mat in bpy.data.materials:
