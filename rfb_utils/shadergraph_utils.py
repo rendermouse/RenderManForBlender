@@ -452,9 +452,12 @@ def get_group_node(node):
     current_group_node = None
     users = bpy.context.blend_data.user_map(subset={node.id_data})
     for group_nt in users[node.id_data]:
+        nodes = []
         if isinstance(group_nt, bpy.types.Material):
-            continue
-        for n in group_nt.nodes:
+            nodes = group_nt.node_tree.nodes
+        elif isinstance(group_nt, bpy.types.NodeGroup):
+            nodes = group_nt.nodes
+        for n in nodes:
             if n.bl_idname == 'ShaderNodeGroup':
                 for n2 in n.node_tree.nodes:
                     if n2 == node:
