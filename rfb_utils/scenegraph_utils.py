@@ -7,6 +7,8 @@ def set_material(sg_node, sg_material_node):
         sg_material_node (RixSGMaterial) - the scene graph material node
     '''    
 
+    if sg_material_node is None:
+        return
 
     sg_node.SetMaterial(sg_material_node)
     attrs = sg_node.GetAttributes()
