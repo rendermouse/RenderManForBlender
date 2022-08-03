@@ -832,7 +832,7 @@ class RmanSceneSync(object):
                             if psys:
                                 self.rman_scene.attach_particle_material(psys.settings, instance_parent, ob_eval, rman_sg_group)
                             else:
-                                self.attach_material(ob_eval, rman_sg_group)                            
+                                self.rman_scene.attach_material(ob_eval, rman_sg_group)                            
                                 
                 if not batch_mode:
                     if rman_type == 'LIGHT':
