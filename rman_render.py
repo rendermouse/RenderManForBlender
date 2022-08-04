@@ -219,29 +219,37 @@ def live_render_cb(e, d, db):
     else:
         db.rman_is_refining = True
 
-def preload_xpu():
+def preload_dsos(rman_render):
     """On linux there is a problem with std::call_once and
     blender, by default, being linked with a static libstdc++.
     The loader seems to not be able to get the right tls key
-    for the __once_call global when libprman loads libxpu. By preloading
+    for the __once_call global when libprman loads libxpu etc. By preloading
     we end up calling the proxy in the blender executable and
     that works.
-    
-    Returns:
-    ctypes.CDLL of xpu or None if that fails. None if not on linux
-    """
-    if sys.platform != 'linux':
-        return None
 
-    tree = envconfig().rmantree
+    Arguments:
+        rman_render (RmanRender) - instance of RmanRender where we want to store
+                                   the ctypes.CDLL
+    
+    """    
+    if sys.platform != 'linux':
+        return
+
+    tree = envconfig().rmantree    
     xpu_path = os.path.join(tree, 'lib', 'libxpu.so')
+    implopenvdb_path = os.path.join(tree, 'lib', 'plugins', 'impl_openvdb.so')
 
     try:
-        xpu = ctypes.CDLL(xpu_path)
-        return xpu
+        rman_render.preload_xpu = ctypes.CDLL(xpu_path)        
     except OSError as error:
         rfb_log().debug('Failed to preload xpu: {0}'.format(error))
-        return None
+        return        
+
+    try:
+        rman_render.preload_impl_openvdb = ctypes.CDLL(implopenvdb_path)
+    except OSError as error:
+        rfb_log().debug('Failed to preload openvdb: {0}'.format(error))
+        return        
 
 class BlRenderResultHelper:
     def __init__(self, rman_render, dspy_dict):
@@ -410,7 +418,10 @@ class RmanRender(object):
         self._start_prman_begin()
 
         # hold onto this or python will unload it
-        self.preload_xpu = preload_xpu()
+        self.preload_xpu = None
+        self.preload_impl_openvdb = None
+
+        preload_dsos(self)
 
     @classmethod
     def get_rman_render(self):

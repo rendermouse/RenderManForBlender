@@ -57,6 +57,12 @@ class RmanOpenVDBTranslator(RmanTranslator):
                 rman_sg_openvdb.sg_node.SetPrimVars(primvar)   
                 return
 
+        if len(grids) < 1:
+            rfb_log().error("Grids length=0: %s" % ob.name)
+            primvar.SetString(self.rman_scene.rman.Tokens.Rix.k_Ri_type, "box")
+            rman_sg_openvdb.sg_node.SetPrimVars(primvar)   
+            return    
+
         active_index = grids.active_index
         active_grid = grids[active_index]  
         if active_grid.data_type not in ['FLOAT', 'DOUBLE']:  
