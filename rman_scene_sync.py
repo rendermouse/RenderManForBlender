@@ -818,9 +818,9 @@ class RmanSceneSync(object):
                             rm = ob_eval.renderman
                             if is_empty_instancer:
                                 rm = instance_parent.renderman
-                            meta = rm.prop_meta[rman_update.update_prop_name]
-                            
-                            property_utils.set_riattr_bl_prop(attrs, rman_update.update_prop_name, meta, rm, check_inherit=True)
+                            meta = rm.prop_meta[rman_update.updated_prop_name]
+                            rfb_log().debug("Setting RiAttribute: %s" % rman_update.updated_prop_name)
+                            property_utils.set_riattr_bl_prop(attrs, rman_update.updated_prop_name, meta, rm, check_inherit=True)
                             rman_sg_group.sg_node.SetAttributes(attrs)                             
 
                         if rman_update.is_updated_transform:
@@ -970,8 +970,7 @@ class RmanSceneSync(object):
 
     def update_sg_node_riattr(self, prop_name, context):
         if not self.rman_render.rman_interactive_running:
-            return     
-        from .rfb_utils import property_utils               
+            return                 
         self.rman_scene.bl_scene = context.scene
         ob = context.object
         rman_update = RmanUpdate()
@@ -983,8 +982,7 @@ class RmanSceneSync(object):
 
     def update_sg_node_primvar(self, prop_name, context):
         if not self.rman_render.rman_interactive_running:
-            return     
-        from .rfb_utils import property_utils               
+            return                 
         self.rman_scene.bl_scene = context.scene
         ob = context.object
         rman_update = RmanUpdate()
