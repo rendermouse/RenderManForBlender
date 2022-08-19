@@ -419,7 +419,8 @@ class PRMAN_OT_revert_renderman_aovs(bpy.types.Operator):
     def execute(self, context):
         active_layer = context.view_layer
         rm_rl = active_layer.renderman
-        rm_rl.custom_aovs.clear()        
+        rm_rl.custom_aovs.clear()     
+        rm_rl.dspy_channels.clear()    
         rm_rl.use_renderman = False
         return {'FINISHED'}
 
