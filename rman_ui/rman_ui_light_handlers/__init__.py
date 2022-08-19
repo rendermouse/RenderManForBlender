@@ -1464,11 +1464,9 @@ def draw():
      
     scene = bpy.context.scene
       
-    lights_list = [x for x in scene.objects if x.type == 'LIGHT']    
+    lights_list = [x for x in bpy.context.view_layer.objects if x.type == 'LIGHT']
     for ob in lights_list:
         if ob.hide_get():
-            continue
-        if ob.name not in bpy.context.view_layer.objects:
             continue
         # check the local view for this light
         if not ob.visible_in_viewport_get(bpy.context.space_data):
