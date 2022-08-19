@@ -300,85 +300,85 @@
         "directDiffuseLobe": {
             "description": "",
             "channelType": "color",
-            "channelSource": "lpe:C<.D2>[<L.>O]",
+            "channelSource": "lpe:CD2[<L.>O]",
             "group": "PxrSurface lobe LPEs"
         },         
         "indirectDiffuseLobe": {
             "description": "",
             "channelType": "color",
-            "channelSource": "lpe:C<.D2>[DS]+[<L.>O]",
+            "channelSource": "lpe:CD2[DS]+[<L.>O]",
             "group": "PxrSurface lobe LPEs"
         },  
         "subsurfaceLobe": {
             "description": "",
             "channelType": "color",
-            "channelSource": "lpe:C<.D3>[DS]*[<L.>O]",
+            "channelSource": "lpe:CD3[DS]*[<L.>O]",
             "group": "PxrSurface lobe LPEs"
         },   
         "directSpecularPrimaryLobe": {
             "description": "",
             "channelType": "color",
-            "channelSource": "lpe:C<.S2>[<L.>O]",
+            "channelSource": "lpe:CS2[<L.>O]",
             "group": "PxrSurface lobe LPEs"
         }, 
         "indirectSpecularPrimaryLobe": {
             "description": "",
             "channelType": "color",
-            "channelSource": "lpe:C<.S2>[DS]+[<L.>O]",
+            "channelSource": "lpe:CS2[DS]+[<L.>O]",
             "group": "PxrSurface lobe LPEs"
         },         
         "directSpecularRoughLobe": {
             "description": "",
             "channelType": "color",
-            "channelSource": "lpe:C<.S3>[<L.>O]",
+            "channelSource": "lpe:CS3[<L.>O]",
             "group": "PxrSurface lobe LPEs"
         },
         "indirectSpecularRoughLobe": {
             "description": "",
             "channelType": "color",
-            "channelSource": "lpe:C<.S3>[DS]+[<L.>O]",
+            "channelSource": "lpe:CS3[DS]+[<L.>O]",
             "group": "PxrSurface lobe LPEs"
         },
         "directSpecularClearcoatLobe": {
             "description": "",
             "channelType": "color",
-            "channelSource": "lpe:C<.S4>[<L.>O]",
+            "channelSource": "lpe:CS4[<L.>O]",
             "group": "PxrSurface lobe LPEs"
         },
         "indirectSpecularClearcoatLobe": {
             "description": "",
             "channelType": "color",
-            "channelSource": "lpe:C<.S4>[DS]+[<L.>O]",
+            "channelSource": "lpe:CS4[DS]+[<L.>O]",
             "group": "PxrSurface lobe LPEs"
         }, 
         "directSpecularIridescenceLobe": {
             "description": "",
             "channelType": "color",
-            "channelSource": "lpe:C<.S5>[<L.>O]",
+            "channelSource": "lpe:CS5[<L.>O]",
             "group": "PxrSurface lobe LPEs"
         },  
         "indirectSpecularIridescenceLobe": {
             "description": "",
             "channelType": "color",
-            "channelSource": "lpe:C<.S5>[DS]+[<L.>O]",
+            "channelSource": "lpe:CS5[DS]+[<L.>O]",
             "group": "PxrSurface lobe LPEs"
         },          
         "directSpecularFuzzLobe": {
             "description": "",
             "channelType": "color",
-            "channelSource": "lpe:C<.S6>[<L.>O]",
+            "channelSource": "lpe:CS6[<L.>O]",
             "group": "PxrSurface lobe LPEs"
         },
         "indirectSpecularFuzzLobe": {
             "description": "",
             "channelType": "color",
-            "channelSource": "lpe:C<.S6>[DS]+[<L.>O]",
+            "channelSource": "lpe:CS6[DS]+[<L.>O]",
             "group": "PxrSurface lobe LPEs"
         },                                                                            
         "transmissiveSingleScatterLobe": {
             "description": "",
             "channelType": "color",
-            "channelSource": "lpe:C<.S7>[DS]*[<L.>O]",
+            "channelSource": "lpe:CS7[DS]*[<L.>O]",
             "group": "PxrSurface lobe LPEs"
         },    
         "directSpecularGlassLobe": {
