@@ -1066,6 +1066,7 @@
             "label": "Diffuse 2 Lobe ID",
             "type": "string",
             "default": "Diffuse,HairDiffuse,diffuse,translucent,hair4,irradiance",
+            "always_write": true,
             "help": ""
         },
         {
@@ -1076,6 +1077,7 @@
             "label": "Diffuse 3 Lobe ID",
             "type": "string",
             "default": "Subsurface,subsurface",
+            "always_write": true,
             "help": ""
         },
         {
@@ -1086,6 +1088,7 @@
             "label": "Specular 2 Lobe ID",
             "type": "string",
             "default": "Specular,HairSpecularR,specular,hair1",
+            "always_write": true,
             "help": ""
         },
         {
@@ -1096,6 +1099,7 @@
             "label": "Specular 3 Lobe ID",
             "type": "string",
             "default": "RoughSpecular,HairSpecularTRT,hair3",
+            "always_write": true,
             "help": ""
         },
         {
@@ -1106,6 +1110,7 @@
             "label": "Specular 4 Lobe ID",
             "type": "string",
             "default": "Clearcoat",
+            "always_write": true,
             "help": ""
         },
         {
@@ -1116,6 +1121,7 @@
             "label": "Specular 5 Lobe ID",
             "type": "string",
             "default": "Iridescence",
+            "always_write": true,
             "help": ""
         },
         {
@@ -1126,6 +1132,7 @@
             "label": "Specular 6 Lobe ID",
             "type": "string",
             "default": "Fuzz,HairSpecularGLINTS",
+            "always_write": true,
             "help": ""
         },
         {
@@ -1136,6 +1143,7 @@
             "label": "Specular 7 Lobe ID",
             "type": "string",
             "default": "SingleScatter,HairSpecularTT,hair2",
+            "always_write": true,
             "help": ""
         },
         {
@@ -1146,6 +1154,7 @@
             "label": "Specular 8 Lobe ID",
             "type": "string",
             "default": "Glass,specular",
+            "always_write": true,
             "help": ""
         },
         {
@@ -1156,6 +1165,7 @@
             "label": "User 2 Lobe ID",
             "type": "string",
             "default": "Albedo,DiffuseAlbedo,SubsurfaceAlbedo,HairAlbedo",
+            "always_write": true,
             "help": ""
         },
         {
@@ -1166,6 +1176,7 @@
             "label": "User 3 Lobe ID",
             "type": "string",
             "default": "",
+            "always_write": true,
             "help": ""
         },
         {
@@ -1176,6 +1187,7 @@
             "label": "User 4 Lobe ID",
             "type": "string",
             "default": "",
+            "always_write": true,
             "help": ""
         },
         {
@@ -1186,6 +1198,7 @@
             "label": "User 5 Lobe ID",
             "type": "string",
             "default": "",
+            "always_write": true,
             "help": ""
         },
         {
@@ -1196,6 +1209,7 @@
             "label": "User 6 Lobe ID",
             "type": "string",
             "default": "",
+            "always_write": true,
             "help": ""
         },
         {
@@ -1206,6 +1220,7 @@
             "label": "User 7 Lobe ID",
             "type": "string",
             "default": "",
+            "always_write": true,
             "help": ""
         },
         {
@@ -1216,6 +1231,7 @@
             "label": "User 8 Lobe ID",
             "type": "string",
             "default": "",
+            "always_write": true,
             "help": ""
         },
         {
@@ -1226,6 +1242,7 @@
             "label": "User 9 Lobe ID",
             "type": "string",
             "default": "",
+            "always_write": true,
             "help": ""
         },
         {
@@ -1236,6 +1253,7 @@
             "label": "User 10 Lobe ID",
             "type": "string",
             "default": "",
+            "always_write": true,
             "help": ""
         },
         {
@@ -1246,6 +1264,7 @@
             "label": "User 11 Lobe ID",
             "type": "string",
             "default": "",
+            "always_write": true,
             "help": ""
         },
         {
@@ -1256,6 +1275,7 @@
             "label": "User 12 Lobe ID",
             "type": "string",
             "default": "",
+            "always_write": true,
             "help": ""
         },      
         {
