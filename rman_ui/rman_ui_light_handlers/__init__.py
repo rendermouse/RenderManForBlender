@@ -21,7 +21,7 @@ _FRUSTUM_DRAW_HELPER_ = None
 _BARN_LIGHT_DRAW_HELPER_ = None
 _PI0_5_ = 1.570796327
 _PRMAN_TEX_CACHE_ = dict()
-_RMAN_TEXTURED_LIGHTS_ = ['PxrRectLight', 'PxrDomeLight']
+_RMAN_TEXTURED_LIGHTS_ = ['PxrRectLight', 'PxrDomeLight', 'PxrGoboLightFilter', 'PxrCookieLightFilter']
 
 s_rmanLightLogo = dict()
 s_rmanLightLogo['box'] = [
@@ -1468,6 +1468,11 @@ def draw():
     for ob in lights_list:
         if ob.hide_get():
             continue
+        if ob.name not in bpy.context.view_layer.objects:
+            continue
+        # check the local view for this light
+        if not ob.visible_in_viewport_get(bpy.context.space_data):
+            continue        
         if not ob.data.renderman:
             continue
         rm = ob.data.renderman
@@ -1476,10 +1481,6 @@ def draw():
 
         light_shader = rm.get_light_node()
         if not light_shader:
-            continue
-
-        # check the local view for this light
-        if not ob.visible_in_viewport_get(bpy.context.space_data):
             continue
 
         light_shader_name = rm.get_light_node_name()
@@ -1540,7 +1541,13 @@ def draw():
             if light_shader_name not in _RMAN_TEXTURED_LIGHTS_:
                 continue
 
-            if light_shader.lightColorMap == k:
+            tex = None
+            if light_shader_name in ['PxrGoboLightFilter', 'PxrCookieLightFilter']:
+                tex = light_shader.map
+            else:
+                tex = light_shader.lightColorMap
+
+            if tex == k:
                 still_exists = True
                 break
 
