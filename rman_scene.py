@@ -1629,10 +1629,11 @@ class RmanScene(object):
                 cam_sg_node = self.rman_cameras.get(camera)
 
             if display_driver in ['deepexr', 'openexr']:
+                is_variance = dspy_params.get('is_variance', False)
                 if rm.use_metadata:
                     display_utils.export_metadata(self.bl_scene, display.params, camera_name=cam_sg_node.db_name)
-                if not dspy_params['denoise']:
-                    display.params.SetInteger("asrgba", 1)
+                if is_variance and dspy_params['denoise'] and display.params.HasParam("asrgba"):
+                    display.params.SetInteger("asrgba", 0)
 
             cam_dspys = cams_to_dspys.get(cam_sg_node, list())
             cam_dspys.append(display)
