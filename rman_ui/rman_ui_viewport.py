@@ -252,6 +252,8 @@ class DrawCropWindowHelper(object):
 
     def check_render_border(self):
         space = bpy.context.space_data
+        if space.shading.type != 'RENDERED':
+            return        
         region_data = bpy.context.region_data
         region = bpy.context.region
         scene = bpy.context.scene
