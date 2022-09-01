@@ -13,6 +13,15 @@ import math
 import re
 import bpy
 
+__MAP_CYCLES_PARAMS__ = {
+    "ShaderNodeTexNoise": {
+        "dimensions": "noise_dimensions"
+    },
+    "ShaderNodeAttribute": {
+        "name": "attribute_name"
+    }
+}
+
 def get_root_node(node, type='bxdf'):
     rman_type = getattr(node, 'renderman_node_type', node.bl_idname)
     if rman_type == type:
@@ -25,6 +34,13 @@ def get_root_node(node, type='bxdf'):
             return None
         return out        
     return None
+
+def get_cycles_value(node, param_name):
+    val = getattr(node, param_name, None)
+    if node.bl_idname in __MAP_CYCLES_PARAMS__:
+        params_map = __MAP_CYCLES_PARAMS__[node.bl_idname]
+        val = getattr(node, params_map.get(param_name, param_name), None)
+    return val
 
 class RmanMaterialTranslator(RmanTranslator):
 
@@ -369,12 +385,11 @@ class RmanMaterialTranslator(RmanTranslator):
             param_name = node_desc_param._name
             if param_name in node.inputs:
                 continue
-            if param_name == 'name':
-                param_name = 'attribute_name'
-            if not hasattr(node, param_name):
-                continue
             param_type = node_desc_param.type
-            val = string_utils.convert_val(getattr(node, param_name),
+            val = get_cycles_value(node, param_name)
+            if val is None:
+                continue
+            val = string_utils.convert_val(val,
                             type_hint=param_type)
 
             if param_type == 'string':
