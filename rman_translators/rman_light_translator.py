@@ -40,7 +40,7 @@ class RmanLightTranslator(RmanTranslator):
         super().__init__(rman_scene)
         self.bl_type = 'LIGHT'  
 
-    def export_object_attributes(self, ob, rman_sg_node):
+    def export_object_attributes(self, ob, rman_sg_node, remove=True):
         pass
 
     def export(self, ob, db_name):

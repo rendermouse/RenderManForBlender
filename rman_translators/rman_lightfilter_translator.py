@@ -11,7 +11,7 @@ class RmanLightFilterTranslator(RmanTranslator):
         super().__init__(rman_scene)
         self.bl_type = 'LIGHTFILTER'  
 
-    def export_object_attributes(self, ob, rman_sg_node):
+    def export_object_attributes(self, ob, rman_sg_node, remove=True):
         pass
 
     def export_light_filters(self, ob, rman_sg_node, rm):
