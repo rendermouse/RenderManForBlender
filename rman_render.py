@@ -998,9 +998,11 @@ class RmanRender(object):
 
         global __DRAW_THREAD__
         self.reset()
-        self.rman_interactive_running = True
-        self.rman_running = True
         __update_areas__()
+        if not self._check_prman_license():
+            return False          
+        self.rman_interactive_running = True
+        self.rman_running = True            
         self.bl_scene = depsgraph.scene_eval
         rm = depsgraph.scene_eval.renderman
         self.it_port = start_cmd_server()    
