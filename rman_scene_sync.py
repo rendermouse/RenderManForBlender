@@ -375,7 +375,23 @@ class RmanSceneSync(object):
                 rman_update = RmanUpdate()
                 rman_update.is_updated_shading = True
                 rman_update.is_updated_transform = True
-                self.rman_updates[o.original] = rman_update            
+                self.rman_updates[o.original] = rman_update        
+
+    def check_empty_instancer(self, dps_update):
+        # mark all objects in a collection
+        # as needing their instances updated
+        ob = dps_update.id.evaluated_get(self.rman_scene.depsgraph)
+        coll = ob.instance_collection
+        rfb_log().debug("\tEmpty Instancer %s Updated" % ob.name)
+        for o in coll.all_objects:
+            if o.type in ('ARMATURE', 'CAMERA'):
+                continue
+            if o.original not in self.rman_updates:
+                rman_update = RmanUpdate()
+                rman_update.is_updated_geometry = dps_update.is_updated_geometry
+                rman_update.is_updated_shading = dps_update.is_updated_shading
+                rman_update.is_updated_transform = dps_update.is_updated_transform
+                self.rman_updates[o.original] = rman_update                          
 
     def update_portals(self, ob):
         for portal in scene_utils.get_all_portals(ob):
@@ -419,6 +435,8 @@ class RmanSceneSync(object):
             self.light_filter_updated(dps_update)            
         elif rman_type == 'CAMERA':
             self.camera_updated(dps_update) 
+        elif rman_type == 'EMPTY_INSTANCER':
+            self.check_empty_instancer(dps_update)
         else:     
             rfb_log().debug("\tObject: %s Updated" % dps_update.id.name)
             rfb_log().debug("\t    is_updated_geometry: %s" % str(dps_update.is_updated_geometry))
