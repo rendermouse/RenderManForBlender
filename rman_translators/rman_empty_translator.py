@@ -19,6 +19,11 @@ class RmanEmptyTranslator(RmanTranslator):
     def update_transform_num_samples(self, rman_sg_group, motion_steps):
         pass
 
+    def clear_children(self, rman_sg_group):
+        if rman_sg_group.sg_node:
+            for c in [ rman_sg_group.sg_node.GetChild(i) for i in range(0, rman_sg_group.sg_node.GetNumChildren())]:
+                rman_sg_group.sg_node.RemoveChild(c)     
+
     def export(self, ob, db_name=""):
         sg_group = self.rman_scene.sg_scene.CreateGroup(db_name)
         rman_sg_group = RmanSgGroup(self.rman_scene, sg_group, db_name)

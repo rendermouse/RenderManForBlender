@@ -614,7 +614,7 @@ class RmanScene(object):
         is_empty_instancer = False
         if instance_parent: 
             is_empty_instancer = object_utils.is_empty_instancer(instance_parent)
-
+           
         # Object attrs
         translator =  self.rman_translators.get(rman_type, None)
         if translator:
@@ -653,6 +653,11 @@ class RmanScene(object):
             rman_empty_node = self.get_rman_prototype(parent_proto_key, ob=ob_parent_eval, create=True)
             rman_sg_group.sg_node.SetInheritTransform(False) # we don't want to inherit the transform
             rman_empty_node.sg_node.AddChild(rman_sg_group.sg_node)
+        elif is_empty_instancer:
+            parent_proto_key = object_utils.prototype_key(instance_parent)
+            rman_parent_node = self.get_rman_prototype(parent_proto_key, ob=instance_parent, create=True)             
+            rman_sg_group.sg_node.SetInheritTransform(False) # we don't want to inherit the transform
+            rman_parent_node.sg_node.AddChild(rman_sg_group.sg_node)
         else:
             self.get_root_sg_node().AddChild(rman_sg_group.sg_node)
             
@@ -793,6 +798,8 @@ class RmanScene(object):
             # along with any instance attributes/materials necessary
             self._export_hidden_instance(ob, rman_sg_node)
             return rman_sg_node
+        elif rman_type == 'EMPTY_INSTANCER':
+            self.get_root_sg_node().AddChild(rman_sg_node.sg_node)
 
         return rman_sg_node
 

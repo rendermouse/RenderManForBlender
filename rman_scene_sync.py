@@ -378,11 +378,17 @@ class RmanSceneSync(object):
                 self.rman_updates[o.original] = rman_update        
 
     def check_empty_instancer(self, dps_update):
-        # mark all objects in a collection
-        # as needing their instances updated
         ob = dps_update.id.evaluated_get(self.rman_scene.depsgraph)
         coll = ob.instance_collection
-        rfb_log().debug("\tEmpty Instancer %s Updated" % ob.name)
+        rfb_log().debug("\tEmpty Instancer %s Updated" % ob.name) 
+        with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):    
+            proto_key = object_utils.prototype_key(ob)     
+            rman_sg_node = self.rman_scene.get_rman_prototype(proto_key, ob=ob, create=True)
+            rman_type = object_utils._detect_primitive_(ob) 
+            self.rman_scene.rman_translators[rman_type].clear_children(rman_sg_node)
+            
+        # mark all objects in the instance collection
+        # as needing their instances updated            
         for o in coll.all_objects:
             if o.type in ('ARMATURE', 'CAMERA'):
                 continue
