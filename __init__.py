@@ -30,12 +30,12 @@ from .rfb_utils.envconfig_utils import envconfig
 bl_info = {
     "name": "RenderMan For Blender",
     "author": "Pixar",
-    "version": (24, 4, 0),
+    "version": (25, 0, 0),
     "blender": (2, 83, 0),
     "location": "Render Properties > Render Engine > RenderMan",
-    "description": "RenderMan 24 integration",
+    "description": "RenderMan 25 integration",
     "doc_url": "https://rmanwiki.pixar.com/display/RFB",
-    "warning": "",
+    "warning": "BETA 1",
     "category": "Render"}
 
 __RMAN_ADDON_LOADED__ = False

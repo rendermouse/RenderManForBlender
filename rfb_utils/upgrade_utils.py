@@ -127,6 +127,8 @@ def upgrade_scene(bl_scene):
             if version < version_str:
                 rfb_log().debug('Upgrade scene to %s' % version_str)
                 fn(scene)
+
+        scene.renderman.renderman_version = rman_constants.RMAN_SUPPORTED_VERSION_STRING                
                
 def update_version(bl_scene):
     if bpy.context.engine != 'PRMAN_RENDER':

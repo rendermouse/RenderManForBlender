@@ -241,6 +241,7 @@ class PRMAN_PT_Renderman_UI_Panel(bpy.types.Panel, _RManPanelHeader):
         op.module = "RenderManForBlender"
         rman_pack_scene = rfb_icons.get_icon('rman_package_scene')
         box.operator("renderman.scene_package", icon_value=rman_pack_scene.icon_id)
+        box.operator("renderman.upgrade_scene", icon='FILE_REFRESH')
 
         layout.separator()
         # RenderMan Doc
