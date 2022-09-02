@@ -417,8 +417,6 @@ class RmanRender(object):
         self._start_prman_begin()
 
         # hold onto this or python will unload it
-        self.preload_xpu = None
-        self.preload_impl_openvdb = None
         self.preloaded_dsos = list()
 
         preload_dsos(self)
