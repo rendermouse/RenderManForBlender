@@ -235,21 +235,20 @@ def preload_dsos(rman_render):
     if sys.platform != 'linux':
         return
 
+    plugins = [
+        'lib/libxpu.so',
+        'lib/plugins/impl_openvdb.so',
+    ]
+
     tree = envconfig().rmantree    
-    xpu_path = os.path.join(tree, 'lib', 'libxpu.so')
-    implopenvdb_path = os.path.join(tree, 'lib', 'plugins', 'impl_openvdb.so')
 
-    try:
-        rman_render.preload_xpu = ctypes.CDLL(xpu_path)        
-    except OSError as error:
-        rfb_log().debug('Failed to preload xpu: {0}'.format(error))
-        return        
+    for plugin in plugins:
+        plugin_path = os.path.join(tree, plugin)
+        try:
+            rman_render.preloaded_dsos.append(ctypes.CDLL(plugin_path))
+        except OSError as error:
+            rfb_log().debug('Failed to preload {0}: {1}'.format(plugin_path, error))
 
-    try:
-        rman_render.preload_impl_openvdb = ctypes.CDLL(implopenvdb_path)
-    except OSError as error:
-        rfb_log().debug('Failed to preload openvdb: {0}'.format(error))
-        return        
 
 class BlRenderResultHelper:
     def __init__(self, rman_render, dspy_dict):
@@ -420,6 +419,7 @@ class RmanRender(object):
         # hold onto this or python will unload it
         self.preload_xpu = None
         self.preload_impl_openvdb = None
+        self.preloaded_dsos = list()
 
         preload_dsos(self)
 
