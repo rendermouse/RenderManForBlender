@@ -43,12 +43,20 @@ class SHADING_OT_convert_all_renderman_nodetree(bpy.types.Operator):
 
         # convert cycles vis settings
         for ob in context.scene.objects:
-            if not ob.cycles_visibility.camera:
-                ob.renderman.visibility_camera = False
-            if not ob.cycles_visibility.diffuse or not ob.cycles_visibility.glossy:
-                ob.renderman.visibility_trace_indirect = False
-            if not ob.cycles_visibility.transmission:
-                ob.renderman.visibility_trace_transmission = False
+            if hasattr(ob, 'cycles_visibility'):
+                if not ob.cycles_visibility.camera:
+                    ob.renderman.rman_visibilityCamera = "0"
+                if not ob.cycles_visibility.diffuse or not ob.cycles_visibility.glossy:
+                    ob.renderman.rman_visibilityIndirect = "0"
+                if not ob.cycles_visibility.transmission:
+                    ob.renderman.rman_visibilityTransmission = "0"
+            else:
+                if not ob.visible_camera:
+                    ob.renderman.rman_visibilityCamera = "0"
+                if not ob.visible_diffuse or not ob.visible_glossy:
+                    ob.renderman.rman_visibilityIndirect = "0"
+                if not ob.visible_transmission:
+                    ob.renderman.rman_visibilityTransmission = "0"                    
 
             if ob.type == 'LIGHT' and not ob.data.use_nodes:
                 if ob.data.type == 'POINT':
