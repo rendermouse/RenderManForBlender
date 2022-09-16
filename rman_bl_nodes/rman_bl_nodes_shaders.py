@@ -710,6 +710,10 @@ class RendermanOutputNode(RendermanShadingNode):
     # updates
     def update(self):
         for link in self.new_links:
+            if not hasattr(link.from_socket, 'renderman_type'):
+                continue
+            if not hasattr(link.to_socket, 'renderman_type'):
+                continue            
             if link.from_socket.renderman_type != link.to_socket.renderman_type:
                 # FIXME: this should removed eventually
                 if link.to_socket.bl_idname == 'RendermanShaderSocket':
