@@ -338,7 +338,7 @@ def generate_node_type(node_desc, is_oso=False):
             self.outputs.new('RendermanNodeSocketLight', "light_out", identifier="Light")
         elif self.renderman_node_type == 'lightfilter':
             node_add_inputs(self, name, self.prop_names)
-            self.outputs.new('RendermanNodeSocketLightFilter', "lightfilter_out", idenitifer="LightFilter")            
+            self.outputs.new('RendermanNodeSocketLightFilter', "lightfilter_out", identifier="LightFilter")            
         elif self.renderman_node_type == 'displace':
             self.outputs.new('RendermanNodeSocketDisplacement', "displace_out", identifier="Displacement")
             node_add_inputs(self, name, self.prop_names)
