@@ -179,7 +179,7 @@ class RendermanShadingNode(bpy.types.ShaderNode):
             nt = node.id_data
             layout.enabled = (nt.library is None)
             layout.template_color_ramp(
-                    ramp_node, 'color_ramp')   
+                    ramp_node, 'color_ramp')                  
             return                            
         elif bl_prop_info.widget == 'floatramp':
             node_group = self.rman_fake_node_group_ptr 
@@ -197,7 +197,10 @@ class RendermanShadingNode(bpy.types.ShaderNode):
             nt = node.id_data
             layout.enabled = (nt.library is None)
             layout.template_curve_mapping(
-                    ramp_node, 'mapping')                   
+                    ramp_node, 'mapping')         
+            interp_name = '%s_Interpolation' % prop_name
+            if hasattr(node, interp_name):
+                layout.prop(node, interp_name, text='Ramp Interpolation')                              
             return
                     
         if prop_name not in node.inputs:

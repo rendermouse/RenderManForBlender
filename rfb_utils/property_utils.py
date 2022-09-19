@@ -651,8 +651,8 @@ def set_ramp_rixparams(node, prop_name, prop, param_type, params):
             params.SetFloatArray('%s_Knots' % prop_name, knots, len(knots))
             params.SetFloatArray('%s_Floats' % prop_name, vals, len(vals))    
             
-            # Blender doesn't have an interpolation selection for float ramps. Default to catmull-rom
-            interp = 'catmull-rom'
+            interp_name = '%s_Interpolation' % prop_name
+            interp = getattr(node, interp_name, 'linear')
             params.SetString("%s_Interpolation" % prop_name, interp )         
         else:
             # this might be from a linked file
@@ -677,7 +677,8 @@ def set_ramp_rixparams(node, prop_name, prop, param_type, params):
             params.SetFloatArray('%s_Knots' % prop_name, knots, len(knots))
             params.SetFloatArray('%s_Floats' % prop_name, vals, len(vals))   
 
-            interp = 'catmull-rom'
+            interp_name = '%s_Interpolation' % prop_name
+            interp = getattr(node, interp_name, 'linear')
             params.SetString("%s_Interpolation" % prop_name, interp )          
 
 def set_array_rixparams(node, rman_sg_node, mat_name, bl_prop_info, prop_name, prop, params):   

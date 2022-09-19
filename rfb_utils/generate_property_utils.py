@@ -46,6 +46,61 @@ def colorspace_names_list():
         pass                
     return items
 
+def generate_string_enum(sp, param_label, param_default, param_help, set_function, update_function):
+    prop = None
+    if 'ocio_colorspaces' in sp.options:
+        def colorspace_names_options(self, context):
+            items = []
+            items.append(('Disabled', 'Disabled', ''))
+            items.extend(colorspace_names_list())
+            return items
+
+        prop = EnumProperty(name=param_label,
+                            description=param_help,
+                            items=colorspace_names_options,
+                            set=set_function,
+                            update=update_function)                
+    else:            
+        items = []
+        
+        if param_default == '' or param_default == "''":
+            param_default = __RMAN_EMPTY_STRING__
+
+        in_items = False
+
+        if isinstance(sp.options, list):
+            for v in sp.options:
+                if v == '' or v == "''":
+                    v = __RMAN_EMPTY_STRING__
+                items.append((str(v), str(v), ''))         
+                if param_default == str(v):
+                    in_items = True
+        else:                
+            for k,v in sp.options.items():
+                if v == '' or v == "''":
+                    v = __RMAN_EMPTY_STRING__
+                items.append((str(v), str(k), ''))         
+                if param_default == str(v):
+                    in_items = True
+
+        if in_items:
+            prop = EnumProperty(name=param_label,
+                                default=param_default, description=param_help,
+                                items=items,
+                                set=set_function,
+                                update=update_function)
+        else:
+            # for strings, assume the first item is the default
+            k = items[0][1]
+            items[0] = (param_default, k, '' )
+            prop = EnumProperty(name=param_label,
+                                default=param_default, description=param_help,
+                                items=items,
+                                set=set_function,
+                                update=update_function)      
+
+    return prop     
+
 def generate_colorspace_menu(node, param_name):
     '''Generate a colorspace enum property for the incoming parameter name
 
@@ -445,63 +500,15 @@ def generate_property(node, sp, update_function=None, set_function=None):
                                   description=param_help)            
 
         elif param_widget in ['mapper', 'popup']:
-            if 'ocio_colorspaces' in sp.options:
-                def colorspace_names_options(self, context):
-                    items = []
-                    items.append(('Disabled', 'Disabled', ''))
-                    items.extend(colorspace_names_list())
-                    return items
-
-                prop = EnumProperty(name=param_label,
-                                    description=param_help,
-                                    items=colorspace_names_options,
-                                    set=set_function,
-                                    update=update_function)                
-            else:            
-                items = []
-                
-                if param_default == '' or param_default == "''":
-                    param_default = __RMAN_EMPTY_STRING__
-
-                in_items = False
-
-                if isinstance(sp.options, list):
-                    for v in sp.options:
-                        if v == '' or v == "''":
-                            v = __RMAN_EMPTY_STRING__
-                        items.append((str(v), str(v), ''))         
-                        if param_default == str(v):
-                            in_items = True
-                else:                
-                    for k,v in sp.options.items():
-                        if v == '' or v == "''":
-                            v = __RMAN_EMPTY_STRING__
-                        items.append((str(v), str(k), ''))         
-                        if param_default == str(v):
-                            in_items = True
-
-                if in_items:
-                    prop = EnumProperty(name=param_label,
-                                        default=param_default, description=param_help,
-                                        items=items,
-                                        set=set_function,
-                                        update=update_function)
-                else:
-                    # for strings, assume the first item is the default
-                    k = items[0][1]
-                    items[0] = (param_default, k, '' )
-                    prop = EnumProperty(name=param_label,
-                                        default=param_default, description=param_help,
-                                        items=items,
-                                        set=set_function,
-                                        update=update_function)                    
+            prop = generate_string_enum(sp, param_label, param_default, param_help, set_function, update_function)
 
         elif param_widget == 'bl_scenegraphlocation':
             reference_type = eval(sp.options['nodeType'])
             prop = PointerProperty(name=param_label, 
                         description=param_help,
-                        type=reference_type)            
-
+                        type=reference_type)      
+        elif param_widget == 'null' and hasattr(sp, 'options'):
+            prop = generate_string_enum(sp, param_label, param_default, param_help, set_function, update_function)
         else:
             prop = StringProperty(name=param_label,
                                 default=str(param_default),
