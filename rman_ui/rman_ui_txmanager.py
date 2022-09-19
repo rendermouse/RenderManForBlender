@@ -534,7 +534,11 @@ class PRMAN_OT_Renderman_txmanager_refresh(Operator):
             else:
                 params.bumpRough = "-1"                
     
-            item.tooltip = '\n' + item.nodeID + "\n" + str(txfile)
+            try:
+                item.tooltip = '\n' + item.nodeID + "\n" + str(txfile)
+            except:
+                rfb_log().debug("Could not set tooltip for: %s" % item.name)
+                pass
        
         PRMAN_PT_Renderman_txmanager_list.refresh_panel(context)
 
