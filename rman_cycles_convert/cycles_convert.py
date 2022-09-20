@@ -122,7 +122,7 @@ def convert_cycles_node(nt, node, location=None):
             rman_node = nt.nodes.new(node_name)            
             return rman_node
 
-        node_name = __BL_NODES_MAP__.get(bxdf_name)
+        node_name = __BL_NODES_MAP__.get(rman_name)
         rman_node = nt.nodes.new(node_name)
         convert_func(nt, node, rman_node)
         converted_nodes[node.name] = rman_node.name
