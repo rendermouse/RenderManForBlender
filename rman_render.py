@@ -347,7 +347,7 @@ class BlRenderResultHelper:
                         filepath = '%s_beauty_raw.exr' % (toks[0])
                     
                     if use_ice:
-                        buffer = self.rman_render._get_buffer(self.width, self.height, image_num=i, raw_buffer=True, as_flat=True)
+                        buffer = self.rman_render._get_buffer(self.width, self.height, image_num=i, raw_buffer=True, as_flat=False)
                         if buffer is None:
                             continue
 
@@ -694,7 +694,10 @@ class RmanRender(object):
         if self.rman_render_into == 'blender':  
             dspy_dict = display_utils.get_dspy_dict(self.rman_scene, include_holdouts=False)
             bl_rr_helper = BlRenderResultHelper(self, dspy_dict)
-            bl_rr_helper.write_aovs = (use_compositor and rm.use_bl_compositor_write_aovs)
+            if for_background:
+                bl_rr_helper.write_aovs = (use_compositor and rm.use_bl_compositor_write_aovs)
+            else:
+                bl_rr_helper.write_aovs = True
             bl_rr_helper.register_passes()
                               
         self.start_stats_thread()
