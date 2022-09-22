@@ -987,6 +987,17 @@
         },
         {
             "panel": "RENDER_PT_renderman_advanced_settings",
+            "name": "volume_aggregatespace",
+            "label": "Volume Aggregate Space",
+            "riopt": "volume:aggregatespace",
+            "type": "string",
+            "default": "world",
+            "widget": "popup",
+            "help": "Space in which to compute aggregate volume metadata. Valid spaces are 'world' and 'camera'. Generally the space should be chosen to minimize the range of motion of the volumes.",
+            "options": "world|camera"
+        },        
+        {
+            "panel": "RENDER_PT_renderman_advanced_settings",
             "page": "Open Shading Language",
             "name": "opt_oslSIMDEnable",
             "label": "Enable Batched OSL",
