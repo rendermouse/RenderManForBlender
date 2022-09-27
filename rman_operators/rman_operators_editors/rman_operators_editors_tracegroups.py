@@ -28,7 +28,7 @@ if rfb_qt:
             super(TraceGroupsQtAppTimed, self).__init__()
 
         def execute(self, context):
-            self._window = TraceGroupsQtAppTimed()
+            self._window = TraceGroupsQtWrapper()
             return super(TraceGroupsQtAppTimed, self).execute(context)
 
     class StandardItem(QtGui.QStandardItem):
@@ -437,7 +437,7 @@ class PRMAN_OT_Renderman_Open_Groups_Editor(CollectionPanel, bpy.types.Operator)
             if sys.platform == "darwin":
                 rfb_qt.run_with_timer(__TRACE_GROUPS_WINDOW__, TraceGroupsQtWrapper)   
             else:
-                wm.trace_groups_qt_app_timed()     
+                bpy.ops.wm.trace_groups_qt_app_timed()     
 
             return {'RUNNING_MODAL'}       
 
