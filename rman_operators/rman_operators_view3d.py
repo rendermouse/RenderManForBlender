@@ -108,7 +108,7 @@ class PRMAN_OT_RM_Add_RenderMan_Geometry(bpy.types.Operator):
                 bxdf = output.inputs['bxdf_in'].links[0].from_node
                 bxdf.densityFloatPrimVar = 'density'           
 
-        if self.properties.rman_open_filebrowser:
+        if self.properties.rman_open_filebrowser or self.filepath != "":
             if rm.primitive == 'DELAYED_LOAD_ARCHIVE':
                 ob.empty_display_type = 'CUBE'
                 rm.path_archive = self.properties.filepath
