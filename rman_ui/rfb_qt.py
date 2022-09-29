@@ -90,6 +90,8 @@ class RmanQtWrapper(QtWidgets.QDialog):
         super().__init__()        
         if sys.platform == "darwin":
             self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+        else:
+            self.setWindowState(self.windowState() & ~QtCore.Qt.WindowMinimized | QtCore.Qt.WindowActive)
 
     def closeEvent(self, event):
         event.accept()
