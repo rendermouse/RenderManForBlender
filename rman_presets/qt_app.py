@@ -32,6 +32,14 @@ class PresetBrowserWrapper(rfb_qt.RmanQtWrapper):
 
         self.resize(1024, 1024)
         self.setWindowTitle('RenderMan Preset Browser')
+
+        if sys.platform != "darwin":
+            bg_role = self.backgroundRole()
+            plt = self.palette()
+            bg_color = plt.color(bg_role)  
+            bg_color.setRgb(70, 70, 70)
+            plt.setColor(bg_role, bg_color)      
+            self.setPalette(plt)              
         
         self.hostPrefs = bl_pb_core.get_host_prefs()
         self.ui = rui.Ui(self.hostPrefs, parent=self)

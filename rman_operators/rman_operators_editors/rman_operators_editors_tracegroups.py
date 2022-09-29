@@ -432,6 +432,7 @@ class PRMAN_OT_Renderman_Open_Groups_Editor(CollectionPanel, bpy.types.Operator)
 
     def invoke(self, context, event):
 
+        '''
         if rfb_qt and get_pref('rman_ui_framework') == 'QT':
             global __TRACE_GROUPS_WINDOW__
             if sys.platform == "darwin":
@@ -440,6 +441,7 @@ class PRMAN_OT_Renderman_Open_Groups_Editor(CollectionPanel, bpy.types.Operator)
                 bpy.ops.wm.trace_groups_qt_app_timed()     
 
             return {'RUNNING_MODAL'}       
+        '''
 
         wm = context.window_manager
         width = rfb_config['editor_preferences']['tracesets_editor']['width']
