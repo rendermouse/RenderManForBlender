@@ -447,7 +447,7 @@ class PRMAN_OT_save_asset_to_lib(PRMAN_OT_save_asset_base):
         hostPrefs = rab.get_host_prefs()
         if rab.bl_export_check('material', hdr=None, context=context, include_display_filters=self.include_display_filters):
             self.set_storage_path(context)
-            label = bl_pb_core.asset_name_from_label(self.label)
+            label = self.label
             infodict = dict()
             infodict['metadict'] = {'label': label,
                         'author': self.author,
@@ -521,7 +521,7 @@ class PRMAN_OT_save_lightrig_to_lib(PRMAN_OT_save_asset_base):
     def execute(self, context):
         hostPrefs = rab.get_host_prefs()
         if rab.bl_export_check('lightrigs', hdr=None, context=context):
-            label = bl_pb_core.asset_name_from_label(self.label)
+            label = self.label
             infodict = dict()
             infodict['metadict'] =  {'label': label,
                         'author': self.author,
@@ -592,7 +592,7 @@ class PRMAN_OT_save_envmap_to_lib(PRMAN_OT_save_asset_base):
         if self.label == '':
             self.label = os.path.splitext(os.path.basename(self.properties.filepath))[0]
         if rab.bl_export_check('envmap', hdr=hdr):
-            label = bl_pb_core.asset_name_from_label(self.label)
+            label = self.label
             infodict = dict()
             infodict['metadict'] = {'label': label,
                         'author': self.author,
