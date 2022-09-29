@@ -76,11 +76,11 @@ def bl_export_check(mode, hdr=None, context=None, include_display_filters=False)
 
 def bl_export_material(hostPrefs, categorypath, infodict, previewtype): # pylint: disable=unused-argument
     return bl_export_asset(hostPrefs._nodesToExport, 'nodeGraph', infodict, categorypath,
-                        hostPrefs.cfg, previewtype)
+                        hostPrefs.cfg, previewtype, isLightRig=False)
 
 def bl_export_LightRig(hostPrefs, categorypath, infodict, previewtype): # pylint: disable=unused-argument
     return bl_export_asset(hostPrefs._nodesToExport, 'nodeGraph', infodict, categorypath,
-                        hostPrefs.cfg, previewtype)
+                        hostPrefs.cfg, previewtype, isLightRig=True)
 
 def bl_export_envmap(hostPrefs, categorypath, infodict, previewtype): # pylint: disable=unused-argument
     return bl_export_asset(hostPrefs._nodesToExport, 'envMap', infodict, categorypath,
@@ -144,7 +144,7 @@ def bl_import_asset(filepath):
     return ''    
 
 def bl_export_asset(nodes, atype, infodict, category, cfg, renderPreview='std',
-                 alwaysOverwrite=False):
+                 alwaysOverwrite=False, isLightRig=False):
     """Exports a nodeGraph or envMap as a RenderManAsset.
 
     Args:
@@ -180,14 +180,7 @@ def bl_export_asset(nodes, atype, infodict, category, cfg, renderPreview='std',
     rfb_log().debug('      rules = %s', ocio_config['rules'])
     Asset.ocio = ocio_config    
 
-    asset_type = ''
     hostPrefs = get_host_prefs()    
-    if atype == 'nodeGraph':
-        rel_path = os.path.relpath(category, hostPrefs.getSelectedLibrary())   
-        if rel_path.startswith('Materials'):
-            asset_type = 'Materials'
-        else:
-            asset_type = 'LightRigs'    
 
     # Add user metadata
     #
@@ -207,7 +200,7 @@ def bl_export_asset(nodes, atype, infodict, category, cfg, renderPreview='std',
     # parse maya scene
     #
     if atype == "nodeGraph":
-        if asset_type == 'Materials':
+        if not isLightRig:
             bl_pb_core.export_material_preset(hostPrefs.blender_material, nodes['material'], hostPrefs.renderman_output_node, Asset)
             if nodes['displayfilter']:
                 bl_pb_core.export_displayfilter_nodes(hostPrefs.bl_world, nodes['displayfilter'], Asset)
@@ -220,11 +213,12 @@ def bl_export_asset(nodes, atype, infodict, category, cfg, renderPreview='std',
 
     #  Get path to our library
     #
-    assetPath = FilePath(category)
+    assetPath = ral.getAbsCategoryPath(cfg, category)
 
     #  Create our directory
     #
-    dirPath = assetPath.join(label)
+    assetDir = bl_pb_core.asset_name_from_label(str(label))
+    dirPath = assetPath.join(assetDir)
     if not dirPath.exists():
         os.mkdir(dirPath)
 
@@ -236,12 +230,6 @@ def bl_export_asset(nodes, atype, infodict, category, cfg, renderPreview='std',
     #
     # print("export_asset: %s..." %   dirPath)
     Asset.save(jsonfile, compact=False)
-
-    if asset_type == 'Materials':
-        ral.renderAssetPreview(Asset, progress=None, rmantree=envconfig().rmantree)
-    elif asset_type == 'LightRigs':
-        ral.renderAssetPreview(Asset, progress=None, rmantree=envconfig().rmantree)
-    elif Asset._type == 'envMap':
-        ral.renderAssetPreview(Asset, progress=None, rmantree=envconfig().rmantree)
+    ral.renderAssetPreview(Asset, progress=None, rmantree=envconfig().rmantree)
 
     return True
