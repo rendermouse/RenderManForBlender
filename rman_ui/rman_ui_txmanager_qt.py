@@ -10,6 +10,7 @@ import bpy
 import hashlib
 
 from ..rfb_logger import rfb_log
+from ..rman_constants import RFB_HELP_URL
 
 __QT_LOADED__ = True
 __TXMANAGER_WINDOW__ = None 
@@ -45,7 +46,10 @@ def _append_to_tx_list(file_path_list):
         txmgr.add_texture(texid, fpath)
     txmgr.update_ui_list()
     # make sure to restart the queue.
-    txmgr.txmake_all(start_queue=True, blocking=False)    
+    txmgr.txmake_all(start_queue=True, blocking=False)   
+
+def help_func(url):
+    bpy.ops.wm.url_open(url = RFB_HELP_URL)
 
 def create_widget():
     global __TXMANAGER_WINDOW__
@@ -56,7 +60,7 @@ def create_widget():
         __TXMANAGER_WINDOW__ = rui.TxManagerUI(None, txmanager=mgr, 
                                                 parse_scene_func=parse_scene,
                                                 append_tx_func=_append_to_tx_list,
-                                                help_func=None)
+                                                help_func=help_func)
         mgr.ui = __TXMANAGER_WINDOW__
     return __TXMANAGER_WINDOW__
 

@@ -5,6 +5,7 @@ from ..rfb_utils import prefs_utils
 from ..rfb_logger import rfb_log
 from .rman_ui_base import _RManPanelHeader
 from ..rman_render import RmanRender
+from ..rman_constants import RFB_HELP_URL
 import bpy
 
 class PRMAN_PT_Renderman_UI_Panel(bpy.types.Panel, _RManPanelHeader):
@@ -248,7 +249,7 @@ class PRMAN_PT_Renderman_UI_Panel(bpy.types.Panel, _RManPanelHeader):
         layout.label(text="Help:")
         rman_help = rfb_icons.get_icon("rman_help")
         layout.operator("wm.url_open", text="RenderMan Docs",
-                        icon_value=rman_help.icon_id).url = "https://rmanwiki.pixar.com/display/RFB24"
+                        icon_value=rman_help.icon_id).url = RFB_HELP_URL
         rman_info = rfb_icons.get_icon("rman_blender")
         layout.operator("renderman.about_renderman", icon_value=rman_info.icon_id)
 
