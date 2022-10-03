@@ -35,6 +35,7 @@ def node_add_input(node, param_type, param_name, meta, param_label):
     socket = node.inputs.new(
         __RMAN_SOCKET_MAP__[param_type], param_name, identifier=param_label)
     socket.link_limit = 1
+    socket.rman_label = param_label
 
     if param_type in ['struct',  'vstruct', 'void']:
         socket.hide_value = True

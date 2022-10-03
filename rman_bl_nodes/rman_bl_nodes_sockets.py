@@ -223,10 +223,13 @@ __RENDERMAN_TYPES_SOCKET_INTERFACES__ =[
 
 class RendermanSocket:
     ui_open: BoolProperty(name='UI Open', default=True)
+    rman_label: StringProperty(name="rman_label", default="")
 
     def get_pretty_name(self, node):
         if node.bl_idname in __CYCLES_GROUP_NODES__:
             return self.name
+        elif self.rman_label != '':
+            return self.rman_label
         else:
             return self.identifier
 
