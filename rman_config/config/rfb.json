@@ -81,7 +81,7 @@
             "diffuse_color": ["diffuseColor"]
         },
         "LamaDiffuse": {
-            "diffuse_color": ["color"]
+            "diffuse_color": ["diffuseColor"]
         }                   
     },
     "disabled_nodes": [

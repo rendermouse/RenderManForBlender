@@ -104,13 +104,79 @@ def upgrade_250(scene):
             output = shadergraph_utils.find_node_from_nodetree(nt, 'RendermanProjectionsOutputNode')
             if 'Projection' in output.inputs:
                 output.inputs['Projection'].name = 'projection_in'
-            
+
+def upgrade_250_1(scene):   
+    '''
+    Upgrade lama nodes
+
+    25.0b2 changed the names of input parameters for lama nodes,
+    because they were using OSL reserved keywords (ex: color)
+    '''         
+
+    def copy_param(old_node, new_node, old_nm, new_nm):
+        if old_node.inputs[old_nm].is_linked:            
+            connected_socket = old_node.inputs[old_nm].links[0].from_socket
+            nt.links.new(connected_socket, new_node.inputs[new_nm])
+        else:
+            setattr(new_node, new_nm, getattr(n, old_nm))
+
+    for mat in bpy.data.materials:
+        if mat.node_tree is None:
+            continue
+        nt = mat.node_tree
+        nodes = [n for n in nt.nodes]
+        for n in nodes:
+            new_node = None
+            if n.bl_label == 'LamaDiffuse':
+                new_node = nt.nodes.new('LamaDiffuseBxdfNode')
+                copy_param(n, new_node, 'color', 'diffuseColor')
+                copy_param(n, new_node, 'normal', 'diffuseNormal')
+            elif n.bl_label == 'LamaSheen':
+                new_node = nt.nodes.new('LamaSheenBxdfNode')
+                copy_param(n, new_node, 'color', 'sheenColor')
+                copy_param(n, new_node, 'normal', 'sheenNormal')
+            elif n.bl_label == 'LamaConductor':
+                new_node = nt.nodes.new('LamaConductorBxdfNode')
+                copy_param(n, new_node, 'normal', 'conductorNormal')                
+            elif n.bl_label == 'LamaDielectric':
+                new_node = nt.nodes.new('LamaDielectricBxdfNode')
+                copy_param(n, new_node, 'normal', 'dielectricNormal')
+            elif n.bl_label == 'LamaEmission':
+                new_node = nt.nodes.new('LamaEmissionBxdfNode')
+                copy_param(n, new_node, 'color', 'emissionColor')        
+            elif n.bl_label == 'LamaGeneralizedSchlick':
+                new_node = nt.nodes.new('LamaGeneralizedSchlickBxdfNode')
+                copy_param(n, new_node, 'normal', 'genSchlickNormal')  
+            elif n.bl_label == 'LamaSSS':
+                new_node = nt.nodes.new('LamaSSSBxdfNode')
+                copy_param(n, new_node, 'color', 'sssColor')
+                copy_param(n, new_node, 'normal', 'sssNormal')
+            elif n.bl_label == 'LamaTranslucent':
+                new_node = nt.nodes.new('LamaTranslucentBxdfNode')
+                copy_param(n, new_node, 'color', 'translucentColor')
+                copy_param(n, new_node, 'normal', 'translucentNormal')
+            elif n.bl_label == 'LamaTricolorSSS':
+                new_node = nt.nodes.new('LamaTricolorSSSBxdfNode')
+                copy_param(n, new_node, 'normal', 'sssNormal')                
+
+            if new_node:
+                new_node.location[0] = n.location[0]
+                new_node.location[1] = n.location[1]      
+                if n.outputs['bxdf_out'].is_linked:
+                    for link in n.outputs['bxdf_out'].links:
+                        connected_socket = link.to_socket
+                        nt.links.new(new_node.outputs['bxdf_out'], connected_socket)
+                node_name = n.name
+                nt.nodes.remove(n)
+                new_node.name = node_name   
+                new_node.select = False                       
 
 __RMAN_SCENE_UPGRADE_FUNCTIONS__ = OrderedDict()
     
 __RMAN_SCENE_UPGRADE_FUNCTIONS__['24.2'] = upgrade_242
 __RMAN_SCENE_UPGRADE_FUNCTIONS__['24.3'] = upgrade_243
 __RMAN_SCENE_UPGRADE_FUNCTIONS__['25.0'] = upgrade_250
+__RMAN_SCENE_UPGRADE_FUNCTIONS__['25.0.1'] = upgrade_250_1
 
 def upgrade_scene(bl_scene):
     global __RMAN_SCENE_UPGRADE_FUNCTIONS__
@@ -123,15 +189,53 @@ def upgrade_scene(bl_scene):
             # we started adding a renderman_version property in 24.1
             version = '24.1'
 
+        scene_major = None
+        scene_minor = None
+        scene_patch = None
+        tokens = version.split('.')
+        scene_major = tokens[0]
+        scene_minor = tokens[1]
+        if len(tokens) > 2:
+            scene_patch = tokens[2]
+
         for version_str, fn in __RMAN_SCENE_UPGRADE_FUNCTIONS__.items():
-            if version < version_str:
+            upgrade_major = None
+            upgrade_minor = None
+            upgrade_patch = None
+            tokens = version_str.split('.')
+            upgrade_major = tokens[0]
+            upgrade_minor = tokens[1]
+            if len(tokens) > 2:
+                upgrade_patch = tokens[2]
+
+            if scene_major < upgrade_major:
                 rfb_log().debug('Upgrade scene to %s' % version_str)
                 fn(scene)
+                continue
 
-        scene.renderman.renderman_version = rman_constants.RMAN_SUPPORTED_VERSION_STRING                
+            if scene_major == upgrade_major and scene_minor < upgrade_minor:
+                rfb_log().debug('Upgrade scene to %s' % version_str)
+                fn(scene)
+                continue
+
+            if not scene_patch and not upgrade_patch:
+                continue
+
+            if not scene_patch and upgrade_patch:
+                # The scene version doesn't include a patch version
+                # This is probably from an older version i.e.: < 25.0b1
+                rfb_log().debug('Upgrade scene to %s' % version_str)
+                fn(scene)
+                continue
+
+            if scene_patch < upgrade_patch:
+                rfb_log().debug('Upgrade scene to %s' % version_str)
+                fn(scene)
+            
+        scene.renderman.renderman_version = rman_constants.RFB_SCENE_VERSION_STRING                
                
 def update_version(bl_scene):
     if bpy.context.engine != 'PRMAN_RENDER':
         return    
     for scene in bpy.data.scenes:
-        scene.renderman.renderman_version = rman_constants.RMAN_SUPPORTED_VERSION_STRING
+        scene.renderman.renderman_version = rman_constants.RFB_SCENE_VERSION_STRING
