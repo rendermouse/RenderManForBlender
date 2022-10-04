@@ -19,10 +19,15 @@ class BlHair:
         self.nverts = 0
         self.hair_width = []
         self.index = []
+        self.bl_hair_attributes = []
 
-    @property
-    def constant_width(self):
-        return (len(self.hair_width) < 2)
+class BlHairAttribute:
+
+    def __init__(self):
+        self.rman_type = ''
+        self.rman_name = ''
+        self.rman_detail = None
+        self.values = []
 
 class RmanHairCurvesTranslator(RmanTranslator):
 
@@ -77,13 +82,19 @@ class RmanHairCurvesTranslator(RmanTranslator):
             width_detail = "vertex" 
             primvar.SetFloatDetail(self.rman_scene.rman.Tokens.Rix.k_width, bl_curve.hair_width, width_detail)
             
-            '''
-            if len(bl_curve.scalpST):
-                primvar.SetFloatArrayDetail("scalpST", bl_curve.scalpST, 2, "uniform")
-
-            if len(bl_curve.mcols):
-                primvar.SetColorDetail("Cs", bl_curve.mcols, "uniform")
-            '''
+            for hair_attr in bl_curve.bl_hair_attributes:
+                if hair_attr.rman_detail is None:
+                    continue
+                if hair_attr.rman_type == "float":
+                    primvar.SetFloatDetail(hair_attr.rman_name, hair_attr.values, hair_attr.rman_detail)
+                elif hair_attr.rman_type == "float2":
+                    primvar.SetFloatArrayDetail(hair_attr.rman_name, hair_attr.values, 2, hair_attr.rman_detail)
+                elif hair_attr.rman_type == "vector":
+                    primvar.SetVectorDetail(hair_attr.rman_name, hair_attr.values, hair_attr.rman_detail)
+                elif hair_attr.rman_type == 'color':
+                    primvar.SetColorDetail(hair_attr.rman_name, hair_attr.values, hair_attr.rman_detail)
+                elif hair_attr.rman_type == 'integer':
+                    primvar.SetIntegerDetail(hair_attr.rman_name, hair_attr.values, hair_attr.rman_detail)
                     
             curves_sg.SetPrimVars(primvar)
             rman_sg_hair.sg_node.AddChild(curves_sg)  
@@ -93,6 +104,74 @@ class RmanHairCurvesTranslator(RmanTranslator):
         rman_sg_hair.sg_node.AddChild(rman_sg_group.sg_node)                
         rman_sg_hair.instances[rman_sg_group.db_name] = rman_sg_group
         rman_sg_group.rman_sg_group_parent = rman_sg_hair
+
+    def get_attributes(self, ob, bl_curve):
+        for attr in ob.data.attributes:
+            if attr.name in ['position']:
+                continue
+            hair_attr = None
+            if attr.data_type == 'FLOAT2':
+                hair_attr = BlHairAttribute()
+                hair_attr.rman_name = attr.name
+                hair_attr.rman_type = 'float2'
+
+                npoints = len(attr.data)
+                values = np.zeros(npoints*2, dtype=np.float32)
+                attr.data.foreach_get('vector', values)
+                values = np.reshape(values, (npoints, 2))
+                hair_attr.values = values.tolist()
+
+            elif attr.data_type == 'FLOAT_VECTOR':
+                hair_attr = BlHairAttribute()
+                hair_attr.rman_name = attr.name
+                hair_attr.rman_type = 'vector'
+
+                npoints = len(attr.data)
+                values = np.zeros(npoints*3, dtype=np.float32)
+                attr.data.foreach_get('vector', values)
+                values = np.reshape(values, (npoints, 3))
+                hair_attr.values = values.tolist()
+            
+            elif attr.data_type in ['BYTE_COLOR', 'FLOAT_COLOR']:
+                hair_attr = BlHairAttribute()
+                hair_attr.rman_name = attr.name
+                if attr.name == 'color':
+                    hair_attr.rman_name = 'Cs'
+                hair_attr.rman_type = 'color'
+
+                npoints = len(attr.data)
+                values = np.zeros(npoints*4, dtype=np.float32)
+                attr.data.foreach_get('color', values)
+                values = np.reshape(values, (npoints, 4))
+                hair_attr.values .extend(values[0:, 0:3].tolist())
+
+            elif attr.data_type == 'FLOAT':
+                hair_attr = BlHairAttribute()
+                hair_attr.rman_name = attr.name
+                hair_attr.rman_type = 'float'
+                hair_attr.array_len = -1
+
+                npoints = len(attr.data)
+                values = np.zeros(npoints, dtype=np.float32)
+                attr.data.foreach_get('value', values)
+                hair_attr.values = values.tolist()                          
+            elif attr.data_type in ['INT8', 'INT']:
+                hair_attr = BlHairAttribute()
+                hair_attr.rman_name = attr.name
+                hair_attr.rman_type = 'integer'
+                hair_attr.array_len = -1
+
+                npoints = len(attr.data)
+                values = np.zeros(npoints, dtype=np.int)
+                attr.data.foreach_get('value', values)
+                hair_attr.values = values.tolist()                
+            
+            if hair_attr:
+                bl_curve.bl_hair_attributes.append(hair_attr)
+                if len(attr.data) == len(ob.data.curves):
+                    hair_attr.rman_detail = 'uniform'
+                elif len(attr.data) == len(ob.data.points):
+                    hair_attr.rman_detail = 'vertex'        
 
     def _get_strands_(self, ob):
 
@@ -109,6 +188,9 @@ class RmanHairCurvesTranslator(RmanTranslator):
             curve.points.foreach_get('position', strand_points)
             curve.points.foreach_get('radius', widths)
             strand_points = np.reshape(strand_points, (npoints, 3))
+            if np.count_nonzero(widths) == 0:
+                # radius is 0. Default to 0.005
+                widths.fill(0.005)
             widths = widths * 2
             strand_points = strand_points.tolist()
             widths = widths.tolist()
@@ -126,15 +208,17 @@ class RmanHairCurvesTranslator(RmanTranslator):
             bl_curve.vertsArray.append(vertsInStrand)
             bl_curve.hair_width.extend(widths)
             bl_curve.index.append(curve.index)
-            bl_curve.nverts += vertsInStrand
+            bl_curve.nverts += vertsInStrand           
                
             # if we get more than 100000 vertices, start a new BlHair.  This
             # is to avoid a maxint on the array length
             if bl_curve.nverts > 100000:
+                self.get_attributes(ob, bl_curve)
                 curve_sets.append(bl_curve)
                 bl_curve = BlHair()
 
         if bl_curve.nverts > 0:       
+            self.get_attributes(ob, bl_curve)
             curve_sets.append(bl_curve)
 
         return curve_sets              
