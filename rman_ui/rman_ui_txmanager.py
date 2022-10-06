@@ -773,9 +773,7 @@ classes = [
 
 def register():
 
-    from ..rfb_utils import register_utils
-
-    register_utils.rman_register_classes(classes)     
+    from ..rfb_utils import register_utils    
 
     if get_pref('rman_ui_framework') == 'QT':
         try:
