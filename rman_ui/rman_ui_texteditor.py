@@ -60,6 +60,6 @@ def register():
 def unregister():
     from ..rfb_utils import register_utils
 
-    register_utils.rman_register_classes(classes) 
+    register_utils.rman_unregister_classes(classes) 
 
     bpy.types.TEXT_MT_templates.remove(draw_item)        

@@ -503,5 +503,3 @@ def unregister():
     bpy.types.VIEW3D_MT_object_context_menu.remove(rman_presets_object_menu)
 
     register_utils.rman_unregister_class(PRMAN_OT_Renderman_Presets_Editor)  
-
-    register_utils.rman_register_classes(classes)
