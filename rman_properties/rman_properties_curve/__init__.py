@@ -17,8 +17,6 @@ classes = [
 def register():
     from ...rfb_utils import register_utils
 
-    register_utils.rman_register_classes(classes) 
-
     for cls in classes:
         cls._add_properties(cls, 'rman_properties_curve')
         register_utils.rman_register_class(cls)
