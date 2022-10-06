@@ -40,20 +40,18 @@ classes = [
 ]
 
 def register():
+    from ...rfb_utils import register_utils
+
     for cls in classes:
         cls._add_properties(cls, 'rman_properties_camera')
-        bpy.utils.register_class(cls)
+        register_utils.rman_register_class(cls)
 
     bpy.types.Camera.renderman = PointerProperty(
         type=RendermanCameraSettings, name="Renderman Camera Settings")  
    
 def unregister():
+    from ...rfb_utils import register_utils    
 
     del bpy.types.Camera.renderman
 
-    for cls in classes:
-        try:
-            bpy.utils.unregister_class(cls)
-        except RuntimeError:
-            rfb_log().debug('Could not unregister class: %s' % str(cls))
-            pass     
+    register_utils.rman_unregister_classes(classes)

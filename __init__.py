@@ -29,6 +29,7 @@ import time
 
 from .rfb_utils.prefs_utils import get_pref
 from .rfb_utils import string_utils
+from .rfb_utils import register_utils
 from .rfb_logger import rfb_log
 from .rfb_utils.envconfig_utils import envconfig
 from .rman_constants import RFB_FLOAT3
@@ -305,8 +306,7 @@ classes = [
 ]
 
 def register():
-    for cls in classes:
-        bpy.utils.register_class(cls)
+    register_utils.rman_register_classes(classes)
     
     from . import preferences
     preferences.register()
@@ -328,10 +328,5 @@ def unregister():
         rfb_translations.unregister()
         rman_stats.unregister()
     
-    for cls in classes:
-        try:
-            bpy.utils.unregister_class(cls)
-        except RuntimeError:
-            rfb_log().debug('Could not unregister class: %s' % str(cls))
-            pass
+    register_utils.rman_unregister_classes(classes)
 
