@@ -12,10 +12,7 @@ class BlHair:
 
     def __init__(self):        
         self.points = []
-        self.next_points = []
         self.vertsArray = []
-        self.scalpST = []
-        self.mcols = []
         self.nverts = 0
         self.hair_width = []
         self.index = []
@@ -100,11 +97,6 @@ class RmanHairCurvesTranslator(RmanTranslator):
             rman_sg_hair.sg_node.AddChild(curves_sg)  
             rman_sg_hair.sg_curves_list.append(curves_sg)
         
-    def add_object_instance(self, rman_sg_hair, rman_sg_group):
-        rman_sg_hair.sg_node.AddChild(rman_sg_group.sg_node)                
-        rman_sg_hair.instances[rman_sg_group.db_name] = rman_sg_group
-        rman_sg_group.rman_sg_group_parent = rman_sg_hair
-
     def get_attributes(self, ob, bl_curve):
         for attr in ob.data.attributes:
             if attr.name in ['position']:

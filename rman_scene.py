@@ -914,7 +914,7 @@ class RmanScene(object):
                 # deformation blur
                 if rman_sg_node.is_deforming and seg in rman_sg_node.deform_motion_steps:
                     rman_type = rman_sg_node.rman_type
-                    if rman_type in ['MESH', 'FLUID']:
+                    if rman_type in ['MESH', 'FLUID', 'CURVES']:
                         translator = self.rman_translators.get(rman_type, None)
                         if translator:
                             deform_idx = 0
