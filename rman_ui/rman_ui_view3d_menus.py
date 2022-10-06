@@ -656,8 +656,9 @@ classes = [
 ]
 
 def register():
-    for cls in classes:
-        bpy.utils.register_class(cls)  
+    from ..rfb_utils import register_utils
+
+    register_utils.rman_register_classes(classes)  
 
     bpy.types.VIEW3D_MT_add.prepend(rman_add_object_menu)
     bpy.types.VIEW3D_MT_object_context_menu.prepend(rman_object_context_menu)
@@ -667,9 +668,6 @@ def unregister():
     bpy.types.VIEW3D_MT_add.remove(rman_add_object_menu)
     bpy.types.VIEW3D_MT_object_context_menu.remove(rman_object_context_menu)
 
-    for cls in classes:
-        try:
-            bpy.utils.unregister_class(cls)
-        except RuntimeError:
-            rfb_log().debug('Could not unregister class: %s' % str(cls))
-            pass
+    from ..rfb_utils import register_utils
+
+    register_utils.rman_unregister_classes(classes) 

@@ -6,6 +6,7 @@ from ..rfb_utils.property_callbacks import *
 from ..rfb_utils.rman_socket_utils import node_add_inputs
 from ..rfb_utils.rman_socket_utils import node_add_outputs
 from ..rfb_utils import shadergraph_utils
+from ..rfb_utils import register_utils
 from ..rfb_logger import rfb_log
 from ..rfb_utils.envconfig_utils import envconfig
 from .. import rfb_icons
@@ -483,7 +484,7 @@ def generate_node_type(node_desc, is_oso=False):
             description="Enable or disable this filter",
             default=True)        
 
-    bpy.utils.register_class(ntype)
+    register_utils.rman_register_class(ntype)
 
     if nodeType == 'pattern' and is_oso:
         # This is mainly here for backwards compatability
@@ -527,7 +528,7 @@ def generate_node_type(node_desc, is_oso=False):
                     default=has_textured_params)                                                
                 
         class_generate_properties(osl_node_type, name, node_desc)
-        bpy.utils.register_class(osl_node_type)
+        register_utils.rman_register_class(osl_node_type)
 
     return (typename, ntype)
 
@@ -540,7 +541,7 @@ def register_plugin_to_parent(ntype, name, node_desc, plugin_type, parent):
             setattr(parent, "__annotations__", {})
 
     # register and add to scene_settings
-    bpy.utils.register_class(ntype)
+    register_utils.rman_register_class(ntype)
     settings_name = "%s_settings" % name
     parent.__annotations__["%s_settings" % name] = PointerProperty(type=ntype, name="%s Settings" % name)
     

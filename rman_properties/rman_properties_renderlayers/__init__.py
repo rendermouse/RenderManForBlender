@@ -111,13 +111,14 @@ props_classes = [
 
 def register():
 
+    from ...rfb_utils import register_utils  
+
     for cls,cfg_name in props_classes:
         if cfg_name:
             cls._add_properties(cls, cfg_name)
-        bpy.utils.register_class(cls)    
+        register_utils.rman_register_class(cls)    
 
-    for cls in classes:
-        bpy.utils.register_class(cls)
+    register_utils.rman_register_classes(classes)
 
     bpy.types.ViewLayer.renderman = PointerProperty(
         type=RendermanRenderLayerSettings, name="Renderman RenderLayer Settings")           
@@ -126,16 +127,9 @@ def unregister():
 
     del bpy.types.ViewLayer.renderman
 
-    for cls,cfg_name in props_classes:        
-        try:
-            bpy.utils.unregister_class(cls)
-        except RuntimeError:
-            rfb_log().debug('Could not unregister class: %s' % str(cls))
-            pass 
+    from ...rfb_utils import register_utils      
 
-    for cls in classes:
-        try:
-            bpy.utils.unregister_class(cls)
-        except RuntimeError:
-            rfb_log().debug('Could not unregister class: %s' % str(cls))
-            pass
+    for cls,cfg_name in props_classes:       
+        register_utils.rman_unregister_class(cls) 
+
+    register_utils.rman_unregister_classes(classes)
