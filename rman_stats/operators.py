@@ -18,7 +18,9 @@ class LiveStatsQtAppTimed(rfb_qt.RfbBaseQtAppTimed):
         super(LiveStatsQtAppTimed, self).__init__()
 
     def execute(self, context):
-        self._window = RmanStatsWrapper()
+        global __STATS_WINDOW__
+        __STATS_WINDOW__ = RmanStatsWrapper()
+        self._window = __STATS_WINDOW__
         return super(LiveStatsQtAppTimed, self).execute(context)
     
 class RmanStatsWrapper(rfb_qt.RmanQtWrapper):
@@ -62,8 +64,11 @@ class PRMAN_OT_Open_Stats(bpy.types.Operator):
     def execute(self, context):
 
         global __STATS_WINDOW__
+        if __STATS_WINDOW__ and __STATS_WINDOW__.isVisible():
+            return {'FINISHED'}
+
         if sys.platform == "darwin":
-            rfb_qt.run_with_timer(__STATS_WINDOW__, RmanStatsWrapper)
+            __STATS_WINDOW__ = rfb_qt.run_with_timer(__STATS_WINDOW__, RmanStatsWrapper)
         else:
             bpy.ops.wm.live_stats_qt_app_timed()
          

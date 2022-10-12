@@ -19,7 +19,9 @@ class PresetBrowserQtAppTimed(rfb_qt.RfbBaseQtAppTimed):
         super(PresetBrowserQtAppTimed, self).__init__()
 
     def execute(self, context):
-        self._window = PresetBrowserWrapper()
+        global __PRESET_BROWSER_WINDOW__
+        __PRESET_BROWSER_WINDOW__ = PresetBrowserWrapper()
+        self._window = __PRESET_BROWSER_WINDOW__
         return super(PresetBrowserQtAppTimed, self).execute(context)
 
 class PresetBrowserWrapper(rfb_qt.RmanQtWrapper):
@@ -57,8 +59,11 @@ class PRMAN_OT_Renderman_Presets_Editor(bpy.types.Operator):
     def execute(self, context):
 
         global __PRESET_BROWSER_WINDOW__
+        if __PRESET_BROWSER_WINDOW__ and __PRESET_BROWSER_WINDOW__.isVisible():
+            return {'FINISHED'}
+
         if sys.platform == "darwin":
-            rfb_qt.run_with_timer(__PRESET_BROWSER_WINDOW__, PresetBrowserWrapper)   
+            __PRESET_BROWSER_WINDOW__ = rfb_qt.run_with_timer(__PRESET_BROWSER_WINDOW__, PresetBrowserWrapper)   
         else:
             bpy.ops.wm.rpb_qt_app_timed()
          

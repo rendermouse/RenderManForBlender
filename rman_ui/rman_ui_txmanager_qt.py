@@ -73,6 +73,9 @@ class PRMAN_OT_TxManager_Qt(bpy.types.Operator):
     def execute(self, context):
         from ..rfb_utils import texture_utils
         global __TXMANAGER_WINDOW__
+        if __TXMANAGER_WINDOW__ and __TXMANAGER_WINDOW__.isVisible():
+            return {'FINISHED'}
+
         if sys.platform == "darwin":
             rfb_qt.run_with_timer(__TXMANAGER_WINDOW__, create_widget)   
         else:

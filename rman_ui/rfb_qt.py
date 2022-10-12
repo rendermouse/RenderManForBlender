@@ -111,3 +111,4 @@ def run_with_timer(window, cls):
         window = cls()
     window.show()
     bpy.app.timers.register(functools.partial(process_qt_events, app, window))
+    return window
