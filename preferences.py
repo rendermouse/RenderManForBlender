@@ -90,7 +90,8 @@ __DEFAULTS__ = {
     'rman_roz_grpcServer': True,  
     'rman_roz_webSocketServer': False,         
     'rman_roz_webSocketServer_Port': 0, 
-    'rman_roz_stats_print_level': '1'                           
+    'rman_roz_stats_print_level': '1',
+    'rman_enhance_zoom_factor': 5                           
 }
 
 class RendermanPreferencePath(bpy.types.PropertyGroup):
@@ -523,6 +524,14 @@ class RendermanPreferences(AddonPreferences):
                         ],
                     description="How much live stats to print",
                     update=update_stats_config
+    )
+
+    rman_enhance_zoom_factor: IntProperty(
+        name="Enhance Zoom Factor",
+        description="How much to zoom in when using the Enhance operator",
+        default=5,
+        min=2,
+        max=10
     )                                                                          
 
     def draw_xpu_devices(self, context, layout):
@@ -586,6 +595,7 @@ class RendermanPreferences(AddonPreferences):
         col.prop(self, 'rman_solo_collapse_nodes')
         col.prop(self, 'rman_use_blend_dir_token')
         col.prop(self, 'rman_editor')      
+        col.prop(self, 'rman_enhance_zoom_factor')
 
         # XPU Prefs
         if sys.platform != ("darwin") and envconfig_utils.envconfig().has_xpu_license:

@@ -419,8 +419,6 @@ class PRMAN_OT_Viewport_Enhance(bpy.types.Operator):
     bl_description = "Enhance"
     bl_options = {"INTERNAL"}
 
-    zoom_factor: FloatProperty(name="Zoom", default=5.0, min=1.0, max=5.0)
-
     def __init__(self):
         self.x = -1
         self.y = -1
@@ -438,8 +436,9 @@ class PRMAN_OT_Viewport_Enhance(bpy.types.Operator):
     @classmethod
     def description(cls, context, properties):
         help = "NOTE: This only works with perspective cameras or the PxrCamera projection plugin.\n\n"
-        help += "Embiggens the region around a pixel (X,Y) by zoom"
-        help += "\nfactor for trouble-shooting.  The magnified pixel will remain"
+        help += "Embiggens the region around a pixel (X,Y) by a zoom"
+        help += "\nfactor for trouble-shooting.  The zoom factor can be changed"
+        help += "in the preferences. The magnified pixel will remain"
         help += "\nanchored in place relative to the image.  Camera effects such as"
         help += "\nvignetting will be scaled accordingly.  Intentionally does not"
         help += "\naffect level-of-detail, dicing, displacement, or MIP map levels."
@@ -447,10 +446,13 @@ class PRMAN_OT_Viewport_Enhance(bpy.types.Operator):
         help += "\n\nEnter to simply exit out of the operator, and keep the current zoom. Esc to exit and reset the zoom."
         return help
 
+    def get_zoom_factor(self):
+        zoom_factor = float(get_pref('rman_enhance_zoom_factor'))
+        return zoom_factor
 
     def execute(self, context):
         rman_render = RmanRender.get_rman_render()
-        rman_render.rman_scene_sync.update_enhance(context, self.x, self.y, self.zoom_factor)
+        rman_render.rman_scene_sync.update_enhance(context, self.x, self.y, self.get_zoom_factor())
 
         return {'RUNNING_MODAL'}
 
@@ -460,7 +462,7 @@ class PRMAN_OT_Viewport_Enhance(bpy.types.Operator):
 
     def call_upate(self, context, x, y):
         rman_render = RmanRender.get_rman_render()
-        rman_render.rman_scene_sync.update_enhance(context, x, y, self.zoom_factor)
+        rman_render.rman_scene_sync.update_enhance(context, x, y, self.get_zoom_factor())
 
     def modal(self, context, event):
         x = event.mouse_region_x
@@ -884,6 +886,7 @@ class PRMAN_PT_Viewport_Options(Panel):
         col.prop(prefs, 'rman_viewport_draw_progress')
         if prefs.rman_viewport_draw_progress:
             col.prop(prefs, 'rman_viewport_progress_color')
+        col.prop(prefs, 'rman_enhance_zoom_factor')
         if rm.current_platform != ("macOS"):
             col = layout.column(align=True)
             col.prop(rm, 'blender_ipr_optix_denoiser')
