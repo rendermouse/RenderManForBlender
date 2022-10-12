@@ -3,6 +3,8 @@ import bpy
 
 def rman_register_class(cls):
     try:
+        if hasattr(bpy.types, str(cls)):
+            rman_unregister_class(cls)
         bpy.utils.register_class(cls)
     except ValueError as e:
         rfb_log().debug("Could not register class, %s, because: %s" % (str(cls), str(e)))
