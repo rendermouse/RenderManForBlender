@@ -228,7 +228,7 @@ def upgrade_scene(bl_scene):
                 fn(scene)
                 continue
 
-            if scene_patch < upgrade_patch:
+            if upgrade_patch and scene_patch < upgrade_patch:
                 rfb_log().debug('Upgrade scene to %s' % version_str)
                 fn(scene)
             
