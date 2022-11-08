@@ -5,6 +5,7 @@ from ..rfb_utils.scene_utils import RMAN_VOL_TYPES
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import object_utils
 from ..rfb_utils.envconfig_utils import envconfig
+from ..rfb_utils.prefs_utils import using_qt
 from ..rfb_logger import rfb_log
 from ..rman_config import __RFB_CONFIG_DICT__ as rfb_config
 from bpy.types import Menu
@@ -497,7 +498,7 @@ class VIEW3D_MT_RM_Add_Selected_To_ObjectGroup_Menu(bpy.types.Menu):
             for i, obj_grp in enumerate(obj_grps.keys()):
                 op = layout.operator('renderman.add_to_group', text=obj_grp)
                 op.do_scene_selected = True     
-                op.open_editor = True
+                op.open_editor = not using_qt()
                 op.group_index = i
 
 class VIEW3D_MT_RM_Add_Selected_To_LightMixer_Menu(bpy.types.Menu):

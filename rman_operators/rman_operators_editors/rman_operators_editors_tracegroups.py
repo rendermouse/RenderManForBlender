@@ -101,7 +101,30 @@ if rfb_qt:
             self.refresh_groups()
             self.refresh_group_objects()
 
-            self.traceGroupObjects.expandAll()            
+            self.traceGroupObjects.expandAll()   
+
+            self.add_handlers()
+
+        def closeEvent(self, event):
+            self.remove_handlers()
+            super(TraceGroupsQtWrapper, self).closeEvent(event)
+
+        def add_handlers(self):       
+            if self.depsgraph_update_post not in bpy.app.handlers.depsgraph_update_post:
+                bpy.app.handlers.depsgraph_update_post.append(self.depsgraph_update_post)            
+
+        def remove_handlers(self):
+            if self.depsgraph_update_post in bpy.app.handlers.depsgraph_update_post:
+                bpy.app.handlers.depsgraph_update_post.remove(self.depsgraph_update_post)             
+
+        def depsgraph_update_post(self, bl_scene, depsgraph):
+            for dps_update in reversed(depsgraph.updates):
+                if isinstance(dps_update.id, bpy.types.Scene): 
+                    self.trace_groups_index_changed()
+                elif isinstance(dps_update.id, bpy.types.Object) or isinstance(dps_update.id, bpy.types.Collection):
+                    self.refresh_groups()
+                    self.refresh_group_objects()            
+
 
         def update(self):
             idx = int(self.traceGroups.currentRow())
@@ -169,6 +192,7 @@ if rfb_qt:
             self.label_2.setText("Objects (%s)" % item.text())
 
         def find_item(self, standard_item, ob):
+            '''
             if standard_item.text() == ob.name:
                 return standard_item
             
@@ -178,6 +202,11 @@ if rfb_qt:
                     return item
                 if item.hasChildren():
                     return self.find_item(item, ob)
+            '''            
+            for i in range(0, standard_item.rowCount()):
+                item = standard_item.child(i)
+                if item.text() == ob.name:
+                    return item                
             
             return None
 
@@ -230,6 +259,8 @@ if rfb_qt:
             current_item = self.traceGroups.currentItem()
             if current_item:
                 self.label_2.setText("Objects (%s)" % current_item.text())
+            else:
+                return
             context = bpy.context
             scene = context.scene
             rm = scene.renderman               

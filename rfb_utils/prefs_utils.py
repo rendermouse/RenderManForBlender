@@ -12,6 +12,9 @@ def get_addon_prefs():
                 return v
         return None
 
+def using_qt():
+    return get_pref('rman_ui_framework') == 'QT'
+
 def get_pref(pref_name='', default=None):
     """ Return the value of a preference
 
