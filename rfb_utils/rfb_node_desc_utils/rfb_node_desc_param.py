@@ -12,6 +12,7 @@ NodeDescParam.optional_attrs = NodeDescParam.optional_attrs + []
 NodeDescParamJSON.keywords = NodeDescParamJSON.keywords + ['panel', 'inheritable', 
                 'inherit_true_value', 'update_function_name', 'update_function', 
                 'set_function_name', 'set_function',
+                'get_function_name', 'get_function',
                 'readOnly', 'always_write']  
 
 def blender_finalize(obj):
