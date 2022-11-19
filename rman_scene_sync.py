@@ -443,12 +443,12 @@ class RmanSceneSync(object):
             self.camera_updated(dps_update) 
         elif rman_type == 'EMPTY_INSTANCER':
             self.check_empty_instancer(dps_update)
-        else:     
-            rfb_log().debug("\tObject: %s Updated" % dps_update.id.name)
-            rfb_log().debug("\t    is_updated_geometry: %s" % str(dps_update.is_updated_geometry))
-            rfb_log().debug("\t    is_updated_shading: %s" % str(dps_update.is_updated_shading))
-            rfb_log().debug("\t    is_updated_transform: %s" % str(dps_update.is_updated_transform))                                                  
-            if dps_update.id.original not in self.rman_updates:                        
+        else:                                                       
+            if dps_update.id.original not in self.rman_updates:              
+                rfb_log().debug("\tObject: %s Updated" % dps_update.id.name)
+                rfb_log().debug("\t    is_updated_geometry: %s" % str(dps_update.is_updated_geometry))
+                rfb_log().debug("\t    is_updated_shading: %s" % str(dps_update.is_updated_shading))
+                rfb_log().debug("\t    is_updated_transform: %s" % str(dps_update.is_updated_transform))                          
                 rman_update = RmanUpdate()
                 rman_update.is_updated_geometry = dps_update.is_updated_geometry
                 rman_update.is_updated_shading = dps_update.is_updated_shading
@@ -761,6 +761,7 @@ class RmanSceneSync(object):
                         for o in users[ob_eval.original]:
                             if isinstance(o, bpy.types.Light):
                                 o.node_tree.update_tag()
+                        self.rman_scene.set_root_lightlinks() # update lightlinking on the root node
                         continue
 
                     is_new_object = True
@@ -992,23 +993,29 @@ class RmanSceneSync(object):
             property_utils.set_riattr_bl_prop(attrs, prop_name, meta, rm, check_inherit=False)
             root_sg.SetAttributes(attrs)
 
-    def update_sg_node_riattr(self, prop_name, context):
+    def update_sg_node_riattr(self, prop_name, context, bl_object=None):
         if not self.rman_render.rman_interactive_running:
             return                 
         self.rman_scene.bl_scene = context.scene
-        ob = context.object
+        if bl_object:
+            ob = bl_object
+        else:
+            ob = context.object
         rman_update = RmanUpdate()
         rman_update.do_clear_instances = False
         rman_update.is_updated_attributes = True
         rman_update.updated_prop_name = prop_name
         self.rman_updates[ob.original] = rman_update
-        rfb_log().debug("Updated RiAttribute: %s" % rman_update.updated_prop_name)
+        rfb_log().debug("Updated RiAttribute: %s (%s)" % (rman_update.updated_prop_name, ob.name))
 
-    def update_sg_node_primvar(self, prop_name, context):
+    def update_sg_node_primvar(self, prop_name, context, bl_object=None):
         if not self.rman_render.rman_interactive_running:
             return                 
         self.rman_scene.bl_scene = context.scene
-        ob = context.object
+        if bl_object:
+            ob = bl_object
+        else:
+            ob = context.object
         rman_update = RmanUpdate()
         rman_update.do_clear_instances = False
         rman_update.is_updated_geometry = True

@@ -216,7 +216,13 @@ def update_root_node_func(self, s, context):
     scenegraph_utils.update_sg_root_node(s, context)
 
 def update_riattr_func(self, s, context):
-    scenegraph_utils.update_sg_node_riattr(s, context)    
+    ob = None
+    if not hasattr(context, 'object'):
+        ob = self.id_data
+    scenegraph_utils.update_sg_node_riattr(s, context, bl_object=ob)    
 
 def update_primvar_func(self, s, context):
-    scenegraph_utils.update_sg_node_primvar(s, context)      
+    ob = None
+    if not hasattr(context, 'object'):
+        ob = self.id_data    
+    scenegraph_utils.update_sg_node_primvar(s, context, bl_object=ob)      

@@ -504,19 +504,16 @@ class RmanScene(object):
 
         self.export_data_blocks()
 
-    def export_root_sg_node(self):
-
+    def set_root_lightlinks(self, rixattrs=None):
         rm = self.bl_scene.renderman
         root_sg = self.get_root_sg_node()
-        attrs = root_sg.GetAttributes()
-
-        # set any properties marked riattr in the config file
-        for prop_name, meta in rm.prop_meta.items():
-            property_utils.set_riattr_bl_prop(attrs, prop_name, meta, rm, check_inherit=False, remove=False)
+        attrs = rixattrs
+        if rixattrs is None:
+            attrs = root_sg.GetAttributes()    
+        all_lightfilters = [string_utils.sanitize_node_name(l.name) for l in scene_utils.get_all_lightfilters(self.bl_scene)]            
 
         if rm.invert_light_linking:
             all_lights = [string_utils.sanitize_node_name(l.name) for l in scene_utils.get_all_lights(self.bl_scene, include_light_filters=False)]
-            all_lightfilters = [string_utils.sanitize_node_name(l.name) for l in scene_utils.get_all_lightfilters(self.bl_scene)]
             for ll in rm.light_links:
                 light_ob = ll.light_ob
                 light_nm = string_utils.sanitize_node_name(light_ob.name)
@@ -536,7 +533,23 @@ class RmanScene(object):
                 attrs.SetString(self.rman.Tokens.Rix.k_lightfilter_subset, ' '. join(all_lightfilters) )
             else:
                 attrs.SetString(self.rman.Tokens.Rix.k_lightfilter_subset, '*')
+        else:
+            attrs.SetString(self.rman.Tokens.Rix.k_lightfilter_subset, ','. join(all_lightfilters) )
 
+        if rixattrs is None:
+            root_sg.SetAttributes(attrs)           
+
+    def export_root_sg_node(self):
+
+        rm = self.bl_scene.renderman
+        root_sg = self.get_root_sg_node()
+        attrs = root_sg.GetAttributes()
+
+        # set any properties marked riattr in the config file
+        for prop_name, meta in rm.prop_meta.items():
+            property_utils.set_riattr_bl_prop(attrs, prop_name, meta, rm, check_inherit=False, remove=False)
+
+        self.set_root_lightlinks(rixattrs=attrs)
         root_sg.SetAttributes(attrs)
 
     def get_root_sg_node(self):

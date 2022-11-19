@@ -104,7 +104,7 @@ class RmanLightFilterTranslator(RmanTranslator):
         rixparams.SetString("coordsys", rman_sg_lightfilter.coord_sys)
             
         # check if this light filter belongs to a light link
-        for ll in self.rman_scene.bl_scene.renderman.light_links:
-            if ll.light_ob == ob:
-                rixparams.SetString("linkingGroups", ob.name)
-                break
+        if ob.original.data.renderman.linkingGroups != "":
+            rixparams.SetString("linkingGroups", ob.original.data.renderman.linkingGroups)
+        else:
+            rixparams.Remove("linkingGroups")

@@ -569,6 +569,30 @@
             "help": "Object groups visible to transmission/refractions"
         },        
         {
+            "panel": "",
+            "name": "rman_lighting_excludesubset_string",
+            "riattr": "lighting:excludesubset",
+            "label": "Lighting Exclude Subset",
+            "type": "string",
+            "default": "",
+            "page": "",
+            "editable": true,
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_lighting_excludesubset_string', c)",              
+            "help": "Lighting exclude subset"
+        },  
+        {
+            "panel": "",
+            "name": "rman_lightfilter_subset_string",
+            "riattr": "lightfilter:subset",
+            "label": "Light Filter Subset",
+            "type": "string",
+            "default": "",
+            "page": "",
+            "editable": true,
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_lightfilter_subset_string', c)",
+            "help": "Light filter subset"
+        },                  
+        {
             "panel": "OBJECT_PT_renderman_object_raytracing",
             "name": "rman_intersectPriority",
             "riattr": "trace:intersectpriority",

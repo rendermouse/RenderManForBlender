@@ -57,6 +57,14 @@ def get_group_db_name(ob_inst):
 
     return string_utils.sanitize_node_name(group_db_name)
 
+def is_light_filter(ob):
+    if ob is None:
+        return False
+    if ob.type != 'LIGHT':
+        return False    
+    rm = ob.data.renderman
+    return (rm.renderman_light_role == 'RMAN_LIGHTFILTER')
+
 def is_portal_light(ob):
     if ob.type != 'LIGHT':
         return False

@@ -3,7 +3,9 @@ from bpy.props import PointerProperty, StringProperty, BoolProperty, \
     CollectionProperty, BoolVectorProperty, IntVectorProperty
 
 from ...rfb_utils import shadergraph_utils
+from ...rfb_utils import scene_utils
 from ...rfb_logger import rfb_log 
+from ...rfb_utils.prefs_utils import using_qt
 from ... import rman_config
 
 import bpy
@@ -61,47 +63,24 @@ class RendermanObjectPointer(bpy.types.PropertyGroup):
     name: StringProperty(name="name", update=update_name)
 
     def update_ob_pointer(self, context):
-        self.ob_pointer.update_tag(refresh={'OBJECT'})
+        if not using_qt():
+            self.ob_pointer.update_tag(refresh={'OBJECT'})
 
     ob_pointer: PointerProperty(type=bpy.types.Object, update=update_ob_pointer)   
 
     def update_link(self, context):
         light_ob = getattr(context, 'light_ob', None)
-        if not light_ob:
+        if not light_ob and hasattr(context, 'active_object'):
             light_ob = context.active_object
-            if light_ob.type != 'LIGHT':
+            if light_ob and light_ob.type != 'LIGHT':
                 return
-
-        light_props = shadergraph_utils.get_rman_light_properties_group(light_ob)
-        if light_props.renderman_light_role not in {'RMAN_LIGHTFILTER', 'RMAN_LIGHT'}:
+        if not light_ob:
             return
 
-        light_ob.update_tag(refresh={'DATA'})
-
         ob = self.ob_pointer
-        light_props = shadergraph_utils.get_rman_light_properties_group(light_ob)
-        if light_props.renderman_light_role == 'RMAN_LIGHT':
-            if self.illuminate == 'OFF':
-                subset = ob.renderman.rman_lighting_excludesubset.add()
-                subset.name = light_ob.name
-                subset.light_ob = light_ob
-            else:
-                for j, subset in enumerate(ob.renderman.rman_lighting_excludesubset):
-                    if subset.light_ob == light_ob:
-                        ob.renderman.rman_lighting_excludesubset.remove(j)
-                        break
-        else:
-            if self.illuminate == 'OFF':
-                for j, subset in enumerate(ob.renderman.rman_lightfilter_subset):
-                    if subset.light_ob == light_ob:
-                        ob.renderman.rman_lightfilter_subset.remove(j)
-                        break                     
-            else:  
-                subset = ob.renderman.rman_lightfilter_subset.add()
-                subset.name = light_ob.name
-                subset.light_ob = light_ob                             
-
-        ob.update_tag(refresh={'OBJECT'})    
+        if scene_utils.set_lightlinking_properties(ob, light_ob, self.illuminate):
+            if not using_qt():
+                ob.update_tag(refresh={'DATA'}) 
 
     illuminate: EnumProperty(
         name="Illuminate",

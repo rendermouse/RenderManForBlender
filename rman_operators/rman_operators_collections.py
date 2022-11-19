@@ -3,6 +3,7 @@ from ..rfb_utils import string_utils
 from ..rfb_logger import rfb_log
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import scenegraph_utils
+from ..rfb_utils import object_utils
 from ..rfb_utils.rman_socket_utils import node_add_input
 
 import bpy
@@ -634,7 +635,8 @@ class PRMAN_OT_add_light_link(bpy.types.Operator):
             if op:
                 op.selected_light_name = '0'
 
-            light_ob.update_tag(refresh={'DATA'})
+            if not object_utils.is_light_filter(light_ob):
+                light_ob.update_tag(refresh={'DATA'})
             
     def add_scene_selected(self, context):
         scene = context.scene
@@ -669,7 +671,8 @@ class PRMAN_OT_add_light_link(bpy.types.Operator):
                 ll = scene.renderman.light_links.add()
                 ll.name = light_ob.name
                 ll.light_ob = light_ob.data   
-                light_ob.update_tag(refresh={'DATA'})  
+                if not object_utils.is_light_filter(light_ob):
+                    light_ob.update_tag(refresh={'DATA'})  
 
     def execute(self, context):
         if self.properties.do_scene_selected:

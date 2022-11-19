@@ -3,7 +3,7 @@ from bpy.props import PointerProperty, StringProperty, BoolProperty, \
     CollectionProperty
 
 from ...rfb_utils.envconfig_utils import envconfig
-from ...rfb_utils.prefs_utils import get_pref
+from ...rfb_utils.prefs_utils import get_pref, using_qt
 from ...rfb_logger import rfb_log
 from ... import rman_bl_nodes
 from ...rman_bl_nodes import rman_bl_nodes_props    
@@ -132,7 +132,7 @@ class RendermanSceneSettings(RmanBasePropertyGroup, bpy.types.PropertyGroup):
         return (rman_render.rman_is_viewport_rendering or is_shading)        
 
     def get_light_linking_inverted(self):
-        return get_pref('rman_invert_light_linking')
+        return get_pref('rman_invert_light_linking') and not using_qt()
 
     current_platform: StringProperty(get=get_platform)
     is_ncr_license: BoolProperty(get=get_is_ncr_license)

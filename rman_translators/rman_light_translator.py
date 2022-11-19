@@ -68,7 +68,7 @@ class RmanLightTranslator(RmanTranslator):
         attrs.SetInteger("visibility:camera", int(primary_vis))
         attrs.SetInteger("visibility:transmission", 0)
         attrs.SetInteger("visibility:indirect", 0)
-        obj_groups_str = "World,%s" % rman_sg_light.db_name
+        obj_groups_str = "World,%s" % ob.name_full
         attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_grouping_membership, obj_groups_str)
 
         rman_sg_light.sg_node.SetAttributes(attrs)
