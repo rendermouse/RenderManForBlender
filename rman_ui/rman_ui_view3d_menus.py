@@ -270,7 +270,7 @@ class VIEW3D_MT_RM_LightLinking_Menu(bpy.types.Menu):
         if light_props.renderman_light_role not in {'RMAN_LIGHTFILTER', 'RMAN_LIGHT'}:
             return
         selected_objects = context.selected_objects
-        if selected_objects:
+        if not using_qt() and not envconfig().getenv('RFB_DEVELOPER') and selected_objects:
             layout.context_pointer_set('light_ob', active_light)
             if not rm.invert_light_linking:
                 layout.separator()

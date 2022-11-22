@@ -1,8 +1,4 @@
-try:
-    from ..rman_ui import rfb_qt
-except:
-    raise
-
+from ..rman_ui import rfb_qt
 import bpy
 import sys
 from ..rfb_logger import rfb_log

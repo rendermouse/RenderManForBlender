@@ -5,354 +5,351 @@ from ...rfb_utils import shadergraph_utils
 from ...rfb_utils import string_utils
 from ...rfb_utils import scenegraph_utils
 from ...rfb_logger import rfb_log
-from ...rfb_utils.prefs_utils import get_pref
+from ...rfb_utils.prefs_utils import get_pref, using_qt
 from ...rfb_utils import object_utils
+from ...rfb_utils.envconfig_utils import envconfig
 from ... import rfb_icons
 from ...rman_operators.rman_operators_collections import return_empty_list   
 from ...rman_config import __RFB_CONFIG_DICT__ as rfb_config
+from ...rman_ui import rfb_qt as rfb_qt
 import bpy
 import re
 import sys
+from PySide2 import QtCore, QtWidgets, QtGui 
 
-rfb_qt = None
+
 __LIGHT_LINKING_WINDOW__ = None 
-try:
-    from ...rman_ui import rfb_qt as rfb_qt
-except:
-    pass
-
-if rfb_qt:
-
-    from PySide2 import QtCore, QtWidgets, QtGui 
-    class LightLinkingQtAppTimed(rfb_qt.RfbBaseQtAppTimed):
-        bl_idname = "wm.light_linking_qt_app_timed"
-        bl_label =  "Light Linking Editor"
-
-        def __init__(self):
-            super(LightLinkingQtAppTimed, self).__init__()
-
-        def execute(self, context):
-            self._window = LightLinkingQtWrapper()
-            return super(LightLinkingQtAppTimed, self).execute(context)
-
-    class StandardItem(QtGui.QStandardItem):
-        def __init__(self, txt=''):
-            super().__init__()
-            self.setEditable(False)
-            self.setText(txt)
-
-    class LightLinkingQtWrapper(rfb_qt.RmanQtWrapper):
-        def __init__(self) -> None:
-            super(LightLinkingQtWrapper, self).__init__()
-            self.setObjectName("Dialog")
-            self.resize(825, 526)
-            self.buttonBox = QtWidgets.QDialogButtonBox(self)
-            self.buttonBox.setGeometry(QtCore.QRect(620, 450, 166, 24))
-            self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
-            self.buttonBox.setObjectName("buttonBox")
-            #self.invert_checkBox = QtWidgets.QCheckBox(self)
-            #self.invert_checkBox.setGeometry(QtCore.QRect(730, 30, 85, 21))
-            #self.invert_checkBox.setObjectName("invert_checkBox")
-            self.widget = QtWidgets.QWidget(self)
-            self.widget.setGeometry(QtCore.QRect(40, 70, 751, 361))
-            self.widget.setObjectName("widget")
-            self.gridLayout = QtWidgets.QGridLayout(self.widget)
-            self.gridLayout.setContentsMargins(0, 0, 0, 0)
-            self.gridLayout.setHorizontalSpacing(50)
-            self.gridLayout.setObjectName("gridLayout")
-            self.verticalLayout = QtWidgets.QVBoxLayout()
-            self.verticalLayout.setObjectName("verticalLayout")
-            self.lights_label = QtWidgets.QLabel(self.widget)
-            self.lights_label.setObjectName("lights_label")
-            self.verticalLayout.addWidget(self.lights_label)
-            self.lights_treeView = QtWidgets.QListWidget(self)
-            self.lights_treeView.setObjectName("lights_treeView")
-            self.verticalLayout.addWidget(self.lights_treeView)
-            self.gridLayout.addLayout(self.verticalLayout, 0, 0, 1, 1)
-            self.verticalLayout_2 = QtWidgets.QVBoxLayout()
-            self.verticalLayout_2.setObjectName("verticalLayout_2")
-            self.objects_label = QtWidgets.QLabel(self.widget)
-            self.objects_label.setObjectName("objects_label")
-            self.verticalLayout_2.addWidget(self.objects_label)
-
-            self.objects_treeView = QtWidgets.QTreeView(self.widget)
-            self.objects_treeView.setSelectionMode(
-                QtWidgets.QAbstractItemView.MultiSelection
-            )               
-            self.objects_treeView.setObjectName("objects_treeView")
-            self.objects_treeView.setHeaderHidden(True)
-            self.treeModel = QtGui.QStandardItemModel(self)
-            self.rootNode = self.treeModel.invisibleRootItem()
-            self.objects_treeView.setModel(self.treeModel)
-
-            self.verticalLayout_2.addWidget(self.objects_treeView)
-            self.gridLayout.addLayout(self.verticalLayout_2, 0, 1, 1, 1)
-
-            self.lights_treeView.itemSelectionChanged.connect(self.lights_index_changed)            
-
-            self.objects_treeView.selectionModel().selectionChanged.connect(self.linked_objects_selection)            
-
-            self.light_link_item = None
-            self.total_objects = 0
-            self.retranslateUi()
-            self.refresh_lights()
-
-            self.add_handlers()
 
 
-        def retranslateUi(self):
-            _translate = QtCore.QCoreApplication.translate
-            self.setWindowTitle(_translate("Dialog", "Light Linking"))
-            #self.invert_checkBox.setToolTip(_translate("Dialog", "Invert light linking"))
-            #self.invert_checkBox.setText(_translate("Dialog", "Invert"))
-            self.lights_label.setText(_translate("Dialog", "Lights"))
-            self.objects_label.setText(_translate("Dialog", "Objects"))       
+class LightLinkingQtAppTimed(rfb_qt.RfbBaseQtAppTimed):
+    bl_idname = "wm.light_linking_qt_app_timed"
+    bl_label =  "Light Linking Editor"
 
-        def closeEvent(self, event):
-            self.remove_handlers()
-            super(LightLinkingQtWrapper, self).closeEvent(event)
+    def __init__(self):
+        super(LightLinkingQtAppTimed, self).__init__()
 
-        def add_handlers(self):       
-            if self.depsgraph_update_post not in bpy.app.handlers.depsgraph_update_post:
-                bpy.app.handlers.depsgraph_update_post.append(self.depsgraph_update_post)            
+    def execute(self, context):
+        self._window = LightLinkingQtWrapper()
+        return super(LightLinkingQtAppTimed, self).execute(context)
 
-        def remove_handlers(self):
-            if self.depsgraph_update_post in bpy.app.handlers.depsgraph_update_post:
-                bpy.app.handlers.depsgraph_update_post.remove(self.depsgraph_update_post)             
+class StandardItem(QtGui.QStandardItem):
+    def __init__(self, txt=''):
+        super().__init__()
+        self.setEditable(False)
+        self.setText(txt)
 
-        def depsgraph_update_post(self, bl_scene, depsgraph):
-            for dps_update in reversed(depsgraph.updates):
-                if isinstance(dps_update.id, bpy.types.Collection):
-                    self.refresh_lights()
-                    self.refresh_linked_objects()
-                    self.lights_index_changed()
-                elif isinstance(dps_update.id, bpy.types.Scene):
-                    self.refresh_lights()                    
-     
-        def update(self):
-            super(LightLinkingQtWrapper, self).update()
+class LightLinkingQtWrapper(rfb_qt.RmanQtWrapper):
+    def __init__(self) -> None:
+        super(LightLinkingQtWrapper, self).__init__()
+        self.setObjectName("Dialog")
+        self.resize(825, 526)
+        self.buttonBox = QtWidgets.QDialogButtonBox(self)
+        self.buttonBox.setGeometry(QtCore.QRect(620, 450, 166, 24))
+        self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
+        self.buttonBox.setObjectName("buttonBox")
+        #self.invert_checkBox = QtWidgets.QCheckBox(self)
+        #self.invert_checkBox.setGeometry(QtCore.QRect(730, 30, 85, 21))
+        #self.invert_checkBox.setObjectName("invert_checkBox")
+        self.widget = QtWidgets.QWidget(self)
+        self.widget.setGeometry(QtCore.QRect(40, 70, 751, 361))
+        self.widget.setObjectName("widget")
+        self.gridLayout = QtWidgets.QGridLayout(self.widget)
+        self.gridLayout.setContentsMargins(0, 0, 0, 0)
+        self.gridLayout.setHorizontalSpacing(50)
+        self.gridLayout.setObjectName("gridLayout")
+        self.verticalLayout = QtWidgets.QVBoxLayout()
+        self.verticalLayout.setObjectName("verticalLayout")
+        self.lights_label = QtWidgets.QLabel(self.widget)
+        self.lights_label.setObjectName("lights_label")
+        self.verticalLayout.addWidget(self.lights_label)
+        self.lights_treeView = QtWidgets.QListWidget(self)
+        self.lights_treeView.setObjectName("lights_treeView")
+        self.verticalLayout.addWidget(self.lights_treeView)
+        self.gridLayout.addLayout(self.verticalLayout, 0, 0, 1, 1)
+        self.verticalLayout_2 = QtWidgets.QVBoxLayout()
+        self.verticalLayout_2.setObjectName("verticalLayout_2")
+        self.objects_label = QtWidgets.QLabel(self.widget)
+        self.objects_label.setObjectName("objects_label")
+        self.verticalLayout_2.addWidget(self.objects_label)
+
+        self.objects_treeView = QtWidgets.QTreeView(self.widget)
+        self.objects_treeView.setSelectionMode(
+            QtWidgets.QAbstractItemView.MultiSelection
+        )               
+        self.objects_treeView.setObjectName("objects_treeView")
+        self.objects_treeView.setHeaderHidden(True)
+        self.treeModel = QtGui.QStandardItemModel(self)
+        self.rootNode = self.treeModel.invisibleRootItem()
+        self.objects_treeView.setModel(self.treeModel)
+
+        self.verticalLayout_2.addWidget(self.objects_treeView)
+        self.gridLayout.addLayout(self.verticalLayout_2, 0, 1, 1, 1)
+
+        self.lights_treeView.itemSelectionChanged.connect(self.lights_index_changed)            
+
+        self.objects_treeView.selectionModel().selectionChanged.connect(self.linked_objects_selection)            
+
+        self.light_link_item = None
+        self.total_objects = 0
+        self.retranslateUi()
+        self.refresh_lights()
+
+        self.add_handlers()
 
 
-        def refresh_lights(self):
-            context = bpy.context
-            scene = context.scene
-            rm = scene.renderman
-            
-            all_lights = [l.name for l in scene_utils.get_all_lights(scene, include_light_filters=True)]
-            remove_items = []
+    def retranslateUi(self):
+        _translate = QtCore.QCoreApplication.translate
+        self.setWindowTitle(_translate("Dialog", "Light Linking"))
+        #self.invert_checkBox.setToolTip(_translate("Dialog", "Invert light linking"))
+        #self.invert_checkBox.setText(_translate("Dialog", "Invert"))
+        self.lights_label.setText(_translate("Dialog", "Lights"))
+        self.objects_label.setText(_translate("Dialog", "Objects"))       
 
-            for i in range(self.lights_treeView.count()):
-                item = self.lights_treeView.item(i)
-                name = item.text()
-                if name not in all_lights:
-                    remove_items.append(item)
-                else:
-                    all_lights.remove(name)
+    def closeEvent(self, event):
+        self.remove_handlers()
+        super(LightLinkingQtWrapper, self).closeEvent(event)
 
-            for nm in all_lights:
-                item = QtWidgets.QListWidgetItem(nm)
-                item.setFlags(item.flags())
-                self.lights_treeView.addItem(item)
+    def add_handlers(self):       
+        if self.depsgraph_update_post not in bpy.app.handlers.depsgraph_update_post:
+            bpy.app.handlers.depsgraph_update_post.append(self.depsgraph_update_post)            
 
-            for item in remove_items:
-                self.lights_treeView.takeItem(self.lights_treeView.row(item))
-                del item
+    def remove_handlers(self):
+        if self.depsgraph_update_post in bpy.app.handlers.depsgraph_update_post:
+            bpy.app.handlers.depsgraph_update_post.remove(self.depsgraph_update_post)             
 
-            if remove_items or len(all_lights) > 0:
-                self.lights_treeView.setCurrentRow(-1)   
-
-        def find_light_link_item(self, light_nm=''):
-            context = bpy.context
-            scene = context.scene
-            rm = scene.renderman     
-            light_link_item = None   
-            for ll in rm.light_links:
-                if ll.light_ob.name == light_nm:
-                    light_link_item = ll
-                    break
-            return light_link_item           
-
-        def lights_index_changed(self):
-            idx = int(self.lights_treeView.currentRow())
-            current_item = self.lights_treeView.currentItem()
-            if not current_item:               
-                self.treeModel.clear()
-                self.objects_treeView.selectionModel().select(QtCore.QItemSelection(), QtCore.QItemSelectionModel.ClearAndSelect | QtCore.QItemSelectionModel.NoUpdate)
-                return
-            self.rootNode = self.treeModel.invisibleRootItem()   
-            if self.rootNode.rowCount() == 0:
+    def depsgraph_update_post(self, bl_scene, depsgraph):
+        for dps_update in reversed(depsgraph.updates):
+            if isinstance(dps_update.id, bpy.types.Collection):
+                self.refresh_lights()
                 self.refresh_linked_objects()
-            context = bpy.context
-            scene = context.scene
-            rm = scene.renderman     
-            light_nm = current_item.text() 
-            light_ob = context.scene.objects.get(light_nm, None)
+                self.lights_index_changed()
+            elif isinstance(dps_update.id, bpy.types.Scene):
+                self.refresh_lights()                    
+    
+    def update(self):
+        super(LightLinkingQtWrapper, self).update()
 
-            light_link_item = self.find_light_link_item(light_nm)   
-            selected_items =  QtCore.QItemSelection()
 
-            if light_link_item is None:
-                if not object_utils.is_light_filter(light_ob):
-                    light_link_item = scene.renderman.light_links.add()
-                    light_link_item.name = light_ob.name
-                    light_link_item.light_ob = light_ob
-                                     
-                for i in range(0, self.rootNode.rowCount()):
-                    item = self.rootNode.child(i)
-                    idx = self.treeModel.indexFromItem(item)
-                    selection_range = QtCore.QItemSelectionRange(idx)
-                    selected_items.append(selection_range)
-            else:            
-                for i in range(0, self.rootNode.rowCount()):
-                    item = self.rootNode.child(i)
-                    if not item:
-                        continue
-                    idx = self.treeModel.indexFromItem(item)
-                    ob_nm = item.text()
-                    found = False
-                    for member in light_link_item.members:
-                        ob = member.ob_pointer
-                        if ob is None:
-                            continue
-                        if ob.name == ob_nm:
-                            found = True
-                            break
+    def refresh_lights(self):
+        context = bpy.context
+        scene = context.scene
+        rm = scene.renderman
+        
+        all_lights = [l.name for l in scene_utils.get_all_lights(scene, include_light_filters=True)]
+        remove_items = []
 
-                    if found:
-                       continue
+        for i in range(self.lights_treeView.count()):
+            item = self.lights_treeView.item(i)
+            name = item.text()
+            if name not in all_lights:
+                remove_items.append(item)
+            else:
+                all_lights.remove(name)
 
-                    selection_range = QtCore.QItemSelectionRange(idx)
-                    selected_items.append(selection_range)
-            self.objects_treeView.selectionModel().select(selected_items, QtCore.QItemSelectionModel.ClearAndSelect | QtCore.QItemSelectionModel.NoUpdate)
+        for nm in all_lights:
+            item = QtWidgets.QListWidgetItem(nm)
+            item.setFlags(item.flags())
+            self.lights_treeView.addItem(item)
 
-        def find_item(self, standard_item, ob):        
-            for i in range(0, standard_item.rowCount()):
-                item = standard_item.child(i)
+        for item in remove_items:
+            self.lights_treeView.takeItem(self.lights_treeView.row(item))
+            del item
+
+        if remove_items or len(all_lights) > 0:
+            self.lights_treeView.setCurrentRow(-1)   
+
+    def find_light_link_item(self, light_nm=''):
+        context = bpy.context
+        scene = context.scene
+        rm = scene.renderman     
+        light_link_item = None   
+        for ll in rm.light_links:
+            if ll.light_ob.name == light_nm:
+                light_link_item = ll
+                break
+        return light_link_item           
+
+    def lights_index_changed(self):
+        idx = int(self.lights_treeView.currentRow())
+        current_item = self.lights_treeView.currentItem()
+        if not current_item:               
+            self.treeModel.clear()
+            self.objects_treeView.selectionModel().select(QtCore.QItemSelection(), QtCore.QItemSelectionModel.ClearAndSelect | QtCore.QItemSelectionModel.NoUpdate)
+            return
+        self.rootNode = self.treeModel.invisibleRootItem()   
+        if self.rootNode.rowCount() == 0:
+            self.refresh_linked_objects()
+        context = bpy.context
+        scene = context.scene
+        rm = scene.renderman     
+        light_nm = current_item.text() 
+        light_ob = context.scene.objects.get(light_nm, None)
+
+        light_link_item = self.find_light_link_item(light_nm)   
+        selected_items =  QtCore.QItemSelection()
+
+        if light_link_item is None:
+            if not object_utils.is_light_filter(light_ob):
+                light_link_item = scene.renderman.light_links.add()
+                light_link_item.name = light_ob.name
+                light_link_item.light_ob = light_ob
+                                    
+            for i in range(0, self.rootNode.rowCount()):
+                item = self.rootNode.child(i)
+                idx = self.treeModel.indexFromItem(item)
+                selection_range = QtCore.QItemSelectionRange(idx)
+                selected_items.append(selection_range)
+        else:            
+            for i in range(0, self.rootNode.rowCount()):
+                item = self.rootNode.child(i)
                 if not item:
                     continue
-                if item.text() == ob.name:
-                    return item          
-                if item.rowCount() > 0:
-                    return self.find_item(item, ob)      
-            
-            return None
-
-        def get_all_removed_items(self, standard_item, scene, remove_items):
-            for i in range(0, standard_item.rowCount()):
-                item = standard_item.child(i)
-                if not item:
-                    continue
-                nm = item.text()
-                if nm not in scene.objects:
-                    remove_items.append(item)
-                if item.rowCount() > 0:
-                    self.get_all_removed_items(item, scene, remove_items)
-
-            
-        def refresh_linked_objects(self):
-            context = bpy.context
-            scene = context.scene
-            self.rootNode = self.treeModel.invisibleRootItem()
-
-            def add_children(root_item, ob):
-                for child in ob.children:
-                    if ob.type in ['CAMERA', 'LIGHT', 'ARMATURE']:
+                idx = self.treeModel.indexFromItem(item)
+                ob_nm = item.text()
+                found = False
+                for member in light_link_item.members:
+                    ob = member.ob_pointer
+                    if ob is None:
                         continue
-                    item = self.find_item(root_item, child)
-                    if not item:
-                        item = StandardItem(txt=child.name)
-                    self.total_objects += 1
-                    root_item.appendRow(item)
-                    if len(child.children) > 0:
-                        add_children(item, child)
+                    if ob.name == ob_nm:
+                        found = True
+                        break
 
-            remove_items = []
-            self.get_all_removed_items(self.rootNode, scene, remove_items)
+                if found:
+                    continue
 
-            for item in remove_items:
-                self.treeModel.takeRow(item.row())
-                self.total_objects -= 1
-                del item
-            
-            root_parents = [ob for ob in scene.objects if ob.parent is None]            
-            for ob in root_parents:           
+                selection_range = QtCore.QItemSelectionRange(idx)
+                selected_items.append(selection_range)
+        self.objects_treeView.selectionModel().select(selected_items, QtCore.QItemSelectionModel.ClearAndSelect | QtCore.QItemSelectionModel.NoUpdate)
+
+    def find_item(self, standard_item, ob):        
+        for i in range(0, standard_item.rowCount()):
+            item = standard_item.child(i)
+            if not item:
+                continue
+            if item.text() == ob.name:
+                return item          
+            if item.rowCount() > 0:
+                return self.find_item(item, ob)      
+        
+        return None
+
+    def get_all_removed_items(self, standard_item, scene, remove_items):
+        for i in range(0, standard_item.rowCount()):
+            item = standard_item.child(i)
+            if not item:
+                continue
+            nm = item.text()
+            if nm not in scene.objects:
+                remove_items.append(item)
+            if item.rowCount() > 0:
+                self.get_all_removed_items(item, scene, remove_items)
+
+        
+    def refresh_linked_objects(self):
+        context = bpy.context
+        scene = context.scene
+        self.rootNode = self.treeModel.invisibleRootItem()
+
+        def add_children(root_item, ob):
+            for child in ob.children:
                 if ob.type in ['CAMERA', 'LIGHT', 'ARMATURE']:
-                    continue     
-                item = self.find_item(self.rootNode, ob)
+                    continue
+                item = self.find_item(root_item, child)
                 if not item:
-                    item = StandardItem(txt=ob.name)
-                    self.total_objects += 1
-                    self.rootNode.appendRow(item)
-                if len(ob.children) > 0:
-                    add_children(item, ob)
+                    item = StandardItem(txt=child.name)
+                self.total_objects += 1
+                root_item.appendRow(item)
+                if len(child.children) > 0:
+                    add_children(item, child)
 
-            self.objects_treeView.expandAll()
+        remove_items = []
+        self.get_all_removed_items(self.rootNode, scene, remove_items)
 
-        def linked_objects_selection(self, selected, deselected):
-            idx = int(self.lights_treeView.currentRow())
-            current_item = self.lights_treeView.currentItem()
-            if not current_item:
-                return
-            context = bpy.context
-            scene = context.scene
-            rm = scene.renderman
-            light_nm = current_item.text() 
-            light_ob = context.scene.objects.get(light_nm, None)           
-            light_props = shadergraph_utils.get_rman_light_properties_group(light_ob.original)
-            is_light_filter =  light_props.renderman_light_role == 'RMAN_LIGHTFILTER'
-            ll = self.find_light_link_item(light_nm)               
+        for item in remove_items:
+            self.treeModel.takeRow(item.row())
+            self.total_objects -= 1
+            del item
+        
+        root_parents = [ob for ob in scene.objects if ob.parent is None]            
+        for ob in root_parents:           
+            if ob.type in ['CAMERA', 'LIGHT', 'ARMATURE']:
+                continue     
+            item = self.find_item(self.rootNode, ob)
+            if not item:
+                item = StandardItem(txt=ob.name)
+                self.total_objects += 1
+                self.rootNode.appendRow(item)
+            if len(ob.children) > 0:
+                add_children(item, ob)
 
-            if ll is None:
-                ll = scene.renderman.light_links.add()
-                ll.name = light_ob.name
-                ll.light_ob = light_ob                     
+        self.objects_treeView.expandAll()
 
-            if is_light_filter:
-                # linkingGroups should only be set if one of the items is deselected
-                total_selected_items = len(self.objects_treeView.selectionModel().selectedIndexes())
+    def linked_objects_selection(self, selected, deselected):
+        idx = int(self.lights_treeView.currentRow())
+        current_item = self.lights_treeView.currentItem()
+        if not current_item:
+            return
+        context = bpy.context
+        scene = context.scene
+        rm = scene.renderman
+        light_nm = current_item.text() 
+        light_ob = context.scene.objects.get(light_nm, None)           
+        light_props = shadergraph_utils.get_rman_light_properties_group(light_ob.original)
+        is_light_filter =  light_props.renderman_light_role == 'RMAN_LIGHTFILTER'
+        ll = self.find_light_link_item(light_nm)               
+
+        if ll is None:
+            ll = scene.renderman.light_links.add()
+            ll.name = light_ob.name
+            ll.light_ob = light_ob                     
+
+        if is_light_filter:
+            # linkingGroups should only be set if one of the items is deselected
+            total_selected_items = len(self.objects_treeView.selectionModel().selectedIndexes())
+            
+            if total_selected_items == self.total_objects and light_props.linkingGroups != "":
+                light_props.linkingGroups = ""
+                light_ob.update_tag(refresh={'DATA'})
+            elif total_selected_items != self.total_objects and light_props.linkingGroups == "":
+                light_props.linkingGroups = string_utils.sanitize_node_name(light_ob.name_full)
+                light_ob.update_tag(refresh={'DATA'})
+
+        for i in deselected.indexes():
+            item = self.objects_treeView.model().itemFromIndex(i)
+            ob = bpy.data.objects.get(item.text(), None)
+            if ob is None:
+                continue
+            do_add = True
+            for member in ll.members:            
+                if ob == member.ob_pointer:
+                    do_add = False
+                    break         
+
+            if do_add:            
+                member = ll.members.add()
+                member.name = ob.name
+                member.ob_pointer = ob
+                member.illuminate = 'OFF'     
                 
-                if total_selected_items == self.total_objects and light_props.linkingGroups != "":
-                    light_props.linkingGroups = ""
-                    light_ob.update_tag(refresh={'DATA'})
-                elif total_selected_items != self.total_objects and light_props.linkingGroups == "":
-                    light_props.linkingGroups = string_utils.sanitize_node_name(light_ob.name_full)
-                    light_ob.update_tag(refresh={'DATA'})
+            scene_utils.set_lightlinking_properties(ob, light_ob, member.illuminate)
 
-            for i in deselected.indexes():
-                item = self.objects_treeView.model().itemFromIndex(i)
-                ob = bpy.data.objects.get(item.text(), None)
-                if ob is None:
-                    continue
-                do_add = True
-                for member in ll.members:            
-                    if ob == member.ob_pointer:
-                        do_add = False
-                        break         
+        for i in selected.indexes():
+            item = self.objects_treeView.model().itemFromIndex(i)
+            ob = bpy.data.objects.get(item.text(), None)
+            if ob is None:
+                continue
+            do_remove = False
+            idx = -1
+            for i, member in enumerate(ll.members):
+                if ob == member.ob_pointer:
+                    do_remove = True
+                    idx = i
+                    break         
+            if do_remove:            
+                member = ll.members.remove(idx)                    
 
-                if do_add:            
-                    member = ll.members.add()
-                    member.name = ob.name
-                    member.ob_pointer = ob
-                    member.illuminate = 'OFF'     
-                    
-                scene_utils.set_lightlinking_properties(ob, light_ob, member.illuminate)
-
-            for i in selected.indexes():
-                item = self.objects_treeView.model().itemFromIndex(i)
-                ob = bpy.data.objects.get(item.text(), None)
-                if ob is None:
-                    continue
-                do_remove = False
-                idx = -1
-                for i, member in enumerate(ll.members):
-                    if ob == member.ob_pointer:
-                        do_remove = True
-                        idx = i
-                        break         
-                if do_remove:            
-                    member = ll.members.remove(idx)                    
-
-                scene_utils.set_lightlinking_properties(ob, light_ob, '')
+            scene_utils.set_lightlinking_properties(ob, light_ob, '')
 
 class RENDERMAN_UL_LightLink_Light_List(bpy.types.UIList):
 
@@ -643,16 +640,14 @@ class PRMAN_PT_Renderman_Open_Light_Linking(bpy.types.Operator):
 
     def invoke(self, context, event):
         
-        '''
-        if rfb_qt and get_pref('rman_ui_framework') == 'QT':
+        if using_qt() and envconfig().getenv('RFB_DEVELOPER'):
             global __LIGHT_LINKING_WINDOW__
             if sys.platform == "darwin":
                 rfb_qt.run_with_timer(__LIGHT_LINKING_WINDOW__, LightLinkingQtWrapper)   
             else:
                 bpy.ops.wm.light_linking_qt_app_timed()     
 
-            return {'RUNNING_MODAL'}  
-        '''     
+            return {'RUNNING_MODAL'}    
 
         wm = context.window_manager
         width = rfb_config['editor_preferences']['lightlink_editor']['width']
@@ -663,7 +658,8 @@ class PRMAN_PT_Renderman_Open_Light_Linking(bpy.types.Operator):
 classes = [
     PRMAN_PT_Renderman_Open_Light_Linking,
     RENDERMAN_UL_LightLink_Light_List,
-    RENDERMAN_UL_LightLink_Object_List
+    RENDERMAN_UL_LightLink_Object_List,
+    LightLinkingQtAppTimed
 ]
 
 def register():

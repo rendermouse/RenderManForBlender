@@ -266,7 +266,7 @@ class RENDER_PT_renderman_live_stats(bpy.types.Panel, _RManPanelHeader):
         scene = context.scene
         rm = scene.renderman         
         rr = RmanRender.get_rman_render()
-        if hasattr(bpy.types, bpy.ops.renderman.rman_open_stats.idname()):
+        if prefs_utils.using_qt():
             layout.separator()
             layout.operator("renderman.rman_open_stats")  
             if rr.stats_mgr.is_connected():

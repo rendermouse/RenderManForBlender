@@ -23,26 +23,72 @@
 #
 # ##### END MIT LICENSE BLOCK #####
 
-from ..rfb_utils.prefs_utils import get_pref, get_addon_prefs
+from ..rfb_utils.prefs_utils import get_pref, get_addon_prefs, using_qt
 from ..rfb_logger import rfb_log
 from ..rman_config import __RFB_CONFIG_DICT__ as rfb_config
+from ..rman_ui import rfb_qt
 
 # for panel icon
 from .. import rfb_icons
 from . import icons as rpb_icons
 
 import bpy
+import sys
 from .properties import RendermanPreset, RendermanPresetCategory
 from bpy.props import *
 
 # for previews of assets
 from . import icons
 from . import rmanAssetsBlender as rab
+from . import core as bl_pb_core
 from rman_utils.rman_assets import core as ra
 from rman_utils.rman_assets.common.exceptions import RmanAssetError
 
 from bpy.props import StringProperty, IntProperty
 import os
+
+__PRESET_BROWSER_WINDOW__ = None 
+
+class PresetBrowserQtAppTimed(rfb_qt.RfbBaseQtAppTimed):
+    bl_idname = "wm.rpb_qt_app_timed"
+    bl_label = "RenderManPreset Browser"
+
+    def __init__(self):
+        super(PresetBrowserQtAppTimed, self).__init__()
+
+    def execute(self, context):
+        global __PRESET_BROWSER_WINDOW__
+        __PRESET_BROWSER_WINDOW__ = PresetBrowserWrapper()
+        self._window = __PRESET_BROWSER_WINDOW__
+        return super(PresetBrowserQtAppTimed, self).execute(context)
+
+class PresetBrowserWrapper(rfb_qt.RmanQtWrapper):
+
+    def __init__(self):
+        super(PresetBrowserWrapper, self).__init__()
+        # import here because we will crash Blender
+        # when we try to import it globally
+        import rman_utils.rman_assets.ui as rui    
+
+        self.resize(1024, 1024)
+        self.setWindowTitle('RenderMan Preset Browser')
+
+        if sys.platform != "darwin":
+            bg_role = self.backgroundRole()
+            plt = self.palette()
+            bg_color = plt.color(bg_role)  
+            bg_color.setRgb(70, 70, 70)
+            plt.setColor(bg_role, bg_color)      
+            self.setPalette(plt)              
+        
+        self.hostPrefs = bl_pb_core.get_host_prefs()
+        self.ui = rui.Ui(self.hostPrefs, parent=self)
+        self.setLayout(self.ui.topLayout)
+        self.show() # Show window        
+
+    def closeEvent(self, event):
+        self.hostPrefs.saveAllPrefs()
+        event.accept()
 
 
 # panel for the toolbar of node editor
@@ -449,6 +495,18 @@ class PRMAN_OT_Renderman_Presets_Editor(bpy.types.Operator):
      
 
     def invoke(self, context, event):
+        if using_qt():
+            global __PRESET_BROWSER_WINDOW__
+            if __PRESET_BROWSER_WINDOW__ and __PRESET_BROWSER_WINDOW__.isVisible():
+                return {'FINISHED'}
+
+            if sys.platform == "darwin":
+                __PRESET_BROWSER_WINDOW__ = rfb_qt.run_with_timer(__PRESET_BROWSER_WINDOW__, PresetBrowserWrapper)   
+            else:
+                bpy.ops.wm.rpb_qt_app_timed()
+            
+            return {'RUNNING_MODAL'}            
+
         self.load_categories(context)
         self.load_presets(context)
              
@@ -474,7 +532,9 @@ classes = [
     VIEW3D_MT_renderman_presets_object_context_menu,
     PRMAN_MT_renderman_preset_ops_menu,
     RENDERMAN_UL_Presets_Categories_List,
-    RENDERMAN_UL_Presets_Preset_List
+    RENDERMAN_UL_Presets_Preset_List,
+    PRMAN_OT_Renderman_Presets_Editor,
+    PresetBrowserQtAppTimed
 ]
 
 
@@ -482,16 +542,6 @@ def register():
     from ..rfb_utils import register_utils
 
     register_utils.rman_register_classes(classes)
-
-    if get_pref('rman_ui_framework') != 'QT':
-        register_utils.rman_register_class(PRMAN_OT_Renderman_Presets_Editor)
-    else:
-        try: 
-            from PySide2 import QtCore, QtWidgets
-        except:
-            # can't find PySide2, load old preset browser
-            register_utils.rman_register_class(PRMAN_OT_Renderman_Presets_Editor)
-
     bpy.types.VIEW3D_MT_add.prepend(rman_presets_object_menu) 
     bpy.types.VIEW3D_MT_object_context_menu.prepend(rman_presets_object_menu)  
           
@@ -502,4 +552,4 @@ def unregister():
     bpy.types.VIEW3D_MT_add.remove(rman_presets_object_menu)
     bpy.types.VIEW3D_MT_object_context_menu.remove(rman_presets_object_menu)
 
-    register_utils.rman_unregister_class(PRMAN_OT_Renderman_Presets_Editor)  
+    register_utils.rman_unregister_classes(classes)
