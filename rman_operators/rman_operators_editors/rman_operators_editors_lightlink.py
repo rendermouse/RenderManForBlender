@@ -174,7 +174,7 @@ class LightLinkingQtWrapper(rfb_qt.RmanQtWrapper):
             item = standard_item.child(i)
             items.append(item)
             if item.rowCount() > 0:
-                self.get_alget_all_object_itemsl_items(item, items)        
+                self.get_all_object_items(item, items)        
 
     def lights_index_changed(self):
         idx = int(self.lights_treeView.currentRow())
