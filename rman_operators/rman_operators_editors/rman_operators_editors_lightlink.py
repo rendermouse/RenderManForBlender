@@ -167,7 +167,14 @@ class LightLinkingQtWrapper(rfb_qt.RmanQtWrapper):
             if ll.light_ob.name == light_nm:
                 light_link_item = ll
                 break
-        return light_link_item           
+        return light_link_item   
+
+    def get_all_object_items(self, standard_item, items):
+        for i in range(standard_item.rowCount()):
+            item = standard_item.child(i)
+            items.append(item)
+            if item.rowCount() > 0:
+                self.get_alget_all_object_itemsl_items(item, items)        
 
     def lights_index_changed(self):
         idx = int(self.lights_treeView.currentRow())
@@ -187,23 +194,21 @@ class LightLinkingQtWrapper(rfb_qt.RmanQtWrapper):
 
         light_link_item = self.find_light_link_item(light_nm)   
         selected_items =  QtCore.QItemSelection()
+        items = []
+        self.get_all_object_items(self.rootNode, items)               
 
         if light_link_item is None:
             if not object_utils.is_light_filter(light_ob):
                 light_link_item = scene.renderman.light_links.add()
                 light_link_item.name = light_ob.name
                 light_link_item.light_ob = light_ob
-                                    
-            for i in range(0, self.rootNode.rowCount()):
-                item = self.rootNode.child(i)
+      
+            for item in items:
                 idx = self.treeModel.indexFromItem(item)
                 selection_range = QtCore.QItemSelectionRange(idx)
                 selected_items.append(selection_range)
         else:            
-            for i in range(0, self.rootNode.rowCount()):
-                item = self.rootNode.child(i)
-                if not item:
-                    continue
+            for item in items:
                 idx = self.treeModel.indexFromItem(item)
                 ob_nm = item.text()
                 found = False
@@ -253,7 +258,7 @@ class LightLinkingQtWrapper(rfb_qt.RmanQtWrapper):
 
         def add_children(root_item, ob):
             for child in ob.children:
-                if ob.type in ['CAMERA', 'LIGHT', 'ARMATURE']:
+                if child.type in ['CAMERA', 'LIGHT', 'ARMATURE']:
                     continue
                 item = self.find_item(root_item, child)
                 if not item:
