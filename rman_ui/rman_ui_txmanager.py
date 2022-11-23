@@ -72,32 +72,6 @@ def create_widget():
                                                 help_func=help_func)
         mgr.ui = __TXMANAGER_WINDOW__
     return __TXMANAGER_WINDOW__
-
-class PRMAN_OT_TxManager_Qt(bpy.types.Operator):
-    bl_idname = "rman_txmgr_list.open_txmanager"
-    bl_label = "Texture Manager"
-
-    nodeID: bpy.props.StringProperty(default='')    
-
-    def execute(self, context):
-        from ..rfb_utils import texture_utils
-        global __TXMANAGER_WINDOW__
-        if __TXMANAGER_WINDOW__ and __TXMANAGER_WINDOW__.isVisible():
-            return {'FINISHED'}
-
-        if sys.platform == "darwin":
-            rfb_qt.run_with_timer(__TXMANAGER_WINDOW__, create_widget)   
-        else:
-            bpy.ops.wm.txm_qt_app_timed()
-        mgr = texture_utils.get_txmanager().txmanager
-        mgr.update_ui_list()
-        if self.nodeID:
-            txfile = mgr.get_txfile_from_id(self.nodeID)
-            mgr.ui.select_txfile(txfile)        
-         
-        return {'RUNNING_MODAL'}
-
-
 class TxFileItem(PropertyGroup):
     """UIList item representing a TxFile"""
 
@@ -867,7 +841,6 @@ classes = [
     PRMAN_OT_Renderman_txmanager_refresh,
     PRMAN_PT_Renderman_txmanager_list,
     PRMAN_OT_Renderman_txmanager_remove_texture,   
-    PRMAN_OT_TxManager_Qt,
     PRMAN_OT_Renderman_open_txmanager,
     TxManagerQtAppTimed 
 ]
