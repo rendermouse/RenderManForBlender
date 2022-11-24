@@ -12,7 +12,9 @@ from ... import rfb_icons
 from ...rman_operators.rman_operators_collections import return_empty_list   
 from ...rman_config import __RFB_CONFIG_DICT__ as rfb_config
 from ...rman_ui import rfb_qt as rfb_qt
+from ...rman_constants import RFB_ADDON_PATH
 import bpy
+import os
 import re
 import sys
 from PySide2 import QtCore, QtWidgets, QtGui 
@@ -148,6 +150,12 @@ class LightLinkingQtWrapper(rfb_qt.RmanQtWrapper):
 
         for nm in all_lights:
             item = QtWidgets.QListWidgetItem(nm)
+            ob = scene.objects[nm]
+            light_shader_name = ob.data.renderman.get_light_node_name()
+            icon_path = os.path.join(RFB_ADDON_PATH, 'rfb_icons/out_%s.png' % light_shader_name)
+            if os.path.exists(icon_path):
+                icon = QtGui.QIcon(icon_path)
+                item.setIcon(icon)
             item.setFlags(item.flags())
             self.lights_treeView.addItem(item)
 
