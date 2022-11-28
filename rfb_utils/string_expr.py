@@ -191,7 +191,7 @@ class StringExpression(object):
 
                 # optional formating
                 if m.group(3):
-                    if isinstance(tok_val, basestring) and tok_val:
+                    if isinstance(tok_val, str) and tok_val:
                         try:
                             tok_val = eval(tok_val)
                         except (NameError, SyntaxError, TypeError) as err:
