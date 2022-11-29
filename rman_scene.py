@@ -1554,7 +1554,7 @@ class RmanScene(object):
                 display.params.Inherit(dspydriver_params)
             display.params.SetString("mode", channels)
             if display_driver == "it":
-                dspy_info = display_utils.make_dspy_info(self.bl_scene)
+                dspy_info = display_utils.make_dspy_info(self.bl_scene, self.is_interactive)
                 port = self.rman_render.it_port
                 dspy_callback = "dspyRender"
                 if self.is_interactive:

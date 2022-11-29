@@ -669,7 +669,7 @@ def get_dspy_dict(rman_scene, expandTokens=True, include_holdouts=True):
     return dspys_dict
 
 
-def make_dspy_info(scene):
+def make_dspy_info(scene, is_interactive=False):
     """
     Create some render parameter from scene and pass it to image tool.
 
@@ -679,6 +679,7 @@ def make_dspy_info(scene):
 
     Arguments:
         scene (bpy.types.Scene) - Blender scene object
+        is_interactive (bool) - True if we are in IPR
 
     Returns:
         (str) - a string with the display notes to give to "it"
@@ -697,7 +698,10 @@ def make_dspy_info(scene):
 
     dspy_notes = "Render start:\t%s\r\r" % ts
     dspy_notes += "Integrator:\t%s\r\r" % integrator_nm
-    dspy_notes += "Samples:\t%d - %d\r" % (rm.hider_minSamples, rm.hider_maxSamples)
+    if is_interactive:
+        dspy_notes += "Samples:\t%d - %d\r" % (rm.ipr_hider_minSamples, rm.ipr_hider_maxSamples)
+    else:
+        dspy_notes += "Samples:\t%d - %d\r" % (rm.hider_minSamples, rm.hider_maxSamples)        
     dspy_notes += "Pixel Variance:\t%f\r\r" % rm.ri_pixelVariance
 
     # moved this in front of integrator check. Was called redundant in
