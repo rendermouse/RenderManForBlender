@@ -792,6 +792,23 @@ class PRMAN_OT_Viewport_Cropwindow(bpy.types.Operator):
         self.crop_handler.crop_windowing = True
         return {'RUNNING_MODAL'}
 
+class PRMAN_MT_Viewport_Render_Menu(Menu):
+    bl_label = "Render Viewport Menu"
+    bl_idname = "PRMAN_MT_Viewport_Render_Menu"
+
+    @classmethod
+    def poll(cls, context):
+        return context.engine == "PRMAN_RENDER"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.operator_context = 'INVOKE_DEFAULT'
+        op = layout.operator('renderman.start_ipr', text='IPR to Viewport', icon='BLENDER')
+        op.render_to_it = False  
+        rman_icon = rfb_icons.get_icon('rman_it')
+        op = layout.operator('renderman.start_ipr', text='IPR to it', icon_value=rman_icon.icon_id)
+        op.render_to_it = True                  
+
 def draw_rman_viewport_props(self, context):
     layout = self.layout
     scene = context.scene
@@ -850,9 +867,7 @@ def draw_rman_viewport_props(self, context):
                 #rman_render.stop_render()
                 rman_render.del_bl_engine()
             rman_rerender_controls = rfb_icons.get_icon("rman_ipr_on")
-            op = row.operator('renderman.start_ipr', text="",
-                            icon_value=rman_rerender_controls.icon_id)
-            op.render_to_it = False
+            row.menu('PRMAN_MT_Viewport_Render_Menu', text='', icon_value=rman_rerender_controls.icon_id)
         row.popover(panel="PRMAN_PT_Viewport_Options", text="")
 
 
@@ -919,7 +934,8 @@ classes = [
     PRMAN_OT_Viewport_CropWindow_Reset,
     PRMAN_OT_Viewport_Cropwindow,
     PRMAN_OT_Viewport_Enhance,
-    PRMAN_PT_Viewport_Options
+    PRMAN_PT_Viewport_Options,
+    PRMAN_MT_Viewport_Render_Menu
 ]
 
 def register():

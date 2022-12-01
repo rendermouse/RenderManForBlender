@@ -192,7 +192,7 @@ class PRMAN_OT_StartInteractive(bpy.types.Operator):
     ''''''
     bl_idname = "renderman.start_ipr"
     bl_label = "Start Interactive Rendering"
-    bl_description = "Start Interactive Rendering"
+    bl_description = "Start IPR and render to the viewport"
     bl_options = {'INTERNAL'}    
 
     render_to_it: bpy.props.BoolProperty(default=False)
