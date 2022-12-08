@@ -78,6 +78,8 @@ class PRMAN_OT_Renderman_Package(Operator):
                 shutil.copyfile(fpath, diskpath)
                 z.write(diskpath, arcname=os.path.join('textures', bfile))
                 remove_files.append(diskpath)
+                if fpath == txfile.outfile:
+                    continue
                 bfile = os.path.basename(txitem.outfile)
                 diskpath = os.path.join(texture_dir, bfile)
                 shutil.copyfile(txitem.outfile, diskpath)
@@ -170,10 +172,16 @@ class PRMAN_OT_Renderman_Package(Operator):
         z.close()
 
         for f in remove_files:
-            os.remove(f)
+            try:
+                os.remove(f)
+            except:
+                continue
 
         for d in remove_dirs:
-            os.removedirs(d)        
+            try:
+                os.removedirs(d)        
+            except:
+                continue
 
         bpy.ops.wm.revert_mainfile()
 
