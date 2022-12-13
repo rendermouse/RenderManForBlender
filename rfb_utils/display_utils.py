@@ -15,6 +15,7 @@ __BLENDER_TO_RMAN_DSPY__ = { 'TIFF': 'tiff', 'TARGA': 'targa', 'TARGA_RAW': 'tar
 __RMAN_TO_BLENDER__ = { 'tiff': 'TIFF', 'targa': 'TARGA', 'openexr':'OPEN_EXR', 'png':'PNG'}
 
 def get_beauty_filepath(bl_scene, use_blender_frame=False, expand_tokens=False, no_ext=False):
+    dspy_info = dict()
     view_layer = bpy.context.view_layer
     rm_rl = None
     if view_layer.renderman.use_renderman:
@@ -40,7 +41,13 @@ def get_beauty_filepath(bl_scene, use_blender_frame=False, expand_tokens=False, 
         filePath = string_utils.expand_string(filePath,
                                             display=display_driver, 
                                             asFilePath=True)
-    return filePath
+    dspy_info['filePath'] = filePath
+    dspy_info['display_driver'] = display_driver
+    return dspy_info
+
+def using_rman_displays():
+    view_layer = bpy.context.view_layer
+    return view_layer.renderman.use_renderman
 
 def _default_dspy_params():
     d = {}

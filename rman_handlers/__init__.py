@@ -62,17 +62,24 @@ def render_pre(bl_scene):
     from ..rfb_utils import display_utils
     from ..rfb_utils import scene_utils
 
+    if bl_scene.render.engine != 'PRMAN_RENDER':
+        return
+
     __ORIGINAL_BL_FILEPATH__ = bl_scene.render.filepath
     __ORIGINAL_BL_FILE_FORMAT__ = bl_scene.render.image_settings.file_format    
     write_comp = scene_utils.should_use_bl_compositor(bl_scene)
-    if write_comp:
-        filePath = display_utils.get_beauty_filepath(bl_scene, use_blender_frame=True, expand_tokens=True, no_ext=True)
-        bl_scene.render.filepath = filePath
-        bl_scene.render.image_settings.file_format = 'OPEN_EXR'   
+    dspy_info = display_utils.get_beauty_filepath(bl_scene, use_blender_frame=True, expand_tokens=True, no_ext=True)    
+    if display_utils.using_rman_displays():
+        if write_comp:       
+            bl_scene.render.filepath = dspy_info['filePath']
+            img_format = display_utils.__RMAN_TO_BLENDER__.get(dspy_info['display_driver'], 'OPEN_EXR')
+            bl_scene.render.image_settings.file_format = img_format  
+        else:
+            __BL_TMP_FILE__ = os.path.join(__BL_TMP_DIR__, '####.png')
+            bl_scene.render.filepath = __BL_TMP_FILE__
+            bl_scene.render.image_settings.file_format = 'PNG'        
     else:
-        __BL_TMP_FILE__ = os.path.join(__BL_TMP_DIR__, '####.png')
-        bl_scene.render.filepath = __BL_TMP_FILE__
-        bl_scene.render.image_settings.file_format = 'PNG'        
+        bl_scene.render.filepath = dspy_info['filePath']     
 
 @persistent
 def render_post(bl_scene):
@@ -85,6 +92,9 @@ def render_post(bl_scene):
     global __ORIGINAL_BL_FILEPATH__
     global __ORIGINAL_BL_FILE_FORMAT__
     global __BL_TMP_FILE__
+
+    if bl_scene.render.engine != 'PRMAN_RENDER':
+        return    
 
     bl_scene.render.filepath = __ORIGINAL_BL_FILEPATH__
     bl_scene.render.image_settings.file_format = __ORIGINAL_BL_FILE_FORMAT__

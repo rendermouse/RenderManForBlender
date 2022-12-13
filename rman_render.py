@@ -45,6 +45,37 @@ __BLENDER_DSPY_PLUGIN__ = None
 __DRAW_THREAD__ = None
 __RMAN_STATS_THREAD__ = None
 
+# map Blender display file format
+# to ice format
+__BLENDER_TO_ICE_DSPY__ = {
+    'TIFF': ice.constants.FMT_TIFFFLOAT, 
+    'TARGA': ice.constants.FMT_TGA,
+    'TARGA_RAW': ice.constants.FMT_TGA, 
+    'JPEG': ice.constants.FMT_JPEG,
+    'JPEG2000': ice.constants.FMT_JPEG,
+    'OPEN_EXR': ice.constants.FMT_EXRFLOAT,
+    'CINEON': ice.constants.FMT_CINEON,
+    'PNG': ice.constants.FMT_PNG
+}
+
+# map ice format to a file extension
+__ICE_EXT_MAP__ = {
+    ice.constants.FMT_TIFFFLOAT: 'tif', 
+    ice.constants.FMT_TGA: 'tga', 
+    ice.constants.FMT_JPEG: 'jpg',
+    ice.constants.FMT_EXRFLOAT: 'exr',
+    ice.constants.FMT_CINEON: 'cin',
+    ice.constants.FMT_PNG: 'png'
+}
+
+# map rman display to ice format
+__RMAN_TO_ICE_DSPY__ = {
+    'tiff': ice.constants.FMT_TIFFFLOAT, 
+    'targa': ice.constants.FMT_TGA,
+    'openexr': ice.constants.FMT_EXRFLOAT,    
+    'png': ice.constants.FMT_PNG
+}
+
 def __update_areas__():
     for window in bpy.context.window_manager.windows:
         for area in window.screen.areas:
@@ -251,8 +282,9 @@ def preload_dsos(rman_render):
 
 
 class BlRenderResultHelper:
-    def __init__(self, rman_render, dspy_dict):
+    def __init__(self, rman_render, bl_scene, dspy_dict):
         self.rman_render = rman_render
+        self.bl_scene = bl_scene
         self.dspy_dict = dspy_dict
         self.width = -1
         self.height = -1
@@ -342,6 +374,8 @@ class BlRenderResultHelper:
                     filepath = self.dspy_dict['displays'][dspy_nm]['filePath']
 
                     if i == 0:
+                        continue 
+
                         # write out the beauty with a 'raw' substring
                         toks = os.path.splitext(filepath)
                         filepath = '%s_beauty_raw.exr' % (toks[0])
@@ -354,25 +388,15 @@ class BlRenderResultHelper:
                         # use ice to save out the image
                         img = ice.FromArray(buffer)
                         img = img.Flip(False, True, False)
-                        img.Save(filepath, ice.constants.FMT_EXRFLOAT)          
-                    else:              
-                        buffer = self.rman_render._get_buffer(self.width, self.height, image_num=i, as_flat=True)
-                        if buffer is None:
-                            continue
-                        bl_image = bpy.data.images.new(dspy_nm, self.width, self.height)
-                        try:
-                            if isinstance(buffer, numpy.ndarray):
-                                buffer = buffer.tolist()
-                            bl_image.use_generated_float = True
-                            bl_image.filepath_raw = filepath                            
-                            bl_image.pixels.foreach_set(buffer)
-                            bl_image.file_format = 'OPEN_EXR'
-                            bl_image.update()
-                            bl_image.save()
-                        except:
-                            pass
-                        finally:
-                            bpy.data.images.remove(bl_image)            
+                        img_format = ice.constants.FMT_EXRFLOAT
+                        if not display_utils.using_rman_displays():
+                            img_format = __BLENDER_TO_ICE_DSPY__.get(self.bl_scene.render.image_settings.file_format, img_format)
+
+                        # change file extension                            
+                        toks = os.path.splitext(filepath)
+                        ext = __ICE_EXT_MAP__.get(img_format)
+                        filepath = '%s.%s' % (toks[0], ext)                            
+                        img.Save(filepath, img_format)        
 
 class RmanRender(object):
     '''
@@ -693,7 +717,7 @@ class RmanRender(object):
             self.sg_scene.Render(render_cmd)
         if self.rman_render_into == 'blender':  
             dspy_dict = display_utils.get_dspy_dict(self.rman_scene, include_holdouts=False)
-            bl_rr_helper = BlRenderResultHelper(self, dspy_dict)
+            bl_rr_helper = BlRenderResultHelper(self, self.bl_scene, dspy_dict)
             if for_background:
                 bl_rr_helper.write_aovs = (use_compositor and rm.use_bl_compositor_write_aovs)
             else:
