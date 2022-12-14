@@ -573,7 +573,8 @@ def export_material_preset(mat, nodes_to_convert, renderman_output_node, Asset):
     nodeClass = 'root'
     rmanNode = 'shadingEngine'
     nodeType = 'shadingEngine'
-    nodeName = '%s_SG' % Asset.label()
+    sg_name = Asset.label().replace('.', '_')
+    nodeName = '%s_SG' % sg_name
     Asset.addNode(nodeName, nodeType,
                     nodeClass, rmanNode,
                     externalosl=False)
@@ -1465,7 +1466,7 @@ def export_asset(nodes, atype, infodict, category, cfg, renderPreview='std',
     #
     prmanversion = envconfig().build_info.version()
     Asset.setCompatibility(hostName='Blender',
-                           hostVersion=bpy.app.version,
+                           hostVersion=bpy.app.version_string,
                            rendererVersion=prmanversion)                           
 
     # parse scene
