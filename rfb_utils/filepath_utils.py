@@ -76,7 +76,9 @@ def get_token_blender_file_path(p):
             pout = re.sub(regex, '<blend_dir>/', p, 0, re.MULTILINE)
     else:
         blend_dir = string_utils.get_var('blend_dir')
-        if blend_dir.endswith('/'):
+        if blend_dir == '':
+            pout = p
+        elif blend_dir.endswith('/'):
             pout = p.replace(blend_dir, '<blend_dir>')
         else:    
             pout = p.replace(blend_dir, '<blend_dir>/')
