@@ -688,6 +688,7 @@
             "label": "Displacement Bound",
             "type": "float",
             "editable": true,
+            "always_write": true,
             "default": 0.1,
             "update_function_name": "lambda s, c: update_primvar_func(s, 'rman_displacementBound', c)",
             "page": "Displacement"
@@ -700,6 +701,7 @@
             "type": "string",
             "default": "object",
             "editable": true,
+            "always_write": true,            
             "widget": "popup",
             "options": "world|object",
             "page": "Displacement",
