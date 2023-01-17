@@ -144,7 +144,6 @@ def create_bxdf(node_type):
 
     Arguments:
         node_type (str) - name of the Bxdf you want to create (ex: PxrSurface)
-        ob (bpy.types.Object) - optional object to attach material to
 
     Returns:
         (bpy.types.Material, bpy.types.Node) - material and bxdf node
@@ -155,6 +154,26 @@ def create_bxdf(node_type):
     output = shadergraph_utils.find_node_from_nodetree(nt, 'RendermanOutputNode')
     bxdf = output.inputs[0].links[0].from_node
     return (material, bxdf)
+
+def create_displacement(material):
+    '''Create a PxrDisplace node for the given material
+
+    Arguments:
+        node_type (bpy.types.Material) - material
+
+    Returns:
+        (bpy.types.Node) - the PxrDisplace node
+
+    '''
+    nt = material.node_tree    
+    output = shadergraph_utils.find_node_from_nodetree(nt, 'RendermanOutputNode')
+    if output is None:
+        return None
+    if output.inputs['displace_in'].is_linked:
+        return output.inputs['displace_in'].links[0].from_node
+    disp = nt.nodes.new('PxrDisplaceDisplaceNode')
+    nt.links.new(disp.outputs['displace_out'], output.inputs['displace_in'])        
+    return disp
 
 def attach_material(material, ob):
     '''Attach material to object
