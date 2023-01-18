@@ -155,9 +155,21 @@ class PRMAN_OT_Renderman_Package(Operator):
             bfile = os.path.basename(openvdb_file)
             diskpath = os.path.join(assets_dir, bfile)
             shutil.copyfile(openvdb_file, diskpath)      
-            setattr(db, 'filepath', '//./assets/%s' % bfile)   
+            #setattr(db, 'filepath', '//./assets/%s' % bfile) # Arig ranch mod
+            setattr(db, 'filepath', '//assets/%s' % bfile)            
             z.write(diskpath, arcname=os.path.join('assets', bfile))               
             remove_files.append(diskpath)
+            
+        # Caches # Arig ranch mod
+        # https://docs.blender.org/manual/fr/dev/animation/constraints/transform/transform_cache.html
+        for cache in bpy.data.cache_files:
+            cache_file = filepath_utils.get_real_path(cache.filepath)
+            bfile = os.path.basename(cache_file)
+            diskpath = os.path.join(assets_dir, bfile)
+            shutil.copyfile(cache_file, diskpath)      
+            setattr(cache, 'filepath', '//assets/%s' % bfile)            
+            z.write(diskpath, arcname=os.path.join('assets', bfile))               
+            remove_files.append(diskpath)            
 
         # archives etc.
         for ob in bpy.data.objects:
