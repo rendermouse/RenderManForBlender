@@ -723,7 +723,12 @@
             "channelType": "color",
             "channelSource": "NPRtoonDiffRamp",
             "group": "NPR"
-        }        
+        },
+        "NPRdistort": {
+            "channelType": "color",
+            "channelSource": "NPRdistort",
+            "group": "NPR"
+        }
     },
     "displays": {
         "Default": {
@@ -802,7 +807,8 @@
                 "NPRalbedo",
                 "NPRtextureCoords",
                 "NPRPtriplanar",
-                "NPRNtriplanar"
+                "NPRNtriplanar",
+                "NPRdistort"
             ]
         }        
     }
