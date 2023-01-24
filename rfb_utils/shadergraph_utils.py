@@ -2,7 +2,6 @@ from . import color_utils
 from . import filepath_utils
 from . import string_utils
 from . import object_utils
-from . import scene_utils
 from ..rman_constants import RMAN_STYLIZED_FILTERS, RMAN_STYLIZED_PATTERNS, RMAN_UTILITY_PATTERN_NAMES, RFB_FLOAT3
 import math
 import bpy
@@ -476,6 +475,8 @@ def get_all_shading_nodes(scene=None):
     Returns:
         (list) - list of all the shading nodes
     '''    
+
+    from . import scene_utils
 
     nodes = list()
 

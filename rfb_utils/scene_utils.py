@@ -2,7 +2,6 @@ from . import shadergraph_utils
 from . import object_utils
 from . import prefs_utils
 from . import string_utils
-from . import display_utils
 from ..rfb_logger import rfb_log
 import bpy
 import sys
@@ -57,6 +56,8 @@ def should_use_bl_compositor(bl_scene):
     Returns:
         (bool) - true if we should use the compositor; false if not
     '''
+    from . import display_utils
+
     rm = bl_scene.renderman
     if not bpy.app.background:
         return (rm.render_into == 'blender')

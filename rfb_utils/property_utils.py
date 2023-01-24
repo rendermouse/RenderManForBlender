@@ -1,16 +1,9 @@
-from operator import methodcaller
-from . import texture_utils
 from . import string_utils
-from . import shadergraph_utils
 from . import prefs_utils
-from ..rman_constants import RFB_ARRAYS_MAX_LEN, __RMAN_EMPTY_STRING__, __RESERVED_BLENDER_NAMES__, RFB_FLOAT3
+from ..rman_constants import __RMAN_EMPTY_STRING__, __RESERVED_BLENDER_NAMES__, RFB_FLOAT3
 from ..rfb_logger import rfb_log
-from collections import OrderedDict
 from bpy.props import *
 import bpy
-import os
-import shutil
-import re
 
 
 __GAINS_TO_ENABLE__ = {
@@ -55,6 +48,9 @@ __LOBES_ENABLE_PARAMS__ = [
 class BlPropInfo:
 
     def __init__(self, node, prop_name, prop_meta):
+
+        from . import shadergraph_utils
+
         self.prop_meta = prop_meta
         self.prop_name = prop_name
         self.prop = getattr(node, prop_name, None)
@@ -322,6 +318,9 @@ def set_riattr_bl_prop(attrs, prop_name, meta, rm, check_inherit=True, remove=Tr
 
 
 def build_output_param_str(rman_sg_node, mat_name, from_node, from_socket, convert_socket=False, param_type=''):
+
+    from . import shadergraph_utils
+
     nodes_to_blnodeinfo = getattr(rman_sg_node, 'nodes_to_blnodeinfo', dict())
     if from_node in nodes_to_blnodeinfo:
         bl_node_info = nodes_to_blnodeinfo[from_node]
@@ -344,6 +343,9 @@ def build_output_param_str(rman_sg_node, mat_name, from_node, from_socket, conve
         return "%s:%s" % (from_node_name, from_sock_name)
 
 def get_output_param_str(rman_sg_node, node, mat_name, socket, to_socket=None, param_type='', check_do_convert=True):
+
+    from . import shadergraph_utils
+
     # if this is a node group, hook it up to the input node inside!
     if node.bl_idname == 'ShaderNodeGroup':
         ng = node.node_tree
@@ -843,6 +845,8 @@ def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group
                 val = [0, 0, 0] if param_type == 'color' else 0
 
             elif param_type == 'string':
+                from . import texture_utils
+
                 if not is_frame_sensitive:
                     is_frame_sensitive = string_utils.check_frame_sensitive(prop)
 
@@ -881,6 +885,8 @@ def portal_inherit_dome_params(portal_node, dome, dome_node, rixparams):
     Portal lights need to inherit some parameter values from the dome light
     it is parented to.
     '''   
+
+    from . import texture_utils
 
     inheritAttrs = {
         "float specular": 1.0,

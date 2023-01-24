@@ -1,7 +1,5 @@
 from . import string_utils
 from . import property_utils
-from . import shadergraph_utils
-from . import scene_utils
 from .. import rman_constants
 from .. import rman_config
 from collections import OrderedDict
@@ -692,6 +690,8 @@ def make_dspy_info(scene, is_interactive=False):
         (str) - a string with the display notes to give to "it"
 
     """
+    from . import shadergraph_utils
+
     params = {}
     rm = scene.renderman
     world = scene.world
@@ -742,6 +742,7 @@ def export_metadata(scene, params, camera_name=None):
         params (RtParamList) - param list to fill with meta data
         camera_name - Name of camera we want meta data from
     """
+    from . import shadergraph_utils
 
     rm = scene.renderman
     world = scene.world         
