@@ -154,7 +154,7 @@
             "default": 0,
             "widget": "checkbox",
             "help": "Keep render data around for faster animation renders, at the cost of increased memory usage. May not work in all cases.",
-            "editable": false,
+            "ipr_editable": false,
             "update_function_name": "update_do_persistent_data",
             "update_function": "def update_do_persistent_data(self, context):\n    scene = context.scene\n    scene.render.use_persistent_data = self.do_persistent_data"            
         },             
@@ -171,7 +171,7 @@
             "widget": false,
             "slidermin": 0,
             "slidermax": 4096,
-            "editable": true,
+            "ipr_editable": true,
             "update_function_name": "lambda s, c: update_options_func(s, 'ipr_hider_minSamples', c)",
             "help": "When set to zero this value is automatically computed as the square root of the max samples."
         },
@@ -193,7 +193,7 @@
                 "Production": 1024,
                 "High Quality": 2048
             },
-            "editable": true,
+            "ipr_editable": true,
             "update_function_name": "lambda s, c: update_options_func(s, 'ipr_hider_maxSamples', c)",            
             "help": "The maximum number of camera rays to be traced for each pixel.  When adaptive sampling is enabled (ie. Pixel Variance is greater than zero), fewer rays may be traced in smoother regions of the image."
         },                
@@ -214,7 +214,7 @@
                 "Denoising": 0.05,
                 "High Quality": 0.01
             },
-            "editable": true,
+            "ipr_editable": true,
             "update_function_name": "lambda s, c: update_options_func(s, 'ipr_ri_pixelVariance', c)",               
             "help": "This value is applied during IPR.  Adaptive sampling is done when Pixel Variance is greater than zero. Reducing this value increases the likelihood that more rays will be traced while increasing its value allows undersampling."
         },
@@ -229,7 +229,7 @@
             "min": 0,
             "max": 6,
             "widget": false,
-            "editable": true,
+            "ipr_editable": true,
             "update_function_name": "lambda s, c: update_options_func(s, 'hider_decidither', c)",
             "help": "This value is only applied during IPR. The value determines how much refinement (in a dither pattern) will be applied to the image during interactive rendering. 0 means full refinement up to a value of 6 which is the least refinement per iteration."
         },        
@@ -245,7 +245,7 @@
             "widget": "mapper",
             "options": "100%:1.0|50%:0.5|33%:0.33|25%:0.25|12.5%:0.125",
             "help": "This value is only applied during IPR. This scales down the resolution during viewport renders.",
-            "editable": true,
+            "ipr_editable": true,
             "update_function_name": "update_viewport_res_mult",
             "update_function": "def update_viewport_res_mult(self, context):\n    from ..rman_render import RmanRender\n    rr = RmanRender.get_rman_render()\n    rr.rman_scene_sync.update_viewport_res_mult(context)",
             "conditionalVisOps": {
@@ -593,7 +593,7 @@
             "riattr": "trace:maxspeculardepth",
             "label": "Max Specular Depth",
             "type": "int",
-            "editable": true,
+            "ipr_editable": true,
             "update_function_name": "lambda s, c: update_root_node_func(s, 'ri_maxSpecularDepth', c)",              
             "default": 4,
             "min": 0,
@@ -606,7 +606,7 @@
             "riattr": "trace:maxdiffusedepth",
             "label": "Max Diffuse Depth",
             "type": "int",
-            "editable": true,
+            "ipr_editable": true,
             "update_function_name": "lambda s, c: update_root_node_func(s, 'ri_maxDiffuseDepth', c)",
             "default": 1,
             "min": 0,

@@ -174,7 +174,7 @@ def _draw_ui_from_rman_config(config_name, panel, context, layout, parent):
             page_prop = ''
             page_open = False
             page_name = ''
-            editable = getattr(ndp, 'editable', False)
+            ipr_editable = getattr(ndp, 'ipr_editable', False)
             is_enabled = True
             if hasattr(ndp, 'page') and ndp.page != '':       
                 page_prop = ndp.page + "_uio"
@@ -268,7 +268,7 @@ def _draw_ui_from_rman_config(config_name, panel, context, layout, parent):
                 row.prop(parent, ndp.name, text=label)         
 
             if is_rman_interactive_running:
-                row.enabled = editable
+                row.enabled = ipr_editable
             elif is_rman_running:
                 row.enabled = False
             else:

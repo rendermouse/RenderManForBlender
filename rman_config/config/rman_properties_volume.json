@@ -6,7 +6,7 @@
             "name": "openvdb_filterwidth",
             "label": "Filter Width",
             "type": "float",
-            "editable": true,
+            "ipr_editable": true,
             "default": 0.0,
             "page": "",
             "help": "If set to 0, disables mipmapping. If greater than 0, values less than 1 bias towards finer levels of the mipmap and values larger than one bias towards coarser levels."
@@ -16,7 +16,7 @@
             "name": "openvdb_densitymult",
             "label": "Density Multiplier",
             "type": "float",
-            "editable": true,
+            "ipr_editable": true,
             "default": 1.0,
             "page": "",
             "help": "Scales the values in the density grid of the volume. This should be more efficient than scaling the density in the shader."
@@ -26,7 +26,7 @@
             "name": "openvdb_densityrolloff",
             "label": "Density Rolloff",
             "type": "float",
-            "editable": true,
+            "ipr_editable": true,
             "default": 0.0,
             "page": "",
             "help": "Values greater than 0 produce a logarithmic falloff in density values. Smaller rolloff values produce greater falloff."
@@ -36,7 +36,7 @@
             "name": "volume_dsominmax",
             "label": "DSO Min/Max",
             "type": "int",
-            "editable": true,
+            "ipr_editable": true,
             "default": 1,
             "widget": "checkbox",
             "primvar": "volume:dsominmax",
