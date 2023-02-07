@@ -844,18 +844,14 @@ def draw_rect_light(ob):
         indices = _FRUSTUM_DRAW_HELPER_.idx_buffer(len(pts), 0, 0)   
         draw_line_shape(ob, _SHADER_, pts, indices)          
 
-    m = ob_matrix @ __MTX_Y_180__ #Matrix.Rotation(math.radians(180.0), 4, 'Y')    
-    tex = ''
-    col = None
     if light_shader_name == 'PxrRectLight':
+        m = ob_matrix @ __MTX_Y_180__ #Matrix.Rotation(math.radians(180.0), 4, 'Y')   
         tex = light_shader.lightColorMap
         col = light_shader.lightColor
-    elif light_shader_name in ['PxrGoboLightFilter', 'PxrCookieLightFilter']:
-        tex = light_shader.map
         
-    pts = ((0.5, -0.5, 0.0), (-0.5, -0.5, 0.0), (-0.5, 0.5, 0.0), (0.5, 0.5, 0.0))
-    uvs = ((1, 1), (0, 1), (0, 0), (1, 0))    
-    draw_solid(ob, pts, m, uvs=uvs, tex=tex, col=col)  
+        pts = ((0.5, -0.5, 0.0), (-0.5, -0.5, 0.0), (-0.5, 0.5, 0.0), (0.5, 0.5, 0.0))
+        uvs = ((1, 1), (0, 1), (0, 0), (1, 0))    
+        draw_solid(ob, pts, m, uvs=uvs, tex=tex, col=col)  
 
 def draw_sphere_light(ob):
     global _FRUSTUM_DRAW_HELPER_
@@ -1430,7 +1426,7 @@ def draw_ramp_light_filter(ob):
     else:
         pass
 
-def draw_barn_light_filter(ob):
+def draw_barn_light_filter(ob, light_shader, light_shader_name):
     global _BARN_LIGHT_DRAW_HELPER_
 
     _SHADER_.bind()
@@ -1438,9 +1434,12 @@ def draw_barn_light_filter(ob):
     m = Matrix(ob.matrix_world) 
     m = m @ __MTX_Y_180__ # Matrix.Rotation(math.radians(180.0), 4, 'Y')
 
-    set_selection_color(ob)
+    set_selection_color(ob) 
 
-    _BARN_LIGHT_DRAW_HELPER_.update_input_params(ob)
+    radius = 1.0
+    if light_shader_name in ['PxrGoboLightFilter', 'PxrCookieLightFilter']:
+        radius = 0.0
+    _BARN_LIGHT_DRAW_HELPER_.update_input_params(ob, radius)
     vtx_buffer = _BARN_LIGHT_DRAW_HELPER_.vtx_buffer()
 
     pts = [m @ Vector(pt) for pt in vtx_buffer ]
@@ -1449,6 +1448,13 @@ def draw_barn_light_filter(ob):
     indices = [indices[i:i+2] for i in range(0, len(indices), 2)]
 
     draw_line_shape(ob, _SHADER_, pts, indices)
+
+    if light_shader_name in ['PxrGoboLightFilter', 'PxrCookieLightFilter']:  
+        col = light_shader.fillColor
+        tex = light_shader.map
+        pts = ((0.5, -0.5, 0.0), (-0.5, -0.5, 0.0), (-0.5, 0.5, 0.0), (0.5, 0.5, 0.0))
+        uvs = ((1, 1), (0, 1), (0, 0), (1, 0))    
+        draw_solid(ob, pts, m, uvs=uvs, tex=tex, col=col)  
 
 def draw():
     global _PRMAN_TEX_CACHE_
@@ -1518,7 +1524,7 @@ def draw():
             draw_ramp_light_filter(ob)
         elif light_shader_name in ['PxrGoboLightFilter', 'PxrCookieLightFilter', 'PxrBarnLightFilter']:
             # get all lights that the barn is attached to
-            draw_barn_light_filter(ob)
+            draw_barn_light_filter(ob, light_shader, light_shader_name)
         else:   
             draw_sphere_light(ob)
 
