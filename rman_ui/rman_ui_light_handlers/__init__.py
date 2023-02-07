@@ -3,7 +3,6 @@ import gpu
 import bgl
 import os
 from gpu_extras.batch import batch_for_shader
-from ...rfb_utils import texture_utils
 from ...rfb_utils import string_utils
 from ...rfb_utils import prefs_utils
 from ...rfb_logger import rfb_log
@@ -537,8 +536,8 @@ def _get_sun_direction(ob):
     rm = light.renderman.get_light_node()
 
     m = Matrix.Identity(4)     
-    m = m @ __MTX_X_90__ #Matrix.Rotation(math.radians(90.0), 4, 'X')
-    m = m @ __MTX_Y_90__ #Matrix.Rotation(math.radians(90.0), 4, 'Y')
+    m = m @ __MTX_X_90__ 
+    m = m @ __MTX_Y_90__ 
 
     month = float(rm.month)
     day = float(rm.day)
@@ -803,7 +802,7 @@ def draw_rect_light(ob):
     set_selection_color(ob)
 
     ob_matrix = Matrix(ob.matrix_world)        
-    m = ob_matrix @ __MTX_Y_180__ #Matrix.Rotation(math.radians(180.0), 4, 'Y')
+    m = ob_matrix @ __MTX_Y_180__ 
 
     box = [m @ Vector(pt) for pt in s_rmanLightLogo['box']]
     box_indices = _get_indices(s_rmanLightLogo['box'])
@@ -845,7 +844,7 @@ def draw_rect_light(ob):
         draw_line_shape(ob, _SHADER_, pts, indices)          
 
     if light_shader_name == 'PxrRectLight':
-        m = ob_matrix @ __MTX_Y_180__ #Matrix.Rotation(math.radians(180.0), 4, 'Y')   
+        m = ob_matrix @ __MTX_Y_180__ 
         tex = light_shader.lightColorMap
         col = light_shader.lightColor
         
@@ -861,18 +860,18 @@ def draw_sphere_light(ob):
     set_selection_color(ob)
 
     ob_matrix = Matrix(ob.matrix_world)        
-    m = ob_matrix @ __MTX_Y_180__ #Matrix.Rotation(math.radians(180.0), 4, 'Y')
+    m = ob_matrix @ __MTX_Y_180__ 
 
     disk = [m @ Vector(pt) for pt in s_diskLight]
     disk_indices = _get_indices(s_diskLight)
     draw_line_shape(ob, _SHADER_, disk, disk_indices)
 
-    m2 = m @ __MTX_Y_90__ #Matrix.Rotation(math.radians(90.0), 4, 'Y')
+    m2 = m @ __MTX_Y_90__ 
     disk = [m2 @ Vector(pt) for pt in s_diskLight]
     disk_indices = _get_indices(s_diskLight)
     draw_line_shape(ob, _SHADER_, disk, disk_indices)
 
-    m3 = m @ __MTX_X_90__ #Matrix.Rotation(math.radians(90.0), 4, 'X')
+    m3 = m @ __MTX_X_90__ 
     disk = [m3 @ Vector(pt) for pt in s_diskLight]
     disk_indices = _get_indices(s_diskLight)
     draw_line_shape(ob, _SHADER_, disk, disk_indices)
@@ -908,7 +907,7 @@ def draw_sphere_light(ob):
         indices = _FRUSTUM_DRAW_HELPER_.idx_buffer(len(pts), 0, 0)      
         draw_line_shape(ob, _SHADER_, pts, indices)         
 
-    m = ob_matrix @ Matrix.Scale(0.5, 4) @ __MTX_X_90__ # Matrix.Rotation(math.radians(90.0), 4, 'X')
+    m = ob_matrix @ Matrix.Scale(0.5, 4) @ __MTX_X_90__ 
     idx_buffer = make_sphere_idx_buffer() 
     if light_shader_name in ['PxrSphereLight']:
         col = light_shader.lightColor
@@ -931,7 +930,7 @@ def draw_envday_light(ob):
     ob_matrix = m
     
     m = Matrix(ob_matrix)
-    m = m @ __MTX_X_90__ #Matrix.Rotation(math.radians(90.0), 4, 'X')
+    m = m @ __MTX_X_90__ 
 
     west_rr_shape = [m @ Vector(pt) for pt in s_envday['west_rr_shape']]
     west_rr_indices = _get_indices(s_envday['west_rr_shape'])
@@ -1006,7 +1005,7 @@ def draw_disk_light(ob):
     set_selection_color(ob)
 
     ob_matrix = Matrix(ob.matrix_world)        
-    m = ob_matrix @ __MTX_Y_180__ #Matrix.Rotation(math.radians(180.0), 4, 'Y')
+    m = ob_matrix @ __MTX_Y_180__ 
 
     disk = [m @ Vector(pt) for pt in s_diskLight]
     disk_indices = _get_indices(s_diskLight)
@@ -1047,7 +1046,7 @@ def draw_disk_light(ob):
         indices = _FRUSTUM_DRAW_HELPER_.idx_buffer(len(pts), 0, 0)      
         draw_line_shape(ob, _SHADER_, pts, indices)      
  
-    m = ob_matrix @ __MTX_Y_180__ #Matrix.Rotation(math.radians(180.0), 4, 'Y')    
+    m = ob_matrix @ __MTX_Y_180__ 
     col = light_shader.lightColor    
     draw_solid(ob, s_diskLight, m, col=col)   
 
@@ -1058,7 +1057,7 @@ def draw_dist_light(ob):
     set_selection_color(ob)
 
     ob_matrix = Matrix(ob.matrix_world)        
-    m = ob_matrix @ __MTX_Y_180__ #Matrix.Rotation(math.radians(180.0), 4, 'Y')  
+    m = ob_matrix @ __MTX_Y_180__ 
 
     arrow1 = [m @ Vector(pt) for pt in s_distantLight['arrow1']]
     arrow1_indices = _get_indices(s_distantLight['arrow1'])
@@ -1097,12 +1096,12 @@ def draw_portal_light(ob):
     R_inside_indices = _get_indices(s_rmanLightLogo['R_inside'])
     draw_line_shape(ob, _SHADER_, R_inside, R_inside_indices)
 
-    m = ob_matrix @ __MTX_Y_180__ #Matrix.Rotation(math.radians(180.0), 4, 'Y')
+    m = ob_matrix @ __MTX_Y_180__ 
     arrow = [m @ Vector(pt) for pt in s_rmanLightLogo['arrow']]
     arrow_indices = _get_indices(s_rmanLightLogo['arrow'])
     draw_line_shape(ob, _SHADER_, arrow, arrow_indices)    
 
-    m = ob_matrix @ __MTX_X_90__ # Matrix.Rotation(math.radians(90.0), 4, 'X')
+    m = ob_matrix @ __MTX_X_90__ 
     m = m @ Matrix.Scale(0.5, 4)
     rays = [m @ Vector(pt) for pt in s_portalRays]
     rays_indices = _get_indices(s_portalRays)
@@ -1118,7 +1117,7 @@ def draw_dome_light(ob):
     scale = max(sca) # take the max axis   
     m = Matrix.Rotation(angle, 4, axis)
     m = m @ Matrix.Scale(100 * scale, 4)
-    m = m @ __MTX_X_90__ # Matrix.Rotation(math.radians(90.0), 4, 'X')
+    m = m @ __MTX_X_90__ 
 
     sphere_pts = make_sphere()
     sphere = [m @ Vector(p) for p in sphere_pts]
@@ -1204,13 +1203,13 @@ def draw_rounded_rectangles(ob, left, right,
     b = radius+bottomEdge
     draw_arc(a, b, 10, 3, right, -bottom, pts)
 
-    translate = m #Matrix.Translation( Vector([0,0, zOffset1])) @ m
+    translate = m 
     shape_pts = [translate @ Vector(pt) for pt in pts]
     shape_pts_indices = _get_indices(shape_pts)
 
     draw_line_shape(ob, _SHADER_, shape_pts, shape_pts_indices)
 
-    translate = m #Matrix.Translation( Vector([0,0, zOffset2])) @ m
+    translate = m 
     shape_pts = [translate @ Vector(pt) for pt in pts]
     shape_pts_indices = _get_indices(shape_pts)
 
@@ -1235,7 +1234,7 @@ def draw_rod(ob, leftEdge, rightEdge, topEdge,  bottomEdge,
                           topEdge, bottomEdge, front, -back, m)
 
  
-    m = world_mat @ __MTX_X_90__ #Matrix.Rotation(math.radians(-90.0), 4, 'X')
+    m = world_mat @ __MTX_X_90__ 
  
     
     # top and bottom
@@ -1244,7 +1243,7 @@ def draw_rod(ob, leftEdge, rightEdge, topEdge,  bottomEdge,
                           leftEdge, rightEdge,
                           backEdge, frontEdge, top, -bottom, m)
  
-    m = world_mat  @ __MTX_Y_90__ #Matrix.Rotation(math.radians(90.0), 4, 'Y')
+    m = world_mat  @ __MTX_Y_90__ 
     
     
     # left and right
@@ -1258,7 +1257,7 @@ def draw_rod_light_filter(ob):
     set_selection_color(ob)
 
     m = Matrix(ob.matrix_world)        
-    m = m @ __MTX_Y_180__ # Matrix.Rotation(math.radians(180.0), 4, 'Y')
+    m = m @ __MTX_Y_180__ 
 
     light = ob.data
     rm = light.renderman.get_light_node()
@@ -1350,7 +1349,7 @@ def draw_ramp_light_filter(ob):
         set_selection_color(ob)
 
         m = Matrix(ob.matrix_world)        
-        m = m @ __MTX_Y_180__ # Matrix.Rotation(math.radians(180.0), 4, 'Y')
+        m = m @ __MTX_Y_180__ 
 
         # begin
         begin_m = m @ Matrix.Scale(begin, 4)      
@@ -1359,11 +1358,11 @@ def draw_ramp_light_filter(ob):
         disk_indices = _get_indices(s_diskLight)
         draw_line_shape(ob, _SHADER_, disk, disk_indices)
 
-        m2 = begin_m @ __MTX_Y_90__ #Matrix.Rotation(math.radians(90.0), 4, 'Y')
+        m2 = begin_m @ __MTX_Y_90__ 
         disk = [m2 @ Vector(pt) for pt in s_diskLight]
         draw_line_shape(ob, _SHADER_, disk, disk_indices)
 
-        m3 = begin_m @ __MTX_X_90__ #Matrix.Rotation(math.radians(90.0), 4, 'X')
+        m3 = begin_m @ __MTX_X_90__ 
         disk = [m3 @ Vector(pt) for pt in s_diskLight]
         draw_line_shape(ob, _SHADER_, disk, disk_indices)
 
@@ -1373,11 +1372,11 @@ def draw_ramp_light_filter(ob):
         disk = [end_m @ Vector(pt) for pt in s_diskLight]
         draw_line_shape(ob, _SHADER_, disk, disk_indices)
 
-        m2 = end_m @ __MTX_Y_90__ #Matrix.Rotation(math.radians(90.0), 4, 'Y')
+        m2 = end_m @ __MTX_Y_90__ 
         disk = [m2 @ Vector(pt) for pt in s_diskLight]
         draw_line_shape(ob, _SHADER_, disk, disk_indices)
 
-        m3 = end_m @ __MTX_X_90__ #Matrix.Rotation(math.radians(90.0), 4, 'X')
+        m3 = end_m @ __MTX_X_90__ 
         disk = [m3 @ Vector(pt) for pt in s_diskLight]
         draw_line_shape(ob, _SHADER_, disk, disk_indices)
 
@@ -1385,7 +1384,7 @@ def draw_ramp_light_filter(ob):
     elif rampType == 1:        
 
         m = Matrix(ob.matrix_world)        
-        m = m @ __MTX_Y_180__ #Matrix.Rotation(math.radians(180.0), 4, 'Y')
+        m = m @ __MTX_Y_180__ 
 
         box = [m @ Vector(pt) for pt in s_rmanLightLogo['box']]
         n = mathutils.geometry.normal(box)
@@ -1410,7 +1409,7 @@ def draw_ramp_light_filter(ob):
         set_selection_color(ob)
 
         m = Matrix(ob.matrix_world)        
-        m = m @ __MTX_Y_180__ #Matrix.Rotation(math.radians(180.0), 4, 'Y')
+        m = m @ __MTX_Y_180__ 
 
         disk_indices = _get_indices(s_diskLight)
         if begin > 0.0:
@@ -1432,7 +1431,7 @@ def draw_barn_light_filter(ob, light_shader, light_shader_name):
     _SHADER_.bind()
 
     m = Matrix(ob.matrix_world) 
-    m = m @ __MTX_Y_180__ # Matrix.Rotation(math.radians(180.0), 4, 'Y')
+    m = m @ __MTX_Y_180__ 
 
     set_selection_color(ob) 
 
