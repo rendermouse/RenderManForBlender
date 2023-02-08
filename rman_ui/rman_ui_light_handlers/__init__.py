@@ -1451,7 +1451,9 @@ def draw_barn_light_filter(ob, light_shader, light_shader_name):
     if light_shader_name in ['PxrGoboLightFilter', 'PxrCookieLightFilter']:  
         col = light_shader.fillColor
         tex = light_shader.map
-        pts = ((0.5, -0.5, 0.0), (-0.5, -0.5, 0.0), (-0.5, 0.5, 0.0), (0.5, 0.5, 0.0))
+        w = light_shader.width
+        h = light_shader.height
+        pts = ((0.5*w, -0.5*h, 0.0), (-0.5*w, -0.5*h, 0.0), (-0.5*w, 0.5*h, 0.0), (0.5*w, 0.5*h, 0.0))
         uvs = ((1, 1), (0, 1), (0, 0), (1, 0))    
         draw_solid(ob, pts, m, uvs=uvs, tex=tex, col=col)  
 
