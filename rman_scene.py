@@ -729,6 +729,8 @@ class RmanScene(object):
                 # Empty was not created. Export it.
                 parent = ob.parent
                 rman_empty_node = self.export_data_block(parent)
+                if not rman_empty_node:
+                    return
             rman_empty_node.sg_node.AddChild(rman_sg_node.sg_node)
         else:
             self.get_root_sg_node().AddChild(rman_sg_node.sg_node)          
