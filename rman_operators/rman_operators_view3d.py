@@ -6,6 +6,7 @@ from ..rfb_utils.envconfig_utils import envconfig
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import object_utils
 from ..rfb_utils import string_utils
+from ..rfb_utils import prefs_utils
 from ..rfb_logger import rfb_log
 from .. import rfb_icons
 from ..rman_constants import RFB_ADDON_VERSION_STRING
@@ -240,9 +241,7 @@ class PRMAN_OT_RM_Add_Light_Filter(bpy.types.Operator):
         info = get_description('lightfilter', properties.rman_lightfilter_name)
         return info    
 
-    def execute(self, context):
-        selected_objects = context.selected_objects
-
+    def create_lightfilter(self, context):
         light_filter = bpy.data.lights.new(self.rman_lightfilter_name, 'AREA')
         light_filter_ob = bpy.data.objects.new(self.rman_lightfilter_name, light_filter)        
 
@@ -267,19 +266,38 @@ class PRMAN_OT_RM_Add_Light_Filter(bpy.types.Operator):
         if context.view_layer.objects.active:
             context.view_layer.objects.active.select_set(False)
         light_filter_ob.select_set(True)
-        context.view_layer.objects.active = light_filter_ob            
+        context.view_layer.objects.active = light_filter_ob             
 
+        return light_filter_ob        
+
+    def execute(self, context):
+        selected_objects = context.selected_objects
         if self.properties.add_to_selected:
-            for ob in selected_objects:
-                rman_type = object_utils._detect_primitive_(ob)
-                if rman_type == 'LIGHT':
-                    light_filter_item = ob.data.renderman.light_filters.add()
-                    light_filter_item.linked_filter_ob = light_filter_ob
-                elif shadergraph_utils.is_mesh_light(ob):
-                    mat = ob.active_material
-                    if mat:
-                        light_filter_item = mat.renderman_light.light_filters.add()
-                        light_filter_item.linked_filter_ob = light_filter_ob                        
+            if not selected_objects:
+                light_filter_ob = self.create_lightfilter(context)
+            else:
+                light_filter_ob = None
+                do_parent = prefs_utils.get_pref('rman_parent_lightfilter')
+                if not do_parent:
+                    light_filter_ob = self.create_lightfilter(context)
+                for ob in selected_objects:
+                    rman_type = object_utils._detect_primitive_(ob)
+                    if rman_type == 'LIGHT':
+                        if do_parent:
+                            light_filter_ob = self.create_lightfilter(context)
+                            light_filter_ob.parent = ob
+                        light_filter_item = ob.data.renderman.light_filters.add()
+                        light_filter_item.linked_filter_ob = light_filter_ob
+                    elif shadergraph_utils.is_mesh_light(ob):
+                        mat = ob.active_material
+                        if mat:
+                            if do_parent:
+                                light_filter_ob = self.create_lightfilter(context)
+                                light_filter_ob.parent = ob
+                            light_filter_item = mat.renderman_light.light_filters.add()
+                            light_filter_item.linked_filter_ob = light_filter_ob
+        else:
+            light_filter_ob = self.create_lightfilter(context)
 
         return {"FINISHED"}        
 

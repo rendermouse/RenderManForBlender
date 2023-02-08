@@ -91,7 +91,8 @@ __DEFAULTS__ = {
     'rman_roz_webSocketServer': False,         
     'rman_roz_webSocketServer_Port': 0, 
     'rman_roz_stats_print_level': '1',
-    'rman_enhance_zoom_factor': 5                           
+    'rman_enhance_zoom_factor': 5,
+    'rman_parent_lightfilter': False
 }
 
 class RendermanPreferencePath(bpy.types.PropertyGroup):
@@ -532,7 +533,13 @@ class RendermanPreferences(AddonPreferences):
         default=5,
         min=2,
         max=10
-    )                                                                          
+    )    
+
+    rman_parent_lightfilter: BoolProperty(
+        name="Parent Filter to Light",
+        default=False,
+        description="If on, and a light is selected, attaching a light filter will parent the light filter to the selected light."
+    )                                                                             
 
     def draw_xpu_devices(self, context, layout):
         if self.rman_xpu_device == 'CPU':
@@ -594,6 +601,7 @@ class RendermanPreferences(AddonPreferences):
         col.prop(self, 'rman_invert_light_linking')
         col.prop(self, 'rman_solo_collapse_nodes')
         col.prop(self, 'rman_use_blend_dir_token')
+        col.prop(self, 'rman_parent_lightfilter')
         col.prop(self, 'rman_editor')      
         col.prop(self, 'rman_enhance_zoom_factor')
 
