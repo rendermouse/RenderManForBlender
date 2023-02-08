@@ -1453,8 +1453,10 @@ def draw_barn_light_filter(ob, light_shader, light_shader_name):
         tex = light_shader.map
         w = light_shader.width
         h = light_shader.height
+        invertU = int(getattr(light_shader, 'invertU', False))
+        invertV = int(getattr(light_shader, 'invertV', False))
         pts = ((0.5*w, -0.5*h, 0.0), (-0.5*w, -0.5*h, 0.0), (-0.5*w, 0.5*h, 0.0), (0.5*w, 0.5*h, 0.0))
-        uvs = ((1, 1), (0, 1), (0, 0), (1, 0))    
+        uvs = ((invertU-0, 1-invertV), (1-invertU, 1-invertV),  (1-invertU, invertV-0), (invertU-0, invertV-0))    
         draw_solid(ob, pts, m, uvs=uvs, tex=tex, col=col)  
 
 def draw():
