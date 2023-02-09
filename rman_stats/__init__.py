@@ -1,13 +1,12 @@
 from ..rfb_logger import rfb_log
 
-import re
 import os
-import sys
 import json
 import bpy
 import rman
 import threading
 import time
+import getpass
 
 from collections import OrderedDict
 import rman_utils.stats_config.core as stcore
@@ -184,7 +183,7 @@ class RfBStatsManager(object):
                 self.rman_stats_session_config.LoadConfigFile(rman_stats_config_path, 'stats.ini')
                           
         # do this once at startup
-        self.web_socket_server_id = 'rfb_statsserver_'+str(os.getpid())
+        self.web_socket_server_id = 'rfb_statsserver_' + getpass.getuser() + '_' + str(os.getpid())
         self.rman_stats_session_config.SetServerId(self.web_socket_server_id)
 
         # initialize session config with prefs, then add session
