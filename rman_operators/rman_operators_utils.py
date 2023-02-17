@@ -107,7 +107,9 @@ class PRMAN_OT_Renderman_Package(Operator):
                 shutil.copyfile(fpath, diskpath)
                 z.write(diskpath, arcname=os.path.join('textures', bfile))
                 remove_files.append(diskpath)
-                if fpath == txfile.outfile:
+                # Check if .tex already copied - agentyRANCH
+                # - when .tex directly specified in texture
+                if fpath == txitem.outfile:
                     continue
                 bfile = os.path.basename(txitem.outfile)
                 diskpath = os.path.join(texture_dir, bfile)
@@ -144,8 +146,12 @@ class PRMAN_OT_Renderman_Package(Operator):
                     if os.path.exists(val):
                         bfile = os.path.basename(val)
                         diskpath = os.path.join(assets_dir, bfile)
-                        shutil.copyfile(val, diskpath)
                         setattr(node, prop_name, os.path.join('<blend_dir>', 'assets', bfile))
+                        # Check if file already copied - agentyRANCH
+                        #(avoid z.write creating multiple instances of same file) 
+                        if os.path.exists(diskpath):
+                            continue
+                        shutil.copyfile(val, diskpath)
                         z.write(diskpath, arcname=os.path.join('assets', bfile))
                         remove_files.append(diskpath)
 
@@ -155,15 +161,17 @@ class PRMAN_OT_Renderman_Package(Operator):
             bfile = os.path.basename(openvdb_file)
             diskpath = os.path.join(assets_dir, bfile)
             shutil.copyfile(openvdb_file, diskpath)      
-            #setattr(db, 'filepath', '//./assets/%s' % bfile) # Arig ranch mod
+            #setattr(db, 'filepath', '//./assets/%s' % bfile)  - agentyRANCH
             setattr(db, 'filepath', '//assets/%s' % bfile)            
             z.write(diskpath, arcname=os.path.join('assets', bfile))               
             remove_files.append(diskpath)
             
-        # Caches # Arig ranch mod
+        # Caches #  - agentyRANCH
         # https://docs.blender.org/manual/fr/dev/animation/constraints/transform/transform_cache.html
         for cache in bpy.data.cache_files:
-            cache_file = filepath_utils.get_real_path(cache.filepath)
+            # Change get_real_path with filesystem_path  - agentyRANCH
+            # (resolve blender relative path for shutil)
+            cache_file = filepath_utils.filesystem_path(cache.filepath)
             bfile = os.path.basename(cache_file)
             diskpath = os.path.join(assets_dir, bfile)
             shutil.copyfile(cache_file, diskpath)      
@@ -206,12 +214,14 @@ class PRMAN_OT_Renderman_Package(Operator):
         bl_filepath = os.path.dirname(bl_scene_file)
         bl_filename = os.path.basename(bl_scene_file)
         bl_filepath = os.path.join(self.directory, bl_filename)
-        bpy.ops.wm.save_as_mainfile(filepath=bl_filepath, copy=True)
-        remove_files.append(bl_filepath)       
+        # Add  relative_remap=False  to avoid //..\ - agentyRANCH
+        bpy.ops.wm.save_as_mainfile(filepath=bl_filepath, copy=True, compress=False, relative_remap=False)
+        remove_files.append(bl_filepath)
 
         z.write(bl_filepath, arcname=bl_filename)
         z.close()
 
+        # Try to remove the temporary files and directories - agentyRANCH
         for f in remove_files:
             try:
                 os.remove(f)
@@ -220,7 +230,7 @@ class PRMAN_OT_Renderman_Package(Operator):
 
         for d in remove_dirs:
             try:
-                os.removedirs(d)        
+                os.removedirs(d)
             except:
                 continue
 
