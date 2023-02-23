@@ -145,7 +145,7 @@ def _add_stylized_channels(dspys_dict, dspy_drv, rman_scene, expandTokens):
             'params': dspy_params,
             'dspyDriverParams': None}                    
 
-def _add_denoiser_channels(dspys_dict, dspy_params):
+def _add_denoiser_channels(dspys_dict, dspy_params, rman_scene):
     """
     Add the necessary dspy channels for denoiser. We assume
     the beauty display will be used as the variance file
@@ -169,9 +169,10 @@ def _add_denoiser_channels(dspys_dict, dspy_params):
 
         dspys_dict['displays']['beauty']['params']['displayChannels'].append(chan)            
 
-    filePath = dspys_dict['displays']['beauty']['filePath']
-    f,ext = os.path.splitext(filePath)
-    dspys_dict['displays']['beauty']['filePath'] = f + '_variance' + ext
+    if not rman_scene.bl_scene.renderman.use_ai_denoiser:
+        filePath = dspys_dict['displays']['beauty']['filePath']
+        f,ext = os.path.splitext(filePath)
+        dspys_dict['displays']['beauty']['filePath'] = f + '_variance' + ext
     dspys_dict['displays']['beauty']['is_variance'] = True
 
 def _set_blender_dspy_dict(layer, dspys_dict, dspy_drv, rman_scene, expandTokens, do_optix_denoise=False):   
@@ -472,7 +473,7 @@ def _set_rman_dspy_dict(rm_rl, dspys_dict, dspy_drv, rman_scene, expandTokens, d
                 'dspyDriverParams': param_list }
 
         if aov_denoise and display_driver == 'openexr' and not rman_scene.is_interactive:
-            _add_denoiser_channels(dspys_dict, dspy_params)
+            _add_denoiser_channels(dspys_dict, dspy_params, rman_scene)
 
         if aov.name == 'beauty' and rman_scene.is_interactive:
           

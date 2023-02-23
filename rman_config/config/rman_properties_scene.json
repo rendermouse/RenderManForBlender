@@ -1525,27 +1525,79 @@
         },
         {
             "panel": "RENDER_PT_renderman_spooling_export_options",
-            "page": "",
+            "page": "Denoising",
+            "name": "use_ai_denoiser",
+            "label": "Use AI Denoiser",
+            "type": "int",
+            "default": 0,
+            "widget": "checkbox",
+            "help": "Use the AI Denoiser to denoise passes."
+        },      
+        {
+            "panel": "RENDER_PT_renderman_spooling_export_options",
+            "page": "Denoising",
+            "name": "ai_denoiser_asymmetry",
+            "label": "Asymmetry",
+            "type": "float",
+            "default": 0.0,
+            "min": 0.0,
+            "max": 2.0,
+            "help": "Controls the asymmetry value, 0 is best quality, higher values encourage the denoiser to avoid overblurring, leading to weaker denoising.",
+            "conditionalVisOps": {
+                "conditionalVisOp": "notEqualTo",
+                "conditionalVisPath": "use_ai_denoiser",
+                "conditionalVisValue": "0"
+            }               
+        },         
+        {
+            "panel": "RENDER_PT_renderman_spooling_export_options",
+            "page": "Denoising",
+            "name": "ai_denoiser_verbose",
+            "label": "Verbose",
+            "type": "int",
+            "default": 0,
+            "widget": "checkbox",
+            "help": "Enable versbose output.",
+            "conditionalVisOps": {
+                "conditionalVisOp": "notEqualTo",
+                "conditionalVisPath": "use_ai_denoiser",
+                "conditionalVisValue": "0"
+            }               
+        },              
+        {
+            "panel": "RENDER_PT_renderman_spooling_export_options",
+            "page": "Denoising",
             "name": "denoise_cmd",
             "label": "Custom Denoise Commands",
             "type": "string",
             "default": "",
-            "help": "Inserts a string of custom commands arguments into the denoising process, if selected"                   
+            "help": "Inserts a string of custom commands arguments into the denoising process (hyperion), if selected",
+            "conditionalVisOps": {
+                "conditionalVisOp": "notEqualTo",
+                "conditionalVisPath": "use_ai_denoiser",
+                "conditionalVisValue": "1"
+            }            
         },                              
         {
             "panel": "RENDER_PT_renderman_spooling_export_options",
-            "page": "",
+            "page": "Denoising",
             "name": "denoise_gpu",
             "label": "Use GPU for denoising",
             "type": "int",
             "default": 0,
             "widget": "checkbox",
-            "help": "The denoiser will attempt to use the GPU (if available)",
+            "help": "The denoiser (hyperion) will attempt to use the GPU (if available)",
             "conditionalVisOps": {
-                "conditionalVisOp": "notEqualTo",
-                "conditionalVisPath": "current_platform",
-                "conditionalVisValue": "macOS"
-            }
+                "conditionalVis1Path": "use_ai_denoiser",
+                "conditionalVis2Op": "notEqualTo",
+                "conditionalVis1Value": "0",
+                "conditionalVisOp": "and",
+                "conditionalVis1Op": "equalTo",
+                "conditionalVisLeft": "conditionalVis1",
+                "conditionalVisRight": "conditionalVis2",
+                "conditionalVis2Path": "current_platform",
+                "conditionalVis2Value": "macOS"     
+            }             
         }
     ]
 }
