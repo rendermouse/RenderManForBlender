@@ -230,6 +230,7 @@ def generate_property(node, sp, update_function=None, set_function=None, get_fun
     prop_stepsize = 3
     if hasattr(sp, 'sensitivity'):
         prop_stepsize = -int(math.log10(sp.sensitivity))
+    prop_precision = getattr(sp, 'digits', 3)          
 
     prop = None
 
@@ -311,7 +312,7 @@ def generate_property(node, sp, update_function=None, set_function=None, get_fun
     elif param_type == 'float':
         if sp.is_array():
             prop = FloatProperty(name=param_label,
-                                       default=0.0, precision=3,
+                                       default=0.0, precision=prop_precision,
                                        step=prop_stepsize,
                                        description=param_help,
                                        set=set_function,
@@ -355,7 +356,7 @@ def generate_property(node, sp, update_function=None, set_function=None, get_fun
                     param_max = sp.slidermax if hasattr(sp, 'slidermax') else param_max   
 
                     prop = FloatProperty(name=param_label,
-                                        default=param_default, precision=3,
+                                        default=param_default, precision=prop_precision,
                                         soft_min=param_min, soft_max=param_max,
                                         step=prop_stepsize,
                                         description=param_help, set=set_function, get=get_function, update=update_function)
@@ -367,7 +368,7 @@ def generate_property(node, sp, update_function=None, set_function=None, get_fun
                 param_max = sp.slidermax if hasattr(sp, 'slidermax') else param_max   
 
                 prop = FloatProperty(name=param_label,
-                                     default=param_default, precision=3,
+                                     default=param_default, precision=prop_precision,
                                      soft_min=param_min, soft_max=param_max,
                                      step=prop_stepsize,
                                      description=param_help, set=set_function, get=get_function, update=update_function)
@@ -525,6 +526,7 @@ def generate_property(node, sp, update_function=None, set_function=None, get_fun
         prop = FloatVectorProperty(name=param_label,
                                    default=param_default, size=3,
                                    subtype="NONE",
+                                   precision=prop_precision,
                                    description=param_help, set=set_function, get=get_function, update=update_function)
         renderman_type = param_type
     elif param_type == 'point':
@@ -532,6 +534,7 @@ def generate_property(node, sp, update_function=None, set_function=None, get_fun
             param_default = '0 0 0'
         prop = FloatVectorProperty(name=param_label,
                                    default=param_default, size=3,
+                                   precision=prop_precision,
                                    subtype="XYZ",
                                    description=param_help, set=set_function, get=get_function, update=update_function)
         renderman_type = param_type
@@ -614,6 +617,7 @@ def generate_property(node, sp, update_function=None, set_function=None, get_fun
             prop = FloatVectorProperty(name=param_label,
                                     default=param_default, size=2,
                                     step=prop_stepsize,
+                                    precision=prop_precision,
                                     description=param_help, set=set_function, update=update_function)
         renderman_type = 'float'
         prop_meta['arraySize'] = 2      
