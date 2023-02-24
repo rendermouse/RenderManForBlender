@@ -1526,12 +1526,12 @@
         {
             "panel": "RENDER_PT_renderman_spooling_export_options",
             "page": "Denoising",
-            "name": "use_ai_denoiser",
-            "label": "Use AI Denoiser",
+            "name": "use_legacy_denoiser",
+            "label": "Use Legacy Denoiser",
             "type": "int",
             "default": 0,
             "widget": "checkbox",
-            "help": "Use the AI Denoiser to denoise passes."
+            "help": "Use the previous denoiser to denoise passes."
         },      
         {
             "panel": "RENDER_PT_renderman_spooling_export_options",
@@ -1545,8 +1545,8 @@
             "help": "Controls the asymmetry value, 0 is best quality, higher values encourage the denoiser to avoid overblurring, leading to weaker denoising.",
             "conditionalVisOps": {
                 "conditionalVisOp": "notEqualTo",
-                "conditionalVisPath": "use_ai_denoiser",
-                "conditionalVisValue": "0"
+                "conditionalVisPath": "use_legacy_denoiser",
+                "conditionalVisValue": "1"
             }               
         },         
         {
@@ -1560,8 +1560,8 @@
             "help": "Enable versbose output.",
             "conditionalVisOps": {
                 "conditionalVisOp": "notEqualTo",
-                "conditionalVisPath": "use_ai_denoiser",
-                "conditionalVisValue": "0"
+                "conditionalVisPath": "use_legacy_denoiser",
+                "conditionalVisValue": "1"
             }               
         },              
         {
@@ -1574,8 +1574,8 @@
             "help": "Inserts a string of custom commands arguments into the denoising process (hyperion), if selected",
             "conditionalVisOps": {
                 "conditionalVisOp": "notEqualTo",
-                "conditionalVisPath": "use_ai_denoiser",
-                "conditionalVisValue": "1"
+                "conditionalVisPath": "use_legacy_denoiser",
+                "conditionalVisValue": "0"
             }            
         },                              
         {
@@ -1588,9 +1588,9 @@
             "widget": "checkbox",
             "help": "The denoiser (hyperion) will attempt to use the GPU (if available)",
             "conditionalVisOps": {
-                "conditionalVis1Path": "use_ai_denoiser",
+                "conditionalVis1Path": "use_legacy_denoiser",
                 "conditionalVis2Op": "notEqualTo",
-                "conditionalVis1Value": "0",
+                "conditionalVis1Value": "1",
                 "conditionalVisOp": "and",
                 "conditionalVis1Op": "equalTo",
                 "conditionalVisLeft": "conditionalVis1",

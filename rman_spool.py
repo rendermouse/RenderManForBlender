@@ -221,7 +221,7 @@ class RmanSpool(object):
             parent_task.addChild(renderframestask)
 
     def generate_aidenoise_tasks(self, start, last, by):
-        tasktitle = "AI Denoiser Renders"
+        tasktitle = "Denoiser Renders"
         parent_task = author.Task()
         parent_task.title = tasktitle          
         rm = self.bl_scene.renderman           
@@ -243,17 +243,16 @@ class RmanSpool(object):
             # for crossframe, do it all in one task
             cur_frame = self.rman_scene.bl_frame_current
             task = author.Task()
-            task.title = 'AI Denoise Cross Frame'
+            task.title = 'Denoise Cross Frame'
             command = author.Command(local=False, service="PixarRender")                
 
-            command.argv = ["aidenoise_ui"]        
+            command.argv = ["denoise_batch"]        
 
             command.argv.append('--crossframe')
-            command.argv.append('run')
             variance_file = string_utils.expand_string(dspys_dict['displays']['beauty']['filePath'], 
                                                 frame=1,
                                                 asFilePath=True)              
-            path = os.path.join(os.path.dirname(variance_file), 'denoiosed')
+            path = os.path.join(os.path.dirname(variance_file), 'denoised')
             command.argv.append('-a')
             command.argv.append('%.3f' % rm.ai_denoiser_asymmetry)
             command.argv.append('-o')
@@ -266,7 +265,7 @@ class RmanSpool(object):
                                                     frame=frame_num,
                                                     asFilePath=True)  
 
-                path = os.path.join(os.path.dirname(variance_file), 'denoiosed')
+                path = os.path.join(os.path.dirname(variance_file), 'denoised')
 
                 for dspy,params in dspys_dict['displays'].items():
                     if not params['denoise']:
@@ -294,15 +293,14 @@ class RmanSpool(object):
                                                     asFilePath=True)    
 
                 task = author.Task()
-                task.title = 'AI Denoise Frame %d' % frame_num
+                task.title = 'Denoise Frame %d' % frame_num
                 command = author.Command(local=False, service="PixarRender")                
 
-                command.argv = ["aidenoiser_ui"]
+                command.argv = ["denoise_batch"]
 
                 if rm.ai_denoiser_verbose:
                     command.argv.append('-v')
-                command.argv.append('run')
-                path = os.path.join(os.path.dirname(variance_file), 'denoiosed')
+                path = os.path.join(os.path.dirname(variance_file), 'denoised')
                 command.argv.append('-a')
                 command.argv.append('%.3f' % rm.ai_denoiser_asymmetry)
                 command.argv.append('-o')
@@ -331,7 +329,7 @@ class RmanSpool(object):
 
     def generate_denoise_tasks(self, start, last, by):
 
-        tasktitle = "Denoiser Renders"
+        tasktitle = "Denoiser (Legacy) Renders"
         parent_task = author.Task()
         parent_task.title = tasktitle          
         rm = self.bl_scene.renderman           
@@ -361,10 +359,10 @@ class RmanSpool(object):
             # for crossframe, do it all in one task
             cur_frame = self.rman_scene.bl_frame_current
             task = author.Task()
-            task.title = 'Denoise Cross Frame'
+            task.title = 'Denoise (Legacy) Cross Frame'
             command = author.Command(local=False, service="PixarRender")                
 
-            command.argv = ["denoise"]
+            command.argv = ["denoise_legacy"]
             for opt in denoise_options:
                 command.argv.append(opt)                
             command.argv.append('--crossframe')  
@@ -422,10 +420,10 @@ class RmanSpool(object):
                         continue
 
                     task = author.Task()
-                    task.title = 'Denoise Frame %d' % frame_num
+                    task.title = 'Denoise (Legacy) Frame %d' % frame_num
                     command = author.Command(local=False, service="PixarRender")                
 
-                    command.argv = ["denoise"]
+                    command.argv = ["denoise_legacy"]
                     for opt in denoise_options:
                         command.argv.append(opt)
                     if dspy == 'beauty':
@@ -496,10 +494,11 @@ class RmanSpool(object):
         # Don't generate denoise tasks if we're baking
         # or using the Blender compositor
         if rm.hider_type == 'RAYTRACE' and (not rm.use_bl_compositor or not scene.use_nodes):
-            if rm.use_ai_denoiser:
-                parent_task = self.generate_aidenoise_tasks(frame_begin, frame_end, by)                               
-            else:
+            if rm.use_legacy_denoiser:
                 parent_task = self.generate_denoise_tasks(frame_begin, frame_end, by)                               
+            else:
+                parent_task = self.generate_aidenoise_tasks(frame_begin, frame_end, by)                               
+                
             job.addChild(parent_task)
         
         scene_filename = bpy.data.filepath
@@ -579,10 +578,11 @@ class RmanSpool(object):
 
         # Don't denoise if we're baking
         if rm.hider_type == 'RAYTRACE':
-            if rm.use_ai_denoiser:
-                parent_task = self.generate_aidenoise_tasks(frame_begin, frame_end, by)
-            else:
+            if rm.use_legacy_denoiser:
                 parent_task = self.generate_denoise_tasks(frame_begin, frame_end, by)                               
+            else:
+                parent_task = self.generate_aidenoise_tasks(frame_begin, frame_end, by)
+                
             job.addChild(parent_task)
 
         bl_filename = bpy.data.filepath
