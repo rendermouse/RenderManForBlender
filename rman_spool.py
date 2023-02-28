@@ -224,105 +224,68 @@ class RmanSpool(object):
         tasktitle = "Denoiser Renders"
         parent_task = author.Task()
         parent_task.title = tasktitle          
-        rm = self.bl_scene.renderman           
-
-        # any cross frame?
-        do_cross_frame = False
+        rm = self.bl_scene.renderman   
         dspys_dict = display_utils.get_dspy_dict(self.rman_scene, expandTokens=False)  
-        for dspy,params in dspys_dict['displays'].items():
+        
+        img_files = list()
+        have_variance = False
+        for frame_num in range(start, last + 1, by):
+            self.rman_render.bl_frame_current = frame_num
+        
+            variance_file = string_utils.expand_string(dspys_dict['displays']['beauty']['filePath'], 
+                                                frame=frame_num,
+                                                asFilePath=True)  
+
+            path = os.path.join(os.path.dirname(variance_file), 'denoised')
+
+            for dspy,params in dspys_dict['displays'].items():
                 if not params['denoise']:
-                    continue        
-                if params['denoise_mode'] == 'crossframe':
-                    do_cross_frame = True
-                    break
+                    continue
+                
+                if dspy == 'beauty':
+                    if not have_variance:
+                        have_variance = True
+                    img_files.append(variance_file)
+                else:
+                    aov_file = string_utils.expand_string(params['filePath'], 
+                                            frame=frame_num,
+                                            asFilePath=True)    
+                    img_files.append(aov_file)      
+
+        if not have_variance or len(img_files) < 1:
+            return None
+
+        do_cross_frame = (rm.ai_denoiser_mode == 'crossframe')
+        
 
         if start == last:
             do_cross_frame = False
 
+        cur_frame = self.rman_scene.bl_frame_current
+        task = author.Task()
         if do_cross_frame:
-            # for crossframe, do it all in one task
-            cur_frame = self.rman_scene.bl_frame_current
-            task = author.Task()
-            task.title = 'Denoise Cross Frame'
-            command = author.Command(local=False, service="PixarRender")                
-
-            command.argv = ["denoise_batch"]        
-
-            command.argv.append('--crossframe')
-            variance_file = string_utils.expand_string(dspys_dict['displays']['beauty']['filePath'], 
-                                                frame=1,
-                                                asFilePath=True)              
-            path = os.path.join(os.path.dirname(variance_file), 'denoised')
-            command.argv.append('-a')
-            command.argv.append('%.3f' % rm.ai_denoiser_asymmetry)
-            command.argv.append('-o')
-            command.argv.append(path)            
-                                             
-            for frame_num in range(start, last + 1, by):
-                self.rman_render.bl_frame_current = frame_num
-         
-                variance_file = string_utils.expand_string(dspys_dict['displays']['beauty']['filePath'], 
-                                                    frame=frame_num,
-                                                    asFilePath=True)  
-
-                path = os.path.join(os.path.dirname(variance_file), 'denoised')
-
-                for dspy,params in dspys_dict['displays'].items():
-                    if not params['denoise']:
-                        continue
-                    
-                    if dspy == 'beauty':
-                        command.argv.append(variance_file)
-                    else:
-                        aov_file = string_utils.expand_string(params['filePath'], 
-                                                frame=frame_num,
-                                                asFilePath=True)    
-                        command.argv.append(aov_file)
-    
-            task.addCommand(command)
-            parent_task.addChild(task) 
-
+            task.title = 'Denoise Frames %d - %d (Cross Frame)' % (start, last)
         else:
-            # single frame
-            cur_frame = self.rman_scene.bl_frame_current
-            for frame_num in range(start, last + 1, by):
-                self.rman_render.bl_frame_current = frame_num
-         
-                variance_file = string_utils.expand_string(dspys_dict['displays']['beauty']['filePath'], 
-                                                    frame=frame_num,
-                                                    asFilePath=True)    
+            task.title = 'Denoise Frames (%d - %d)' % (start, last)
+        
+        command = author.Command(local=False, service="PixarRender")                
 
-                task = author.Task()
-                task.title = 'Denoise Frame %d' % frame_num
-                command = author.Command(local=False, service="PixarRender")                
+        command.argv = ["denoise_batch"]        
 
-                command.argv = ["denoise_batch"]
-
-                if rm.ai_denoiser_verbose:
-                    command.argv.append('-v')
-                path = os.path.join(os.path.dirname(variance_file), 'denoised')
-                command.argv.append('-a')
-                command.argv.append('%.3f' % rm.ai_denoiser_asymmetry)
-                command.argv.append('-o')
-                command.argv.append(path)
-
-                for dspy,params in dspys_dict['displays'].items():
-                    if not params['denoise']:
-                        continue
-                    
-                    if params['denoise_mode'] != 'singleframe':
-                        continue
-
-                    if dspy == 'beauty':
-                        command.argv.append(variance_file)
-                    else:
-                        aov_file = string_utils.expand_string(params['filePath'], 
-                                                frame=frame_num,
-                                                asFilePath=True)    
-                        command.argv.append(aov_file)
-    
-                task.addCommand(command)
-                parent_task.addChild(task) 
+        if do_cross_frame:
+            command.argv.append('--crossframe')
+        variance_file = string_utils.expand_string(dspys_dict['displays']['beauty']['filePath'], 
+                                            frame=1,
+                                            asFilePath=True)              
+        path = os.path.join(os.path.dirname(variance_file), 'denoised')
+        command.argv.append('-a')
+        command.argv.append('%.3f' % rm.ai_denoiser_asymmetry)
+        command.argv.append('-o')
+        command.argv.append(path)    
+        command.argv.extend(img_files)
+                                                         
+        task.addCommand(command)
+        parent_task.addChild(task) 
 
         self.rman_render.bl_frame_current = cur_frame
         return parent_task
@@ -499,7 +462,8 @@ class RmanSpool(object):
             else:
                 parent_task = self.generate_aidenoise_tasks(frame_begin, frame_end, by)                               
                 
-            job.addChild(parent_task)
+            if parent_task:
+                job.addChild(parent_task)
         
         scene_filename = bpy.data.filepath
         if scene_filename == '':
@@ -583,7 +547,8 @@ class RmanSpool(object):
             else:
                 parent_task = self.generate_aidenoise_tasks(frame_begin, frame_end, by)
                 
-            job.addChild(parent_task)
+            if parent_task:
+                job.addChild(parent_task)
 
         bl_filename = bpy.data.filepath
         if bl_filename == '':

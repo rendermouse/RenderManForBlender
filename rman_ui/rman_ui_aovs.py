@@ -256,9 +256,10 @@ class RENDER_PT_layer_custom_aovs(CollectionPanel, Panel):
         # denoise options
         row = col.row()
         row.prop(item, 'denoise')
-        row = col.row()
-        row.enabled = item.denoise
-        row.prop(item, 'denoise_mode')
+        if rm.use_legacy_denoiser:
+            row = col.row()
+            row.enabled = item.denoise
+            row.prop(item, 'denoise_mode')
 
         row = col.row()
         row.label(text='')
