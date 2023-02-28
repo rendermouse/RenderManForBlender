@@ -82,6 +82,44 @@ class PRMAN_OT_Renderman_Package(Operator):
         remove_files = list()
         remove_dirs = list()
 
+        bl_original_filepath = os.path.dirname(bl_scene_file)
+        bl_filename = os.path.basename(bl_scene_file)
+        bl_filepath = os.path.join(self.directory, bl_filename)        
+
+        # deal with libraries
+        # bpy.ops.file.pack_libraries() # comment out for now. May need it later on.
+        for lib in bpy.data.libraries:
+            real_path = filepath_utils.get_real_path(lib.filepath)
+            if not lib.filepath.startswith('//'):
+                self.report({'ERROR'}, "We currently only support library files that are relative to the main Blend scene.")
+                z.close()
+                try:
+                    os.remove(self.filepath)
+                except:
+                    rfb_log().debug("Cannot remove: %s" % self.filepath)
+                    pass
+                return {'FINISHED'}
+            subdir = os.path.dirname(lib.filepath).replace('//', '', 1)
+            dst_path = os.path.join(self.directory, subdir)
+            shutil.copytree(os.path.dirname(real_path), dst_path)
+
+        # get all directories and files that were copied from the libraries
+        for root, dirnames, files in os.walk(self.directory):
+            for d in dirnames:
+                dst_path = os.path.join(root, d)
+                if dst_path == self.directory:
+                    continue
+                if dst_path not in remove_dirs:
+                    remove_dirs.append(dst_path)        
+            for f in files:
+                fpath = os.path.relpath(os.path.join(root, f), self.directory)
+                diskpath = os.path.join(root, f)
+                if diskpath == self.filepath:
+                    continue                
+                if diskpath not in remove_files:
+                    z.write(diskpath, arcname=fpath)
+                    remove_files.append(diskpath)                      
+
         # textures
         texture_dir = os.path.join(self.directory, 'textures')
         os.mkdir(os.path.join(texture_dir))
@@ -95,7 +133,7 @@ class PRMAN_OT_Renderman_Package(Operator):
         # osl shaders
         shaders_dir = os.path.join(self.directory, 'shaders')
         os.mkdir(os.path.join(shaders_dir))
-        remove_dirs.append(shaders_dir)
+        remove_dirs.append(shaders_dir)                                  
 
         for item in context.scene.rman_txmgr_list:
             txfile = texture_utils.get_txmanager().txmanager.get_txfile_from_id(item.nodeID)
@@ -211,9 +249,6 @@ class PRMAN_OT_Renderman_Package(Operator):
                 remove_files.append(diskpath)                                
                                           
                             
-        bl_filepath = os.path.dirname(bl_scene_file)
-        bl_filename = os.path.basename(bl_scene_file)
-        bl_filepath = os.path.join(self.directory, bl_filename)
         # Add  relative_remap=False  to avoid //..\ - agentyRANCH
         bpy.ops.wm.save_as_mainfile(filepath=bl_filepath, copy=True, compress=False, relative_remap=False)
         remove_files.append(bl_filepath)
