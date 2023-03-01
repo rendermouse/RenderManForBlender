@@ -236,19 +236,18 @@ class RmanSpool(object):
                                                 frame=frame_num,
                                                 asFilePath=True)  
 
-            path = os.path.join(os.path.dirname(variance_file), 'denoised')
-
             for dspy,params in dspys_dict['displays'].items():
                 if not params['denoise']:
                     continue
-                
                 if dspy == 'beauty':
                     if not have_variance:
                         have_variance = True
                     img_files.append(variance_file)
                 else:
+                    token_dict = {'aov': dspy}
                     aov_file = string_utils.expand_string(params['filePath'], 
                                             frame=frame_num,
+                                            token_dict=token_dict,
                                             asFilePath=True)    
                     img_files.append(aov_file)      
 
@@ -352,8 +351,10 @@ class RmanSpool(object):
                         command.argv.append(variance_file)
                     else:
                         command.argv.append(variance_file)
+                        token_dict = {'aov': dspy}
                         aov_file = string_utils.expand_string(params['filePath'], 
                                                 frame=frame_num,
+                                                token_dict=token_dict,
                                                 asFilePath=True)    
                         command.argv.append(aov_file)
     
@@ -393,8 +394,10 @@ class RmanSpool(object):
                         command.argv.append(variance_file)
                     else:
                         command.argv.append(variance_file)
+                        token_dict = {'aov': dspy}
                         aov_file = string_utils.expand_string(params['filePath'], 
                                                 frame=frame_num,
+                                                token_dict=token_dict,
                                                 asFilePath=True)    
                         command.argv.append(aov_file)
     
