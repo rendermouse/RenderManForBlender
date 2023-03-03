@@ -1531,9 +1531,7 @@
             "type": "int",
             "default": 0,
             "widget": "checkbox",
-            "help": "Use the previous denoiser to denoise passes.",
-            "get_function_name": "get_use_legacy_denoiser",
-            "get_function": "def get_use_legacy_denoiser(self):\n    import sys\n    if sys.platform=='linux':\n        return 0\n    return 1"            
+            "help": "Use the previous denoiser to denoise passes."
         },      
         {
             "panel": "RENDER_PT_renderman_spooling_export_options",
