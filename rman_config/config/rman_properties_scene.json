@@ -1524,14 +1524,16 @@
             "help": "Inserts a string of custom command arguments into the render process"                   
         },
         {
-            "panel": "RENDER_PT_renderman_spooling_export_options",
+            "panel": "",
             "page": "Denoising",
             "name": "use_legacy_denoiser",
             "label": "Use Legacy Denoiser",
             "type": "int",
             "default": 0,
             "widget": "checkbox",
-            "help": "Use the previous denoiser to denoise passes."
+            "help": "Use the previous denoiser to denoise passes.",
+            "get_function_name": "get_use_legacy_denoiser",
+            "get_function": "def get_use_legacy_denoiser(self):\n    import sys\n    if sys.platform=='linux':\n        return 0\n    return 1"            
         },      
         {
             "panel": "RENDER_PT_renderman_spooling_export_options",
