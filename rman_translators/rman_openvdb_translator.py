@@ -109,5 +109,6 @@ class RmanOpenVDBTranslator(RmanTranslator):
         scenegraph_utils.export_vol_aggregate(self.rman_scene.bl_scene, primvar, ob)     
 
         primvar.SetInteger("volume:dsominmax", rm.volume_dsominmax)
+        primvar.SetInteger("volume:dsovelocity", rm.volume_dsovelocity)
         super().export_object_primvars(ob, primvar)
         rman_sg_openvdb.sg_node.SetPrimVars(primvar)
