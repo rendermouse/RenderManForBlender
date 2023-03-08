@@ -277,6 +277,8 @@ class RmanSpool(object):
                                             frame=1,
                                             asFilePath=True)              
         path = os.path.join(os.path.dirname(variance_file), 'denoised')
+        if rm.ai_denoiser_verbose:
+            command.argv.append('-v')
         command.argv.append('-a')
         command.argv.append('%.3f' % rm.ai_denoiser_asymmetry)
         command.argv.append('-o')
