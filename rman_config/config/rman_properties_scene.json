@@ -1562,6 +1562,21 @@
         {
             "panel": "RENDER_PT_renderman_spooling_export_options",
             "page": "Denoising",
+            "name": "ai_denoiser_output_dir",
+            "label": "Output Directory",
+            "type": "string",
+            "widget": "dirinput",
+            "default": "",
+            "help": "The output directory for the denoised images. If not set, we put the images into a subfolder 'denoised' relative to the input images.",
+            "conditionalVisOps": {
+                "conditionalVisOp": "notEqualTo",
+                "conditionalVisPath": "use_legacy_denoiser",
+                "conditionalVisValue": "1"
+            }               
+        },        
+        {
+            "panel": "RENDER_PT_renderman_spooling_export_options",
+            "page": "Denoising",
             "name": "ai_denoiser_mode",
             "label": "Mode",
             "type": "string",
@@ -1575,6 +1590,21 @@
                 "conditionalVisValue": "1"
             }               
         },              
+        {
+            "panel": "RENDER_PT_renderman_spooling_export_options",
+            "page": "Denoising",
+            "name": "ai_denoiser_flow",
+            "label": "Flow",
+            "type": "int",
+            "default": 1,
+            "widget": "checkbox",
+            "help": "Whether to compute optical flow.",
+            "conditionalVisOps": {
+                "conditionalVisOp": "notEqualTo",
+                "conditionalVisPath": "use_legacy_denoiser",
+                "conditionalVisValue": "1"
+            }               
+        },
         {
             "panel": "RENDER_PT_renderman_spooling_export_options",
             "page": "Denoising",

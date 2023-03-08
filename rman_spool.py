@@ -3,6 +3,7 @@ import os
 import getpass
 import socket
 import bpy
+from .rfb_utils import filepath_utils
 from .rfb_utils import string_utils
 from .rfb_utils.envconfig_utils import envconfig
 from .rfb_utils import display_utils
@@ -276,13 +277,18 @@ class RmanSpool(object):
         variance_file = string_utils.expand_string(dspys_dict['displays']['beauty']['filePath'], 
                                             frame=1,
                                             asFilePath=True)              
-        path = os.path.join(os.path.dirname(variance_file), 'denoised')
+        
         if rm.ai_denoiser_verbose:
             command.argv.append('-v')
         command.argv.append('-a')
         command.argv.append('%.3f' % rm.ai_denoiser_asymmetry)
         command.argv.append('-o')
-        command.argv.append(path)    
+        path = filepath_utils.get_real_path(rm.ai_denoiser_output_dir)
+        if not os.path.exists(path):
+            path = os.path.join(os.path.dirname(variance_file), 'denoised')
+        command.argv.append(path)
+        if rm.ai_denoiser_flow:
+            command.argv.append('-f')
         command.argv.extend(img_files)
                                                          
         task.addCommand(command)
