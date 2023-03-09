@@ -58,7 +58,7 @@ class RENDER_PT_renderman_render(PRManButtonsPanel, Panel):
         _draw_ui_from_rman_config('rman_properties_scene', 'RENDER_PT_renderman_render', context, layout, rm)  
 
 class RENDER_PT_renderman_spooling(PRManButtonsPanel, Panel):
-    bl_label = "External Rendering"
+    bl_label = "Batch Rendering"
     bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context):
@@ -75,11 +75,11 @@ class RENDER_PT_renderman_spooling(PRManButtonsPanel, Panel):
         col = layout.column()
         row = col.row(align=True)
         rman_batch = rfb_icons.get_icon("rman_batch")
-        row.operator("renderman.external_render",
-                     text="External Render", icon_value=rman_batch.icon_id)
+        row.operator("renderman.batch_render",
+                     text="Batch Render", icon_value=rman_batch.icon_id)
         rman_bake = rfb_icons.get_icon("rman_bake")                     
-        row.operator("renderman.external_bake",
-                     text="External Bake Render", icon_value=rman_bake.icon_id)
+        row.operator("renderman.batch_bake_render",
+                     text="Batch Bake Render", icon_value=rman_bake.icon_id)
 
         # do animation
         col.prop(rm, 'external_animation')

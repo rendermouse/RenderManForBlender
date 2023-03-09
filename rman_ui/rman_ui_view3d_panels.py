@@ -78,7 +78,7 @@ class PRMAN_PT_Renderman_UI_Panel(bpy.types.Panel, _RManPanelHeader):
             row = layout.row(align=True)
             rman_batch = rfb_icons.get_icon("rman_batch")
 
-            row.operator("renderman.external_render",
+            row.operator("renderman.batch_render",
                         text="External Render", icon_value=rman_batch.icon_id)
 
             row.prop(context.scene, "rm_render_external", text="",

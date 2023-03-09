@@ -94,10 +94,10 @@ class PRMAN_OT_RendermanBakeSelectedBrickmap(bpy.types.Operator):
         context.window_manager.fileselect_add(self)
         return{'RUNNING_MODAL'}         
 
-class PRMAN_OT_ExternalRendermanBake(bpy.types.Operator):
-    bl_idname = "renderman.external_bake"
-    bl_label = "External Baking"
-    bl_description = "Spool an external bake render."
+class PRMAN_OT_BatchRendermanBake(bpy.types.Operator):
+    bl_idname = "renderman.batch_bake_render"
+    bl_label = "Batch Baking"
+    bl_description = "Spool a batch bake render."
     bl_options = {'INTERNAL'}    
             
     def execute(self, context):
@@ -118,15 +118,15 @@ class PRMAN_OT_ExternalRendermanBake(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PRMAN_OT_ExternalRender(bpy.types.Operator):
+class PRMAN_OT_BatchRender(bpy.types.Operator):
 
     ''''''
-    bl_idname = "renderman.external_render"
-    bl_label = "External Render"
-    bl_description = "Launch a spooled external render."
+    bl_idname = "renderman.batch_render"
+    bl_label = "Batch Render"
+    bl_description = "Launch a spooled batch render."
     bl_options = {'INTERNAL'}    
 
-    def external_blender_batch(self, context):
+    def blender_batch_render(self, context):
         rm = context.scene.renderman
         if rm.queuing_system != 'none':
             from .. import rman_spool
@@ -162,7 +162,7 @@ class PRMAN_OT_ExternalRender(bpy.types.Operator):
         else:
             self.report({'ERROR'}, 'Queuing system set to none')       
 
-    def external_rib_render(self, context):
+    def rib_batch_render(self, context):
         scene = context.scene
         rm = scene.renderman
         if not rm.is_rman_interactive_running:
@@ -180,9 +180,9 @@ class PRMAN_OT_ExternalRender(bpy.types.Operator):
         rm = scene.renderman
         if not rm.is_rman_interactive_running:
             if scene.renderman.spool_style == 'rib':
-                self.external_rib_render(context)       
+                self.rib_batch_render(context)       
             else:
-                self.external_blender_batch(context)
+                self.blender_batch_render(context)
         else:
             self.report({"ERROR"}, "Viewport rendering is on.")              
         return {'FINISHED'}        
@@ -324,8 +324,8 @@ classes = [
     PRMAN_OT_Renderman_Use_Renderman,
     PRMAN_OT_RendermanBake,
     PRMAN_OT_RendermanBakeSelectedBrickmap,
-    PRMAN_OT_ExternalRendermanBake,
-    PRMAN_OT_ExternalRender,
+    PRMAN_OT_BatchRendermanBake,
+    PRMAN_OT_BatchRender,
     PRMAN_OT_StartInteractive,
     PRMAN_OT_StopInteractive,
     PRMAN_OT_StopRender,
