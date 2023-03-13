@@ -64,7 +64,7 @@ class RmanSpool(object):
         task = author.Task()
         task.title = title
         if img:
-            task.preview = 'sho %s' % str(img)
+            task.preview = '%s %s' % (envconfig().rman_it_path, str(img))
 
         command = author.Command(local=False, service="PixarRender")
         command.argv = ["prman"]
@@ -83,14 +83,11 @@ class RmanSpool(object):
         task.addCommand(command)
         parentTask.addChild(task)            
 
-    def add_blender_render_task(self, frame, parentTask, title, bl_filename, img, chunk=None):
+    def add_blender_render_task(self, frame, parentTask, title, bl_filename, chunk=None):
         rm = self.bl_scene.renderman
 
         task = author.Task()
         task.title = title
-        if img:        
-            img_expanded = string_utils.expand_string(img, frame=frame, asFilePath=True)
-            task.preview = 'sho %s' % img_expanded
 
         command = author.Command(local=False, service="PixarRender")
         bl_blender_path = bpy.app.binary_path
@@ -98,25 +95,33 @@ class RmanSpool(object):
 
         command.argv.append('-b')
         command.argv.append('%%D(%s)' % bl_filename)
+        begin = frame
+        end = frame
         if chunk:
             command.argv.append('-f')
             command.argv.append('%s..%s' % (str(frame), str(frame+(chunk))))
+            end = frame+chunk
         else:
             command.argv.append('-f')
             command.argv.append(str(frame))            
 
         task.addCommand(command)
+
+        imgs = list()
+        dspys_dict = display_utils.get_dspy_dict(self.rman_scene, expandTokens=False)  
+        for i in range(begin, end+1):
+            img = string_utils.expand_string(dspys_dict['displays']['beauty']['filePath'], 
+                                                frame=i,
+                                                asFilePath=True)         
+            imgs.append(img)     
+
+
+        task.preview = "%s %s" % (envconfig().rman_it_path, " ".join(imgs))
         parentTask.addChild(task)
 
     def generate_blender_batch_tasks(self, anim, parent_task, tasktitle,
                                 start, last, by, chunk, bl_filename): 
-
-        self.any_denoise = display_utils.any_dspys_denoise(self.rman_scene.bl_view_layer)
-        img = None
-        if not self.any_denoise:
-            dspys_dict = display_utils.get_dspy_dict(self.rman_scene, expandTokens=False)  
-            img = dspys_dict['displays']['beauty']['filePath']
-        
+       
         if anim is False:
      
             frametasktitle = ("%s Frame: %d " %
@@ -128,7 +133,7 @@ class RmanSpool(object):
             prmantasktitle = "%s (render)" % frametasktitle
 
             self.add_blender_render_task(start, frametask, prmantasktitle,
-                                bl_filename, img)
+                                bl_filename)
 
             parent_task.addChild(frametask)
 
@@ -151,7 +156,7 @@ class RmanSpool(object):
                                     (tasktitle, iframe, iframe+diff))
 
                     self.add_blender_render_task(iframe, renderframestask, prmantasktitle,
-                                        bl_filename, None, chunk=diff) 
+                                        bl_filename, chunk=diff) 
                     iframe += diff+1
             else:
                 for iframe in range(start, last + 1, by):
@@ -159,7 +164,7 @@ class RmanSpool(object):
                                     (tasktitle, int(iframe)))
 
                     self.add_blender_render_task(iframe, renderframestask, prmantasktitle,
-                                        bl_filename, img)
+                                        bl_filename)
 
             parent_task.addChild(renderframestask)                                 
 
@@ -229,7 +234,14 @@ class RmanSpool(object):
         dspys_dict = display_utils.get_dspy_dict(self.rman_scene, expandTokens=False)  
         
         img_files = list()
+        preview_img_files = list()
         have_variance = False
+        variance_file = string_utils.expand_string(dspys_dict['displays']['beauty']['filePath'], 
+                                            frame=1,
+                                            asFilePath=True)            
+        path = filepath_utils.get_real_path(rm.ai_denoiser_output_dir)
+        if not os.path.exists(path):
+            path = os.path.join(os.path.dirname(variance_file), 'denoised')        
         for frame_num in range(start, last + 1, by):
             self.rman_render.bl_frame_current = frame_num
         
@@ -244,6 +256,7 @@ class RmanSpool(object):
                     if not have_variance:
                         have_variance = True
                     img_files.append(variance_file)
+                    preview_img_files.append(os.path.join(path, os.path.basename(variance_file)))
                 else:
                     token_dict = {'aov': dspy}
                     aov_file = string_utils.expand_string(params['filePath'], 
@@ -273,25 +286,20 @@ class RmanSpool(object):
         command.argv = ["denoise_batch"]        
 
         if do_cross_frame:
-            command.argv.append('--crossframe')
-        variance_file = string_utils.expand_string(dspys_dict['displays']['beauty']['filePath'], 
-                                            frame=1,
-                                            asFilePath=True)              
+            command.argv.append('--crossframe')  
         
         if rm.ai_denoiser_verbose:
             command.argv.append('-v')
         command.argv.append('-a')
         command.argv.append('%.3f' % rm.ai_denoiser_asymmetry)
         command.argv.append('-o')
-        path = filepath_utils.get_real_path(rm.ai_denoiser_output_dir)
-        if not os.path.exists(path):
-            path = os.path.join(os.path.dirname(variance_file), 'denoised')
         command.argv.append(path)
         if rm.ai_denoiser_flow:
             command.argv.append('-f')
         command.argv.extend(img_files)
                                                          
         task.addCommand(command)
+        task.preview = "%s %s" % (envconfig().rman_it_path, " ".join(preview_img_files))
         parent_task.addChild(task) 
 
         self.rman_render.bl_frame_current = cur_frame
