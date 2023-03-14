@@ -364,11 +364,11 @@ classes = [
     RENDER_PT_renderman_render,
     RENDER_PT_renderman_spooling,
     RENDER_PT_renderman_spooling_export_options,    
+    RENDER_PT_renderman_sampling,
     RENDER_PT_renderman_baking,
     RENDER_PT_renderman_world_integrators,
     RENDER_PT_renderman_world_display_filters,
     RENDER_PT_renderman_world_sample_filters,    
-    RENDER_PT_renderman_sampling,
     RENDER_PT_renderman_motion_blur,    
     RENDER_PT_renderman_advanced_settings,   
     RENDER_PT_renderman_custom_options
