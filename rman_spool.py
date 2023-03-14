@@ -2,6 +2,7 @@ import subprocess
 import os
 import getpass
 import socket
+import platform
 import bpy
 from .rfb_utils import filepath_utils
 from .rfb_utils import string_utils
@@ -56,6 +57,17 @@ class RmanSpool(object):
             args.append('%r')
 
         scene_utils.set_render_variant_spool(self.bl_scene, args, self.is_tractor)
+
+    def add_preview_task(self, task, imgs):
+        if imgs is None:
+            return
+        it_path = envconfig().rman_it_path
+        if platform.system() == 'Windows':        
+            it_path = '"%s"' % it_path
+        img = imgs
+        if isinstance(imgs, list):
+            img = " ".join(imgs)
+        task.preview = "%s %s" % (it_path, img)
             
     def add_prman_render_task(self, parentTask, title, threads, rib, img):
         rm = self.bl_scene.renderman
@@ -63,8 +75,7 @@ class RmanSpool(object):
 
         task = author.Task()
         task.title = title
-        if img:
-            task.preview = '%s %s' % (envconfig().rman_it_path, str(img))
+        self.add_preview_task(task, img)
 
         command = author.Command(local=False, service="PixarRender")
         command.argv = ["prman"]
@@ -116,7 +127,7 @@ class RmanSpool(object):
             imgs.append(img)     
 
 
-        task.preview = "%s %s" % (envconfig().rman_it_path, " ".join(imgs))
+        self.add_preview_task(task, imgs)
         parentTask.addChild(task)
 
     def generate_blender_batch_tasks(self, anim, parent_task, tasktitle,
@@ -299,7 +310,7 @@ class RmanSpool(object):
         command.argv.extend(img_files)
                                                          
         task.addCommand(command)
-        task.preview = "%s %s" % (envconfig().rman_it_path, " ".join(preview_img_files))
+        self.add_preview_task(task, preview_img_files)
         parent_task.addChild(task) 
 
         self.rman_render.bl_frame_current = cur_frame
