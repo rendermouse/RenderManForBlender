@@ -2,6 +2,7 @@ from . import color_utils
 from . import filepath_utils
 from . import string_utils
 from . import object_utils
+from .prefs_utils import get_pref
 from ..rman_constants import RMAN_STYLIZED_FILTERS, RMAN_STYLIZED_PATTERNS, RMAN_UTILITY_PATTERN_NAMES, RFB_FLOAT3
 import math
 import bpy
@@ -257,6 +258,58 @@ def is_socket_float3_type(socket):
         return renderman_type in RFB_FLOAT3
     else:
         return socket.type in ['RGBA', 'VECTOR'] 
+
+def set_solo_node(node, nt, solo_node_name, refresh_solo=False, solo_node_output=''):
+    def hide_all(nt, node):
+        if not get_pref('rman_solo_collapse_nodes'):
+            return
+        for n in nt.nodes:
+            hide = (n != node)
+            if hasattr(n, 'prev_hidden'):
+                setattr(n, 'prev_hidden', n.hide)
+            n.hide = hide
+            for input in n.inputs:
+                if not input.is_linked:
+                    if hasattr(input, 'prev_hidden'):
+                        setattr(input, 'prev_hidden', input.hide)
+                    input.hide = hide
+
+            for output in n.outputs:
+                if not output.is_linked:
+                    if hasattr(output, 'prev_hidden'):
+                        setattr(output, 'prev_hidden', output.hide)
+                    output.hide = hide                        
+
+    def unhide_all(nt):
+        if not get_pref('rman_solo_collapse_nodes'):
+            return        
+        for n in nt.nodes:
+            hide = getattr(n, 'prev_hidden', False)
+            n.hide = hide
+            for input in n.inputs:
+                if not input.is_linked:
+                    hide = getattr(input, 'prev_hidden', False)
+                    input.hide = hide
+
+            for output in n.outputs:
+                if not output.is_linked:
+                    hide = getattr(output, 'prev_hidden', False)
+                    output.hide = hide
+
+    if refresh_solo:
+        node.solo_nodetree = None
+        node.solo_node_name = ''
+        node.solo_node_output = ''
+        unhide_all(nt)
+        return
+
+    if solo_node_name:
+        node.solo_nodetree = nt
+        node.solo_node_name = solo_node_name
+        node.solo_node_output = solo_node_output
+        solo_node = nt.nodes[solo_node_name]
+        hide_all(nt, solo_node)
+
 
 # do we need to convert this socket?
 def do_convert_socket(from_socket, to_socket):

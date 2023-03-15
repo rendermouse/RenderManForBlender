@@ -729,16 +729,28 @@ class RendermanOutputNode(RendermanShadingNode):
                     pass
         
         self.new_links.clear()
+        
+        # check if the solo node still exists
+        if self.solo_node_name:
+            solo_nodetree = self.solo_nodetree
+            solo_node = solo_nodetree.nodes.get(self.solo_node_name, None)
+            if solo_node is None:
+                shadergraph_utils.set_solo_node(self, solo_nodetree, '', refresh_solo=True)
+                solo_nodetree.update_tag()
+                return
+
+        self.id_data.update_tag()
 
         # This sucks. There doesn't seem to be a way to tag the material
         # it needs updating, so we manually issue an edit
-
+        '''
         area = getattr(bpy.context, 'area', None)
         if area and area.type == 'NODE_EDITOR':
             rr = rman_render.RmanRender.get_rman_render()        
             mat = getattr(bpy.context, 'material', None)
             if mat:
                 rr.rman_scene_sync.update_material(mat)
+        '''
 
 class RendermanIntegratorsOutputNode(RendermanShadingNode):
     bl_label = 'RenderMan Integrators'
