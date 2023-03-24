@@ -45,6 +45,7 @@ RFB_VIEWPORT_MAX_BUCKETS = 10
 RFB_PREFS_NAME = __name__.split('.')[0]
 RMAN_RENDERMAN_BLUE = (0.0, 0.498, 1.0, 1.0)
 RMAN_FAKE_NODEGROUP = '.__RMAN_FAKE_NODEGROUP__'
+RMAN_GLOBAL_VOL_AGGREGATE = 'globalVolumeAggregate'
 
 RFB_HELP_URL = "https://rmanwiki.pixar.com/display/RFB%s" % RMAN_SUPPORTED_VERSION_MAJOR
 

@@ -355,6 +355,8 @@ class VIEW3D_MT_RM_Volume_Aggregates_Menu(bpy.types.Menu):
             layout.separator()
             layout.label(text='Add Selected To: ')   
             for i, v in enumerate(vol_aggregates):
+                if i == 0:
+                    continue
                 op = layout.operator('renderman.add_to_vol_aggregate', text=v.name)
                 op.vol_aggregates_index = i
                 op.do_scene_selected = True

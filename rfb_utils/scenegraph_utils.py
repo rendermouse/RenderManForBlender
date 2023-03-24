@@ -42,7 +42,9 @@ def update_sg_node_primvar(prop_name, context, bl_object=None):
 
 def export_vol_aggregate(bl_scene, primvar, ob):
     vol_aggregate_group = []
-    for v in bl_scene.renderman.vol_aggregates:
+    for i,v in enumerate(bl_scene.renderman.vol_aggregates):
+        if i == 0:
+            continue
         for member in v.members:
             if member.ob_pointer.original == ob.original:
                 vol_aggregate_group.append(v.name)
@@ -50,3 +52,8 @@ def export_vol_aggregate(bl_scene, primvar, ob):
 
     if vol_aggregate_group:
         primvar.SetStringArray("volume:aggregate", vol_aggregate_group, len(vol_aggregate_group))
+    elif ob.renderman.volume_global_aggregate:
+        # we assume the first group is the global aggregate
+        primvar.SetStringArray("volume:aggregate", [bl_scene.renderman.vol_aggregates[0].name], 1)
+    else:
+        primvar.SetStringArray("volume:aggregate", [""], 1)

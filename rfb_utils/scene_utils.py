@@ -2,6 +2,7 @@ from . import shadergraph_utils
 from . import object_utils
 from . import prefs_utils
 from . import string_utils
+from ..rman_constants import RMAN_GLOBAL_VOL_AGGREGATE
 from ..rfb_logger import rfb_log
 import bpy
 import sys
@@ -45,6 +46,22 @@ def get_renderman_layer(context):
     rm_rl = layer.renderman 
 
     return rm_rl    
+
+def add_global_vol_aggregate():
+    '''
+    Checks to see if the global volume aggregate exists.
+    If it doesn't exists, we add it.
+    '''
+    bl_scene = bpy.context.scene
+    rm = bl_scene.renderman
+    if len(rm.vol_aggregates) > 0:
+        vol_agg = rm.vol_aggregates[0]
+        if vol_agg.name == RMAN_GLOBAL_VOL_AGGREGATE:
+            return
+    vol_agg = rm.vol_aggregates.add()
+    vol_agg.name = RMAN_GLOBAL_VOL_AGGREGATE
+    rm.vol_aggregates.move(len(rm.vol_aggregates)-1, 0)
+
 
 def should_use_bl_compositor(bl_scene):
     '''

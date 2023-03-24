@@ -862,7 +862,7 @@
                 "conditionalVisPath": "dice_referenceCameraType",
                 "conditionalVisValue": 1
             }
-        },
+        },      
         {
             "panel": "OBJECT_PT_renderman_object_geometry_volume",
             "page": "",
@@ -956,7 +956,29 @@
             }, 
             "update_function_name": "lambda s, c: update_primvar_func(s, 'volume_velocityshuttercorrection', c)",            
             "help": "The shutter offset used to interpret volumetric velocity. A value of 1 will use the current position of the object and the position of the object on the next frame as the time interval to use for motion blur. A value of -1 will use the position of the object on the previous frame and the current position of the object as the time. A value of 0 will generate an interval which begins halfway through the previous frame and ends halfway into the next frame."
-        },                                        
+        },  
+        {
+            "panel": "OBJECT_PT_renderman_object_geometry_volume",
+            "page": "",
+            "name": "volume_global_aggregate",
+            "label": "Global Volume Aggregate",
+            "type": "int",
+            "default": 1,
+            "widget": "checkbox",                        
+            "ipr_editable": true,
+            "conditionalVisOps": {
+                "conditionalVis1Path": "bl_object_type",
+                "conditionalVis2Op": "equalTo",
+                "conditionalVis1Value": "OPENVDB",
+                "conditionalVisOp": "or",
+                "conditionalVis1Op": "equalTo",
+                "conditionalVisLeft": "conditionalVis1",
+                "conditionalVisRight": "conditionalVis2",
+                "conditionalVis2Path": "bl_object_type",
+                "conditionalVis2Value": "RI_VOLUME"
+            }, 
+            "help": "Include this volume in the global volume aggregate, if it's not part of an aggregate already. Note, for XPU, volumes have to be in an aggregate in order for them to render."
+        },                                                
         {
             "panel": "OBJECT_PT_renderman_object_render",
             "name": "rman_visibilityCamera",

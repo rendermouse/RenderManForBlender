@@ -5,18 +5,29 @@ from ...rfb_logger import rfb_log
 from ...rman_operators.rman_operators_collections import return_empty_list   
 from ...rman_config import __RFB_CONFIG_DICT__ as rfb_config
 from ...rfb_utils import scene_utils
+from ... import rfb_icons
 import bpy
 import re
 
 class RENDERMAN_UL_Volume_Aggregates_List(bpy.types.UIList):
 
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+        rman_vol_agg = rfb_icons.get_icon("rman_vol_aggregates").icon_id
+        if index == 0:
+            layout.label(text=item.name, icon_value=rman_vol_agg)
+        else:
+            layout.prop(item, 'name', text='', emboss=False, icon_value=rman_vol_agg) 
+        
 
-        custom_icon = 'OBJECT_DATAMODE'
+class RENDERMAN_UL_Volume_Aggregates_Objects_List(bpy.types.UIList):
+
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+
+        custom_icon = 'OUTLINER_OB_VOLUME'
         layout.context_pointer_set("selected_obj", item.ob_pointer)
         op = layout.operator('renderman.remove_from_vol_aggregate', text='', icon='REMOVE')     
         label = item.ob_pointer.name
-        layout.label(text=label, icon=custom_icon) 
+        layout.label(text=label, icon=custom_icon)         
 
 class PRMAN_OT_Renderman_Open_Volume_Aggregates_Editor(CollectionPanel, bpy.types.Operator):
 
@@ -87,13 +98,49 @@ class PRMAN_OT_Renderman_Open_Volume_Aggregates_Editor(CollectionPanel, bpy.type
                             "renderman.add_remove_volume_aggregates",
                             "scene.renderman",
                             "vol_aggregates", "vol_aggregates_index",
-                            default_name='VolumeAggreagte_%d' % len(rm.vol_aggregates))          
+                            default_name='VolumeAggreagte_%d' % len(rm.vol_aggregates),
+                            ui_list_class="RENDERMAN_UL_Volume_Aggregates_List",
+                            enable_remove_func=self.enable_remove_func)
+
+    def enable_remove_func(self, context):
+        scene = context.scene
+        rm = scene.renderman
+        return (rm.vol_aggregates_index != 0)
 
     def draw_objects_item(self, layout, context, item):
         row = layout.row()
         scene = context.scene
         rm = scene.renderman
         vol_aggregate = rm.vol_aggregates[rm.vol_aggregates_index]
+
+        if rm.vol_aggregates_index == 0:
+            # we're viewing the global volume aggregate
+            # just display what volumes are in the global aggregate
+            # and don't allow the user to edit the list
+            box = layout.box()
+            box.use_property_split = True
+            box.use_property_decorate = False
+
+            # Loop over all of volume objects in the scene.
+            # Check if they already belong to aggregate. If they do, they
+            # are not the global aggregate.
+            for ob in scene_utils.get_all_volume_objects(scene):
+                if not ob.renderman.volume_global_aggregate:
+                    # volume is should not be in the global aggregate
+                    continue
+                do_draw = True
+                for lg in rm.vol_aggregates:
+                    for member in lg.members:
+                        if member.ob_pointer == ob:
+                            do_draw = False
+                            break
+                    if not do_draw:
+                        break
+                if do_draw:
+                    row = box.row(align=True)
+                    custom_icon = 'OUTLINER_OB_VOLUME'
+                    row.label(text=ob.name, icon=custom_icon)
+            return
 
         row = layout.row()
         row.separator()   
@@ -132,7 +179,7 @@ class PRMAN_OT_Renderman_Open_Volume_Aggregates_Editor(CollectionPanel, bpy.type
 
         row = layout.row()
         
-        row.template_list('RENDERMAN_UL_Volume_Aggregates_List', "",
+        row.template_list('RENDERMAN_UL_Volume_Aggregates_Objects_List', "",
                         vol_aggregate, "members", vol_aggregate, 'members_index', rows=6)        
 
     def draw_item(self, layout, context, item):
@@ -171,7 +218,8 @@ class PRMAN_OT_Renderman_Open_Volume_Aggregates_Editor(CollectionPanel, bpy.type
 
 classes = [    
     PRMAN_OT_Renderman_Open_Volume_Aggregates_Editor,
-    RENDERMAN_UL_Volume_Aggregates_List
+    RENDERMAN_UL_Volume_Aggregates_List,
+    RENDERMAN_UL_Volume_Aggregates_Objects_List
 ]
 
 def register():
