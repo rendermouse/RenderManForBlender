@@ -247,41 +247,70 @@ class RmanSpool(object):
         img_files = list()
         preview_img_files = list()
         have_variance = False
-        variance_file = string_utils.expand_string(dspys_dict['displays']['beauty']['filePath'], 
+        beauty_path = dspys_dict['displays']['beauty']['filePath']
+        variance_file = string_utils.expand_string(beauty_path, 
                                             frame=1,
                                             asFilePath=True)            
         path = filepath_utils.get_real_path(rm.ai_denoiser_output_dir)
         if not os.path.exists(path):
-            path = os.path.join(os.path.dirname(variance_file), 'denoised')        
-        for frame_num in range(start, last + 1, by):
-            self.rman_render.bl_frame_current = frame_num
-        
-            variance_file = string_utils.expand_string(dspys_dict['displays']['beauty']['filePath'], 
-                                                frame=frame_num,
-                                                asFilePath=True)  
+            path = os.path.join(os.path.dirname(variance_file), 'denoised')
+        do_cross_frame = (rm.ai_denoiser_mode == 'crossframe')            
+        if by > 1:        
+            do_cross_frame = False # can't do crossframe if by > 1
+            for frame_num in range(start, last + 1, by):
+                self.rman_render.bl_frame_current = frame_num
+            
+                variance_file = string_utils.expand_string(beauty_path, 
+                                                    frame=frame_num,
+                                                    asFilePath=True)  
 
+                for dspy,params in dspys_dict['displays'].items():
+                    if not params['denoise']:
+                        continue
+                    if dspy == 'beauty':
+                        if not have_variance:
+                            have_variance = True
+                        img_files.append(variance_file)
+                        preview_img_files.append(os.path.join(path, os.path.basename(variance_file)))
+                    else:
+                        token_dict = {'aov': dspy}
+                        aov_file = string_utils.expand_string(params['filePath'], 
+                                                frame=frame_num,
+                                                token_dict=token_dict,
+                                                asFilePath=True)    
+                        img_files.append(aov_file)   
+        else:   
+            # use frame range format
+            # ex: foo.####.exr start-last
+            for frame_num in range(start, last + 1):           
+                variance_file = string_utils.expand_string(beauty_path, 
+                                                    frame=frame_num,
+                                                    asFilePath=True)   
+                preview_img_files.append(os.path.join(path, os.path.basename(variance_file)))
+                               
             for dspy,params in dspys_dict['displays'].items():
                 if not params['denoise']:
                     continue
                 if dspy == 'beauty':
                     if not have_variance:
                         have_variance = True
+                    variance_file = string_utils.expand_string(beauty_path, 
+                                                        frame='#',
+                                                        asFilePath=True)                        
                     img_files.append(variance_file)
-                    preview_img_files.append(os.path.join(path, os.path.basename(variance_file)))
                 else:
                     token_dict = {'aov': dspy}
                     aov_file = string_utils.expand_string(params['filePath'], 
-                                            frame=frame_num,
                                             token_dict=token_dict,
+                                            frame="#",
                                             asFilePath=True)    
-                    img_files.append(aov_file)      
+                    img_files.append(aov_file)       
+
+            img_files.append('%d-%d' % (start, last))        
 
         if not have_variance or len(img_files) < 1:
             return None
-
-        do_cross_frame = (rm.ai_denoiser_mode == 'crossframe')
-        
-
+       
         if start == last:
             do_cross_frame = False
 

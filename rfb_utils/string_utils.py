@@ -34,7 +34,7 @@ class SceneStringConverter(object):
         Kwargs:
         - display (str): The display being considered. This is necessary if your
         expression contains <aov> or <ext>
-        - frame (int): An optional frame number to expand <F>, <F4>, etc.
+        - frame (int, str): An optional frame number to expand <F>, <F4>, etc.
 
         Returns:
         - The expanded string
@@ -110,7 +110,7 @@ def expand_string(string, display=None, glob_sequence=False, frame=None, token_d
 
     Kwargs:
     - display (str): the name of a display driver to update <ext> tokens.
-    - frame (str): the frame to use for expanding
+    - frame (int, str): the frame to use for expanding. If a string, the string will be repeated by the paddning. Ex: '#' will turn to '####' for <f4>
     - token_dict (dict): dictionary of token/vals that also need to be set.
     - asFilePath (bool): treat the input string as a path. Will create directories if they don't exist
 
