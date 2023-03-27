@@ -723,13 +723,8 @@ class PRMAN_PT_Renderman_txmanager_list(_RManPanelHeader, Panel):
     def draw(self, context):
         layout = self.layout
         if get_pref('rman_ui_framework') == 'QT':
-            try:
-                from . import rman_ui_txmanager_qt
-                if rman_ui_txmanager_qt.__QT_LOADED__:
-                    rman_icon = rfb_icons.get_icon('rman_txmanager')  
-                    layout.operator("rman_txmgr_list.open_txmanager", icon_value=rman_icon.icon_id)
-            except:
-                PRMAN_PT_Renderman_txmanager_list.draw_txmanager_layout(context, layout)    
+            rman_icon = rfb_icons.get_icon('rman_txmanager')  
+            layout.operator("rman_txmgr_list.open_txmanager", icon_value=rman_icon.icon_id) 
         else:
             PRMAN_PT_Renderman_txmanager_list.draw_txmanager_layout(context, layout)
 
