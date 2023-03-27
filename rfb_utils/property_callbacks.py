@@ -219,10 +219,14 @@ def update_riattr_func(self, s, context):
     ob = None
     if not hasattr(context, 'object'):
         ob = self.id_data
+    if ob is None:
+        return
     scenegraph_utils.update_sg_node_riattr(s, context, bl_object=ob)    
 
 def update_primvar_func(self, s, context):
     ob = None
     if not hasattr(context, 'object'):
         ob = self.id_data    
+    if ob is None:
+        return
     scenegraph_utils.update_sg_node_primvar(s, context, bl_object=ob)      

@@ -47,7 +47,10 @@ class LightLinkingQtWrapper(rfb_qt.RmanQtWrapper):
         self.resize(825, 526)
         self.buttonBox = QtWidgets.QDialogButtonBox(self)
         self.buttonBox.setGeometry(QtCore.QRect(620, 450, 166, 24))
-        self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
+        
+        # hide OK, and cancel buttons
+        #self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
+        
         self.buttonBox.setObjectName("buttonBox")
         #self.invert_checkBox = QtWidgets.QCheckBox(self)
         #self.invert_checkBox.setGeometry(QtCore.QRect(730, 30, 85, 21))

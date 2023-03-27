@@ -41,7 +41,10 @@ class TraceGroupsQtWrapper(rfb_qt.RmanQtWrapper):
         self.buttonBox = QtWidgets.QDialogButtonBox(self)
         self.buttonBox.setGeometry(QtCore.QRect(260, 440, 341, 32))
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
+        
+        # hide OK and cancel buttons
+        #self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
+        
         self.buttonBox.setObjectName("buttonBox")
         self.addButton = QtWidgets.QPushButton(self)
         self.addButton.setGeometry(QtCore.QRect(280, 30, 31, 26))
