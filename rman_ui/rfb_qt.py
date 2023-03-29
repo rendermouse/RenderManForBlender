@@ -50,6 +50,7 @@ isort:skip_file
 ## CSS copied from $RMANTREE/bin/rman_utils/rman_assets/common/ui_style.py
 __rmanPltF__ = {'bg': (68, 68, 68),
                 'darkbg': (43, 43, 43),
+                'alternatebg': (53, 53, 53),
                 'lightbg': (78, 78, 78),
                 'tipbg': (58, 58, 58),
                 'tiptext': (192, 192, 192),
@@ -166,6 +167,7 @@ __BASE_CSS__ = '''
         border-color: %(darkbg)s;
         color: %(text)s;
         background-color: %(darkbg)s;
+        alternate-background-color: %(alternatebg)s;        
         min-width: 138px;
     }
     QTreeView {
@@ -176,6 +178,7 @@ __BASE_CSS__ = '''
         border-color: %(darkbg)s;
         color: %(text)s;
         background-color: %(darkbg)s;
+        alternate-background-color: %(alternatebg)s;
         min-width: 138px;
     }    
     QListWidget {
@@ -186,6 +189,7 @@ __BASE_CSS__ = '''
         border-color: %(darkbg)s;
         color: %(text)s;
         background-color: %(darkbg)s;
+        alternate-background-color: %(alternatebg)s;        
         min-width: 138px;
     }     
 '''
