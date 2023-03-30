@@ -496,7 +496,7 @@ class PRMAN_OT_Renderman_Presets_Editor(bpy.types.Operator):
             else:
                 bpy.ops.wm.rpb_qt_app_timed()
             
-            return {'RUNNING_MODAL'}            
+            return {'FINISHED'}            
 
         self.load_categories(context)
         self.load_presets(context)

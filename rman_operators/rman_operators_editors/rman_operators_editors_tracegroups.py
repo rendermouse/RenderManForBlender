@@ -488,7 +488,7 @@ class PRMAN_OT_Renderman_Open_Groups_Editor(CollectionPanel, bpy.types.Operator)
             else:
                 bpy.ops.wm.trace_groups_qt_app_timed()     
 
-            return {'RUNNING_MODAL'}       
+            return {'FINISHED'}       
 
         wm = context.window_manager
         width = rfb_config['editor_preferences']['tracesets_editor']['width']

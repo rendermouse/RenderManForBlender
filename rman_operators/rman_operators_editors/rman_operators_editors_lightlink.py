@@ -663,7 +663,7 @@ class PRMAN_PT_Renderman_Open_Light_Linking(bpy.types.Operator):
             else:
                 bpy.ops.wm.light_linking_qt_app_timed()     
 
-            return {'RUNNING_MODAL'}    
+            return {'FINISHED'}    
 
         wm = context.window_manager
         width = rfb_config['editor_preferences']['lightlink_editor']['width']

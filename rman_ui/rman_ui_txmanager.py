@@ -765,7 +765,7 @@ class PRMAN_OT_Renderman_open_txmanager(Operator):
                 txfile = mgr.get_txfile_from_id(self.nodeID)
                 mgr.ui.select_txfile(txfile)        
             
-            return {'RUNNING_MODAL'}            
+            return {'FINISHED'}            
 
 
         if self.properties.nodeID != '':

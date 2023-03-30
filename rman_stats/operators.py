@@ -68,7 +68,7 @@ class PRMAN_OT_Open_Stats(bpy.types.Operator):
         else:
             bpy.ops.wm.live_stats_qt_app_timed()
          
-        return {'RUNNING_MODAL'}
+        return {'FINISHED'}
 
 classes = [         
     PRMAN_OT_Open_Stats,
