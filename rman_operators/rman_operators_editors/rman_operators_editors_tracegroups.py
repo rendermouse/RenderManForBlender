@@ -1,13 +1,10 @@
-from logging import root
 from bpy.props import (StringProperty, BoolProperty, EnumProperty)
 
 from ...rman_ui.rman_ui_base import CollectionPanel   
-from ...rfb_logger import rfb_log
 from ...rman_operators.rman_operators_collections import return_empty_list   
 from ...rman_config import __RFB_CONFIG_DICT__ as rfb_config
-from ...rfb_utils.prefs_utils import get_pref, using_qt, show_wip_qt
+from ...rfb_utils.prefs_utils import using_qt, show_wip_qt
 from ...rman_ui import rfb_qt as rfb_qt
-from ...rfb_utils.envconfig_utils import envconfig
 import bpy
 import re
 import sys
@@ -192,6 +189,9 @@ class TraceGroupsQtWrapper(rfb_qt.RmanQtWrapper):
         grp = rm.object_groups[idx]
         grp.name = item.text()    
         self.label_2.setText("Objects (%s)" % item.text())
+        for member in grp.members:
+            ob = member.ob_pointer
+            ob.update_tag(refresh={'OBJECT'})        
 
     def find_item(self, standard_item, ob):
         '''
@@ -235,6 +235,8 @@ class TraceGroupsQtWrapper(rfb_qt.RmanQtWrapper):
 
         def add_children(root_item, ob):
             for child in ob.children:
+                if child.type in ['CAMERA', 'ARMATURE']:
+                    continue                
                 item = self.find_item(root_item, child)
                 if not item:
                     item = StandardItem(txt=child.name)
@@ -244,6 +246,8 @@ class TraceGroupsQtWrapper(rfb_qt.RmanQtWrapper):
         
         root_parents = [ob for ob in scene.objects if ob.parent is None]            
         for ob in root_parents:
+            if ob.type in ('ARMATURE', 'CAMERA'):
+                continue  
             
             item = self.find_item(self.rootNode, ob)
             if not item:
@@ -255,6 +259,14 @@ class TraceGroupsQtWrapper(rfb_qt.RmanQtWrapper):
         self.traceGroupObjects.expandAll()
         if idx != -1:
             self.trace_groups_index_changed()
+
+    def bl_select_objects(self, obs):
+        context = bpy.context
+        for ob in context.selected_objects:
+            ob.select_set(False)
+        for ob in obs:
+            ob.select_set(True)
+            context.view_layer.objects.active = ob                
 
     def trace_groups_index_changed(self):
         idx = int(self.traceGroups.currentRow())
@@ -274,6 +286,7 @@ class TraceGroupsQtWrapper(rfb_qt.RmanQtWrapper):
         object_group = object_groups[group_index]
 
         selected_items =  QtCore.QItemSelection()
+        obs = []
         for member in object_group.members:
             ob = member.ob_pointer
             if ob is None:
@@ -283,7 +296,9 @@ class TraceGroupsQtWrapper(rfb_qt.RmanQtWrapper):
                 idx = self.treeModel.indexFromItem(item)
                 selection_range = QtCore.QItemSelectionRange(idx)
                 selected_items.append(selection_range)
+                obs.append(ob)
         self.traceGroupObjects.selectionModel().select(selected_items, QtCore.QItemSelectionModel.ClearAndSelect | QtCore.QItemSelectionModel.NoUpdate)
+        self.bl_select_objects(obs)
                 
     def trace_group_objects_selection(self, selected, deselected):
         idx = int(self.traceGroups.currentRow())
@@ -312,6 +327,7 @@ class TraceGroupsQtWrapper(rfb_qt.RmanQtWrapper):
                     ob.update_tag(refresh={'OBJECT'}) 
                     break                    
 
+        obs = []
         for i in selected.indexes():
             item = self.traceGroupObjects.model().itemFromIndex(i)
             ob = bpy.data.objects.get(item.text(), None)
@@ -321,12 +337,14 @@ class TraceGroupsQtWrapper(rfb_qt.RmanQtWrapper):
             for member in object_group.members:            
                 if ob == member.ob_pointer:
                     do_add = False
-                    break                
+                obs.append(member.ob_pointer)                
             if do_add:
+                obs.append(ob)
                 ob_in_group = object_group.members.add()
                 ob_in_group.name = ob.name
                 ob_in_group.ob_pointer = ob      
                 ob.update_tag(refresh={'OBJECT'})                   
+        self.bl_select_objects(obs)
                 
 class RENDERMAN_UL_Object_Group_List(bpy.types.UIList):
 
