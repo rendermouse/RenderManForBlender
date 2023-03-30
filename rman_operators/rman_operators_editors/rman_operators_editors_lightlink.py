@@ -5,7 +5,7 @@ from ...rfb_utils import shadergraph_utils
 from ...rfb_utils import string_utils
 from ...rfb_utils import scenegraph_utils
 from ...rfb_logger import rfb_log
-from ...rfb_utils.prefs_utils import get_pref, using_qt
+from ...rfb_utils.prefs_utils import get_pref, using_qt, show_wip_qt
 from ...rfb_utils import object_utils
 from ...rfb_utils.envconfig_utils import envconfig
 from ... import rfb_icons
@@ -128,8 +128,8 @@ class LightLinkingQtWrapper(rfb_qt.RmanQtWrapper):
                 self.refresh_lights()
                 self.refresh_linked_objects()
                 self.lights_index_changed()
-            elif isinstance(dps_update.id, bpy.types.Scene):
-                self.refresh_lights()                    
+            #elif isinstance(dps_update.id, bpy.types.Scene):
+            #    self.refresh_lights()                    
     
     def update(self):
         super(LightLinkingQtWrapper, self).update()
@@ -656,7 +656,7 @@ class PRMAN_PT_Renderman_Open_Light_Linking(bpy.types.Operator):
 
     def invoke(self, context, event):
         
-        if using_qt() and envconfig().getenv('RFB_DEVELOPER'):
+        if using_qt() and show_wip_qt():
             global __LIGHT_LINKING_WINDOW__
             if sys.platform == "darwin":
                 rfb_qt.run_with_timer(__LIGHT_LINKING_WINDOW__, LightLinkingQtWrapper)   

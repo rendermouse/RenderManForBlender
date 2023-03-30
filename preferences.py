@@ -471,6 +471,12 @@ class RendermanPreferences(AddonPreferences):
             ]
     )
 
+    rman_show_wip_qt: BoolProperty(
+        name="Show WIP UI",
+        default=False,
+        description="Show WIP Qt UI. Not all of our UI have been completely converted to Qt. Turn this option off to go back to the native version, even if UI Framework is set to Qt."
+    )
+
     # For the preset browser
     rpbConfigFile: StringProperty(default='')
     rpbUserLibraries: CollectionProperty(type=RendermanPreferencePath)
@@ -656,6 +662,8 @@ class RendermanPreferences(AddonPreferences):
             col.prop(self, 'rman_viewport_progress_color')                
         col.prop(self, 'draw_panel_icon')
         col.prop(self, 'rman_ui_framework')
+        if self.rman_ui_framework == 'QT':
+            col.prop(self, 'rman_show_wip_qt')
 
         # Logging
         row = layout.row()

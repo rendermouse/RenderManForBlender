@@ -5,7 +5,7 @@ from ..rfb_utils.scene_utils import RMAN_VOL_TYPES
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import object_utils
 from ..rfb_utils.envconfig_utils import envconfig
-from ..rfb_utils.prefs_utils import using_qt
+from ..rfb_utils.prefs_utils import using_qt, show_wip_qt
 from ..rfb_logger import rfb_log
 from ..rman_config import __RFB_CONFIG_DICT__ as rfb_config
 from bpy.types import Menu
@@ -269,8 +269,10 @@ class VIEW3D_MT_RM_LightLinking_Menu(bpy.types.Menu):
             return
         if light_props.renderman_light_role not in {'RMAN_LIGHTFILTER', 'RMAN_LIGHT'}:
             return
+        if using_qt() and show_wip_qt():
+            return
         selected_objects = context.selected_objects
-        if not using_qt() and not envconfig().getenv('RFB_DEVELOPER') and selected_objects:
+        if selected_objects:
             layout.context_pointer_set('light_ob', active_light)
             if not rm.invert_light_linking:
                 layout.separator()
@@ -475,6 +477,8 @@ class VIEW3D_MT_RM_Add_Selected_To_ObjectGroup_Menu(bpy.types.Menu):
         scene = context.scene
 
         op = layout.operator("scene.rman_open_groups_editor", text="Trace Sets Editor")
+        if using_qt() and show_wip_qt():
+            return
         selected_objects = []
         if context.selected_objects:
             for obj in context.selected_objects:

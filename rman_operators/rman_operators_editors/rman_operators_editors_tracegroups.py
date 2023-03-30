@@ -5,7 +5,7 @@ from ...rman_ui.rman_ui_base import CollectionPanel
 from ...rfb_logger import rfb_log
 from ...rman_operators.rman_operators_collections import return_empty_list   
 from ...rman_config import __RFB_CONFIG_DICT__ as rfb_config
-from ...rfb_utils.prefs_utils import get_pref, using_qt
+from ...rfb_utils.prefs_utils import get_pref, using_qt, show_wip_qt
 from ...rman_ui import rfb_qt as rfb_qt
 from ...rfb_utils.envconfig_utils import envconfig
 import bpy
@@ -98,6 +98,7 @@ class TraceGroupsQtWrapper(rfb_qt.RmanQtWrapper):
 
         self.refresh_groups()
         self.refresh_group_objects()
+        self.checkTraceGroups()
 
         self.traceGroupObjects.expandAll()   
 
@@ -117,16 +118,14 @@ class TraceGroupsQtWrapper(rfb_qt.RmanQtWrapper):
 
     def depsgraph_update_post(self, bl_scene, depsgraph):
         for dps_update in reversed(depsgraph.updates):
-            if isinstance(dps_update.id, bpy.types.Scene): 
-                self.trace_groups_index_changed()
-            elif isinstance(dps_update.id, bpy.types.Object) or isinstance(dps_update.id, bpy.types.Collection):
-                self.refresh_groups()
-                self.refresh_group_objects()            
+            if isinstance(dps_update.id, bpy.types.Collection):
+                #self.refresh_groups()
+                self.traceGroups.setCurrentRow(-1)
+                self.refresh_group_objects()             
+            #elif isinstance(dps_update.id, bpy.types.Scene): 
+            #    self.trace_groups_index_changed()
 
-
-    def update(self):
-        idx = int(self.traceGroups.currentRow())
-        self.addButton.setEnabled(True)
+    def checkTraceGroups(self):
         if self.traceGroups.count() < 1:
             self.traceGroupObjects.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
             self.enable_trace_group_objects(self.rootNode, enable=False)
@@ -134,8 +133,13 @@ class TraceGroupsQtWrapper(rfb_qt.RmanQtWrapper):
         else:
             self.traceGroupObjects.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
             self.removeButton.setEnabled(True)
-            self.enable_trace_group_objects(self.rootNode, enable=True)
+            self.enable_trace_group_objects(self.rootNode, enable=True)        
 
+    def update(self):
+        idx = int(self.traceGroups.currentRow())
+        self.addButton.setEnabled(True)
+
+        self.checkTraceGroups()
         super(TraceGroupsQtWrapper, self).update()
 
     def refresh_groups(self):
@@ -255,6 +259,7 @@ class TraceGroupsQtWrapper(rfb_qt.RmanQtWrapper):
     def trace_groups_index_changed(self):
         idx = int(self.traceGroups.currentRow())
         current_item = self.traceGroups.currentItem()
+        self.checkTraceGroups()
         if current_item:
             self.label_2.setText("Objects (%s)" % current_item.text())
         else:
@@ -281,6 +286,11 @@ class TraceGroupsQtWrapper(rfb_qt.RmanQtWrapper):
         self.traceGroupObjects.selectionModel().select(selected_items, QtCore.QItemSelectionModel.ClearAndSelect | QtCore.QItemSelectionModel.NoUpdate)
                 
     def trace_group_objects_selection(self, selected, deselected):
+        idx = int(self.traceGroups.currentRow())
+        current_item = self.traceGroups.currentItem()
+        if not current_item:
+            return
+
         context = bpy.context
         scene = context.scene
         rm = scene.renderman  
@@ -290,6 +300,17 @@ class TraceGroupsQtWrapper(rfb_qt.RmanQtWrapper):
         if group_index not in range(0, len(object_groups)):
             return
         object_group = object_groups[group_index]
+
+        for i in deselected.indexes():
+            item = self.traceGroupObjects.model().itemFromIndex(i)
+            ob = bpy.data.objects.get(item.text(), None)
+            if ob is None:
+                continue
+            for i, member in enumerate(object_group.members):
+                if ob == member.ob_pointer:
+                    object_group.members.remove(i)
+                    ob.update_tag(refresh={'OBJECT'}) 
+                    break                    
 
         for i in selected.indexes():
             item = self.traceGroupObjects.model().itemFromIndex(i)
@@ -306,7 +327,6 @@ class TraceGroupsQtWrapper(rfb_qt.RmanQtWrapper):
                 ob_in_group.name = ob.name
                 ob_in_group.ob_pointer = ob      
                 ob.update_tag(refresh={'OBJECT'})                   
-                
                 
 class RENDERMAN_UL_Object_Group_List(bpy.types.UIList):
 
@@ -461,7 +481,7 @@ class PRMAN_OT_Renderman_Open_Groups_Editor(CollectionPanel, bpy.types.Operator)
 
     def invoke(self, context, event):
 
-        if using_qt() and envconfig().getenv('RFB_DEVELOPER'):
+        if using_qt() and show_wip_qt():
             global __TRACE_GROUPS_WINDOW__
             if sys.platform == "darwin":
                 rfb_qt.run_with_timer(__TRACE_GROUPS_WINDOW__, TraceGroupsQtWrapper)   
