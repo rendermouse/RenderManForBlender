@@ -523,6 +523,8 @@ class VIEW3D_MT_RM_Add_Selected_To_LightMixer_Menu(bpy.types.Menu):
         scene = context.scene
         layout.operator('scene.rman_open_light_mixer_editor', text='Light Mixer Editor') 
         layout.separator()
+        if using_qt() and show_wip_qt():
+            return        
         selected_light_objects = []
         if context.selected_objects:
             for obj in context.selected_objects:

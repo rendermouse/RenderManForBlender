@@ -5,10 +5,640 @@ from ...rfb_utils import scene_utils
 from ...rfb_utils import shadergraph_utils
 from ...rfb_logger import rfb_log
 from ... import rfb_icons
+from ...rfb_utils.prefs_utils import using_qt, show_wip_qt
+from ...rman_ui import rfb_qt as rfb_qt
 from ...rman_operators.rman_operators_collections import return_empty_list   
 from ...rman_config import __RFB_CONFIG_DICT__ as rfb_config
 import bpy
 import re
+import sys
+from PySide2 import QtCore, QtWidgets, QtGui 
+
+__LIGHT_MIXER_WINDOW__ = None 
+
+class LightMixerQtAppTimed(rfb_qt.RfbBaseQtAppTimed):
+    bl_idname = "wm.light_mixer_qt_app_timed"
+    bl_label =  "RenderMan Trace Sets Editor"
+
+    def __init__(self):
+        super(LightMixerQtAppTimed, self).__init__()
+
+    def execute(self, context):
+        self._window = LightMixerQtWrapper()
+        return super(LightMixerQtAppTimed, self).execute(context)
+
+class StandardItem(QtGui.QStandardItem):
+    def __init__(self, txt=''):
+        super().__init__()
+        self.setEditable(False)
+        self.setText(txt)
+
+class ParamLabel(QtWidgets.QLabel):
+    def __init__(self, *args, **kwargs):
+        super(ParamLabel, self).__init__(*args, **kwargs)
+        #self.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)        
+
+class VBoxLayout(QtWidgets.QVBoxLayout):
+    def __init__(self, m=1, s=1):
+        super(VBoxLayout, self).__init__()
+        self.setContentsMargins(m, m, m, m)
+        self.setSpacing(s)
+
+
+class HBoxLayout(QtWidgets.QHBoxLayout):
+    def __init__(self, m=5, s=10):
+        super(HBoxLayout, self).__init__()
+        self.setContentsMargins(m, m, m, m)
+        self.setSpacing(s)
+
+class SliderParam(QtWidgets.QWidget):
+    def __init__(self, *args, **kwargs):
+        super(SliderParam, self).__init__(parent=kwargs.get("parent", None))    
+        self.light_shader = None
+
+        # build ui
+        self._lyt = VBoxLayout()
+        self.light_shader = kwargs.get("light_shader", None)
+        self.param = kwargs.get("param", "")
+        self.param_label = ParamLabel(kwargs.get("label", "label"))
+        self._lyt.addWidget(self.param_label)
+        self.sl = QtWidgets.QSlider(QtCore.Qt.Vertical, self)
+        self.sl.setMinimum(kwargs.get("min", 0.0))
+        self.sl.setMaximum(kwargs.get("max", 10.0))
+        self.sl.setValue(kwargs.get("value", 0.0))
+        self.sl.setTickPosition(QtWidgets.QSlider.TicksBothSides)
+        self.sl.setTickInterval(1.0)
+        self.sl.setSingleStep(kwargs.get("step", 0.1))
+        self.sl.valueChanged.connect(self.slider_changed)
+        self._lyt.addWidget(self.sl)
+
+        self._field = QtWidgets.QDoubleSpinBox()
+        self._field.setMinimum(0.0)
+        self._field.setMaximum(100000.0)
+        self._field.setSingleStep(kwargs.get("step", 0.1))
+        self._field.setValue(kwargs.get("value", 0.0))
+        self._field.valueChanged.connect(self.value_changed)
+        #self.setToolTip(kwargs.get("tooltip", ""))
+        self._lyt.addWidget(self._field)
+        self.setLayout(self._lyt)  
+
+    def value_changed(self, val):
+        val = self._field.value()
+        #self.sl.setValue(val)
+        self.update_shader(val)
+
+    def slider_changed(self):
+        val = self.sl.value()
+        self._field.setValue(val)
+        self.update_shader(val)
+
+    def update_shader(self, val):
+        if self.light_shader:
+            setattr(self.light_shader, self.param, val) 
+
+class FloatParam(QtWidgets.QWidget):
+    def __init__(self, *args, **kwargs):
+        super(FloatParam, self).__init__(parent=kwargs.get("parent", None))
+        # build ui
+        self._lyt = HBoxLayout()
+        self.light_shader = kwargs.get("light_shader", None)
+        self.param = kwargs.get("param", "")
+        self.param_label = ParamLabel(kwargs.get("label", "label"))
+        self._lyt.addWidget(self.param_label)
+        self._field = QtWidgets.QDoubleSpinBox()
+        self._field.setMinimum(kwargs.get("min", 0.0))
+        self._field.setMaximum(kwargs.get("max", 1.0))
+        self._field.setSingleStep(kwargs.get("step", 0.1))
+        self._field.setValue(kwargs.get("value", 0.0))
+        self.setToolTip(kwargs.get("tooltip", ""))
+        self._lyt.addWidget(self._field)
+        self.setLayout(self._lyt)
+        # change cb
+        self._field.valueChanged.connect(self.on_change)
+
+    @property
+    def value(self):
+        return self._field.value
+
+    def on_change(self, val):
+        setattr(self.light_shader, self.param, val)        
+
+class BoolParam(QtWidgets.QWidget):
+    def __init__(self, *args, **kwargs):
+        super(BoolParam, self).__init__(parent=kwargs.get("parent", None))
+        self.light_shader = kwargs.get("light_shader", None)
+        self.param = kwargs.get("param", "")
+        self.param_label = ParamLabel(kwargs.get("label", "label")) 
+        self._lyt = HBoxLayout(m=1, s=1)
+        self._lyt.addWidget(self.param_label)
+        self._cb = QtWidgets.QCheckBox()
+        self._cb.setTristate(False)
+        self._cb.setChecked(kwargs.get("value", False))
+        self.setToolTip(kwargs.get("tooltip", ""))
+        self._lyt.addWidget(self._cb)
+        self.setLayout(self._lyt)
+        # change cb
+        self._cb.stateChanged.connect(self.on_change)
+
+    @property
+    def value(self):
+        return self._cb.isChecked()
+
+    def setChecked(self, v):
+        self._cb.setChecked(v)
+
+    def on_change(self, val):                
+        setattr(self.light_shader, self.param, bool(val))
+
+class ColorButton(QtWidgets.QWidget):
+    colorChanged = QtCore.Signal(object)
+
+    def __init__(self, *args, **kwargs):
+        super(ColorButton, self).__init__(parent=kwargs.get("parent", None))
+
+        self._lyt = HBoxLayout()
+        self.light_shader = kwargs.get("light_shader", None)
+        self.param = kwargs.get("param", "")
+        self.param_label = ParamLabel(kwargs.get("label", "label"))        
+        self._lyt.addWidget(self.param_label)
+        self._color = None
+        clr = kwargs.get("color", (0.0, 0.0, 0.0))
+        self._default = QtGui.QColor.fromRgbF(clr[0], clr[1], clr[2])
+        self.color_btn = QtWidgets.QPushButton()
+        self.color_btn.pressed.connect(self.onColorPicker)
+        self._lyt.addWidget(self.color_btn)
+        self.dlg = None
+
+        self.setLayout(self._lyt)  
+
+        self._color = self._default
+        self.color_btn.setStyleSheet("background-color: %s;" % self._color.name())
+
+    def setColor(self, qcolor):
+        if qcolor != self._color:
+            self._color = qcolor
+            self.colorChanged.emit(qcolor)
+
+        if self._color:
+            self.color_btn.setStyleSheet("background-color: %s;" % qcolor.name())
+        else:
+            self.color_btn.setStyleSheet("")
+
+        if self.light_shader:            
+            setattr(self.light_shader, self.param, (qcolor.redF(), qcolor.greenF(), qcolor.blueF()))            
+
+    def color(self):
+        return self._color
+
+    def onColorPicker(self):
+        if self.dlg is None:
+            self.dlg = QtWidgets.QColorDialog(self)
+            self.dlg.setOption(QtWidgets.QColorDialog.DontUseNativeDialog)
+            self.dlg.currentColorChanged.connect(self.currentColorChanged)
+            self.dlg.accepted.connect(self.dlg_accept)
+            self.dlg.rejected.connect(self.dlg_rejected)
+
+        self.dlg.setCurrentColor(self._color)
+        self.dlg.open()
+ 
+    def dlg_accept(self):
+        self.setColor(self.dlg.currentColor())
+
+    def dlg_rejected(self):
+        self.setColor(self._color)        
+
+    def currentColorChanged(self, qcolor):
+        if self.light_shader:
+            setattr(self.light_shader, self.param, (qcolor.redF(), qcolor.greenF(), qcolor.blueF()))
+
+    def mousePressEvent(self, e):
+        if e.button() == QtCore.Qt.RightButton:
+            self.setColor(self._default)
+
+        return super(ColorButton, self).mousePressEvent(e)        
+    
+class LightMixerWidget(QtWidgets.QWidget):
+    def __init__(self, *args, color=None, **kwargs):
+        super(LightMixerWidget, self).__init__(parent=kwargs.get("parent", None))
+
+        self._lyt = HBoxLayout()
+        self._simple_lyt = VBoxLayout()
+        self._complex_lyt = HBoxLayout()
+        self._lyt.addLayout(self._simple_lyt)
+        self._lyt.addLayout(self._complex_lyt)
+        self.setLayout(self._lyt)  
+        self.simple_wgts = list()
+        self.complex_wgts = list()
+
+    def add_widget(self, wgt):
+        self.complex_wgts.append(wgt)
+        self._complex_lyt.addWidget(wgt)
+
+    def add_simple_widget(self, wgt):
+        self.simple_wgts.append(wgt)
+        self._simple_lyt.addWidget(wgt)
+
+    def remove_widgets(self):
+        for w in self.simple_wgts:
+            self._simple_lyt.removeWidget(w)
+            w.deleteLater()
+            del w
+        for w in self.complex_wgts:
+            self._complex_lyt.removeWidget(w)            
+            w.deleteLater()
+            del w
+        self.simple_wgts.clear()
+        self.complex_wgts.clear()
+
+class LightMixerQtWrapper(rfb_qt.RmanQtWrapper):
+    def __init__(self) -> None:
+        super(LightMixerQtWrapper, self).__init__()
+    
+        self.setWindowTitle('RenderMan Light Mixer')
+        self.resize(1100, 500)
+        self.buttonBox = QtWidgets.QDialogButtonBox(self)
+        self.buttonBox.setGeometry(QtCore.QRect(260, 440, 341, 32))
+        self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
+        
+        # hide OK and cancel buttons
+        #self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
+        
+        self.buttonBox.setObjectName("buttonBox")
+        self.addButton = QtWidgets.QPushButton(self)
+        self.addButton.setGeometry(QtCore.QRect(280, 30, 31, 26))
+        self.addButton.setObjectName("addButton")
+        self.addButton.setText("+")
+        self.addButton.setAutoDefault(False)
+        self.removeButton = QtWidgets.QPushButton(self)
+        self.removeButton.setGeometry(QtCore.QRect(280, 50, 31, 26))
+        self.removeButton.setObjectName("removeButton")
+        self.removeButton.setText("-")
+        self.removeButton.setAutoDefault(False)
+
+        self.mixerGroupObjects = QtWidgets.QTreeView(self)
+        self.mixerGroupObjects.setHeaderHidden(True)
+        self.treeModel = QtGui.QStandardItemModel(self)
+        self.rootNode = self.treeModel.invisibleRootItem()
+        self.mixerGroupObjects.setModel(self.treeModel)
+
+        self.mixerGroupObjects.setGeometry(QtCore.QRect(30, 250, 250, 192))
+        self.mixerGroupObjects.setObjectName("mixerGroupObjects")
+        self.mixerGroupObjects.setSelectionMode(
+            QtWidgets.QAbstractItemView.SingleSelection
+        )            
+
+        self.mixerGroups = QtWidgets.QListWidget(self)
+        self.mixerGroups.setGeometry(QtCore.QRect(30, 30, 256, 192))
+        self.mixerGroups.setObjectName("mixerGroups")
+
+        self.label = QtWidgets.QLabel(self)
+        self.label.setGeometry(QtCore.QRect(40, 10, 200, 17))
+        self.label.setText("Light Mixer Groups")
+
+        self.label_2 = QtWidgets.QLabel(self)
+        self.label_2.setGeometry(QtCore.QRect(40, 230, 200, 17))
+        self.label_2.setText("Lights")
+
+        self.add_light_btn = QtWidgets.QPushButton(self)
+        self.add_light_btn.setGeometry(QtCore.QRect(279, 250, 31, 26))
+        self.add_light_btn.setText("+")
+        self.add_light_btn.setToolTip("""Add selected lights to this mixer group""" )      
+        self.add_light_btn.setEnabled(False) 
+        self.add_light_btn.setAutoDefault(False)
+
+        self.remove_light_btn = QtWidgets.QPushButton(self)
+        self.remove_light_btn.setGeometry(QtCore.QRect(279, 270, 31, 26))
+        self.remove_light_btn.setText("-")
+        self.remove_light_btn.setToolTip("""Remove selected lights""" )  
+        self.remove_light_btn.setEnabled(False)
+        self.remove_light_btn.setAutoDefault(False)     
+
+        self.addButton.clicked.connect(self.add_group)
+        self.removeButton.clicked.connect(self.remove_group)
+        self.add_light_btn.clicked.connect(self.add_light)
+
+        self.mixerGroups.itemChanged.connect(self.trace_group_changed)
+        self.mixerGroups.itemSelectionChanged.connect(self.mixer_groups_index_changed)
+        self.mixerGroupObjects.selectionModel().selectionChanged.connect(self.mixer_group_objects_selection)
+
+        self.light_mixer_wgt = LightMixerWidget(parent=self)
+        self.light_mixer_wgt.setGeometry(QtCore.QRect(340, 30, 600, 400))
+
+        self.refresh_groups()
+        self.mixerGroupObjects.expandAll() 
+        self.enableAddLightButton()  
+
+        self.add_handlers()
+
+    def closeEvent(self, event):
+        self.remove_handlers()
+        super(LightMixerQtWrapper, self).closeEvent(event)
+
+    def add_handlers(self):       
+        if self.depsgraph_update_post not in bpy.app.handlers.depsgraph_update_post:
+            bpy.app.handlers.depsgraph_update_post.append(self.depsgraph_update_post)            
+
+    def remove_handlers(self):
+        if self.depsgraph_update_post in bpy.app.handlers.depsgraph_update_post:
+            bpy.app.handlers.depsgraph_update_post.remove(self.depsgraph_update_post)             
+
+    def depsgraph_update_post(self, bl_scene, depsgraph):
+        for dps_update in reversed(depsgraph.updates):
+            if isinstance(dps_update.id, bpy.types.Collection):
+                self.refresh_group_objects()             
+            elif isinstance(dps_update.id, bpy.types.Scene): 
+                self.enableAddLightButton()
+
+    def enableAddLightButton(self):
+        context = bpy.context
+        scene = context.scene
+        rm = scene.renderman        
+        lights = [ob for ob in context.selected_objects if ob.type == "LIGHT"]
+        if not lights:
+            any_lights = []
+            grp = rm.light_mixer_groups[rm.light_mixer_groups_index]
+            for ob in lights:
+                do_add = True
+                for member in grp.members:
+                    if member.light_ob == ob:
+                        do_add = False
+                        break
+                if do_add:
+                    any_lights.append(ob)
+
+            self.add_light_btn.setEnabled(len(any_lights) > 0)
+            return
+        self.add_light_btn.setEnabled(True)
+
+    def add_light(self):
+        context = bpy.context
+        scene = context.scene
+        rm = scene.renderman    
+
+        grp = rm.light_mixer_groups[rm.light_mixer_groups_index]
+        for ob in context.selected_objects:
+            do_add = True
+            for member in grp.members:
+                if member.light_ob == ob:
+                    do_add = False
+                    break
+            if do_add:
+                ob_in_group = grp.members.add()
+                ob_in_group.name = ob.name
+                ob_in_group.light_ob = ob  
+
+        self.refresh_group_objects()                       
+
+    def checkMixerGroups(self):
+        if self.mixerGroups.count() < 1:
+            self.mixerGroupObjects.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
+            self.enable_trace_group_objects(self.rootNode, enable=False)
+            self.removeButton.setEnabled(False)
+        else:
+            self.mixerGroupObjects.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+            self.removeButton.setEnabled(True)
+            self.enable_trace_group_objects(self.rootNode, enable=True)        
+
+    def update(self):
+        idx = int(self.mixerGroups.currentRow())
+        self.addButton.setEnabled(True)
+
+        self.checkMixerGroups()
+        super(LightMixerQtWrapper, self).update()
+
+    def refresh_groups(self):
+        context = bpy.context
+        scene = context.scene
+        rm = scene.renderman
+        self.mixerGroups.clear()
+        for grp in rm.light_mixer_groups:
+            item = QtWidgets.QListWidgetItem(grp.name)
+            item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable)
+            self.mixerGroups.addItem(item)
+
+        if self.mixerGroups.count() > 0:
+            self.mixerGroups.setCurrentRow(rm.light_mixer_groups_index)
+            
+    def add_group(self):
+        context = bpy.context
+        scene = context.scene
+        rm = scene.renderman    
+
+        grp = rm.light_mixer_groups.add()
+        grp.name = 'mixerGroup_%d' % len(rm.light_mixer_groups)
+        rm.light_mixer_groups_index = len(rm.light_mixer_groups)-1
+        self.refresh_groups()
+
+    def remove_group(self):
+        context = bpy.context
+        scene = context.scene
+        rm = scene.renderman    
+
+        index = rm.object_groups_index
+        group = rm.object_groups[index]            
+        # get a list of all objects in this group
+        ob_list = [member.ob_pointer for member in group.members]
+        rm.object_groups.remove(index)
+        rm.object_groups_index -= 1
+
+        # now tell each object to update
+        for ob in ob_list:
+            ob.update_tag(refresh={'OBJECT'})
+
+        self.refresh_groups()       
+
+    def trace_group_changed(self, item):
+        idx = int(self.mixerGroups.currentRow())
+
+        context = bpy.context
+        scene = context.scene
+        rm = scene.renderman
+        grp = rm.object_groups[idx]
+        grp.name = item.text()    
+        self.label_2.setText("Objects (%s)" % item.text())
+        for member in grp.members:
+            ob = member.ob_pointer
+            ob.update_tag(refresh={'OBJECT'})        
+
+    def find_item(self, standard_item, ob):           
+        for i in range(0, standard_item.rowCount()):
+            item = standard_item.child(i)
+            if item.text() == ob.name:
+                return item                
+        
+        return None
+
+    def enable_trace_group_objects(self, standard_item, enable=True):
+        standard_item.setEnabled(enable)
+        for i in range(0, standard_item.rowCount()):
+            item = standard_item.child(i)
+            item.setEnabled(enable)
+            if item.hasChildren():
+                return self.enable_trace_group_objects(item, enable=enable)
+        
+    def refresh_group_objects(self):
+        idx = int(self.mixerGroups.currentRow())
+        enabled = True
+        if idx == -1:
+            enabled = False
+            self.label_2.setText("Objects (no group selected)")
+
+        context = bpy.context
+        scene = context.scene
+        rm = scene.renderman    
+
+        grp = rm.light_mixer_groups[rm.light_mixer_groups_index]
+        
+        self.treeModel.clear()
+        self.rootNode = self.treeModel.invisibleRootItem()
+
+        for member in grp.members:
+            ob = member.light_ob
+            if ob.type in ('ARMATURE', 'CAMERA'):
+                continue  
+            
+            item = StandardItem(txt=ob.name)
+            self.rootNode.appendRow(item)
+
+        self.mixerGroupObjects.expandAll()
+        #if idx != -1:
+        #    self.mixer_groups_index_changed()
+
+    def bl_select_objects(self, obs):
+        context = bpy.context
+        for ob in context.selected_objects:
+            ob.select_set(False)
+        for ob in obs:
+            ob.select_set(True)
+            context.view_layer.objects.active = ob                
+
+    def mixer_groups_index_changed(self):
+        idx = int(self.mixerGroups.currentRow())
+        current_item = self.mixerGroups.currentItem()
+        self.checkMixerGroups()
+        if current_item:
+            self.label_2.setText("Lights (%s)" % current_item.text())
+        else:
+            return
+        context = bpy.context
+        scene = context.scene
+        rm = scene.renderman               
+        rm.light_mixer_groups_index = idx   
+
+        self.refresh_group_objects()
+                
+    def mixer_group_objects_selection(self, selected, deselected):
+        idx = int(self.mixerGroups.currentRow())
+        current_item = self.mixerGroups.currentItem()
+        if not current_item:
+            return
+
+        context = bpy.context
+        scene = context.scene
+        rm = scene.renderman  
+
+        group_index = rm.light_mixer_groups_index
+        object_groups = rm.light_mixer_groups
+        if group_index not in range(0, len(object_groups)):
+            return
+        object_group = object_groups[group_index]
+
+        self.light_mixer_wgt.remove_widgets()
+
+        for i in selected.indexes():
+            item = self.mixerGroupObjects.model().itemFromIndex(i)
+            ob = bpy.data.objects.get(item.text(), None)
+            if ob is None:
+                continue
+
+            light_shader = shadergraph_utils.get_light_node(ob) 
+
+            if light_shader.bl_label == 'PxrPortalLight':
+                enableTemperature = BoolParam(parent=self,
+                                        param="enableTemperature",
+                                        label="Enable Temperature",
+                                        value=light_shader.enableTemperature,
+                                        light_shader=light_shader
+                                        )
+                self.light_mixer_wgt.add_simple_widget(enableTemperature)
+
+                temperature = FloatParam(parent=self,
+                                        param="temperature",
+                                        label="Temperature",
+                                        min=1000.0,
+                                        max=50000.0,
+                                        value=light_shader.temperature,
+                                        light_shader=light_shader
+                                        )
+                self.light_mixer_wgt.add_simple_widget(temperature)      
+
+                wgt = SliderParam(parent=self, 
+                            light_shader=light_shader,
+                            value=light_shader.intensityMult,
+                            min=0.0,
+                            max=10.0,
+                            param="intensityMult", 
+                            label="Intensity Mult")
+                self.light_mixer_wgt.add_widget(wgt)
+                                                    
+
+            else:
+                exposure_wgt = SliderParam(parent=self, 
+                            light_shader=light_shader,
+                            value=light_shader.exposure,
+                            min=0.0,
+                            max=10.0,
+                            param="exposure", 
+                            label="Exposure")
+                self.light_mixer_wgt.add_widget(exposure_wgt)                
+            
+                wgt = SliderParam(parent=self, 
+                            light_shader=light_shader,
+                            value=light_shader.intensity,
+                            min=0.0,
+                            max=10.0,
+                            param="intensity", 
+                            label="Intensity")
+                self.light_mixer_wgt.add_widget(wgt)
+                                
+                if light_shader.bl_label == 'PxrEnvDayLight':
+                    color_picker = ColorButton(parent=self, 
+                                            color=light_shader.skyTint,
+                                            param="skyTint",
+                                            label="Sky Tint",
+                                            light_shader=light_shader
+                                            )
+                    self.light_mixer_wgt.add_simple_widget(color_picker)
+                else:
+                    enableTemperature = BoolParam(parent=self,
+                                            param="enableTemperature",
+                                            label="Enable Temperature",
+                                            value=light_shader.enableTemperature,
+                                            light_shader=light_shader
+                                            )
+                    self.light_mixer_wgt.add_simple_widget(enableTemperature)
+
+                    temperature = FloatParam(parent=self,
+                                            param="temperature",
+                                            label="Temperature",
+                                            min=1000.0,
+                                            max=50000.0,
+                                            value=light_shader.temperature,
+                                            light_shader=light_shader
+                                            )
+                    self.light_mixer_wgt.add_simple_widget(temperature)                    
+
+                    color_picker = ColorButton(parent=self, 
+                                            color=light_shader.lightColor,
+                                            param="lightColor",
+                                            label="Light Color",
+                                            light_shader=light_shader
+                                            )
+                    
+                    self.light_mixer_wgt.add_simple_widget(color_picker)
+
+            break
+                  
 
 class RENDERMAN_UL_LightMixer_Group_Members_List(bpy.types.UIList):
 
@@ -137,6 +767,15 @@ class PRMAN_OT_Renderman_Open_Light_Mixer_Editor(CollectionPanel, bpy.types.Oper
         self.event = None         
 
     def invoke(self, context, event):
+        if using_qt() and show_wip_qt():
+            global __LIGHT_MIXER_WINDOW__
+            if sys.platform == "darwin":
+                rfb_qt.run_with_timer(__LIGHT_MIXER_WINDOW__, LightMixerQtWrapper)   
+            else:
+                bpy.ops.wm.light_mixer_qt_app_timed()     
+
+            return {'FINISHED'}       
+
 
         wm = context.window_manager
         width = rfb_config['editor_preferences']['lightmixer_editor']['width']
@@ -208,7 +847,8 @@ class PRMAN_OT_Renderman_Open_Light_Mixer_Editor(CollectionPanel, bpy.types.Oper
 
 classes = [
     PRMAN_OT_Renderman_Open_Light_Mixer_Editor, 
-    RENDERMAN_UL_LightMixer_Group_Members_List
+    RENDERMAN_UL_LightMixer_Group_Members_List,
+    LightMixerQtAppTimed
 ]
 
 def register():

@@ -192,6 +192,9 @@ __BASE_CSS__ = '''
         alternate-background-color: %(alternatebg)s;        
         min-width: 138px;
     }     
+    QDoubleSpinBox {
+        color: %(text)s;   
+    }
 '''
 
 class RfbBaseQtAppTimed(bpy.types.Operator):
