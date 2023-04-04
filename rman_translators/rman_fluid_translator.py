@@ -193,7 +193,7 @@ class RmanFluidTranslator(RmanTranslator):
 
         primvar = rman_sg_fluid.rman_sg_volume_node.GetPrimVars()
         primvar.SetString(self.rman_scene.rman.Tokens.Rix.k_Ri_type, "blobbydso:impl_openvdb")
-        primvar.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_Bound, transform_utils.convert_ob_bounds(ob.bound_box), 6)
+        primvar.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_Bound, [-1e30, 1e30, -1e30, 1e30, -1e30, 1e30], 6)
         primvar.SetStringArray(self.rman_scene.rman.Tokens.Rix.k_blobbydso_stringargs, [cacheFile, "density:fogvolume"], 2)
 
         primvar.SetFloatDetail("density", [], "varying")
