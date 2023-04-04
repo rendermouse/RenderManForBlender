@@ -1219,6 +1219,11 @@ class RmanScene(object):
 
         # dirmaps
         dirmaps = ''
+        prefs_dirmaps = get_pref('rman_tractor_dirmaps', [])
+        for dirmap in prefs_dirmaps:
+            d = "[ \"%s\" \"%s\" \"%s\"]" % (dirmap.zone, dirmap.from_path, dirmap.to_path)
+            dirmaps += d
+
         for k in rfb_config['dirmaps']:
             dirmap = rfb_config['dirmaps'][k]
             d = "[ \"%s\" \"%s\" \"%s\"]" % (dirmap['zone'], dirmap['from'], dirmap['to'])

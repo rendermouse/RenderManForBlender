@@ -3,6 +3,7 @@ import os
 import getpass
 import socket
 import platform
+import datetime
 import bpy
 from .rfb_utils import filepath_utils
 from .rfb_utils import string_utils
@@ -23,6 +24,7 @@ class RmanSpool(object):
         self.is_localqueue = True
         self.is_tractor = False
         self.any_denoise = False
+        self.tractor_cfg = rfb_config['tractor_cfg']
         if depsgraph:
             self.bl_scene = depsgraph.scene_eval
             self.depsgraph = depsgraph
@@ -30,6 +32,12 @@ class RmanSpool(object):
             self.is_tractor = (self.bl_scene.renderman.queuing_system == 'tractor')
 
     def add_job_level_attrs(self, job):
+        dirmaps = get_pref('rman_tractor_dirmaps', [])
+        for dirmap in dirmaps:
+            job.newDirMap(src=dirmap.from_path,
+                        dst=dirmap.to_path,
+                        zone=dirmap.zone)
+
         for k in rfb_config['dirmaps']:
             dirmap = rfb_config['dirmaps'][k]
             job.newDirMap(src=str(dirmap['from']),
@@ -37,10 +45,57 @@ class RmanSpool(object):
                         zone=str(dirmap['zone']))
 
         rman_vers = envconfig().build_info.version()
+        envkeys = []
         if self.is_localqueue:
-            job.envkey = ['rmantree=%s' % envconfig().rmantree]
+            envkeys.append('rmantree=%s' % envconfig().rmantree)
         else:
-            job.envkey = ['prman-%s' % rman_vers]     
+            envkeys.append('prman-%s' % rman_vers)
+        
+        user_envkeys = self.tractor_cfg.get('envkeys', get_pref('rman_tractor_envkeys'))
+        job.envkey = envkeys + user_envkeys.split()
+
+        service = self.tractor_cfg.get('service', get_pref('rman_tractor_service'))
+        job.service = service
+        job.priority = float(self.tractor_cfg.get('priority', get_pref('rman_tractor_priority')))
+        job.metadata = self.tractor_cfg.get('metadata', get_pref('rman_tractor_metadata'))
+        job.comment = self.tractor_cfg.get('comment', get_pref('rman_tractor_comment'))
+
+        crews = self.tractor_cfg.get('crews', get_pref('rman_tractor_crews'))
+        if crews != '':
+            job.crews = crews.split()
+        projects = self.tractor_cfg.get('projects', get_pref('rman_tractor_projects'))
+        if projects != '':
+            job.projects = projects.split()
+
+        whendone = self.tractor_cfg.get('whendone', get_pref('rman_tractor_whendone'))
+        whenerror = self.tractor_cfg.get('whenerror', get_pref('rman_tractor_whenerror'))
+        whenalways = self.tractor_cfg.get('whenalways', get_pref('rman_tractor_whenalways'))
+        if whendone != '':
+            job.newPostscript(argv=whendone, when="done", service=service)
+        if whenerror != '':
+            job.newPostscript(argv=whenerror, when="error", service=service)            
+        if whenalways != '':
+            job.newPostscript(argv=whenalways, when="always", service=service)  
+
+        after = self.tractor_cfg.get('after', get_pref('rman_tractor_after'))
+        if after != '':
+            try:
+                aftersplit = after.split(' ')
+                if len(aftersplit) == 2:
+                    t_date = aftersplit[0].split('/')
+                    t_time = aftersplit[1].split(':')
+                    if len(t_date) == 2 and len(t_time) == 2:
+                        today = datetime.datetime.today()
+                        job.after = datetime.datetime(today.year, int(t_date[0]),
+                                                        int(t_date[1]),
+                                                        int(t_time[0]),
+                                                        int(t_time[1]), 0)
+                    else:
+                        print('Could not parse after date: %s. Ignoring.' % after)
+                else:
+                    print('Could not parse after date: %s. Ignoring.' % after)
+            except:
+                print('Could not parse after date: %s. Ignoring.' % after)        
 
     def _add_additional_prman_args(self, args):
         rm = self.bl_scene.renderman
@@ -101,7 +156,9 @@ class RmanSpool(object):
         task.title = title
 
         command = author.Command(local=False, service="PixarRender")
-        bl_blender_path = bpy.app.binary_path
+        bl_blender_path = 'blender'
+        if self.is_localqueue:
+            bl_blender_path = bpy.app.binary_path
         command.argv = [bl_blender_path]
 
         command.argv.append('-b')
@@ -657,14 +714,15 @@ class RmanSpool(object):
             subprocess.Popen(args, env=env)
         else:
             # spool to tractor
-            tractor_engine ='tractor-engine'
-            tractor_port = '80'
+            tractor_engine = get_pref("rman_tractor_hostname")
+            tractor_port = str(get_pref("rman_tractor_port"))
             owner = getpass.getuser()
+            if not get_pref("rman_tractor_local_user"):
+                owner = get_pref("rman_tractor_user")
 
-            tractor_cfg = rfb_config['tractor_cfg']
-            tractor_engine = tractor_cfg.get('engine', tractor_engine)
-            tractor_port = str(tractor_cfg.get('port', tractor_port))
-            owner = tractor_cfg.get('user', owner)            
+            tractor_engine = self.tractor_cfg.get('engine', tractor_engine)
+            tractor_port = str(self.tractor_cfg.get('port', tractor_port))
+            owner = self.tractor_cfg.get('user', owner)            
 
             # env var trumps rfb.json
             tractor_env = envconfig().getenv('TRACTOR_ENGINE')

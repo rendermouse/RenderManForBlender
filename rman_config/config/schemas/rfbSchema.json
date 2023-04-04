@@ -35,11 +35,46 @@
                 },
                 "user": {
                     "type": "string"
+                },
+                "priority": {
+                    "type": "number"
+                },
+                "service": {
+                    "type": "string"
+                },
+                "envkeys": {
+                    "type": "string"
+                },
+                "after": {
+                    "type": "string"
+                },
+                "crews": {
+                    "type": "string"
+                },
+                "tier": {
+                    "type": "string"
+                },
+                "projects": {
+                    "type": "string"
+                },
+                "comment": {
+                    "type": "string"
+                },
+                "metdata": {
+                    "type": "string"
+                },
+                "whendone": {
+                    "type": "string"
+                },
+                "whenerror": {
+                    "type": "string"
+                },
+                "whenalways": {
+                    "type": "string"
                 }
+
             },
             "required": [
-                "engine",
-                "port"
             ]
         },
         "bxdf_viewport_color_map": {

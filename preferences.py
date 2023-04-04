@@ -92,11 +92,69 @@ __DEFAULTS__ = {
     'rman_roz_webSocketServer_Port': 0, 
     'rman_roz_stats_print_level': '1',
     'rman_enhance_zoom_factor': 5,
-    'rman_parent_lightfilter': False
+    'rman_parent_lightfilter': False,
+    'rman_tractor_hostname': 'tractor-engine',
+    'rman_tractor_port': 80,
+    'rman_tractor_local_user': True,
+    'rman_tractor_user': '',
+    'rman_tractor_priority': 1.0,
+    'rman_tractor_service': 'PixarRender',
+    'rman_tractor_envkeys': '',
+    'rman_tractor_after': '',
+    'rman_tractor_crews': '',
+    'rman_tractor_tier': '',
+    'rman_tractor_projects': '',
+    'rman_tractor_comment': '',
+    'rman_tractor_metadata': '',
+    'rman_tractor_whendone': '',
+    'rman_tractor_whenerror': '',
+    'rman_tractor_whenalways': '',
+    'rman_tractor_dirmaps': []
 }
 
 class RendermanPreferencePath(bpy.types.PropertyGroup):
     path: StringProperty(name="", subtype='DIR_PATH')
+
+class PRMAN_OT_add_dirmap(bpy.types.Operator):
+    bl_idname = "renderman.add_dirmap"
+    bl_label = "Add Dirmap"
+    bl_description = "Add a new dirmap"
+    
+    def execute(self, context):
+        addon = context.preferences.addons[__package__]
+        prefs = addon.preferences
+        dirmap = prefs.rman_tractor_dirmaps.add()
+        
+        return {'FINISHED'}
+    
+class PRMAN_OT_remove_dirmap(bpy.types.Operator):
+    bl_idname = "renderman.remove_dirmap"
+    bl_label = "Remove Dirmap"
+    bl_description = "Remove a dirmap"
+    
+    index: IntProperty(
+        default=0
+    )
+
+    def execute(self, context):
+        addon = context.preferences.addons[__package__]
+        prefs = addon.preferences        
+        if self.properties.index < len(prefs.rman_tractor_dirmaps):
+            prefs.rman_tractor_dirmaps.remove(self.properties.index)
+
+        return {'FINISHED'}    
+
+class RendermanDirMap(bpy.types.PropertyGroup):
+    from_path: StringProperty(name="From", description="")
+    to_path: StringProperty(name="To", description="")
+    zone: EnumProperty(
+        name="Zone",
+        description="The zone that this dirmap should apply to. UNC is for Windows; NFS is for linux and macOS.",
+        default="NFS",
+        items=[('NFS', 'NFS', ''),
+               ('UNC', 'UNC', '')
+               ]
+    )
 
 class RendermanDeviceDesc(bpy.types.PropertyGroup):
     name: StringProperty(name="", default="")
@@ -545,7 +603,106 @@ class RendermanPreferences(AddonPreferences):
         name="Parent Filter to Light",
         default=False,
         description="If on, and a light is selected, attaching a light filter will parent the light filter to the selected light."
-    )                                                                             
+    )                      
+
+    # Tractor preferences
+    rman_tractor_hostname: StringProperty(
+        name="Hostname",
+        default="tractor-engine",
+        description="Hostname of the Tractor engine to use to submit batch render jobs"
+    )               
+
+    rman_tractor_port: IntProperty(
+        name="Port",
+        default=80,
+        description="Port number that the Tractor engine is listening on"
+    )
+
+    rman_tractor_local_user: BoolProperty(
+        name="Use Local User",
+        default=True,
+        description="Use the current logged in user to submit the tractor job"
+    )
+
+    rman_tractor_user: StringProperty(
+        name="Username",
+        default="",
+        description="Username to use to submit the tractor job"
+    )
+
+    rman_tractor_priority: FloatProperty(
+        name="Priority",
+        default=1.0,
+        description="Priority of your job"
+    )
+
+    rman_tractor_service: StringProperty(
+        name="Service",
+        default="PixarRender",
+        description="Service keys for your job"
+    )
+
+    rman_tractor_envkeys: StringProperty(
+        name="Environment Keys",
+        default="",
+        description="Multiple keys can be specified and should be space separated.",
+    )
+
+    rman_tractor_after: StringProperty(
+        name="After",
+        default="",
+        description="Delay start of job processing until given time\nFormat: MONTH/DAY HOUR:MINUTES\nEx: 11/24 13:45"
+    )
+
+    rman_tractor_crews: StringProperty(
+        name="Crews",
+        default="",
+        description="List of crews. See 'Crews' in the Tractor documentation",
+    )
+
+    rman_tractor_tier: StringProperty(
+        name="Tier",
+        default="",
+        description="Dispatching tier that the job belongs to. See 'Scheduling Modes' in the Tractor documentation"
+    )
+
+    rman_tractor_projects: StringProperty(
+        name="Projects",
+        default="",
+        description="Dispatching tier that the job belongs to. See 'Limits Configuration' in the Tractor documentation"
+    )
+
+    rman_tractor_comment: StringProperty(
+        name="Comments",
+        default="",
+        description="Additional comment about the job."
+    )
+
+    rman_tractor_metadata: StringProperty(
+        name="Meta Data",
+        default="",
+        description= "Meta data to add to the job."
+    )
+
+    rman_tractor_whendone: StringProperty(
+        name='When Done Command',
+        default='',
+        description="Command to run when job completes withour error."
+    )
+
+    rman_tractor_whenerror: StringProperty(
+        name='When Error Command', 
+        default='',
+        description="Command to run if there is an error executing the job."
+    )
+
+    rman_tractor_whenalways: StringProperty( 
+        name='When Always Command',
+        default='',
+        description="Command to run regardless if job completes with or without errors."
+    )
+
+    rman_tractor_dirmaps: bpy.props.CollectionProperty(type=RendermanDirMap)
 
     def draw_xpu_devices(self, context, layout):
         if self.rman_xpu_device == 'CPU':
@@ -673,6 +830,44 @@ class RendermanPreferences(AddonPreferences):
         col.prop(self, 'rman_logging_level')
         col.prop(self, 'rman_logging_file')
 
+        # Batch Rendering
+        row = layout.row()
+        row.label(text='Batch Rendering', icon_value=rman_r_icon.icon_id)
+        row = layout.row()
+        col = row.column()        
+        col.prop(self, 'rman_tractor_hostname')
+        col.prop(self, 'rman_tractor_port')
+        col.prop(self, 'rman_tractor_local_user')
+        if not self.rman_tractor_local_user:
+            col.prop(self, 'rman_tractor_user')
+        col.prop(self, 'rman_tractor_priority')
+        col.prop(self, 'rman_tractor_service')
+        col.prop(self, 'rman_tractor_envkeys')
+        col.prop(self, 'rman_tractor_after')
+        col.prop(self, 'rman_tractor_crews')
+        col.prop(self, 'rman_tractor_tier')
+        col.prop(self, 'rman_tractor_projects')
+        col.prop(self, 'rman_tractor_comment')
+        col.prop(self, 'rman_tractor_metadata')
+        col.prop(self, 'rman_tractor_whendone')
+        col.prop(self, 'rman_tractor_whenerror')
+        col.prop(self, 'rman_tractor_whenalways')
+
+        row = layout.row()
+        row.label(text='Directory Maps')
+        row = layout.row()
+        col = row.column()   
+        col.operator('renderman.add_dirmap', text='+')
+        for i, dirmap in enumerate(self.rman_tractor_dirmaps):
+            dirmap_row = col.row()
+            dirmap_row.use_property_split = False
+            dirmap_row.use_property_decorate = True             
+            dirmap_row.prop(dirmap, 'from_path')
+            dirmap_row.prop(dirmap, 'to_path')
+            dirmap_row.prop(dirmap, 'zone')
+            op = dirmap_row.operator('renderman.remove_dirmap', text='X')
+            op.index = i
+
         # Advanced
         row = layout.row()      
         row.use_property_split = False
@@ -724,6 +919,9 @@ class RendermanPreferences(AddonPreferences):
 classes = [
     RendermanPreferencePath,
     RendermanDeviceDesc,
+    PRMAN_OT_add_dirmap,
+    PRMAN_OT_remove_dirmap,
+    RendermanDirMap,
     RendermanPreferences
 ]
 
