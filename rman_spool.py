@@ -48,8 +48,6 @@ class RmanSpool(object):
         envkeys = []
         if self.is_localqueue:
             envkeys.append('rmantree=%s' % envconfig().rmantree)
-        else:
-            envkeys.append('prman-%s' % rman_vers)
         
         user_envkeys = self.tractor_cfg.get('envkeys', get_pref('rman_tractor_envkeys'))
         job.envkey = envkeys + user_envkeys.split()

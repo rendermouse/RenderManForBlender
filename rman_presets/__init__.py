@@ -23,30 +23,20 @@
 #
 # ##### END MIT LICENSE BLOCK #####
 
+import bpy
 from . import properties
-from . import ui
+if not bpy.app.background:
+    from . import ui
 from . import operators
-from ..rfb_utils.prefs_utils import get_pref
-import os
 
 def register():
     properties.register()
-    if get_pref('rman_ui_framework') == 'QT':
-        try:
-            from . import qt_app
-            qt_app.register()    
-        except:
-            pass
-    ui.register()
+    if not bpy.app.background:
+        ui.register()
     operators.register()
 
 def unregister():
     properties.unregister()
-    if get_pref('rman_ui_framework') == 'QT':
-        try:
-            from . import qt_app
-            qt_app.unregister()    
-        except:
-            pass
-    ui.unregister()
+    if not bpy.app.background:
+        ui.unregister()
     operators.unregister()    

@@ -15,63 +15,65 @@ from .. import rman_render
 from rman_utils.txmanager import txparams
 from rman_utils import txmanager as txmngr
 from .. import rfb_icons
-from ..rman_ui import rfb_qt
 import sys
 import hashlib
 import os
 import uuid
 
-__QT_LOADED__ = True
 __TXMANAGER_WINDOW__ = None 
 
-class TxManagerQtAppTimed(rfb_qt.RfbBaseQtAppTimed):
-    bl_idname = "wm.txm_qt_app_timed"
-    bl_label = "Texture Manager"
+if not bpy.app.background:
+    from ..rman_ui import rfb_qt
 
-    def __init__(self):
-        super(TxManagerQtAppTimed, self).__init__()
+    class TxManagerQtAppTimed(rfb_qt.RfbBaseQtAppTimed):
+        bl_idname = "wm.txm_qt_app_timed"
+        bl_label = "Texture Manager"
 
-    def execute(self, context):
-        self._window = create_widget()
-        return super(TxManagerQtAppTimed, self).execute(context)
+        def __init__(self):
+            super(TxManagerQtAppTimed, self).__init__()
 
-def parse_scene():
-    from ..rfb_utils import texture_utils
-    bl_scene = bpy.context.scene
-    mgr = texture_utils.get_txmanager().txmanager
-    mgr.reset()
-    texture_utils.parse_for_textures(bl_scene)
+        def execute(self, context):
+            self._window = create_widget()
+            return super(TxManagerQtAppTimed, self).execute(context)
 
-def _append_to_tx_list(file_path_list):
-    """Called by the txmanager when extra files are added to the scene list.
-    """
-    from ..rfb_utils import texture_utils
-    bl_scene = bpy.context.scene
-    txmgr = texture_utils.get_txmanager().txmanager
-    texture_utils.parse_for_textures(bl_scene)    
-    for fpath in file_path_list:
-        # Pass None as the nodeID and a hash will be generated.
-        texid = hashlib.sha1(fpath.encode('utf-8')).hexdigest()
-        txmgr.add_texture(texid, fpath)
-    txmgr.update_ui_list()
-    # make sure to restart the queue.
-    txmgr.txmake_all(start_queue=True, blocking=False)   
-
-def help_func(url):
-    bpy.ops.wm.url_open(url = RFB_HELP_URL)
-
-def create_widget():
-    global __TXMANAGER_WINDOW__
-    if not __TXMANAGER_WINDOW__:
-        import rman_utils.txmanager.ui as rui    
-        from ..rfb_utils import texture_utils    
+    def parse_scene():
+        from ..rfb_utils import texture_utils
+        bl_scene = bpy.context.scene
         mgr = texture_utils.get_txmanager().txmanager
-        __TXMANAGER_WINDOW__ = rui.TxManagerUI(None, txmanager=mgr, 
-                                                parse_scene_func=parse_scene,
-                                                append_tx_func=_append_to_tx_list,
-                                                help_func=help_func)
-        mgr.ui = __TXMANAGER_WINDOW__
-    return __TXMANAGER_WINDOW__
+        mgr.reset()
+        texture_utils.parse_for_textures(bl_scene)
+
+    def _append_to_tx_list(file_path_list):
+        """Called by the txmanager when extra files are added to the scene list.
+        """
+        from ..rfb_utils import texture_utils
+        bl_scene = bpy.context.scene
+        txmgr = texture_utils.get_txmanager().txmanager
+        texture_utils.parse_for_textures(bl_scene)    
+        for fpath in file_path_list:
+            # Pass None as the nodeID and a hash will be generated.
+            texid = hashlib.sha1(fpath.encode('utf-8')).hexdigest()
+            txmgr.add_texture(texid, fpath)
+        txmgr.update_ui_list()
+        # make sure to restart the queue.
+        txmgr.txmake_all(start_queue=True, blocking=False)   
+
+    def help_func(url):
+        bpy.ops.wm.url_open(url = RFB_HELP_URL)
+
+    def create_widget():
+        global __TXMANAGER_WINDOW__
+        if not __TXMANAGER_WINDOW__:
+            import rman_utils.txmanager.ui as rui    
+            from ..rfb_utils import texture_utils    
+            mgr = texture_utils.get_txmanager().txmanager
+            __TXMANAGER_WINDOW__ = rui.TxManagerUI(None, txmanager=mgr, 
+                                                    parse_scene_func=parse_scene,
+                                                    append_tx_func=_append_to_tx_list,
+                                                    help_func=help_func)
+            mgr.ui = __TXMANAGER_WINDOW__
+        return __TXMANAGER_WINDOW__
+    
 class TxFileItem(PropertyGroup):
     """UIList item representing a TxFile"""
 
@@ -837,8 +839,10 @@ classes = [
     PRMAN_PT_Renderman_txmanager_list,
     PRMAN_OT_Renderman_txmanager_remove_texture,   
     PRMAN_OT_Renderman_open_txmanager,
-    TxManagerQtAppTimed 
-]
+]    
+
+if not bpy.app.background:
+    classes.append(TxManagerQtAppTimed)
 
 def register():
 

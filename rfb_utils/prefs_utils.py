@@ -13,9 +13,13 @@ def get_addon_prefs():
         return None
 
 def using_qt():
+    if bpy.app.background:
+        return False
     return get_pref('rman_ui_framework') == 'QT'
 
 def show_wip_qt():
+    if bpy.app.background:
+        return False    
     return get_pref('rman_show_wip_qt')
 
 def get_pref(pref_name='', default=None):
