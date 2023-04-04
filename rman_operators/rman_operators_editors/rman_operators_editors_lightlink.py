@@ -127,7 +127,7 @@ class LightLinkingQtWrapper(rfb_qt.RmanQtWrapper):
             if isinstance(dps_update.id, bpy.types.Collection):
                 self.refresh_lights()
                 self.refresh_linked_objects()
-                self.lights_index_changed()
+                #self.lights_index_changed()
             #elif isinstance(dps_update.id, bpy.types.Scene):
             #    self.refresh_lights()                    
     
@@ -185,7 +185,15 @@ class LightLinkingQtWrapper(rfb_qt.RmanQtWrapper):
             item = standard_item.child(i)
             items.append(item)
             if item.rowCount() > 0:
-                self.get_all_object_items(item, items)        
+                self.get_all_object_items(item, items)       
+
+    def bl_select_objects(self, obs):
+        context = bpy.context
+        for ob in context.selected_objects:
+            ob.select_set(False)
+        for ob in obs:
+            ob.select_set(True)
+            context.view_layer.objects.active = ob                     
 
     def lights_index_changed(self):
         idx = int(self.lights_treeView.currentRow())
@@ -200,8 +208,11 @@ class LightLinkingQtWrapper(rfb_qt.RmanQtWrapper):
         context = bpy.context
         scene = context.scene
         rm = scene.renderman     
+        rm.light_links_index = idx
         light_nm = current_item.text() 
         light_ob = context.scene.objects.get(light_nm, None)
+        if light_ob:
+            self.bl_select_objects([light_ob])
 
         light_link_item = self.find_light_link_item(light_nm)   
         selected_items =  QtCore.QItemSelection()
@@ -209,10 +220,12 @@ class LightLinkingQtWrapper(rfb_qt.RmanQtWrapper):
         self.get_all_object_items(self.rootNode, items)               
 
         if light_link_item is None:
+            '''
             if not object_utils.is_light_filter(light_ob):
                 light_link_item = scene.renderman.light_links.add()
                 light_link_item.name = light_ob.name
                 light_link_item.light_ob = light_ob
+            '''
       
             for item in items:
                 idx = self.treeModel.indexFromItem(item)
@@ -313,12 +326,13 @@ class LightLinkingQtWrapper(rfb_qt.RmanQtWrapper):
         light_ob = context.scene.objects.get(light_nm, None)           
         light_props = shadergraph_utils.get_rman_light_properties_group(light_ob.original)
         is_light_filter =  light_props.renderman_light_role == 'RMAN_LIGHTFILTER'
-        ll = self.find_light_link_item(light_nm)               
+        ll = self.find_light_link_item(light_nm)  
 
         if ll is None:
             ll = scene.renderman.light_links.add()
             ll.name = light_ob.name
-            ll.light_ob = light_ob                     
+            ll.light_ob = light_ob          
+            rm.lights_link_index = len(rm.light_links)-1           
 
         if is_light_filter:
             # linkingGroups should only be set if one of the items is deselected
@@ -347,8 +361,7 @@ class LightLinkingQtWrapper(rfb_qt.RmanQtWrapper):
                 member.name = ob.name
                 member.ob_pointer = ob
                 member.illuminate = 'OFF'     
-                
-            scene_utils.set_lightlinking_properties(ob, light_ob, member.illuminate)
+                scene_utils.set_lightlinking_properties(ob, light_ob, member.illuminate)
 
         for i in selected.indexes():
             item = self.objects_treeView.model().itemFromIndex(i)
@@ -363,9 +376,8 @@ class LightLinkingQtWrapper(rfb_qt.RmanQtWrapper):
                     idx = i
                     break         
             if do_remove:            
-                member = ll.members.remove(idx)                    
-
-            scene_utils.set_lightlinking_properties(ob, light_ob, '')
+                member = ll.members.remove(idx)                                   
+                scene_utils.set_lightlinking_properties(ob, light_ob, '')
 
 class RENDERMAN_UL_LightLink_Light_List(bpy.types.UIList):
 

@@ -473,12 +473,13 @@ def find_node_by_name(node_name, ob_name, library=''):
 
     return (None, None)
 
-def set_lightlinking_properties(ob, light_ob, illuminate):
+def set_lightlinking_properties(ob, light_ob, illuminate, update_light=True):
     light_props = shadergraph_utils.get_rman_light_properties_group(light_ob)
     if light_props.renderman_light_role not in {'RMAN_LIGHTFILTER', 'RMAN_LIGHT'}:
         return
 
-    light_ob.update_tag(refresh={'DATA'})
+    if update_light:
+        light_ob.update_tag(refresh={'DATA'})
     changed = False
     if light_props.renderman_light_role == 'RMAN_LIGHT':
         exclude_subset = []
@@ -487,7 +488,7 @@ def set_lightlinking_properties(ob, light_ob, illuminate):
             for j, subset in enumerate(ob.renderman.rman_lighting_excludesubset):
                 if subset.light_ob == light_ob:            
                     do_add = False
-                exclude_subset.append('%s' % string_utils.sanitize_node_name(light_ob.name_full))
+                exclude_subset.append('%s' % string_utils.sanitize_node_name(subset.light_ob.name_full))
             if do_add:
                 subset = ob.renderman.rman_lighting_excludesubset.add()
                 subset.name = light_ob.name
@@ -501,7 +502,7 @@ def set_lightlinking_properties(ob, light_ob, illuminate):
                     changed = True
                     idx = j
                 else:
-                    exclude_subset.append('%s' % string_utils.sanitize_node_name(light_ob.name_full))
+                    exclude_subset.append('%s' % string_utils.sanitize_node_name(subset.light_ob.name_full))
             if changed:
                 ob.renderman.rman_lighting_excludesubset.remove(j)
         ob.renderman.rman_lighting_excludesubset_string = ','.join(exclude_subset)                
@@ -512,7 +513,7 @@ def set_lightlinking_properties(ob, light_ob, illuminate):
             for j, subset in enumerate(ob.renderman.rman_lightfilter_subset):
                 if subset.light_ob == light_ob:
                     do_add = False
-                lightfilter_subset.append('-%s' % string_utils.sanitize_node_name(light_ob.name_full))    
+                lightfilter_subset.append('-%s' % string_utils.sanitize_node_name(subset.light_ob.name_full))    
                          
             if do_add:
                 subset = ob.renderman.rman_lightfilter_subset.add()
@@ -527,7 +528,7 @@ def set_lightlinking_properties(ob, light_ob, illuminate):
                     changed = True 
                     idx = j                   
                 else:  
-                    lightfilter_subset.append('-%s' % string_utils.sanitize_node_name(light_ob.name_full))
+                    lightfilter_subset.append('-%s' % string_utils.sanitize_node_name(subset.light_ob.name_full))
             if changed:
                 ob.renderman.rman_lightfilter_subset.remove(idx)
         ob.renderman.rman_lightfilter_subset_string = ','.join(lightfilter_subset)

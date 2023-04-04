@@ -70,12 +70,16 @@ class RendermanObjectPointer(bpy.types.PropertyGroup):
 
     def update_link(self, context):
         light_ob = getattr(context, 'light_ob', None)
+        if not light_ob or light_ob.type != 'LIGHT':
+            return
+        '''
         if not light_ob and hasattr(context, 'active_object'):
             light_ob = context.active_object
             if light_ob and light_ob.type != 'LIGHT':
                 return
         if not light_ob:
             return
+        '''
 
         ob = self.ob_pointer
         if scene_utils.set_lightlinking_properties(ob, light_ob, self.illuminate):

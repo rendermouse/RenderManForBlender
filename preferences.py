@@ -405,7 +405,7 @@ class RendermanPreferences(AddonPreferences):
     rman_invert_light_linking: BoolProperty(
         name="Invert Light Linking",
         default=False,
-        description="Invert the behavior of light linking. Only objects linked to the light in the light linking editor will be illuminated. Changing this requires an IPR restart.",
+        description="Invert the behavior of light linking (only applies if UI framework is set to Native). Only objects linked to the light in the light linking editor will be illuminated. Changing this requires an IPR restart.",
     )    
 
     rman_show_cycles_convert: BoolProperty(
