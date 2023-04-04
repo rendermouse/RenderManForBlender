@@ -43,9 +43,9 @@ class RmanOpenVDBTranslator(RmanTranslator):
         primvar = rman_sg_openvdb.sg_node.GetPrimVars()
         primvar.Clear()
         bounds = transform_utils.convert_ob_bounds(ob.bound_box)
-        primvar.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_Bound, string_utils.convert_val(bounds), 6)              
         if db.filepath == '':
             primvar.SetString(self.rman_scene.rman.Tokens.Rix.k_Ri_type, "box")
+            primvar.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_Bound, string_utils.convert_val(bounds), 6)
             rman_sg_openvdb.sg_node.SetPrimVars(primvar)   
             return
 
@@ -54,12 +54,14 @@ class RmanOpenVDBTranslator(RmanTranslator):
             if not grids.load():
                 rfb_log().error("Could not load grids and metadata for volume: %s" % ob.name)
                 primvar.SetString(self.rman_scene.rman.Tokens.Rix.k_Ri_type, "box")
+                primvar.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_Bound, string_utils.convert_val(bounds), 6)
                 rman_sg_openvdb.sg_node.SetPrimVars(primvar)   
                 return
 
         if len(grids) < 1:
             rfb_log().error("Grids length=0: %s" % ob.name)
             primvar.SetString(self.rman_scene.rman.Tokens.Rix.k_Ri_type, "box")
+            primvar.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_Bound, string_utils.convert_val(bounds), 6)
             rman_sg_openvdb.sg_node.SetPrimVars(primvar)   
             return    
 
@@ -68,8 +70,11 @@ class RmanOpenVDBTranslator(RmanTranslator):
         if active_grid.data_type not in ['FLOAT', 'DOUBLE']:  
             rfb_log().error("Active grid is not of float type: %s" % ob.name)
             primvar.SetString(self.rman_scene.rman.Tokens.Rix.k_Ri_type, "box")
+            primvar.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_Bound, string_utils.convert_val(bounds), 6)
             rman_sg_openvdb.sg_node.SetPrimVars(primvar)   
             return                      
+        
+        primvar.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_Bound, [-1e30, 1e30, -1e30, 1e30, -1e30, 1e30], 6)
 
         
         openvdb_file = filepath_utils.get_real_path(db.filepath)
