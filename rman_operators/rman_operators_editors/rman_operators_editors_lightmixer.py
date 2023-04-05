@@ -372,8 +372,11 @@ if not bpy.app.background:
         def enableAddLightButton(self):
             context = bpy.context
             scene = context.scene
-            rm = scene.renderman        
-            lights = [ob for ob in context.selected_objects if ob.type == "LIGHT"]
+            rm = scene.renderman      
+            obs = getattr(context, 'selected_objects', None)
+            if obs is None:
+                obs = context.view_layer.objects.selected  
+            lights = [ob for ob in obs if ob.type == "LIGHT"]
             if len(lights) > 0:
                 any_lights = []
                 if rm.light_mixer_groups_index > 0:
@@ -399,7 +402,10 @@ if not bpy.app.background:
             rm = scene.renderman    
 
             grp = rm.light_mixer_groups[rm.light_mixer_groups_index]
-            for ob in context.selected_objects:
+            obs = getattr(context, 'selected_objects', None)
+            if obs is None:
+                obs = context.view_layer.objects.selected              
+            for ob in obs:
                 do_add = True
                 for member in grp.members:
                     if member.light_ob == ob:
