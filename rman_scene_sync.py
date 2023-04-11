@@ -84,6 +84,18 @@ class RmanSceneSync(object):
             else:
                 translator.update_transform(camera, rman_sg_camera)  
 
+
+    def create_rman_update(self, ob_key, **kwargs):
+        rman_update = RmanUpdate()
+        rman_update.is_updated_shading = kwargs.get('update_shading', False)
+        rman_update.is_updated_transform = kwargs.get('update_transform', False)
+        rman_update.is_updated_geometry = kwargs.get('update_geometry', False)
+        rman_update.is_updated_attributes = kwargs.get('update_attributes', False)
+        rman_update.updated_prop_name = kwargs.get('prop_name', None)
+        rman_update.do_clear_instances = kwargs.get('clear_instances', True)
+        self.rman_updates[ob_key] = rman_update   
+        return rman_update                       
+
     @time_this
     def scene_updated(self):
         # Check visible objects
@@ -563,6 +575,9 @@ class RmanSceneSync(object):
 
                 elif isinstance(dps_update.id, bpy.types.Object):                
                     self.check_object_datablock(dps_update)
+                elif isinstance(dps_update.id, bpy.types.GeometryNodeTree):
+                    # create an empty RmanUpdate
+                    self.create_rman_update(dps_update.id.original, clear_instances=False)                    
                                     
             if not self.rman_updates and self.num_instances_changed:
                 # The number of instances changed, but we are not able
@@ -685,8 +700,10 @@ class RmanSceneSync(object):
 
             elif isinstance(dps_update.id, bpy.types.Collection):
                 rfb_log().debug("Collection updated: %s" % dps_update.id.name)
-                #self.update_collection(dps_update.id)
-
+                #self.update_collection(dps_update.id)           
+            elif isinstance(dps_update.id, bpy.types.GeometryNodeTree):
+                # create an empty RmanUpdate
+                self.create_rman_update(dps_update.id.original, clear_instances=False)
             else:
                 rfb_log().debug("Not handling %s update: %s" % (str(type(dps_update.id)), dps_update.id.name))
 
@@ -766,11 +783,9 @@ class RmanSceneSync(object):
 
                     is_new_object = True
                     if rman_update is None:
-                        rman_update = RmanUpdate()
-                        rman_update.is_updated_geometry = True
-                        rman_update.is_updated_shading = True
-                        rman_update.is_updated_transform = True
-                        self.rman_updates[ob_key] = rman_update    
+                        rman_update = self.create_rman_update(ob_key, update_geometry=False, update_shading=True, update_transform=True)
+                    # set update_geometry to False
+                    # since we've already exported the datablock                        
                     rman_update.is_updated_geometry = False
                     clear_instances.append(rman_sg_node)
                                                                 
@@ -784,15 +799,30 @@ class RmanSceneSync(object):
                         if rman_sg_node.is_frame_sensitive and self.frame_number_changed:
                             rman_update.is_updated_geometry = True                              
                         self.rman_updates[ob_key] = rman_update  
-                elif rman_update is None:                       
-                    # check if the instance_parent was the thing that 
-                    # changed
-                    if not instance_parent:
-                        continue
-                    rman_update = self.rman_updates.get(instance_parent.original, None)
-                    if rman_update is None:
-                        continue
-                    rfb_log().debug("\t%s parent updated (%s)" % (ob_eval.name, instance_parent.name))
+                elif rman_update is None:    
+                    # no RmanUpdate exists for this object
+                    #                    
+                    # check if one of the users of this object updated
+                    # ex: the object was instanced via a GeometryNodeTree, and the 
+                    # geometry node tree updated
+                    users = self.rman_scene.context.blend_data.user_map(subset={ob_eval.original})
+                    user_exist = False
+                    for o in users[ob_eval.original]:
+                        if o.original in self.rman_updates:
+                            rfb_log().debug("\t%s user updated (%s)" % (ob_eval.name, o.name))
+                            user_exist = True
+                            break
+                    if user_exist:
+                        rman_update = self.create_rman_update(ob_key, update_transform=True)
+                    else:
+                        # check if the instance_parent was the thing that 
+                        # changed
+                        if not instance_parent:
+                            continue
+                        rman_update = self.rman_updates.get(instance_parent.original, None)
+                        if rman_update is None:
+                            continue
+                        rfb_log().debug("\t%s parent updated (%s)" % (ob_eval.name, instance_parent.name))
 
                 if rman_sg_node and not is_new_object and not instance.is_instance:
                     if rman_update.is_updated_geometry and proto_key not in already_udpated:
