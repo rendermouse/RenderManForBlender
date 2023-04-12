@@ -309,8 +309,10 @@ class RmanMeshTranslator(RmanTranslator):
 
     def export(self, ob, db_name):
         
-        sg_node = self.rman_scene.sg_scene.CreateMesh(db_name)
+        sg_node = self.rman_scene.sg_scene.CreateGroup(db_name)
         rman_sg_mesh = RmanSgMesh(self.rman_scene, sg_node, db_name)
+        rman_sg_mesh.sg_mesh = self.rman_scene.sg_scene.CreateMesh('')
+        rman_sg_mesh.sg_node.AddChild(rman_sg_mesh.sg_mesh)
 
         if self.rman_scene.do_motion_blur:
             rman_sg_mesh.is_transforming = object_utils.is_transforming(ob)
@@ -323,7 +325,7 @@ class RmanMeshTranslator(RmanTranslator):
         mesh = None
         mesh = ob.to_mesh()
         if not sg_node:
-            sg_node = rman_sg_mesh.sg_node
+            sg_node = rman_sg_mesh.sg_mesh
         primvar = sg_node.GetPrimVars()
         P = mesh_utils.get_mesh_points_(mesh)
         npoints = len(P)
@@ -374,7 +376,7 @@ class RmanMeshTranslator(RmanTranslator):
                 return True
 
         if not sg_node:
-            sg_node = rman_sg_mesh.sg_node
+            sg_node = rman_sg_mesh.sg_mesh
 
         rman_sg_mesh.is_subdiv = object_utils.is_subdmesh(ob)
         use_smooth_normals = getattr(ob.data.renderman, 'rman_smoothnormals', False)
@@ -390,7 +392,13 @@ class RmanMeshTranslator(RmanTranslator):
             rman_sg_mesh.nverts = 0
             rman_sg_mesh.is_transforming = False
             rman_sg_mesh.is_deforming = False
+            rman_sg_mesh.sg_node.RemoveChild(rman_sg_mesh.sg_mesh)
             return None
+        
+        # double check that sg_mesh has been added
+        # as a child
+        if rman_sg_mesh.sg_node.GetNumChildren() < 1:
+            rman_sg_mesh.sg_node.AddChild(rman_sg_mesh.sg_mesh)
 
         npolys = len(nverts) 
         npoints = len(P)

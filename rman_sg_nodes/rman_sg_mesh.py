@@ -12,6 +12,13 @@ class RmanSgMesh(RmanSgNode):
         self.subdiv_scheme = 'none'
         self.is_multi_material = False
         self.multi_material_children = []
+        self.sg_mesh = None
+
+    def __del__(self):
+        if self.rman_scene.rman_render.rman_running and self.rman_scene.rman_render.sg_scene:
+            with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene): 
+                self.rman_scene.sg_scene.DeleteDagNode(self.sg_mesh)
+        super().__del__()
 
     @property
     def matrix_world(self):
