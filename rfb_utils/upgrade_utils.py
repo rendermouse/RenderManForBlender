@@ -114,8 +114,9 @@ def upgrade_250_1(scene):
     '''         
 
     def copy_param(old_node, new_node, old_nm, new_nm):
-        if old_node.inputs[old_nm].is_linked:            
-            connected_socket = old_node.inputs[old_nm].links[0].from_socket
+        socket = old_node.inputs.get(old_nm, None)
+        if socket and socket.is_linked:            
+            connected_socket = socket.links[0].from_socket
             nt.links.new(connected_socket, new_node.inputs[new_nm])
         else:
             setattr(new_node, new_nm, getattr(n, old_nm))
@@ -129,35 +130,80 @@ def upgrade_250_1(scene):
             new_node = None
             if n.bl_label == 'LamaDiffuse':
                 new_node = nt.nodes.new('LamaDiffuseBxdfNode')
+                nms = ['color', 'normal']
                 copy_param(n, new_node, 'color', 'diffuseColor')
                 copy_param(n, new_node, 'normal', 'diffuseNormal')
+                for prop_name, meta in n.prop_meta.items():
+                    if prop_name in nms:
+                        continue
+                    copy_param(n, new_node, prop_name, prop_name)
             elif n.bl_label == 'LamaSheen':
                 new_node = nt.nodes.new('LamaSheenBxdfNode')
+                nms = ['color', 'normal']
                 copy_param(n, new_node, 'color', 'sheenColor')
                 copy_param(n, new_node, 'normal', 'sheenNormal')
+                for prop_name, meta in n.prop_meta.items():
+                    if prop_name in nms:
+                        continue
+                    copy_param(n, new_node, prop_name, prop_name)                
             elif n.bl_label == 'LamaConductor':
                 new_node = nt.nodes.new('LamaConductorBxdfNode')
-                copy_param(n, new_node, 'normal', 'conductorNormal')                
+                nms = ['normal']
+                copy_param(n, new_node, 'normal', 'conductorNormal')       
+                for prop_name, meta in n.prop_meta.items():
+                    if prop_name in nms:
+                        continue
+                    copy_param(n, new_node, prop_name, prop_name)                            
             elif n.bl_label == 'LamaDielectric':
                 new_node = nt.nodes.new('LamaDielectricBxdfNode')
+                nms = ['normal']
                 copy_param(n, new_node, 'normal', 'dielectricNormal')
+                for prop_name, meta in n.prop_meta.items():
+                    if prop_name in nms:
+                        continue
+                    copy_param(n, new_node, prop_name, prop_name)                   
             elif n.bl_label == 'LamaEmission':
                 new_node = nt.nodes.new('LamaEmissionBxdfNode')
-                copy_param(n, new_node, 'color', 'emissionColor')        
+                nms = ['color']
+                copy_param(n, new_node, 'color', 'emissionColor')   
+                for prop_name, meta in n.prop_meta.items():
+                    if prop_name in nms:
+                        continue
+                    copy_param(n, new_node, prop_name, prop_name)                        
             elif n.bl_label == 'LamaGeneralizedSchlick':
                 new_node = nt.nodes.new('LamaGeneralizedSchlickBxdfNode')
-                copy_param(n, new_node, 'normal', 'genSchlickNormal')  
+                nms = ['normal']
+                copy_param(n, new_node, 'normal', 'genSchlickNormal')
+                for prop_name, meta in n.prop_meta.items():
+                    if prop_name in nms:
+                        continue
+                    copy_param(n, new_node, prop_name, prop_name)                     
             elif n.bl_label == 'LamaSSS':
                 new_node = nt.nodes.new('LamaSSSBxdfNode')
+                nms = ['color', 'normal']
                 copy_param(n, new_node, 'color', 'sssColor')
                 copy_param(n, new_node, 'normal', 'sssNormal')
+                for prop_name, meta in n.prop_meta.items():
+                    if prop_name in nms:
+                        continue
+                    copy_param(n, new_node, prop_name, prop_name)                   
             elif n.bl_label == 'LamaTranslucent':
                 new_node = nt.nodes.new('LamaTranslucentBxdfNode')
+                nms = ['color', 'normal']
                 copy_param(n, new_node, 'color', 'translucentColor')
                 copy_param(n, new_node, 'normal', 'translucentNormal')
+                for prop_name, meta in n.prop_meta.items():
+                    if prop_name in nms:
+                        continue
+                    copy_param(n, new_node, prop_name, prop_name)                   
             elif n.bl_label == 'LamaTricolorSSS':
                 new_node = nt.nodes.new('LamaTricolorSSSBxdfNode')
-                copy_param(n, new_node, 'normal', 'sssNormal')                
+                nms = ['normal']
+                copy_param(n, new_node, 'normal', 'sssNormal')      
+                for prop_name, meta in n.prop_meta.items():
+                    if prop_name in nms:
+                        continue
+                    copy_param(n, new_node, prop_name, prop_name)                             
 
             if new_node:
                 new_node.location[0] = n.location[0]
