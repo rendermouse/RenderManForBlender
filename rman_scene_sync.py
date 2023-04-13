@@ -858,12 +858,18 @@ class RmanSceneSync(object):
                         clear_instances.append(rman_sg_node) 
 
                     if not self.rman_scene.check_visibility(instance):
-                        # This instance is not visible in the viewport. Don't
+                         # This instance is not visible in the viewport. Don't
                         # add an instance of it
                         continue
 
                     self.rman_scene.export_instance(ob_eval, instance, rman_sg_node, rman_type, instance_parent, psys)
                 else:
+                    if rman_sg_node not in clear_instances:
+                        # this might be a bit werid, but we don't want another RmanUpdate
+                        # instance to clear the instances afterwards, so we add to the
+                        # clear_instances list
+                        clear_instances.append(rman_sg_node) 
+
                     # simply grab the existing instance and update the transform and/or material
                     rman_sg_group = self.rman_scene.get_rman_sg_instance(instance, rman_sg_node, instance_parent, psys, create=False)
                     if rman_sg_group:
@@ -888,6 +894,9 @@ class RmanSceneSync(object):
                                 self.rman_scene.attach_particle_material(psys.settings, instance_parent, ob_eval, rman_sg_group)
                             else:
                                 self.rman_scene.attach_material(ob_eval, rman_sg_group)                            
+                    else:
+                        # Didn't get an rman_sg_group. Do a full instance export.
+                        self.rman_scene.export_instance(ob_eval, instance, rman_sg_node, rman_type, instance_parent, psys)
                                 
                 if not batch_mode:
                     if rman_type == 'LIGHT':
