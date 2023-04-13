@@ -1,3 +1,77 @@
+v25.0 April 17, 2023
+
+New Features:
+* You can now use the Qt version of the preset browser and texture manager, which 
+matches what is available in the other RenderMan DCC plugins. To use the Qt version, 
+go to the addon preferences and change UI Framework from Native to Qt
+* Blender's "Persistent Data" option is now supported. This is mostly useful in batch rendering 
+where for subsequent frames only differences in the scene are calculated, rather than 
+re-generating the whole scene. Note, this option is off by default.
+* For external/batch rendering using Blender Batch style, there is a new Frame Chunking option, 
+which specifies how many frames each blender process will render (previously, each 
+blender process would only do one frame).
+* We now auto load the Blender's builtin Node Arrange addon. This allows for auto 
+arranging nodes in the shader graph.  Two of the operators have been added to the RenderMan 
+right click context menu.
+
+Changes:
+* Scene translation time has been improved. In some cases, as much as 27% speed improvement 
+has been seen.
+* IPR to "it" is no longer a separate setting. To IPR to "it", right click in the Viewport, 
+and go to RenderMan->Render->IPR to it.
+* Support for fluid meshes has been added.
+* We now export two new user attributes: "user:blender_is_instance" and "user:blender_instance_uv". 
+If "user:blender_is_instance" is set to 1, this indicates that the current object is an instance.
+* For subdivision meshes, you can now select a face map to act as holes for your mesh (note, 
+this does not work in XPU).
+* Socket names for terminal nodes (ex: RenderMan Material, Bxdf etc) have been renamed. For example, 
+old name (Bxdf), new name (bxdf_in). This is to match the names used in our other DCC plugins.
+* Editing attributes or options during IPR should be faster.
+* For meshes, exporting of the tangent and bitangent vectors is now off by default. 
+* The default Subsurface Model for PxrSurface has changed from "Jensen Dipole" to 
+"Exponential Path Traced". If you would like to revert the default back to "Jensen Dipole", 
+you can create an override json file for PxrSurface. The json file would look something like this:
+
+{
+    "name": "PxrSurface.args",
+    "params": [
+        {
+            "name": "subsurfaceType",   
+            "default": 0,
+            "always_write": true
+        }
+    ]
+}
+See Customizing Blender in the docs on how to install this override file.
+
+* The clapboard icon in the viewport will now first display an option to either render in
+the viewport or to "it"
+* For float ramps, you can now select the interpolation type to be used
+* You can now change the zoom factor for the Enhance operator in the addon preferences
+* We now draw the texture map for gobo and cookie light filters, if the draw textured lights option
+is turned on
+* The External Rendering panel has been renamed to Batch Rendering
+* We now use "it" for the preview image task for our batch render jobs, instead of "sho".
+* Volumes are now added to the "global volume aggregate" by default. If you want to turn off this
+behavior, turn off the "Global Volume Aggregate" checkbox on volume object properties. 
+
+Bug Fixes:
+* Fixed issues with instancing using geometry nodes.
+* Fixed issue where channels in the stylized output were in random order
+* Fixed issue where the FOV was not correct when the camera sensor width was not default, 
+and viewport was in perspective mode
+* Fixed issue where using the cookie or gobo light filters was slow in the viewport
+* Fixed numerous issues with group nodes in the shader graph.
+* Frame step setting should not be respected when batch rendering in RIB mode.
+* Fixed issues with light linking when a light or an object are no longer in the scene.
+* Fixed issue where normals and vectors were not editable in the shader graph.
+* Fixed issue where the viewport render progress bar color was incorrect.
+* "it" inspector was displaying the wrong min/max samples for IPR
+* Various fixes for the package scene operator
+* Fix the viewport drawing of gobo and cookie light filters
+* Fixed a bug where UDIM textures from linked collections was not working
+
+
 v24.4 April 22, 2022
 
 Changes:
