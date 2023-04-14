@@ -557,9 +557,9 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     diffuse_node.location[0] -= 1280.0
     nodes_list.append(diffuse_node)
     
-    nt.links.new(rman_node.outputs["out_baseColor"], diffuse_node.inputs["color"])
+    nt.links.new(rman_node.outputs["out_baseColor"], diffuse_node.inputs["diffuseColor"])
     nt.links.new(rman_node.outputs["out_roughness"], diffuse_node.inputs["roughness"])
-    nt.links.new(rman_node.outputs["out_normal"], diffuse_node.inputs["normal"])
+    nt.links.new(rman_node.outputs["out_normal"], diffuse_node.inputs["diffuseNormal"])
 
     # subsurface
     node_name = __BL_NODES_MAP__.get('LamaSSS', None)
@@ -569,8 +569,8 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     sss_node.location[1] -= 240.0 
     nodes_list.append(sss_node)    
     
-    nt.links.new(rman_node.outputs["out_sssColor"], sss_node.inputs["color"])
-    nt.links.new(rman_node.outputs["out_normal"], sss_node.inputs["normal"])
+    nt.links.new(rman_node.outputs["out_sssColor"], sss_node.inputs["sssColor"])
+    nt.links.new(rman_node.outputs["out_normal"], sss_node.inputs["sssNormal"])
     nt.links.new(rman_node.outputs["out_sssRadius"], sss_node.inputs["sssRadius"])
 
     # diff or sss mix
@@ -593,8 +593,8 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     sheen_node.location[1] -= 240.0     
     nodes_list.append(sheen_node)
 
-    nt.links.new(rman_node.outputs["out_sheenColor"], sheen_node.inputs["color"])
-    nt.links.new(rman_node.outputs["out_normal"], sheen_node.inputs["normal"])
+    nt.links.new(rman_node.outputs["out_sheenColor"], sheen_node.inputs["sheenColor"])
+    nt.links.new(rman_node.outputs["out_normal"], sheen_node.inputs["sheenNormal"])
 
     # diff sheen add
     node_name = __BL_NODES_MAP__.get('LamaAdd', None)
@@ -619,7 +619,7 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
 
     nt.links.new(rman_node.outputs["out_specF0"], specular_node.inputs["reflectivity"])  
     nt.links.new(rman_node.outputs["out_roughness"], specular_node.inputs["roughness"])
-    nt.links.new(rman_node.outputs["out_normal"], specular_node.inputs["normal"])
+    nt.links.new(rman_node.outputs["out_normal"], specular_node.inputs["conductorNormal"])
     nt.links.new(rman_node.outputs["out_anisotropic"], specular_node.inputs["anisotropy"])
     nt.links.new(rman_node.outputs["out_anisotropicRotation"], specular_node.inputs["anisotropyRotation"])
 
@@ -648,7 +648,7 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
 
     nt.links.new(rman_node.outputs["out_baseColor"], transmission_node.inputs["transmissionTint"])
     nt.links.new(rman_node.outputs["out_roughness"], transmission_node.inputs["roughness"])
-    nt.links.new(rman_node.outputs["out_normal"], transmission_node.inputs["normal"])
+    nt.links.new(rman_node.outputs["out_normal"], transmission_node.inputs["dielectricNormal"])
 
     # spec transmission add
     node_name = __BL_NODES_MAP__.get('LamaAdd', None)
@@ -672,7 +672,7 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     nodes_list.append(coat_node)
 
     nt.links.new(rman_node.outputs["out_clearcoatRoughness"], coat_node.inputs["roughness"])
-    nt.links.new(rman_node.outputs["out_clearcoatNormal"], coat_node.inputs["normal"])       
+    nt.links.new(rman_node.outputs["out_clearcoatNormal"], coat_node.inputs["dielectricNormal"])       
 
     # transmission coat add
     node_name = __BL_NODES_MAP__.get('LamaAdd', None)
@@ -694,7 +694,7 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     emission_node.location[1] -= 240.0       
     nodes_list.append(emission_node)
 
-    nt.links.new(rman_node.outputs["out_emissionColor"], emission_node.inputs["color"])   
+    nt.links.new(rman_node.outputs["out_emissionColor"], emission_node.inputs["emissionColor"])   
 
     # final mix node
     nt.links.new(transmission_coat_add_node.outputs["bxdf_out"], final_mix_node.inputs["material1"]) 
