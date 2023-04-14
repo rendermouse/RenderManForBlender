@@ -741,7 +741,7 @@ def convert_glass_bsdf(nt, node, rman_node):
                          rman_node, "roughness")
     convert_cycles_input(nt, inputs['IOR'],
                          rman_node, "IOR")       
-    convert_cycles_input(nt, inputs['Normal'], rman_node, "conductorNormal")                                             
+    convert_cycles_input(nt, inputs['Normal'], rman_node, "dielectricNormal")                                             
 
 def convert_refraction_bsdf(nt, node, rman_node):
 
