@@ -55,7 +55,7 @@ class DATA_PT_renderman_projection(ShaderPanel, Panel):
             
 
             split = layout.split(factor=0.35)
-            split.label(text=socket.name + ':')
+            split.label(text=socket.identifier + ':')
 
             split.context_pointer_set("socket", socket)
             split.context_pointer_set("node", output)

@@ -194,7 +194,7 @@ def bl_export_asset(nodes, atype, infodict, category, cfg, renderPreview='std',
     #
     prmanversion = envconfig().build_info.version()
     Asset.setCompatibility(hostName='Blender',
-                           hostVersion=bpy.app.version,
+                           hostVersion=bpy.app.version_string,
                            rendererVersion=prmanversion)                           
 
     # parse maya scene

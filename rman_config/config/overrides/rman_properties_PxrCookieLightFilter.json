@@ -1,0 +1,9 @@
+{
+    "name": "PxrCookieLightFilter.args",
+    "params": [
+        {
+            "name": "refreshMap",    
+            "widget": "__REMOVE__"
+        }                                 
+    ]
+}

@@ -13,6 +13,15 @@ import math
 import re
 import bpy
 
+__MAP_CYCLES_PARAMS__ = {
+    "ShaderNodeTexNoise": {
+        "dimensions": "noise_dimensions"
+    },
+    "ShaderNodeAttribute": {
+        "name": "attribute_name"
+    }
+}
+
 def get_root_node(node, type='bxdf'):
     rman_type = getattr(node, 'renderman_node_type', node.bl_idname)
     if rman_type == type:
@@ -25,6 +34,13 @@ def get_root_node(node, type='bxdf'):
             return None
         return out        
     return None
+
+def get_cycles_value(node, param_name):
+    val = getattr(node, param_name, None)
+    if node.bl_idname in __MAP_CYCLES_PARAMS__:
+        params_map = __MAP_CYCLES_PARAMS__[node.bl_idname]
+        val = getattr(node, params_map.get(param_name, param_name), None)
+    return val
 
 class RmanMaterialTranslator(RmanTranslator):
 
@@ -41,7 +57,6 @@ class RmanMaterialTranslator(RmanTranslator):
 
     def update(self, mat, rman_sg_material, time_sample=0):
 
-        mat = mat.original
         rm = mat.renderman
         succeed = False
 
@@ -115,8 +130,11 @@ class RmanMaterialTranslator(RmanTranslator):
                             return True
 
                 # bxdf
-                socket = out.inputs['Bxdf']
-                if socket.is_linked and len(socket.links) > 0:
+                socket = out.inputs.get('bxdf_in', None)
+                if socket is None:
+                    # try old name
+                    socket = out.inputs.get('Bxdf', None)
+                if socket and socket.is_linked and len(socket.links) > 0:
                     from_node = socket.links[0].from_node
                     linked_node = get_root_node(from_node, type='bxdf')
                     if linked_node:
@@ -142,10 +160,13 @@ class RmanMaterialTranslator(RmanTranslator):
                     self.create_pxrdiffuse_node(rman_sg_material, handle)
 
                 # light
-                socket = out.inputs['Light']
-                if socket.is_linked and len(socket.links) > 0:
+                socket = out.inputs.get('light_in', None)
+                if socket is None:
+                    # try old name
+                    socket = out.inputs.get('Light', None)
+                if socket and socket.is_linked and len(socket.links) > 0:
                     from_node = socket.links[0].from_node
-                    linked_node = get_root_node(from_node, type='light')
+                    linked_node = get_root_node(socket.links[0].from_node, type='light')
                     if linked_node:
                         lightNodesList = []
                         sub_nodes = []
@@ -164,8 +185,11 @@ class RmanMaterialTranslator(RmanTranslator):
                             rman_sg_material.sg_node.SetLight(lightNodesList)                                   
 
                 # displacement
-                socket = out.inputs['Displacement']
-                if socket.is_linked and len(socket.links) > 0:
+                socket = out.inputs.get('displace_in', None)
+                if socket is None:
+                    # use old name
+                    socket = out.inputs.get('Displacement', None)                
+                if socket and socket.is_linked and len(socket.links) > 0:
                     from_node = socket.links[0].from_node
                     linked_node = get_root_node(from_node, type='displace')
                     if linked_node:                    
@@ -271,7 +295,8 @@ class RmanMaterialTranslator(RmanTranslator):
         bxdf_name = '%s_PxrDisneyBsdf' % name
         sg_node = self.rman_scene.rman.SGManager.RixSGShader("Bxdf", "PxrDisneyBsdf", bxdf_name)
         rix_params = sg_node.params
-        rix_params.SetColor('baseColor', string_utils.convert_val(mat.diffuse_color, 'color'))
+        diffuse_color = string_utils.convert_val(mat.diffuse_color, type_hint='color')
+        rix_params.SetColor('baseColor', diffuse_color)
         rix_params.SetFloat('metallic', mat.metallic )
         rix_params.SetFloat('roughness', mat.roughness)
         rix_params.SetFloat('specReflectScale', mat.metallic )
@@ -360,12 +385,11 @@ class RmanMaterialTranslator(RmanTranslator):
             param_name = node_desc_param._name
             if param_name in node.inputs:
                 continue
-            if param_name == 'name':
-                param_name = 'attribute_name'
-            if not hasattr(node, param_name):
-                continue
             param_type = node_desc_param.type
-            val = string_utils.convert_val(getattr(node, param_name),
+            val = get_cycles_value(node, param_name)
+            if val is None:
+                continue
+            val = string_utils.convert_val(val,
                             type_hint=param_type)
 
             if param_type == 'string':

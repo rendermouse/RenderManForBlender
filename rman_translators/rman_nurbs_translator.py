@@ -260,5 +260,5 @@ class RmanNurbsTranslator(RmanTranslator):
         primvar.SetHpointDetail(self.rman_scene.rman.Tokens.Rix.k_Pw, P, "vertex")   
         primvar.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_uknot, uknots, len(uknots))
         primvar.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_vknot, vknots, len(vknots))
-
+        super().export_object_primvars(ob, primvar)
         rman_sg_nurbs.sg_node.SetPrimVars(primvar)

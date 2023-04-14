@@ -73,6 +73,8 @@ class RmanBasePropertyGroup:
 
         for param_name, ndp in config.params.items():
             update_func = None
+            set_func = None
+            get_func = None
             if hasattr(ndp, 'update_function'):
                 # this code tries to dynamically add a function to cls
                 # don't ask me why this works.
@@ -83,11 +85,30 @@ class RmanBasePropertyGroup:
                 setattr(cls, ndp.update_function_name, update_func)
             elif hasattr(ndp, 'update_function_name'):
                 update_func = ndp.update_function_name
+
+            if hasattr(ndp, 'set_function'):
+                lcls = locals()
+                exec(ndp.set_function, globals(), lcls)
+                exec('set_func = %s' % ndp.set_function_name, globals(), lcls)
+                set_func = lcls['set_func']
+                setattr(cls, ndp.set_function_name, set_func)
+            elif hasattr(ndp, 'set_function_name'):
+                set_func = ndp.set_function_name
+
+            if hasattr(ndp, 'get_function'):
+                lcls = locals()
+                exec(ndp.get_function, globals(), lcls)
+                exec('get_func = %s' % ndp.get_function_name, globals(), lcls)
+                get_func = lcls['get_func']
+                setattr(cls, ndp.get_function_name, get_func)
+            elif hasattr(ndp, 'get_function_name'):
+                get_func = ndp.get_function_name                
+
             if ndp.is_array():
                 if generate_property_utils.generate_array_property(cls, prop_names, prop_meta, ndp):
                     addpage(ndp)
                     continue
-            name, meta, prop = generate_property_utils.generate_property(cls, ndp, update_function=update_func)
+            name, meta, prop = generate_property_utils.generate_property(cls, ndp, update_function=update_func, set_function=set_func, get_function=get_func)
             if prop:
                 cls.__annotations__[ndp._name] = prop
                 prop_names.append(ndp.name)

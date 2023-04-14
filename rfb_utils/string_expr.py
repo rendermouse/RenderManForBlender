@@ -145,18 +145,32 @@ class StringExpression(object):
     # @time_this
     def set_frame_context(self, frame):
         """Set the scene frame for the next subst() call."""
-        self.tokens['frame'] = str(frame)
-        iframe = int(frame)
-        self.tokens['f'] = str(iframe)
-        self.tokens['f2'] = '{:0>2d}'.format(iframe)
-        self.tokens['f3'] = '{:0>3d}'.format(iframe)
-        self.tokens['f4'] = '{:0>4d}'.format(iframe)
-        self.tokens['f5'] = '{:0>5d}'.format(iframe)
-        self.tokens['F'] = str(iframe)
-        self.tokens['F2'] = '{:0>2d}'.format(iframe)
-        self.tokens['F3'] = '{:0>3d}'.format(iframe)
-        self.tokens['F4'] = '{:0>4d}'.format(iframe)
-        self.tokens['F5'] = '{:0>5d}'.format(iframe)
+
+        if isinstance(frame, int):
+            self.tokens['frame'] = str(frame)
+            iframe = int(frame)
+            self.tokens['f'] = str(iframe)
+            self.tokens['f2'] = '{:0>2d}'.format(iframe)
+            self.tokens['f3'] = '{:0>3d}'.format(iframe)
+            self.tokens['f4'] = '{:0>4d}'.format(iframe)
+            self.tokens['f5'] = '{:0>5d}'.format(iframe)
+            self.tokens['F'] = str(iframe)
+            self.tokens['F2'] = '{:0>2d}'.format(iframe)
+            self.tokens['F3'] = '{:0>3d}'.format(iframe)
+            self.tokens['F4'] = '{:0>4d}'.format(iframe)
+            self.tokens['F5'] = '{:0>5d}'.format(iframe)
+        elif isinstance(frame, str):
+            self.tokens['frame'] = frame
+            self.tokens['f'] = frame
+            self.tokens['f2'] = '%s' % (frame) * 2
+            self.tokens['f3'] = '%s' % (frame) * 3
+            self.tokens['f4'] = '%s' % (frame) * 4
+            self.tokens['f5'] = '%s' % (frame) * 5
+            self.tokens['F'] = frame
+            self.tokens['F2'] = '%s' % (frame) * 2
+            self.tokens['F3'] = '%s' % (frame) * 3
+            self.tokens['F4'] = '%s' % (frame) * 4
+            self.tokens['F5'] = '%s' % (frame) * 5
 
     # @time_this
     def expand(self, expr, objTokens={}, asFilePath=False):

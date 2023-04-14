@@ -2,7 +2,7 @@ from . import color_utils
 from . import filepath_utils
 from . import string_utils
 from . import object_utils
-from . import scene_utils
+from .prefs_utils import get_pref
 from ..rman_constants import RMAN_STYLIZED_FILTERS, RMAN_STYLIZED_PATTERNS, RMAN_UTILITY_PATTERN_NAMES, RFB_FLOAT3
 import math
 import bpy
@@ -259,6 +259,58 @@ def is_socket_float3_type(socket):
     else:
         return socket.type in ['RGBA', 'VECTOR'] 
 
+def set_solo_node(node, nt, solo_node_name, refresh_solo=False, solo_node_output=''):
+    def hide_all(nt, node):
+        if not get_pref('rman_solo_collapse_nodes'):
+            return
+        for n in nt.nodes:
+            hide = (n != node)
+            if hasattr(n, 'prev_hidden'):
+                setattr(n, 'prev_hidden', n.hide)
+            n.hide = hide
+            for input in n.inputs:
+                if not input.is_linked:
+                    if hasattr(input, 'prev_hidden'):
+                        setattr(input, 'prev_hidden', input.hide)
+                    input.hide = hide
+
+            for output in n.outputs:
+                if not output.is_linked:
+                    if hasattr(output, 'prev_hidden'):
+                        setattr(output, 'prev_hidden', output.hide)
+                    output.hide = hide                        
+
+    def unhide_all(nt):
+        if not get_pref('rman_solo_collapse_nodes'):
+            return        
+        for n in nt.nodes:
+            hide = getattr(n, 'prev_hidden', False)
+            n.hide = hide
+            for input in n.inputs:
+                if not input.is_linked:
+                    hide = getattr(input, 'prev_hidden', False)
+                    input.hide = hide
+
+            for output in n.outputs:
+                if not output.is_linked:
+                    hide = getattr(output, 'prev_hidden', False)
+                    output.hide = hide
+
+    if refresh_solo:
+        node.solo_nodetree = None
+        node.solo_node_name = ''
+        node.solo_node_output = ''
+        unhide_all(nt)
+        return
+
+    if solo_node_name:
+        node.solo_nodetree = nt
+        node.solo_node_name = solo_node_name
+        node.solo_node_output = solo_node_output
+        solo_node = nt.nodes[solo_node_name]
+        hide_all(nt, solo_node)
+
+
 # do we need to convert this socket?
 def do_convert_socket(from_socket, to_socket):
     if not to_socket:
@@ -476,6 +528,8 @@ def get_all_shading_nodes(scene=None):
     Returns:
         (list) - list of all the shading nodes
     '''    
+
+    from . import scene_utils
 
     nodes = list()
 
@@ -843,6 +897,42 @@ def has_stylized_pattern_node(ob, node=None):
                     return from_node        
 
     return False
+
+def hide_cycles_nodes(id):
+    cycles_output_node = None
+    if isinstance(id, bpy.types.Material):
+        cycles_output_node = find_node(id, 'ShaderNodeOutputMaterial')
+    elif isinstance(id, bpy.types.Light):
+        cycles_output_node = find_node(id, 'ShaderNodeOutputLight')
+    elif isinstance(id, bpy.types.World):
+        cycles_output_node = find_node(id, 'ShaderNodeOutputWorld')
+    if not cycles_output_node:
+        return
+    cycles_output_node.hide = True
+    for i in cycles_output_node.inputs:
+        if i.is_linked:
+            i.links[0].from_node.hide = True    
+
+
+def create_bxdf(bxdf):
+    mat = bpy.data.materials.new(bxdf)
+    mat.use_nodes = True
+    nt = mat.node_tree
+    hide_cycles_nodes(mat)    
+
+    output = nt.nodes.new('RendermanOutputNode')
+    default = nt.nodes.new('%sBxdfNode' % bxdf)
+    default.location = output.location
+    default.location[0] -= 300
+    nt.links.new(default.outputs[0], output.inputs[0])
+    output.inputs[1].hide = True
+    output.inputs[3].hide = True  
+    default.update_mat(mat)    
+
+    if bxdf == 'PxrLayerSurface':
+        create_pxrlayer_nodes(nt, default)   
+
+    return mat 
 
 def create_pxrlayer_nodes(nt, bxdf):
     from .. import rman_bl_nodes

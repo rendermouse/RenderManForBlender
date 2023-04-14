@@ -6,6 +6,7 @@ from ..rfb_utils import string_utils
 from ..rfb_utils import scenegraph_utils
 from ..rfb_utils import particles_utils
 from ..rfb_utils import object_utils
+from ..rfb_utils import mesh_utils
 from ..rfb_logger import rfb_log
 from mathutils import Matrix
 import bpy
@@ -48,32 +49,6 @@ class RmanFluidTranslator(RmanTranslator):
             rman_sg_fluid.is_deforming = object_utils._is_deforming_(ob)        
 
         return rman_sg_fluid
-
-    def export_object_primvars(self, ob, rman_sg_node, sg_node=None): 
-        if rman_sg_node.rman_sg_liquid_node:
-            sg_node = rman_sg_node.rman_sg_liquid_node  
-            super().export_object_primvars(ob, rman_sg_node, sg_node=sg_node)             
-            return 
-
-        sg_node = rman_sg_node.rman_sg_volume_node
-        super().export_object_primvars(ob, rman_sg_node, sg_node=sg_node)  
-        prop_name = 'rman_micropolygonlength_volume'
-        rm = ob.renderman
-        rm_scene = self.rman_scene.bl_scene.renderman
-        meta = rm.prop_meta[prop_name]
-        val = getattr(rm, prop_name)
-        inherit_true_value = meta['inherit_true_value']
-        if float(val) == inherit_true_value:
-            if hasattr(rm_scene, 'rman_micropolygonlength'):
-                val = getattr(rm_scene, 'rman_micropolygonlength')
-
-        try:
-            primvars = sg_node.GetPrimVars()
-            primvars.SetFloat('dice:micropolygonlength', val)
-            sg_node.SetPrimVars(primvars)
-        except AttributeError:
-            rfb_log().debug("Cannot get RtPrimVar for this node")
-
 
     def export_deform_sample(self, rman_sg_fluid, ob, time_sample):
         return
@@ -139,7 +114,7 @@ class RmanFluidTranslator(RmanTranslator):
     def update_fluid_mesh(self, ob, rman_sg_fluid, psys, fluid_data):
         sg_node = rman_sg_fluid.rman_sg_liquid_node
         mesh = ob.data
-        (nverts, verts, P, N) = object_utils._get_mesh_(mesh, get_normals=True)
+        (nverts, verts, P, N) = mesh_utils.get_mesh(mesh, get_normals=True)
         npolys = len(nverts) 
         npoints = len(P)
         numnverts = len(verts)
@@ -196,7 +171,7 @@ class RmanFluidTranslator(RmanTranslator):
         else:
             primvar.SetPointDetail(self.rman_scene.rman.Tokens.Rix.k_P, P, "vertex")               
         primvar.SetFloatDetail(self.rman_scene.rman.Tokens.Rix.k_width, width, "vertex")
-
+        super().export_object_primvars(ob, primvar)
         sg_node.SetPrimVars(primvar)
 
         # Attach material
@@ -218,12 +193,13 @@ class RmanFluidTranslator(RmanTranslator):
 
         primvar = rman_sg_fluid.rman_sg_volume_node.GetPrimVars()
         primvar.SetString(self.rman_scene.rman.Tokens.Rix.k_Ri_type, "blobbydso:impl_openvdb")
-        primvar.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_Bound, transform_utils.convert_ob_bounds(ob.bound_box), 6)
+        primvar.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_Bound, [-1e30, 1e30, -1e30, 1e30, -1e30, 1e30], 6)
         primvar.SetStringArray(self.rman_scene.rman.Tokens.Rix.k_blobbydso_stringargs, [cacheFile, "density:fogvolume"], 2)
 
         primvar.SetFloatDetail("density", [], "varying")
         primvar.SetFloatDetail("flame", [], "varying")        
-        primvar.SetColorDetail("color", [], "varying")                  
+        primvar.SetColorDetail("color", [], "varying")   
+        super().export_object_primvars(ob, primvar)               
         rman_sg_fluid.rman_sg_volume_node.SetPrimVars(primvar)
         
         attrs = rman_sg_fluid.rman_sg_volume_node.GetAttributes() 
@@ -245,7 +221,7 @@ class RmanFluidTranslator(RmanTranslator):
         primvar.SetColorDetail("color", [item for index, item in enumerate(fluid_data.color_grid) if index % 4 != 0], "varying")
         primvar.SetVectorDetail("velocity", fluid_data.velocity_grid, "varying")
         primvar.SetFloatDetail("temperature", fluid_data.temperature_grid, "varying")
-
+        super().export_object_primvars(ob, primvar)
         rman_sg_fluid.rman_sg_volume_node.SetPrimVars(primvar)  
 
         attrs = rman_sg_fluid.rman_sg_volume_node.GetAttributes() 

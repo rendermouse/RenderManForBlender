@@ -28,7 +28,7 @@ class RendermanShadingNode(bpy.types.ShaderNode):
     prev_hidden: BoolProperty(default=False, description="Whether or not this node was previously hidden.")
 
     def update_mat(self, mat):
-        if self.renderman_node_type == 'bxdf' and self.outputs['Bxdf'].is_linked:
+        if self.renderman_node_type == 'bxdf' and self.outputs['bxdf_out'].is_linked:
             mat.specular_color = [1, 1, 1]
             mat.diffuse_color = [1, 1, 1, 1]
             mat.specular_intensity = 0
@@ -179,7 +179,7 @@ class RendermanShadingNode(bpy.types.ShaderNode):
             nt = node.id_data
             layout.enabled = (nt.library is None)
             layout.template_color_ramp(
-                    ramp_node, 'color_ramp')   
+                    ramp_node, 'color_ramp')                  
             return                            
         elif bl_prop_info.widget == 'floatramp':
             node_group = self.rman_fake_node_group_ptr 
@@ -197,7 +197,10 @@ class RendermanShadingNode(bpy.types.ShaderNode):
             nt = node.id_data
             layout.enabled = (nt.library is None)
             layout.template_curve_mapping(
-                    ramp_node, 'mapping')                   
+                    ramp_node, 'mapping')         
+            interp_name = '%s_Interpolation' % prop_name
+            if hasattr(node, interp_name):
+                layout.prop(node, interp_name, text='Ramp Interpolation')                              
             return
                     
         if prop_name not in node.inputs:
@@ -685,13 +688,13 @@ class RendermanOutputNode(RendermanShadingNode):
         self._init_inputs()   
 
     def _init_inputs(self):
-        input = self.inputs.new('RendermanNodeSocketBxdf', 'Bxdf')
+        input = self.inputs.new('RendermanNodeSocketBxdf', 'bxdf_in', identifier='Bxdf')
         input.hide_value = True
-        input = self.inputs.new('RendermanNodeSocketLight', 'Light')
+        input = self.inputs.new('RendermanNodeSocketLight', 'light_in', identifier='Light')
         input.hide_value = True
-        input = self.inputs.new('RendermanNodeSocketDisplacement', 'Displacement')
+        input = self.inputs.new('RendermanNodeSocketDisplacement', 'displace_in', identifier='Displacement')
         input.hide_value = True
-        input = self.inputs.new('RendermanNodeSocketLightFilter', 'LightFilter')
+        input = self.inputs.new('RendermanNodeSocketLightFilter', 'lightfilter_in', identifier='LightFilter')
         input.hide_value = True    
 
     def draw_buttons(self, context, layout):
@@ -726,16 +729,28 @@ class RendermanOutputNode(RendermanShadingNode):
                     pass
         
         self.new_links.clear()
+        
+        # check if the solo node still exists
+        if self.solo_node_name:
+            solo_nodetree = self.solo_nodetree
+            solo_node = solo_nodetree.nodes.get(self.solo_node_name, None)
+            if solo_node is None:
+                shadergraph_utils.set_solo_node(self, solo_nodetree, '', refresh_solo=True)
+                solo_nodetree.update_tag()
+                return
+
+        self.id_data.update_tag()
 
         # This sucks. There doesn't seem to be a way to tag the material
         # it needs updating, so we manually issue an edit
-
+        '''
         area = getattr(bpy.context, 'area', None)
         if area and area.type == 'NODE_EDITOR':
             rr = rman_render.RmanRender.get_rman_render()        
             mat = getattr(bpy.context, 'material', None)
             if mat:
                 rr.rman_scene_sync.update_material(mat)
+        '''
 
 class RendermanIntegratorsOutputNode(RendermanShadingNode):
     bl_label = 'RenderMan Integrators'
@@ -745,7 +760,7 @@ class RendermanIntegratorsOutputNode(RendermanShadingNode):
     new_links = []
 
     def init(self, context):
-        input = self.inputs.new('RendermanNodeSocketIntegrator', 'Integrator')
+        input = self.inputs.new('RendermanNodeSocketIntegrator', 'integrator_in', identifier='Integrator')
 
     def draw_buttons(self, context, layout):
         return
@@ -785,11 +800,12 @@ class RendermanSamplefiltersOutputNode(RendermanShadingNode):
     new_links = []
 
     def init(self, context):
-        input = self.inputs.new('RendermanNodeSocketSampleFilter', 'samplefilter[0]')
+        input = self.inputs.new('RendermanNodeSocketSampleFilter', 'samplefilter_in[0]', identifier='samplefilter[0]')
         input.hide_value = True
 
     def add_input(self):
-        input = self.inputs.new('RendermanNodeSocketSampleFilter', 'samplefilter[%d]' % (len(self.inputs)))
+        size = len(self.inputs)
+        input = self.inputs.new('RendermanNodeSocketSampleFilter', 'samplefilter_in[%d]' % size, identifier='samplefilter[%d]' % size)
         input.hide_value = True
 
     def remove_input(self):
@@ -850,11 +866,12 @@ class RendermanDisplayfiltersOutputNode(RendermanShadingNode):
     new_links = []
 
     def init(self, context):
-        input = self.inputs.new('RendermanNodeSocketDisplayFilter', 'displayfilter[0]')
+        input = self.inputs.new('RendermanNodeSocketDisplayFilter', 'displayfilter_in[0]', identifier='displayflter[0]')
         input.hide_value = True
 
     def add_input(self):
-        input = self.inputs.new('RendermanNodeSocketDisplayFilter', 'displayfilter[%d]' % (len(self.inputs)))
+        size = len(self.inputs)
+        input = self.inputs.new('RendermanNodeSocketDisplayFilter', 'displayfilter_in[%d]' % size, identifier='displayfilter[%d]' % size)
         input.hide_value = True
 
     def remove_input(self):
@@ -918,7 +935,7 @@ class RendermanProjectionsOutputNode(RendermanShadingNode):
         return ntree.bl_idname == 'ShaderNodeTree'
         
     def init(self, context):
-        input = self.inputs.new('RendermanNodeSocketProjection', 'Projection')
+        input = self.inputs.new('RendermanNodeSocketProjection', 'projection_in', identifier='Projection')
 
     def draw_buttons(self, context, layout):
         return

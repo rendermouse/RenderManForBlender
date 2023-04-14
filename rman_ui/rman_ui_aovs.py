@@ -256,9 +256,10 @@ class RENDER_PT_layer_custom_aovs(CollectionPanel, Panel):
         # denoise options
         row = col.row()
         row.prop(item, 'denoise')
-        row = col.row()
-        row.enabled = item.denoise
-        row.prop(item, 'denoise_mode')
+        if rm.use_legacy_denoiser:
+            row = col.row()
+            row.enabled = item.denoise
+            row.prop(item, 'denoise_mode')
 
         row = col.row()
         row.label(text='')
@@ -311,18 +312,18 @@ class RENDER_PT_layer_custom_aovs(CollectionPanel, Panel):
             col = layout.column()
             col.label(text="Remap Settings")
             row = col.row(align=True)
-            row.prop(channel, "remap_a", text="A")
-            row.prop(channel, "remap_b", text="B")
-            row.prop(channel, "remap_c", text="C")
+            row.prop(channel, "remap_a")
+            row.prop(channel, "remap_b")
+            row.prop(channel, "remap_c")
             layout.separator()
-            if rm.hider_pixelFilterMode != 'importance':
-                row = col.row()
-                row.prop(channel, "chan_pixelfilter")
-                row = col.row()
-                if channel.chan_pixelfilter != 'default':
-                    row.prop(channel, "chan_pixelfilter_x", text="Size X")
-                    row.prop(channel, "chan_pixelfilter_y", text="Size Y")
-                layout.separator()
+            row = col.row()
+            row.prop(channel, "chan_pixelfilter")
+            row = col.row()
+            if channel.chan_pixelfilter != 'default':
+                row.prop(channel, "chan_pixelfilter_x", text="Size X")
+                row.prop(channel, "chan_pixelfilter_y", text="Size Y")
+            layout.separator()
+
             row = col.row()
             row.prop(channel, "stats_type")
             layout.separator()
@@ -419,7 +420,8 @@ class PRMAN_OT_revert_renderman_aovs(bpy.types.Operator):
     def execute(self, context):
         active_layer = context.view_layer
         rm_rl = active_layer.renderman
-        rm_rl.custom_aovs.clear()        
+        rm_rl.custom_aovs.clear()     
+        rm_rl.dspy_channels.clear()    
         rm_rl.use_renderman = False
         return {'FINISHED'}
 

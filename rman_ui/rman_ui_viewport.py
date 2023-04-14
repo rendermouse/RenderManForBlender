@@ -6,6 +6,7 @@ from .. import rfb_icons
 from ..rfb_utils.prefs_utils import get_pref, get_addon_prefs
 from ..rfb_utils import display_utils
 from ..rfb_utils import camera_utils
+from ..rfb_logger import rfb_log
 from bpy.types import Menu
 
 import bpy
@@ -94,7 +95,7 @@ class PRMAN_MT_Viewport_Channel_Sel_Menu(Menu):
         layout = self.layout
         rman_render = RmanRender.get_rman_render()
         rman_render.rman_scene._find_renderman_layer()
-        dspys_dict = display_utils.get_dspy_dict(rman_render.rman_scene)
+        dspys_dict = display_utils.get_dspy_dict(rman_render.rman_scene, include_holdouts=False)
         for chan_name, chan_params in dspys_dict['channels'].items():
             layout.operator_context = 'EXEC_DEFAULT'
             op = layout.operator('renderman_viewport.channel_selector', text=chan_name)
@@ -137,10 +138,8 @@ class PRMAN_OT_Viewport_Refinement(bpy.types.Operator):
                                     )
 
     def execute(self, context):
-        rman_render = RmanRender.get_rman_render()
         rm = context.scene.renderman
         rm.hider_decidither = int(self.viewport_hider_decidither)
-        rman_render.rman_scene_sync.update_global_options(context)
 
         return {"FINISHED"}
 
@@ -191,7 +190,7 @@ class PRMAN_OT_Viewport_Snapshot(bpy.types.Operator):
     def execute(self, context):
         rman_render = RmanRender.get_rman_render()
         scene = context.scene
-        rman_render.save_viewport_snapshot(frame=scene.frame_current)
+        rman_render.save_viewport_snapshot()
 
         return {"FINISHED"}
 
@@ -420,8 +419,6 @@ class PRMAN_OT_Viewport_Enhance(bpy.types.Operator):
     bl_description = "Enhance"
     bl_options = {"INTERNAL"}
 
-    zoom_factor: FloatProperty(name="Zoom", default=5.0, min=1.0, max=5.0)
-
     def __init__(self):
         self.x = -1
         self.y = -1
@@ -439,8 +436,9 @@ class PRMAN_OT_Viewport_Enhance(bpy.types.Operator):
     @classmethod
     def description(cls, context, properties):
         help = "NOTE: This only works with perspective cameras or the PxrCamera projection plugin.\n\n"
-        help += "Embiggens the region around a pixel (X,Y) by zoom"
-        help += "\nfactor for trouble-shooting.  The magnified pixel will remain"
+        help += "Embiggens the region around a pixel (X,Y) by a zoom"
+        help += "\nfactor for trouble-shooting.  The zoom factor can be changed"
+        help += "in the preferences. The magnified pixel will remain"
         help += "\nanchored in place relative to the image.  Camera effects such as"
         help += "\nvignetting will be scaled accordingly.  Intentionally does not"
         help += "\naffect level-of-detail, dicing, displacement, or MIP map levels."
@@ -448,10 +446,13 @@ class PRMAN_OT_Viewport_Enhance(bpy.types.Operator):
         help += "\n\nEnter to simply exit out of the operator, and keep the current zoom. Esc to exit and reset the zoom."
         return help
 
+    def get_zoom_factor(self):
+        zoom_factor = float(get_pref('rman_enhance_zoom_factor'))
+        return zoom_factor
 
     def execute(self, context):
         rman_render = RmanRender.get_rman_render()
-        rman_render.rman_scene_sync.update_enhance(context, self.x, self.y, self.zoom_factor)
+        rman_render.rman_scene_sync.update_enhance(context, self.x, self.y, self.get_zoom_factor())
 
         return {'RUNNING_MODAL'}
 
@@ -461,7 +462,7 @@ class PRMAN_OT_Viewport_Enhance(bpy.types.Operator):
 
     def call_upate(self, context, x, y):
         rman_render = RmanRender.get_rman_render()
-        rman_render.rman_scene_sync.update_enhance(context, x, y, self.zoom_factor)
+        rman_render.rman_scene_sync.update_enhance(context, x, y, self.get_zoom_factor())
 
     def modal(self, context, event):
         x = event.mouse_region_x
@@ -791,6 +792,23 @@ class PRMAN_OT_Viewport_Cropwindow(bpy.types.Operator):
         self.crop_handler.crop_windowing = True
         return {'RUNNING_MODAL'}
 
+class PRMAN_MT_Viewport_Render_Menu(Menu):
+    bl_label = "Render Viewport Menu"
+    bl_idname = "PRMAN_MT_Viewport_Render_Menu"
+
+    @classmethod
+    def poll(cls, context):
+        return context.engine == "PRMAN_RENDER"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.operator_context = 'INVOKE_DEFAULT'
+        op = layout.operator('renderman.start_ipr', text='IPR to Viewport', icon='BLENDER')
+        op.render_to_it = False  
+        rman_icon = rfb_icons.get_icon('rman_it')
+        op = layout.operator('renderman.start_ipr', text='IPR to it', icon_value=rman_icon.icon_id)
+        op.render_to_it = True                  
+
 def draw_rman_viewport_props(self, context):
     layout = self.layout
     scene = context.scene
@@ -800,7 +818,9 @@ def draw_rman_viewport_props(self, context):
     if context.engine == "PRMAN_RENDER":
         view = context.space_data
         rman_render = RmanRender.get_rman_render()
-        if view.shading.type == 'RENDERED':
+        if view.shading.type == 'RENDERED' or rman_render.is_ipr_to_it():
+            if not rman_render.rman_running:
+                return
             rman_rerender_controls = rfb_icons.get_icon("rman_ipr_cancel")
             row.operator('renderman.stop_ipr', text="",
                             icon_value=rman_rerender_controls.icon_id)
@@ -833,6 +853,7 @@ def draw_rman_viewport_props(self, context):
             # texture cache clear
             rman_icon = rfb_icons.get_icon('rman_lightning_grey')
             row.operator('rman_txmgr_list.clear_all_cache', text='', icon_value=rman_icon.icon_id)
+
         elif rman_render.rman_running:
             rman_rerender_controls = rfb_icons.get_icon("rman_ipr_cancel")
             row.operator('renderman.stop_render', text="",
@@ -846,8 +867,7 @@ def draw_rman_viewport_props(self, context):
                 #rman_render.stop_render()
                 rman_render.del_bl_engine()
             rman_rerender_controls = rfb_icons.get_icon("rman_ipr_on")
-            row.operator('renderman.start_ipr', text="",
-                            icon_value=rman_rerender_controls.icon_id)
+            row.menu('PRMAN_MT_Viewport_Render_Menu', text='', icon_value=rman_rerender_controls.icon_id)
         row.popover(panel="PRMAN_PT_Viewport_Options", text="")
 
 
@@ -881,7 +901,12 @@ class PRMAN_PT_Viewport_Options(Panel):
         col.prop(prefs, 'rman_viewport_draw_progress')
         if prefs.rman_viewport_draw_progress:
             col.prop(prefs, 'rman_viewport_progress_color')
-        col.prop(prefs, 'draw_ipr_text')
+        col.prop(prefs, 'rman_enhance_zoom_factor')
+        if rm.current_platform != ("macOS"):
+            col = layout.column(align=True)
+            col.prop(rm, 'blender_ipr_optix_denoiser')
+            if rman_render.rman_interactive_running:
+                col.enabled = False
 
         if rm.current_platform != ("macOS") and rm.has_xpu_license:
             col = layout.column(align=True)
@@ -909,7 +934,8 @@ classes = [
     PRMAN_OT_Viewport_CropWindow_Reset,
     PRMAN_OT_Viewport_Cropwindow,
     PRMAN_OT_Viewport_Enhance,
-    PRMAN_PT_Viewport_Options
+    PRMAN_PT_Viewport_Options,
+    PRMAN_MT_Viewport_Render_Menu
 ]
 
 def register():

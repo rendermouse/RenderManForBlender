@@ -28,5 +28,5 @@ class RmanProceduralTranslator(RmanTranslator):
         primvar.SetString(self.rman_scene.rman.Tokens.Rix.k_dsoname, path_dso)
         primvar.SetString(self.rman_scene.rman.Tokens.Rix.k_data, rm.path_dso_initial_data )
         primvar.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_bound, bounds, 6)
-
+        super().export_object_primvars(ob, primvar)
         rman_sg_procedural.sg_node.SetPrimVars(primvar)        

@@ -337,6 +337,12 @@ class RendermanLightSettings(bpy.types.PropertyGroup):
         description="Lock from changing light shader and light role."
     )
 
+    linkingGroups: StringProperty(
+        name="linkingGroups",
+        default = "",
+        description="What linking groups this light filter belongs to. These work in conjunction to the 'lightfilter:subset' attrbiute"
+    )
+
     # OLD PROPERTIES
 
     shadingrate: FloatProperty(

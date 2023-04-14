@@ -75,7 +75,6 @@ class RmanEnvConfig(object):
         self._set_it_path()
         self._set_localqueue_path()
         self._set_license_app_path()
-        self._config_pythonpath()
         self._set_ocio()
         self._get_license_info()
 
@@ -139,25 +138,30 @@ class RmanEnvConfig(object):
 
         return paths        
 
-    def _config_pythonpath(self):
+    def config_pythonpath(self):
         python_vers = 'python%s' % rman_constants.BLENDER_PYTHON_VERSION
         rfb_log().debug("Blender Python Version: %s" % rman_constants.BLENDER_PYTHON_VERSION)
         if platform.system() == 'Windows':
             rman_packages = os.path.join(self.rmantree, 'lib', python_vers, 'Lib', 'site-packages')
         else:
             rman_packages = os.path.join(self.rmantree, 'lib', python_vers, 'site-packages')
+        if not os.path.exists(rman_packages):
+            return False
+
         sys.path.append(rman_packages)        
         sys.path.append(os.path.join(self.rmantree, 'bin'))
         pythonbindings = os.path.join(self.rmantree, 'bin', 'pythonbindings')
-        sys.path.append(pythonbindings)   
-
+        sys.path.append(pythonbindings)     
+   
         if platform.system() == 'Windows':
             # apparently, we need to do this for windows app versions
             # of Blender, otherwise the rman python modules don't load
             os.add_dll_directory(rman_packages)
             os.add_dll_directory(os.path.join(self.rmantree, 'bin'))
             os.add_dll_directory(pythonbindings)
-            os.add_dll_directory(os.path.join(self.rmantree, 'lib'))               
+            os.add_dll_directory(os.path.join(self.rmantree, 'lib'))    
+
+        return True                        
 
     def _append_to_path(self, path):        
         if path is not None:
@@ -393,13 +397,20 @@ def _guess_rmantree():
         if buildinfo._version_major == rman_constants.RMAN_SUPPORTED_VERSION_MAJOR and buildinfo._version_minor < rman_constants.RMAN_SUPPORTED_VERSION_MINOR:
             rfb_log().error("Error loading addon using RMANTREE=%s.  The minor version found (%s) is not supported. Minimum version supported is %s." % (rmantree, buildinfo._version_minor, rman_constants.RMAN_SUPPORTED_VERSION_STRING))
             __RMAN_ENV_CONFIG__ = None
-            return None            
+            return None             
 
         rfb_log().debug("Guessed RMANTREE: %s" % rmantree)
 
     # Create an RmanEnvConfig object
     __RMAN_ENV_CONFIG__.rmantree = rmantree
     __RMAN_ENV_CONFIG__.build_info = buildinfo
+
+    # configure python path
+    if not __RMAN_ENV_CONFIG__.config_pythonpath():
+        rfb_log().error("The Python version this Blender uses (%s) is not supported by this version of RenderMan (%s)" % (rman_constants.BLENDER_PYTHON_VERSION, rman_constants.RMAN_SUPPORTED_VERSION_STRING))
+        __RMAN_ENV_CONFIG__ = None
+        return None   
+
     __RMAN_ENV_CONFIG__.config_environment()
 
     return __RMAN_ENV_CONFIG__

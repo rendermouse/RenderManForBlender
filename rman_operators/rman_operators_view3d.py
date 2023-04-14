@@ -6,6 +6,7 @@ from ..rfb_utils.envconfig_utils import envconfig
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import object_utils
 from ..rfb_utils import string_utils
+from ..rfb_utils import prefs_utils
 from ..rfb_logger import rfb_log
 from .. import rfb_icons
 from ..rman_constants import RFB_ADDON_VERSION_STRING
@@ -78,15 +79,13 @@ class PRMAN_OT_RM_Add_RenderMan_Geometry(bpy.types.Operator):
 
     def execute(self, context):
 
-        if self.properties.bl_prim_type != '':
-            bpy.ops.object.add(type=self.properties.bl_prim_type)
-        else:
-            bpy.ops.object.add(type='EMPTY')
-
         ob = None
-        for o in context.selected_objects:
-            ob = o
-            break
+        nm = self.rman_default_name
+        data_block = None
+        if self.properties.bl_prim_type == 'VOLUME':
+            data_block = bpy.data.volumes.new(nm)
+                    
+        ob = bpy.data.objects.new(nm, data_block)
         
         ob.empty_display_type = 'PLAIN_AXES'
         rm = ob.renderman
@@ -98,23 +97,33 @@ class PRMAN_OT_RM_Add_RenderMan_Geometry(bpy.types.Operator):
             ob.name = 'Ri%s' % rm.rman_quadric_type.capitalize()
             if rm.rman_quadric_type == 'SPHERE':
                 ob.empty_display_type = 'SPHERE'  
-        else:
-            if self.properties.rman_default_name != '':
-                ob.name = self.properties.rman_default_name     
+        else:   
             if rm.primitive == 'RI_VOLUME':
                 ob.empty_display_type = 'CUBE'
-                bpy.ops.node.rman_new_material_override('EXEC_DEFAULT', bxdf_name='PxrVolume')
+                mat = shadergraph_utils.create_bxdf('PxrVolume')
+                ob.renderman.rman_material_override = mat
             elif self.properties.bl_prim_type == 'VOLUME':
-                bpy.ops.object.rman_add_bxdf('EXEC_DEFAULT', bxdf_name='PxrVolume')
-                mat = ob.active_material
-                nt = mat.node_tree
+                mat = shadergraph_utils.create_bxdf('PxrVolume')
+                ob.active_material = mat
                 output = shadergraph_utils.find_node(mat, 'RendermanOutputNode')
-                bxdf = output.inputs['Bxdf'].links[0].from_node
+                bxdf = output.inputs['bxdf_in'].links[0].from_node
                 bxdf.densityFloatPrimVar = 'density'           
 
-        if self.properties.rman_open_filebrowser:
+        if self.properties.rman_open_filebrowser or self.filepath != "":
             if rm.primitive == 'DELAYED_LOAD_ARCHIVE':
+                ob.empty_display_type = 'CUBE'
                 rm.path_archive = self.properties.filepath
+                # try to get the bounding box from the RIB file
+                with open(rm.path_archive) as f:
+                    for ln in f.readlines():
+                        if not ln.startswith('##bbox: '):
+                            continue
+                        tokens = ln.replace('##bbox: ', '').split(' ')
+                        min_x, max_x, min_y, max_y, min_z, max_z = tokens
+                        max_scale = max(max(float(max_x), float(max_y)), float(max_z))
+                        ob.empty_display_size = max_scale
+                        break
+
             elif rm.primitive == 'PROCEDURAL_RUN_PROGRAM':
                 rm.runprogram_path = self.properties.filepath
             elif rm.primitive == 'DYNAMIC_LOAD_DSO':
@@ -130,7 +139,11 @@ class PRMAN_OT_RM_Add_RenderMan_Geometry(bpy.types.Operator):
             yup_to_zup = mathutils.Matrix.Rotation(math.radians(90.0), 4, 'X')
             ob.matrix_world = yup_to_zup @ ob.matrix_world                               
 
-        ob.update_tag(refresh={'DATA'})
+        context.scene.collection.objects.link(ob)
+        if context.view_layer.objects.active:
+            context.view_layer.objects.active.select_set(False)
+        ob.select_set(True)
+        context.view_layer.objects.active = ob  
         
         return {"FINISHED"}    
         
@@ -183,23 +196,16 @@ class PRMAN_OT_RM_Add_Light(bpy.types.Operator):
         return info
 
     def execute(self, context):
-        bpy.ops.object.light_add(type='AREA')
-        light_ob = getattr(context, 'object', None)
-        if not light_ob:
-            if hasattr(context, 'selected_objects'):
-                light_ob = context.selected_objects[0]
-            else:
-                scene = context.scene
-                light_ob = scene.view_layers[0].objects.active
+        light = bpy.data.lights.new(self.rman_light_name, 'AREA')
+        light_ob = bpy.data.objects.new(self.rman_light_name, light)
+        
+        light.renderman.renderman_light_role = 'RMAN_LIGHT'
+        light.renderman.renderman_lock_light_type = True
+        light.use_nodes = True
+        light.renderman.use_renderman_node = True
+        shadergraph_utils.hide_cycles_nodes(light)
 
-        light_ob.data.renderman.renderman_light_role = 'RMAN_LIGHT'
-        light_ob.data.renderman.renderman_lock_light_type = True
-        light_ob.data.use_nodes = True
-        light_ob.data.renderman.use_renderman_node = True
-        light_ob.name = self.rman_light_name
-        light_ob.data.name = self.rman_light_name
-
-        nt = light_ob.data.node_tree
+        nt = light.node_tree
         output = nt.nodes.new('RendermanOutputNode')                 
         default = nt.nodes.new('%sLightNode' % self.rman_light_name)
         default.location = output.location
@@ -208,7 +214,13 @@ class PRMAN_OT_RM_Add_Light(bpy.types.Operator):
         output.inputs[0].hide = True
         output.inputs[2].hide = True
         output.inputs[3].hide = True          
-        light_ob.data.renderman.renderman_light_shader = self.rman_light_name  
+        light.renderman.renderman_light_shader = self.rman_light_name  
+
+        context.scene.collection.objects.link(light_ob)
+        if context.view_layer.objects.active:
+            context.view_layer.objects.active.select_set(False)
+        light_ob.select_set(True)
+        context.view_layer.objects.active = light_ob        
 
         return {"FINISHED"}
 
@@ -229,20 +241,17 @@ class PRMAN_OT_RM_Add_Light_Filter(bpy.types.Operator):
         info = get_description('lightfilter', properties.rman_lightfilter_name)
         return info    
 
-    def execute(self, context):
-        selected_objects = context.selected_objects
+    def create_lightfilter(self, context):
+        light_filter = bpy.data.lights.new(self.rman_lightfilter_name, 'AREA')
+        light_filter_ob = bpy.data.objects.new(self.rman_lightfilter_name, light_filter)        
 
-        bpy.ops.object.light_add(type='AREA')
-        light_filter_ob = context.object
-        light_filter_ob.data.renderman.renderman_light_role = 'RMAN_LIGHTFILTER'
-        light_filter_ob.data.renderman.renderman_lock_light_type = True
-        light_filter_ob.data.use_nodes = True
-        light_filter_ob.data.renderman.use_renderman_node = True
-        
-        light_filter_ob.name = self.rman_lightfilter_name
-        light_filter_ob.data.name = self.rman_lightfilter_name         
+        light_filter.renderman.renderman_light_role = 'RMAN_LIGHTFILTER'
+        light_filter.renderman.renderman_lock_light_type = True
+        light_filter.use_nodes = True
+        light_filter.renderman.use_renderman_node = True
+        shadergraph_utils.hide_cycles_nodes(light_filter)
 
-        nt = light_filter_ob.data.node_tree
+        nt = light_filter.node_tree
         output = nt.nodes.new('RendermanOutputNode')
         default = nt.nodes.new('%sLightfilterNode' % self.rman_lightfilter_name)
         default.location = output.location
@@ -251,19 +260,44 @@ class PRMAN_OT_RM_Add_Light_Filter(bpy.types.Operator):
         output.inputs[0].hide = True
         output.inputs[1].hide = True
         output.inputs[2].hide = True   
-        light_filter_ob.data.renderman.renderman_light_filter_shader = self.rman_lightfilter_name
+        light_filter.renderman.renderman_light_filter_shader = self.rman_lightfilter_name
 
+        context.scene.collection.objects.link(light_filter_ob)
+        if context.view_layer.objects.active:
+            context.view_layer.objects.active.select_set(False)
+        light_filter_ob.select_set(True)
+        context.view_layer.objects.active = light_filter_ob             
+
+        return light_filter_ob        
+
+    def execute(self, context):
+        selected_objects = context.selected_objects
         if self.properties.add_to_selected:
-            for ob in selected_objects:
-                rman_type = object_utils._detect_primitive_(ob)
-                if rman_type == 'LIGHT':
-                    light_filter_item = ob.data.renderman.light_filters.add()
-                    light_filter_item.linked_filter_ob = light_filter_ob
-                elif shadergraph_utils.is_mesh_light(ob):
-                    mat = ob.active_material
-                    if mat:
-                        light_filter_item = mat.renderman_light.light_filters.add()
+            if not selected_objects:
+                light_filter_ob = self.create_lightfilter(context)
+            else:
+                light_filter_ob = None
+                do_parent = prefs_utils.get_pref('rman_parent_lightfilter')
+                if not do_parent:
+                    light_filter_ob = self.create_lightfilter(context)
+                for ob in selected_objects:
+                    rman_type = object_utils._detect_primitive_(ob)
+                    if rman_type == 'LIGHT':
+                        if do_parent:
+                            light_filter_ob = self.create_lightfilter(context)
+                            light_filter_ob.parent = ob
+                        light_filter_item = ob.data.renderman.light_filters.add()
                         light_filter_item.linked_filter_ob = light_filter_ob
+                    elif shadergraph_utils.is_mesh_light(ob):
+                        mat = ob.active_material
+                        if mat:
+                            if do_parent:
+                                light_filter_ob = self.create_lightfilter(context)
+                                light_filter_ob.parent = ob
+                            light_filter_item = mat.renderman_light.light_filters.add()
+                            light_filter_item.linked_filter_ob = light_filter_ob
+        else:
+            light_filter_ob = self.create_lightfilter(context)
 
         return {"FINISHED"}        
 
@@ -287,34 +321,22 @@ class PRMAN_OT_RM_Add_bxdf(bpy.types.Operator):
         selection = bpy.context.selected_objects if hasattr(
             bpy.context, 'selected_objects') else []
         bxdf_name = self.properties.bxdf_name
-        mat = bpy.data.materials.new(bxdf_name)
-
-        mat.use_nodes = True
-        nt = mat.node_tree
-
-        output = nt.nodes.new('RendermanOutputNode')
-        default = nt.nodes.new('%sBxdfNode' % bxdf_name)
-        default.location = output.location
-        default.location[0] -= 300
-        nt.links.new(default.outputs[0], output.inputs[0])
-        output.inputs[1].hide = True
-        output.inputs[3].hide = True  
-        default.update_mat(mat)
-
-        if bxdf_name == 'PxrLayerSurface':
-            shadergraph_utils.create_pxrlayer_nodes(nt, default)
-
+        mat = shadergraph_utils.create_bxdf(bxdf_name)
         for obj in selection:
             if(obj.type not in EXCLUDED_OBJECT_TYPES):
                 if obj.type == 'EMPTY':
                     obj.renderman.rman_material_override = mat
                 else:
                     material_slots = getattr(obj, 'material_slots', None)
-                    if material_slots:
+                    if material_slots is None:
+                        continue
+                    if len(material_slots) < 1:
                         obj.active_material = mat
                     else:
-                        bpy.ops.object.material_slot_add()
-                        obj.active_material = mat
+                        material_slot = material_slots[0]
+                        material_slot.material = mat
+                        obj.active_material_index = 0
+                        obj.active_material = mat      
         return {"FINISHED"}  
 
 class PRMAN_OT_RM_Create_MeshLight(bpy.types.Operator):
@@ -325,9 +347,9 @@ class PRMAN_OT_RM_Create_MeshLight(bpy.types.Operator):
 
     def create_mesh_light_material(self, context):
         mat = bpy.data.materials.new("PxrMeshLight")
-
         mat.use_nodes = True
         nt = mat.node_tree
+        shadergraph_utils.hide_cycles_nodes(mat)
 
         output = nt.nodes.new('RendermanOutputNode')
         geoLight = nt.nodes.new('PxrMeshLightLightNode')
@@ -359,11 +381,16 @@ class PRMAN_OT_RM_Create_MeshLight(bpy.types.Operator):
                     continue
                 mat = self.create_mesh_light_material(context)
                 material_slots = getattr(obj, 'material_slots', None)
-                if material_slots:
+
+                if material_slots is None:
+                    continue
+                if len(material_slots) < 1:
                     obj.active_material = mat
                 else:
-                    bpy.ops.object.material_slot_add()
-                    obj.active_material = mat
+                    material_slot = material_slots[0]
+                    material_slot.material = mat
+                    obj.active_material_index = 0
+                    obj.active_material = mat             
 
         return {"FINISHED"}
 
@@ -503,7 +530,6 @@ class PRMAN_OT_Renderman_open_stats(bpy.types.Operator):
         scene = context.scene
         rm = scene.renderman        
         output_dir = string_utils.expand_string(rm.path_rib_output, 
-                                                frame=scene.frame_current, 
                                                 asFilePath=True)  
         output_dir = os.path.dirname(output_dir)            
         bpy.ops.wm.url_open(

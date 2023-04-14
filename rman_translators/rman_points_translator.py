@@ -1,10 +1,6 @@
 from .rman_translator import RmanTranslator
 from ..rman_sg_nodes.rman_sg_points import RmanSgPoints
-from ..rfb_utils import object_utils
-from ..rfb_utils import string_utils
-
-import bpy
-import math
+from ..rfb_utils import mesh_utils
 
 class RmanPointsTranslator(RmanTranslator):
 
@@ -23,7 +19,7 @@ class RmanPointsTranslator(RmanTranslator):
         mesh = None
         mesh = ob.to_mesh()
 
-        P = object_utils._get_mesh_points_(mesh)
+        P = mesh_utils.get_mesh_points_(mesh)
 
         primvar = rman_sg_points.sg_node.GetPrimVars()
         npoints = len(P)
@@ -47,7 +43,7 @@ class RmanPointsTranslator(RmanTranslator):
         if not mesh:
             mesh = ob.to_mesh()        
 
-        P = object_utils._get_mesh_points_(mesh)
+        P = mesh_utils.get_mesh_points_(mesh)
 
         # if this is empty continue:
         if not P or len(P) < 1:
@@ -69,7 +65,7 @@ class RmanPointsTranslator(RmanTranslator):
 
         primvar.SetPointDetail(self.rman_scene.rman.Tokens.Rix.k_P, P, "vertex")
         primvar.SetFloatDetail(self.rman_scene.rman.Tokens.Rix.k_constantwidth, rm.primitive_point_width, "constant")
-            
+        super().export_object_primvars(ob, primvar)            
         rman_sg_points.sg_node.SetPrimVars(primvar)         
 
         if not input_mesh:

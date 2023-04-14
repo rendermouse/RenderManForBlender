@@ -1,0 +1,9 @@
+{
+    "name": "PxrGoboLightFilter.args",
+    "params": [
+        {
+            "name": "refreshMap",    
+            "widget": "__REMOVE__"
+        }                                 
+    ]
+}

@@ -1,6 +1,7 @@
 import time
 import os
 import rman
+import ice
 import bpy
 import sys
 from .rman_constants import RFB_VIEWPORT_MAX_BUCKETS, RMAN_RENDERMAN_BLUE
@@ -25,7 +26,9 @@ from .rfb_utils.envconfig_utils import envconfig
 from .rfb_utils import string_utils
 from .rfb_utils import display_utils
 from .rfb_utils import scene_utils
+from .rfb_utils import transform_utils
 from .rfb_utils.prefs_utils import get_pref
+from .rfb_utils.timer_utils import time_this
 
 # config
 from .rman_config import __RFB_CONFIG_DICT__ as rfb_config
@@ -33,25 +36,45 @@ from .rman_config import __RFB_CONFIG_DICT__ as rfb_config
 # roz stats
 from .rman_stats import RfBStatsManager
 
+# handlers
+from .rman_handlers.rman_it_handlers import add_ipr_to_it_handlers, remove_ipr_to_it_handlers
+
 __RMAN_RENDER__ = None
 __RMAN_IT_PORT__ = -1
 __BLENDER_DSPY_PLUGIN__ = None
 __DRAW_THREAD__ = None
 __RMAN_STATS_THREAD__ = None
 
-def __turn_off_viewport__():
-    '''
-    Loop through all of the windows/areas and turn shading to SOLID
-    for all view_3d areas.
-    '''
-    rfb_log().debug("Attempting to turn off viewport render")
-    for window in bpy.context.window_manager.windows:
-        for area in window.screen.areas:
-            if area.type == 'VIEW_3D':
-                for space in area.spaces:
-                    if space.type == 'VIEW_3D':
-                        space.shading.type = 'SOLID'    
-            area.tag_redraw()     
+# map Blender display file format
+# to ice format
+__BLENDER_TO_ICE_DSPY__ = {
+    'TIFF': ice.constants.FMT_TIFFFLOAT, 
+    'TARGA': ice.constants.FMT_TGA,
+    'TARGA_RAW': ice.constants.FMT_TGA, 
+    'JPEG': ice.constants.FMT_JPEG,
+    'JPEG2000': ice.constants.FMT_JPEG,
+    'OPEN_EXR': ice.constants.FMT_EXRFLOAT,
+    'CINEON': ice.constants.FMT_CINEON,
+    'PNG': ice.constants.FMT_PNG
+}
+
+# map ice format to a file extension
+__ICE_EXT_MAP__ = {
+    ice.constants.FMT_TIFFFLOAT: 'tif', 
+    ice.constants.FMT_TGA: 'tga', 
+    ice.constants.FMT_JPEG: 'jpg',
+    ice.constants.FMT_EXRFLOAT: 'exr',
+    ice.constants.FMT_CINEON: 'cin',
+    ice.constants.FMT_PNG: 'png'
+}
+
+# map rman display to ice format
+__RMAN_TO_ICE_DSPY__ = {
+    'tiff': ice.constants.FMT_TIFFFLOAT, 
+    'targa': ice.constants.FMT_TGA,
+    'openexr': ice.constants.FMT_EXRFLOAT,    
+    'png': ice.constants.FMT_PNG
+}
 
 def __update_areas__():
     for window in bpy.context.window_manager.windows:
@@ -71,7 +94,7 @@ def __draw_callback__():
     return False     
 
 DRAWCALLBACK_FUNC = ctypes.CFUNCTYPE(ctypes.c_bool)
-__CALLBACK_FUNC__ = DRAWCALLBACK_FUNC(__draw_callback__)    
+__CALLBACK_FUNC__ = DRAWCALLBACK_FUNC(__draw_callback__) 
 
 class ItHandler(chatserver.ItBaseHandler):
 
@@ -93,7 +116,7 @@ class ItHandler(chatserver.ItBaseHandler):
         global __RMAN_RENDER__
         rfb_log().debug("Stop Render Requested.")
         if __RMAN_RENDER__.rman_interactive_running:
-            __turn_off_viewport__()
+            __RMAN_RENDER__.stop_render(stop_draw_thread=False)
         __RMAN_RENDER__.del_bl_engine() 
 
     def selectObjectById(self):
@@ -156,11 +179,11 @@ def start_cmd_server():
 def draw_threading_func(db):
     refresh_rate = get_pref('rman_viewport_refresh_rate', default=0.01)
     while db.rman_is_live_rendering:
-        if not scene_utils.any_areas_shading():
-            # if there are no 3d viewports, stop IPR
+        if db.bl_viewport.shading.type != 'RENDERED':
+            # if the viewport is not rendering, stop IPR
             db.del_bl_engine()
             break
-        if db.rman_is_xpu:
+        if db.xpu_slow_mode:
             if db.has_buffer_updated():
                 try:
                     db.bl_engine.tag_redraw()
@@ -227,29 +250,153 @@ def live_render_cb(e, d, db):
     else:
         db.rman_is_refining = True
 
-def preload_xpu():
+def preload_dsos(rman_render):
     """On linux there is a problem with std::call_once and
     blender, by default, being linked with a static libstdc++.
     The loader seems to not be able to get the right tls key
-    for the __once_call global when libprman loads libxpu. By preloading
+    for the __once_call global when libprman loads libxpu etc. By preloading
     we end up calling the proxy in the blender executable and
     that works.
+
+    Arguments:
+        rman_render (RmanRender) - instance of RmanRender where we want to store
+                                   the ctypes.CDLL
     
-    Returns:
-    ctypes.CDLL of xpu or None if that fails. None if not on linux
-    """
+    """    
     if sys.platform != 'linux':
-        return None
+        return
 
-    tree = envconfig().rmantree
-    xpu_path = os.path.join(tree, 'lib', 'libxpu.so')
+    plugins = [
+        'lib/libxpu.so',
+        'lib/plugins/impl_openvdb.so',
+    ]
 
-    try:
-        xpu = ctypes.CDLL(xpu_path)
-        return xpu
-    except OSError as error:
-        rfb_log().debug('Failed to preload xpu: {0}'.format(error))
-        return None
+    tree = envconfig().rmantree    
+
+    for plugin in plugins:
+        plugin_path = os.path.join(tree, plugin)
+        try:
+            rman_render.preloaded_dsos.append(ctypes.CDLL(plugin_path))
+        except OSError as error:
+            rfb_log().debug('Failed to preload {0}: {1}'.format(plugin_path, error))
+
+
+class BlRenderResultHelper:
+    def __init__(self, rman_render, bl_scene, dspy_dict):
+        self.rman_render = rman_render
+        self.bl_scene = bl_scene
+        self.dspy_dict = dspy_dict
+        self.width = -1
+        self.height = -1
+        self.size_x = -1
+        self.size_y = -1
+        self.bl_result = None
+        self.bl_image_rps = dict()
+        self.render = None
+        self.render_view = None
+        self.image_scale = -1
+        self.write_aovs = False
+
+    def register_passes(self):
+        self.render = self.rman_render.rman_scene.bl_scene.render
+        self.render_view = self.rman_render.bl_engine.active_view_get()
+        self.image_scale = self.render.resolution_percentage / 100.0
+        self.width = int(self.render.resolution_x * self.image_scale)
+        self.height = int(self.render.resolution_y * self.image_scale)
+
+        # register any AOV's as passes
+        for i, dspy_nm in enumerate(self.dspy_dict['displays'].keys()):
+            if i == 0:
+                continue     
+
+            num_channels = -1
+            while num_channels == -1:
+                num_channels = self.rman_render.get_numchannels(i)    
+
+            dspy = self.dspy_dict['displays'][dspy_nm]
+            dspy_chan = dspy['params']['displayChannels'][0]
+            chan_info = self.dspy_dict['channels'][dspy_chan]
+            chan_type = chan_info['channelType']['value']                        
+
+            if num_channels == 4:
+                self.rman_render.bl_engine.add_pass(dspy_nm, 4, 'RGBA')
+            elif num_channels == 3:
+                if chan_type == 'color':
+                    self.rman_render.bl_engine.add_pass(dspy_nm, 3, 'RGB')
+                else:
+                    self.rman_render.bl_engine.add_pass(dspy_nm, 3, 'XYZ')
+            elif num_channels == 2:
+                self.rman_render.bl_engine.add_pass(dspy_nm, 2, 'XY')                        
+            else:
+                self.rman_render.bl_engine.add_pass(dspy_nm, 1, 'X')
+
+        self.size_x = self.width
+        self.size_y = self.height
+        if self.render.use_border:
+            self.size_x = int(self.width * (self.render.border_max_x - self.render.border_min_x))
+            self.size_y = int(self.height * (self.render.border_max_y - self.render.border_min_y))     
+
+        self.bl_result = self.rman_render.bl_engine.begin_result(0, 0,
+                                    self.size_x,
+                                    self.size_y,
+                                    view=self.render_view)                        
+
+        for i, dspy_nm in enumerate(self.dspy_dict['displays'].keys()):
+            if i == 0:
+                render_pass = self.bl_result.layers[0].passes.find_by_name("Combined", self.render_view)
+            else:
+                render_pass = self.bl_result.layers[0].passes.find_by_name(dspy_nm, self.render_view)
+            self.bl_image_rps[i] = render_pass           
+
+    def update_passes(self): 
+        for i, rp in self.bl_image_rps.items():
+            buffer = self.rman_render._get_buffer(self.width, self.height, image_num=i, 
+                                        num_channels=rp.channels, 
+                                        as_flat=False, 
+                                        back_fill=False,
+                                        render=self.render)
+            if buffer is None:
+                continue
+            rp.rect = buffer
+
+        if self.rman_render.bl_engine:
+            self.rman_render.bl_engine.update_result(self.bl_result)
+
+    def finish_passes(self):           
+        if self.bl_result:
+            if self.rman_render.bl_engine:
+                self.rman_render.bl_engine.end_result(self.bl_result) 
+
+            # check if we should write out the AOVs
+            if self.write_aovs:
+                use_ice = hasattr(ice, 'FromArray')
+                for i, dspy_nm in enumerate(self.dspy_dict['displays'].keys()):
+                    filepath = self.dspy_dict['displays'][dspy_nm]['filePath']
+
+                    if i == 0:
+                        continue 
+
+                        # write out the beauty with a 'raw' substring
+                        toks = os.path.splitext(filepath)
+                        filepath = '%s_beauty_raw.exr' % (toks[0])
+                    
+                    if use_ice:
+                        buffer = self.rman_render._get_buffer(self.width, self.height, image_num=i, raw_buffer=True, as_flat=False)
+                        if buffer is None:
+                            continue
+
+                        # use ice to save out the image
+                        img = ice.FromArray(buffer)
+                        img = img.Flip(False, True, False)
+                        img_format = ice.constants.FMT_EXRFLOAT
+                        if not display_utils.using_rman_displays():
+                            img_format = __BLENDER_TO_ICE_DSPY__.get(self.bl_scene.render.image_settings.file_format, img_format)
+
+                        # change file extension                            
+                        toks = os.path.splitext(filepath)
+                        ext = __ICE_EXT_MAP__.get(img_format)
+                        filepath = '%s.%s' % (toks[0], ext)                            
+                        img.Save(filepath, img_format)        
 
 class RmanRender(object):
     '''
@@ -288,11 +435,15 @@ class RmanRender(object):
         self.stats_mgr = RfBStatsManager(self)
         self.deleting_bl_engine = threading.Lock()
         self.stop_render_mtx = threading.Lock()
+        self.bl_viewport = None
+        self.xpu_slow_mode = False
 
         self._start_prman_begin()
 
         # hold onto this or python will unload it
-        self.preload_xpu = preload_xpu()
+        self.preloaded_dsos = list()
+
+        preload_dsos(self)
 
     @classmethod
     def get_rman_render(self):
@@ -313,7 +464,6 @@ class RmanRender(object):
     def _start_prman_begin(self):
         argv = []
         argv.append("prman") 
-        #argv.append("-Progress")  
         argv.append("-dspyserver")
         argv.append("%s" % envconfig().rman_it_path)
 
@@ -392,6 +542,7 @@ class RmanRender(object):
             args.append(ptc_file)
             args.append(bkm_file)
             subprocess.run(args)   
+        string_utils.update_frame_token(self.bl_scene.frame_current)
 
     def _check_prman_license(self):
         if not envconfig().is_valid_license:
@@ -423,6 +574,9 @@ class RmanRender(object):
         # return if we are doing a regular render and not interactive
         return (self.rman_running and not self.rman_interactive_running)   
 
+    def is_ipr_to_it(self):
+        return (self.rman_interactive_running and self.rman_scene.ipr_render_into == 'it')
+
     def do_draw_buckets(self):
         return get_pref('rman_viewport_draw_bucket', default=True) and self.rman_is_refining
 
@@ -442,6 +596,11 @@ class RmanRender(object):
             __RMAN_STATS_THREAD__.join()
             __RMAN_STATS_THREAD__ = None
         __RMAN_STATS_THREAD__ = threading.Thread(target=call_stats_update_payloads, args=(self, ))
+        if self.rman_is_xpu:
+            # FIXME: for now, add a 1 second delay before starting the stats thread
+            # for some reason, XPU doesn't seem to reset the progress between renders
+            time.sleep(1.0)        
+        self.stats_mgr.reset()
         __RMAN_STATS_THREAD__.start()         
 
     def reset(self):
@@ -449,6 +608,8 @@ class RmanRender(object):
         self.rman_license_failed_message = ''
         self.rman_is_xpu = False
         self.rman_is_refining = False
+        self.bl_viewport = None
+        self.xpu_slow_mode = False
 
     def start_render(self, depsgraph, for_background=False):
     
@@ -462,9 +623,14 @@ class RmanRender(object):
         if not self._check_prman_license():
             return False        
 
+        do_persistent_data = rm.do_persistent_data
+        use_compositor = scene_utils.should_use_bl_compositor(self.bl_scene)
         if for_background:
             self.rman_render_into = ''
             is_external = True
+            if use_compositor:
+                self.rman_render_into = 'blender'
+                is_external = False
             self.rman_callbacks.clear()
             ec = rman.EventCallbacks.Get()
             ec.RegisterCallback("Render", render_cb, self)
@@ -472,7 +638,7 @@ class RmanRender(object):
             if envconfig().getenv('RFB_BATCH_NO_PROGRESS') is None:  
                 ec.RegisterCallback("Progress", batch_progress_cb, self)
                 self.rman_callbacks["Progress"] = batch_progress_cb               
-            rman.Dspy.DisableDspyServer()          
+            rman.Dspy.DisableDspyServer()       
         else:
 
             self.rman_render_into = rm.render_into
@@ -498,27 +664,37 @@ class RmanRender(object):
         scene_utils.set_render_variant_config(self.bl_scene, config, render_config)
         self.rman_is_xpu = (rendervariant == 'xpu')
 
-        self.sg_scene = self.sgmngr.CreateScene(config, render_config, self.stats_mgr.rman_stats_session) 
+        boot_strapping = False
+        bl_rr_helper = None
+        if self.sg_scene is None:
+            boot_strapping = True
+            self.sg_scene = self.sgmngr.CreateScene(config, render_config, self.stats_mgr.rman_stats_session) 
         was_connected = self.stats_mgr.is_connected()
-        if self.rman_is_xpu and self.rman_render_into == 'blender':
-            if not was_connected:
-                # force the stats to start in the case of XPU
-                # this is so that we can get a progress percentage
-                # if we can't get it to start, abort
-                self.stats_mgr.attach()
-                time.sleep(0.5) # give it a second to attach
-                if not self.stats_mgr.is_connected():
-                    self.bl_engine.report({'ERROR'}, 'Cannot start live stats. Aborting XPU render')
-                    self.stop_render(stop_draw_thread=False)
-                    self.del_bl_engine()
-                    return False            
+        if self.rman_is_xpu and not was_connected:
+            # force the stats to start in the case of XPU
+            # this is so that we can get a progress percentage
+            # if we can't get it to start, abort
+            self.stats_mgr.attach(force=True)
+            time.sleep(0.5) # give it a second to attach
+            if not self.stats_mgr.is_connected():
+                self.bl_engine.report({'ERROR'}, 'Cannot start live stats. Aborting XPU render')
+                self.stop_render(stop_draw_thread=False)
+                self.del_bl_engine()
+                return False            
 
+        # Export the scene
         try:
             bl_layer = depsgraph.view_layer
             self.rman_is_exporting = True
             self.rman_running = True
             self.start_export_stats_thread()
-            self.rman_scene.export_for_final_render(depsgraph, self.sg_scene, bl_layer, is_external=is_external)
+            if boot_strapping:
+                # This is our first time exporting
+                self.rman_scene.export_for_final_render(depsgraph, self.sg_scene, bl_layer, is_external=is_external)
+            else:   
+                # Scene still exists, which means we're in persistent data mode
+                # Try to get the scene diffs.                    
+                self.rman_scene_sync.batch_update_scene(bpy.context, depsgraph)
             self.rman_is_exporting = False
             self.stats_mgr.reset_progress()
 
@@ -532,118 +708,40 @@ class RmanRender(object):
             self.del_bl_engine()
             return False            
         
+        # Start the render
         render_cmd = "prman"
-        if self.rman_render_into == 'blender':
+        if self.rman_render_into == 'blender' or do_persistent_data:
             render_cmd = "prman -live"
         render_cmd = self._append_render_cmd(render_cmd)
-        self.sg_scene.Render(render_cmd)
+        if boot_strapping:
+            self.sg_scene.Render(render_cmd)
         if self.rman_render_into == 'blender':  
-            dspy_dict = display_utils.get_dspy_dict(self.rman_scene)
-            
-            render = self.rman_scene.bl_scene.render
-            render_view = self.bl_engine.active_view_get()
-            image_scale = render.resolution_percentage / 100.0
-            width = int(render.resolution_x * image_scale)
-            height = int(render.resolution_y * image_scale)
+            dspy_dict = display_utils.get_dspy_dict(self.rman_scene, include_holdouts=False)
+            bl_rr_helper = BlRenderResultHelper(self, self.bl_scene, dspy_dict)
+            if for_background:
+                bl_rr_helper.write_aovs = (use_compositor and rm.use_bl_compositor_write_aovs)
+            else:
+                bl_rr_helper.write_aovs = True
+            bl_rr_helper.register_passes()
+                              
+        self.start_stats_thread()
+        while self.bl_engine and not self.bl_engine.test_break() and self.rman_is_live_rendering:
+            time.sleep(0.01)      
+            if bl_rr_helper:
+                bl_rr_helper.update_passes()
+        if bl_rr_helper:
+            bl_rr_helper.finish_passes()
 
-            bl_image_rps= dict()
-
-            # register any AOV's as passes
-            for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
-                if i == 0:
-                    continue     
-
-                num_channels = -1
-                while num_channels == -1:
-                    num_channels = self.get_numchannels(i)    
-
-                dspy = dspy_dict['displays'][dspy_nm]
-                dspy_chan = dspy['params']['displayChannels'][0]
-                chan_info = dspy_dict['channels'][dspy_chan]
-                chan_type = chan_info['channelType']['value']                        
-
-                if num_channels == 4:
-                    self.bl_engine.add_pass(dspy_nm, 4, 'RGBA')
-                elif num_channels == 3:
-                    if chan_type == 'color':
-                        self.bl_engine.add_pass(dspy_nm, 3, 'RGB')
-                    else:
-                        self.bl_engine.add_pass(dspy_nm, 3, 'XYZ')
-                elif num_channels == 2:
-                    self.bl_engine.add_pass(dspy_nm, 2, 'XY')                        
-                else:
-                    self.bl_engine.add_pass(dspy_nm, 1, 'X')
-
-            size_x = width
-            size_y = height
-            if render.use_border:
-                size_x = int(width * (render.border_max_x - render.border_min_x))
-                size_y = int(height * (render.border_max_y - render.border_min_y))     
-
-            result = self.bl_engine.begin_result(0, 0,
-                                        size_x,
-                                        size_y,
-                                        view=render_view)                        
-
-            for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
-                if i == 0:
-                    render_pass = result.layers[0].passes.find_by_name("Combined", render_view)           
-                else:
-                    render_pass = result.layers[0].passes.find_by_name(dspy_nm, render_view)
-                bl_image_rps[i] = render_pass            
-            
-            if self.rman_is_xpu:
-                # FIXME: for now, add a 1 second delay before starting the stats thread
-                # for some reason, XPU doesn't seem to reset the progress between renders
-                time.sleep(1.0)
-            self.start_stats_thread()
-            while self.bl_engine and not self.bl_engine.test_break() and self.rman_is_live_rendering:
-                time.sleep(0.01)
-                for i, rp in bl_image_rps.items():
-                    buffer = self._get_buffer(width, height, image_num=i, 
-                                                num_channels=rp.channels, 
-                                                as_flat=False, 
-                                                back_fill=False,
-                                                render=render)
-                    if buffer:
-                        rp.rect = buffer
-        
-                if self.bl_engine:
-                    self.bl_engine.update_result(result)        
-        
-            if result:
-                if self.bl_engine:
-                    self.bl_engine.end_result(result) 
-
-                # Try to save out the displays out to disk. This matches
-                # Cycles behavior                    
-                for i, dspy_nm in enumerate(dspy_dict['displays'].keys()):
-                    filepath = dspy_dict['displays'][dspy_nm]['filePath']
-                    buffer = self._get_buffer(width, height, image_num=i, as_flat=True)
-                    if buffer:
-                        bl_image = bpy.data.images.new(dspy_nm, width, height)
-                        try:
-                            bl_image.use_generated_float = True
-                            bl_image.filepath_raw = filepath                            
-                            bl_image.pixels = buffer
-                            bl_image.file_format = 'OPEN_EXR'
-                            bl_image.update()
-                            bl_image.save()
-                        except:
-                            pass
-                        finally:
-                            bpy.data.images.remove(bl_image)      
-
-            if not was_connected and self.stats_mgr.is_connected():
-                # if stats were not started before rendering, disconnect
-                self.stats_mgr.disconnect()                                 
-        else:
-            self.start_stats_thread()
-            while self.bl_engine and not self.bl_engine.test_break() and self.rman_is_live_rendering:
-                time.sleep(0.01)        
+        if not was_connected and self.stats_mgr.is_connected():
+            # if stats was not started before rendering, disconnect
+            self.stats_mgr.disconnect()                     
 
         self.del_bl_engine()
-        self.stop_render()                          
+        if not do_persistent_data:
+            # If we're not in persistent data mode, stop the renderer immediately
+            # If we are in persistent mode, we rely on the render_complete and
+            # render_cancel handlers to stop the renderer (see rman_handlers/__init__.py)
+            self.stop_render()
 
         return True   
 
@@ -666,30 +764,76 @@ class RmanRender(object):
 
         if rm.external_animation:
             original_frame = bl_scene.frame_current
-            rfb_log().debug("Writing to RIB...")             
-            for frame in range(bl_scene.frame_start, bl_scene.frame_end + 1, bl_scene.frame_step):
-                bl_view_layer = depsgraph.view_layer
-                config = rman.Types.RtParamList()
-                render_config = rman.Types.RtParamList()
+            do_persistent_data = rm.do_persistent_data
+            rfb_log().debug("Writing to RIB...")     
+            time_start = time.time()
 
-                self.sg_scene = self.sgmngr.CreateScene(config, render_config, self.stats_mgr.rman_stats_session) 
-                try:
-                    self.bl_engine.frame_set(frame, subframe=0.0)
-                    self.rman_is_exporting = True
-                    self.rman_scene.export_for_final_render(depsgraph, self.sg_scene, bl_view_layer, is_external=True)
-                    self.rman_is_exporting = False
-                    rib_output = string_utils.expand_string(rm.path_rib_output, 
-                                                            frame=frame, 
-                                                            asFilePath=True)                                                                            
-                    self.sg_scene.Render("rib %s %s" % (rib_output, rib_options))
-                    self.sgmngr.DeleteScene(self.sg_scene)     
-                except Exception as e:      
-                    self.bl_engine.report({'ERROR'}, 'Export failed: %s' % str(e))
-                    rfb_log().error('Export Failed:\n%s' % traceback.format_exc())
-                    self.stop_render(stop_draw_thread=False)
-                    self.del_bl_engine()
-                    return False                       
+            if do_persistent_data:
+                        
+                for frame in range(bl_scene.frame_start, bl_scene.frame_end + 1, bl_scene.frame_step):
+                    bl_view_layer = depsgraph.view_layer
+                    config = rman.Types.RtParamList()
+                    render_config = rman.Types.RtParamList()
 
+                    if self.sg_scene is None:
+                        self.sg_scene = self.sgmngr.CreateScene(config, render_config, self.stats_mgr.rman_stats_session) 
+                    try:
+                        self.bl_engine.frame_set(frame, subframe=0.0)
+                        rfb_log().debug("Frame: %d" % frame)
+                        if frame == bl_scene.frame_start:
+                            self.rman_is_exporting = True
+                            self.rman_scene.export_for_final_render(depsgraph, self.sg_scene, bl_view_layer, is_external=True)
+                            self.rman_is_exporting = False
+                        else:
+                            self.rman_scene_sync.batch_update_scene(bpy.context, depsgraph)
+                            
+                        rib_output = string_utils.expand_string(rm.path_rib_output, 
+                                                                asFilePath=True)
+                        self.sg_scene.Render("rib %s %s" % (rib_output, rib_options))                
+
+                    except Exception as e:      
+                        self.bl_engine.report({'ERROR'}, 'Export failed: %s' % str(e))
+                        rfb_log().error('Export Failed:\n%s' % traceback.format_exc())
+                        self.stop_render(stop_draw_thread=False)
+                        self.del_bl_engine()
+                        return False         
+
+                self.sgmngr.DeleteScene(self.sg_scene) 
+                self.sg_scene = None   
+                self.rman_scene.reset()       
+            else:     
+                for frame in range(bl_scene.frame_start, bl_scene.frame_end + 1):
+                    bl_view_layer = depsgraph.view_layer
+                    config = rman.Types.RtParamList()
+                    render_config = rman.Types.RtParamList()
+
+                    self.sg_scene = self.sgmngr.CreateScene(config, render_config, self.stats_mgr.rman_stats_session) 
+                    try:
+                        self.bl_engine.frame_set(frame, subframe=0.0)
+                        rfb_log().debug("Frame: %d" % frame)
+                        self.rman_is_exporting = True
+                        self.rman_scene.export_for_final_render(depsgraph, self.sg_scene, bl_view_layer, is_external=True)
+                        self.rman_is_exporting = False
+                            
+                        rib_output = string_utils.expand_string(rm.path_rib_output, 
+                                                                asFilePath=True)
+                        self.sg_scene.Render("rib %s %s" % (rib_output, rib_options))
+                        self.sgmngr.DeleteScene(self.sg_scene) 
+                        self.sg_scene = None   
+                        self.rman_scene.reset()                     
+
+                    except Exception as e:      
+                        self.bl_engine.report({'ERROR'}, 'Export failed: %s' % str(e))
+                        rfb_log().error('Export Failed:\n%s' % traceback.format_exc())
+                        self.stop_render(stop_draw_thread=False)
+                        self.del_bl_engine()
+                        return False         
+
+                if self.sg_scene:
+                    self.sgmngr.DeleteScene(self.sg_scene) 
+                    self.sg_scene = None   
+                    self.rman_scene.reset()                                            
+            rfb_log().info("Finished parsing scene. Total time: %s" % string_utils._format_time_(time.time() - time_start))
             self.bl_engine.frame_set(original_frame, subframe=0.0)
             
 
@@ -707,7 +851,6 @@ class RmanRender(object):
                 self.rman_scene.export_for_final_render(depsgraph, self.sg_scene, bl_view_layer, is_external=True)
                 self.rman_is_exporting = False
                 rib_output = string_utils.expand_string(rm.path_rib_output, 
-                                                        frame=bl_scene.frame_current, 
                                                         asFilePath=True)            
 
                 rfb_log().debug("Writing to RIB: %s..." % rib_output)
@@ -715,7 +858,9 @@ class RmanRender(object):
                 self.sg_scene.Render("rib %s %s" % (rib_output, rib_options))     
                 rfb_log().debug("Finished writing RIB. Time: %s" % string_utils._format_time_(time.time() - rib_time_start)) 
                 rfb_log().info("Finished parsing scene. Total time: %s" % string_utils._format_time_(time.time() - time_start))
-                self.sgmngr.DeleteScene(self.sg_scene)
+                self.sgmngr.DeleteScene(self.sg_scene)     
+                self.sg_scene = None
+                self.rman_scene.reset()                       
             except Exception as e:      
                 self.bl_engine.report({'ERROR'}, 'Export failed: %s' % str(e))
                 rfb_log().error('Export Failed:\n%s' % traceback.format_exc())
@@ -727,7 +872,6 @@ class RmanRender(object):
             spooler = rman_spool.RmanSpool(self, self.rman_scene, depsgraph)
             spooler.batch_render()
         self.rman_running = False
-        self.sg_scene = None
         self.del_bl_engine()
         return True          
 
@@ -821,7 +965,6 @@ class RmanRender(object):
                     self.rman_scene.export_for_bake_render(depsgraph, self.sg_scene, bl_view_layer, is_external=True)
                     self.rman_is_exporting = False
                     rib_output = string_utils.expand_string(rm.path_rib_output, 
-                                                            frame=frame, 
                                                             asFilePath=True)                                                                            
                     self.sg_scene.Render("rib %s %s" % (rib_output, rib_options))
                 except Exception as e:      
@@ -829,7 +972,9 @@ class RmanRender(object):
                     self.stop_render(stop_draw_thread=False)
                     self.del_bl_engine()
                     return False                         
-                self.sgmngr.DeleteScene(self.sg_scene)     
+                self.sgmngr.DeleteScene(self.sg_scene)  
+                self.sg_scene = None
+                self.rman_scene.reset()                     
 
             self.bl_engine.frame_set(original_frame, subframe=0.0)
             
@@ -849,7 +994,6 @@ class RmanRender(object):
                 self.rman_scene.export_for_bake_render(depsgraph, self.sg_scene, bl_view_layer, is_external=True)
                 self.rman_is_exporting = False
                 rib_output = string_utils.expand_string(rm.path_rib_output, 
-                                                        frame=bl_scene.frame_current, 
                                                         asFilePath=True)            
 
                 rfb_log().debug("Writing to RIB: %s..." % rib_output)
@@ -865,12 +1009,13 @@ class RmanRender(object):
                 return False                     
 
             self.sgmngr.DeleteScene(self.sg_scene)
+            self.sg_scene = None
+            self.rman_scene.reset()              
 
         if rm.queuing_system != 'none':
             spooler = rman_spool.RmanSpool(self, self.rman_scene, depsgraph)
             spooler.batch_render()
         self.rman_running = False
-        self.sg_scene = None
         self.del_bl_engine()
         return True                  
 
@@ -878,14 +1023,17 @@ class RmanRender(object):
 
         global __DRAW_THREAD__
         self.reset()
-        self.rman_interactive_running = True
-        self.rman_running = True
         __update_areas__()
+        if not self._check_prman_license():
+            return False          
+        self.rman_interactive_running = True
+        self.rman_running = True            
         self.bl_scene = depsgraph.scene_eval
         rm = depsgraph.scene_eval.renderman
         self.it_port = start_cmd_server()    
         render_into_org = '' 
-        self.rman_render_into = rm.render_ipr_into
+        self.rman_render_into = self.rman_scene.ipr_render_into
+        self.bl_viewport = context.space_data
         
         self.rman_callbacks.clear()
         # register the blender display driver
@@ -902,6 +1050,7 @@ class RmanRender(object):
                 self._draw_viewport_buckets = True                           
             else:
                 rman.Dspy.EnableDspyServer()
+                add_ipr_to_it_handlers()
         except:
             # force rendering to 'it'
             rfb_log().error('Could not register Blender display driver. Rendering to "it".')
@@ -919,6 +1068,8 @@ class RmanRender(object):
         rendervariant = scene_utils.get_render_variant(self.bl_scene)
         scene_utils.set_render_variant_config(self.bl_scene, config, render_config)
         self.rman_is_xpu = (rendervariant == 'xpu')
+        if self.rman_is_xpu:
+            self.xpu_slow_mode = envconfig().getenv('RFB_XPU_SLOW_MODE', default=False)
 
         self.sg_scene = self.sgmngr.CreateScene(config, render_config, self.stats_mgr.rman_stats_session) 
 
@@ -943,9 +1094,10 @@ class RmanRender(object):
             if render_into_org != '':
                 rm.render_ipr_into = render_into_org    
             
-            if not self.rman_is_xpu:
-                # for now, we only set the redraw callback for RIS
+            if not self.xpu_slow_mode:
                 self.set_redraw_func()
+            else:
+                rfb_log().debug("XPU slow mode enabled.")
             # start a thread to periodically call engine.tag_redraw()                
             __DRAW_THREAD__ = threading.Thread(target=draw_threading_func, args=(self, ))
             __DRAW_THREAD__.start()
@@ -999,18 +1151,14 @@ class RmanRender(object):
                                     view=render_view)
         layer = result.layers[0].passes.find_by_name("Combined", render_view)        
         while not self.bl_engine.test_break() and self.rman_is_live_rendering:
-            time.sleep(0.001)
+            time.sleep(0.01)
             if layer:
-                buffer = self._get_buffer(width, height, image_num=0, as_flat=False)
-                if buffer:
+                buffer = self._get_buffer(width, height, image_num=0, num_channels=4, as_flat=False)
+                if buffer is None:
+                    break
+                else:
                     layer.rect = buffer
                     self.bl_engine.update_result(result)
-        # try to get the buffer one last time before exiting
-        if layer:
-            buffer = self._get_buffer(width, height, image_num=0, as_flat=False)
-            if buffer:
-                layer.rect = buffer
-                self.bl_engine.update_result(result)        
         self.stop_render()              
         self.bl_engine.end_result(result)  
         self.del_bl_engine()         
@@ -1035,15 +1183,18 @@ class RmanRender(object):
                     self.rman_scene.export_for_rib_selection(context, self.sg_scene)
                     self.rman_is_exporting = False
                     rib_output = string_utils.expand_string(rib_path, 
-                                                        frame=frame, 
                                                         asFilePath=True) 
-                    self.sg_scene.Render("rib " + rib_output + " -archive")
+                    cmd = 'rib ' + rib_output + ' -archive'                                                        
+                    cmd = cmd + ' -bbox ' + transform_utils.get_world_bounding_box(context.selected_objects)
+                    self.sg_scene.Render(cmd)
                 except Exception as e:      
                     self.bl_engine.report({'ERROR'}, 'Export failed: %s' % str(e))
                     self.stop_render(stop_draw_thread=False)
                     self.del_bl_engine()
                     return False                    
-                self.sgmngr.DeleteScene(self.sg_scene)
+                self.sgmngr.DeleteScene(self.sg_scene)     
+                self.sg_scene = None
+                self.rman_scene.reset()            
             bl_scene.frame_set(original_frame, subframe=0.0)    
         else:
             config = rman.Types.RtParamList()
@@ -1055,9 +1206,10 @@ class RmanRender(object):
                 self.rman_scene.export_for_rib_selection(context, self.sg_scene)
                 self.rman_is_exporting = False
                 rib_output = string_utils.expand_string(rib_path, 
-                                                    frame=bl_scene.frame_current, 
                                                     asFilePath=True) 
-                self.sg_scene.Render("rib " + rib_output + " -archive")
+                cmd = 'rib ' + rib_output + ' -archive'
+                cmd = cmd + ' -bbox ' + transform_utils.get_world_bounding_box(context.selected_objects)
+                self.sg_scene.Render(cmd)
             except Exception as e:      
                 self.bl_engine.report({'ERROR'}, 'Export failed: %s' % str(e))
                 rfb_log().error('Export Failed:\n%s' % traceback.format_exc())
@@ -1065,9 +1217,9 @@ class RmanRender(object):
                 self.del_bl_engine()
                 return False    
             self.sgmngr.DeleteScene(self.sg_scene)            
+            self.sg_scene = None
+            self.rman_scene.reset()  
 
-
-        self.sg_scene = None
         self.rman_running = False        
         return True                 
 
@@ -1097,6 +1249,7 @@ class RmanRender(object):
         for k,v in self.rman_callbacks.items():
             ec.UnregisterCallback(k, v, self)
         self.rman_callbacks.clear()          
+        remove_ipr_to_it_handlers()
 
         self.rman_is_live_rendering = False
 
@@ -1156,78 +1309,79 @@ class RmanRender(object):
     def draw_pixels(self, width, height):
         self.viewport_res_x = width
         self.viewport_res_y = height
-        if self.rman_is_viewport_rendering:
-            dspy_plugin = self.get_blender_dspy_plugin()
+        if self.rman_is_viewport_rendering is False:
+            return
+                 
+        dspy_plugin = self.get_blender_dspy_plugin()
 
-            # (the driver will handle pixel scaling to the given viewport size)
-            dspy_plugin.DrawBufferToBlender(ctypes.c_int(width), ctypes.c_int(height))
+        # (the driver will handle pixel scaling to the given viewport size)
+        dspy_plugin.DrawBufferToBlender(ctypes.c_int(width), ctypes.c_int(height))
+        if self.do_draw_buckets():
+            # draw bucket indicator
+            image_num = 0
+            arXMin = ctypes.c_int(0)
+            arXMax = ctypes.c_int(0)
+            arYMin = ctypes.c_int(0)
+            arYMax = ctypes.c_int(0)            
+            dspy_plugin.GetActiveRegion(ctypes.c_size_t(image_num), ctypes.byref(arXMin), ctypes.byref(arXMax), ctypes.byref(arYMin), ctypes.byref(arYMax))
+            if ( (arXMin.value + arXMax.value + arYMin.value + arYMax.value) > 0):
+                yMin = height-1 - arYMin.value
+                yMax = height-1 - arYMax.value
+                xMin = arXMin.value
+                xMax = arXMax.value
+                if self.rman_scene.viewport_render_res_mult != 1.0:
+                    # render resolution multiplier is set, we need to re-scale the bucket markers
+                    scaled_width = width * self.rman_scene.viewport_render_res_mult
+                    xMin = int(width * ((arXMin.value) / (scaled_width)))
+                    xMax = int(width * ((arXMax.value) / (scaled_width)))
 
-            if self.do_draw_buckets():
-                # draw bucket indicator
-                image_num = 0
-                arXMin = ctypes.c_int(0)
-                arXMax = ctypes.c_int(0)
-                arYMin = ctypes.c_int(0)
-                arYMax = ctypes.c_int(0)            
-                dspy_plugin.GetActiveRegion(ctypes.c_size_t(image_num), ctypes.byref(arXMin), ctypes.byref(arXMax), ctypes.byref(arYMin), ctypes.byref(arYMax))
-                if ( (arXMin.value + arXMax.value + arYMin.value + arYMax.value) > 0):
-                    yMin = height-1 - arYMin.value
-                    yMax = height-1 - arYMax.value
-                    xMin = arXMin.value
-                    xMax = arXMax.value
-                    if self.rman_scene.viewport_render_res_mult != 1.0:
-                        # render resolution multiplier is set, we need to re-scale the bucket markers
-                        scaled_width = width * self.rman_scene.viewport_render_res_mult
-                        xMin = int(width * ((arXMin.value) / (scaled_width)))
-                        xMax = int(width * ((arXMax.value) / (scaled_width)))
+                    scaled_height = height * self.rman_scene.viewport_render_res_mult
+                    yMin = height-1 - int(height * ((arYMin.value) / (scaled_height)))
+                    yMax = height-1 - int(height * ((arYMax.value) / (scaled_height)))
+                
+                vertices = []
+                c1 = (xMin, yMin)
+                c2 = (xMax, yMin)
+                c3 = (xMax, yMax)
+                c4 = (xMin, yMax)
+                vertices.append(c1)
+                vertices.append(c2)
+                vertices.append(c3)
+                vertices.append(c4)
+                indices = [(0, 1), (1, 2), (2,3), (3, 0)]
 
-                        scaled_height = height * self.rman_scene.viewport_render_res_mult
-                        yMin = height-1 - int(height * ((arYMin.value) / (scaled_height)))
-                        yMax = height-1 - int(height * ((arYMax.value) / (scaled_height)))
-                    
-                    vertices = []
-                    c1 = (xMin, yMin)
-                    c2 = (xMax, yMin)
-                    c3 = (xMax, yMax)
-                    c4 = (xMin, yMax)
-                    vertices.append(c1)
-                    vertices.append(c2)
-                    vertices.append(c3)
-                    vertices.append(c4)
-                    indices = [(0, 1), (1, 2), (2,3), (3, 0)]
+                # we've reach our max buckets, pop the oldest one off the list
+                if len(self.viewport_buckets) > RFB_VIEWPORT_MAX_BUCKETS:
+                    self.viewport_buckets.pop()
+                self.viewport_buckets.insert(0,[vertices, indices])
+                
+            bucket_color = get_pref('rman_viewport_bucket_color', default=RMAN_RENDERMAN_BLUE)
 
-                    # we've reach our max buckets, pop the oldest one off the list
-                    if len(self.viewport_buckets) > RFB_VIEWPORT_MAX_BUCKETS:
-                        self.viewport_buckets.pop()
-                    self.viewport_buckets.insert(0,[vertices, indices])
-                    
-                bucket_color = get_pref('rman_viewport_bucket_color', default=RMAN_RENDERMAN_BLUE)
+            # draw from newest to oldest
+            shader = gpu.shader.from_builtin('2D_UNIFORM_COLOR')            
+            shader.bind()
+            shader.uniform_float("color", bucket_color)                   
+            for v, i in (self.viewport_buckets):        
+                batch = batch_for_shader(shader, 'LINES', {"pos": v}, indices=i)                 
+                batch.draw(shader)   
 
-                # draw from newest to oldest
-                for v, i in (self.viewport_buckets):      
-                    shader = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
-                    shader.uniform_float("color", bucket_color)                                  
-                    batch = batch_for_shader(shader, 'LINES', {"pos": v}, indices=i)
-                    shader.bind()
-                    batch.draw(shader)   
-
-            # draw progress bar at the bottom of the viewport
-            if self.do_draw_progressbar():
-                progress = self.stats_mgr._progress / 100.0 
-                progress_color = get_pref('rman_viewport_progress_color', default=RMAN_RENDERMAN_BLUE) 
-                shader = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
-                shader.uniform_float("color", progress_color)                       
-                vtx = [(0, 1), (width * progress, 1)]
-                batch = batch_for_shader(shader, 'LINES', {"pos": vtx})
-                shader.bind()
-                batch.draw(shader)
+        # draw progress bar at the bottom of the viewport
+        if self.do_draw_progressbar():
+            progress = self.stats_mgr._progress / 100.0 
+            shader = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
+            shader.bind()                
+            progress_color = get_pref('rman_viewport_progress_color', default=RMAN_RENDERMAN_BLUE) 
+            shader.uniform_float("color", progress_color)                       
+            vtx = [(0, 1), (width * progress, 1)]
+            batch = batch_for_shader(shader, 'LINES', {"pos": vtx})
+            batch.draw(shader)   
 
     def get_numchannels(self, image_num):
         dspy_plugin = self.get_blender_dspy_plugin()
         num_channels = dspy_plugin.GetNumberOfChannels(ctypes.c_size_t(image_num))
         return num_channels
 
-    def _get_buffer(self, width, height, image_num=0, num_channels=-1, back_fill=True, as_flat=True, render=None):
+    def _get_buffer(self, width, height, image_num=0, num_channels=-1, raw_buffer=False, back_fill=True, as_flat=True, render=None):
         dspy_plugin = self.get_blender_dspy_plugin()
         if num_channels == -1:
             num_channels = self.get_numchannels(image_num)
@@ -1240,37 +1394,34 @@ class RmanRender(object):
         f.restype = ctypes.POINTER(ArrayType)
 
         try:
-            buffer = numpy.array(f(ctypes.c_size_t(image_num)).contents)
-            pixels = list()
+            buffer = numpy.array(f(ctypes.c_size_t(image_num)).contents, dtype=numpy.float32)
 
-            # we need to flip the image
-            # also, Blender is expecting a 4 channel image
+            if raw_buffer:
+                if not as_flat:
+                    buffer.shape = (height, width, num_channels)
+                return buffer
 
             if as_flat:
-                if num_channels == 4:
-                    return buffer.tolist()
+                if (num_channels == 4) or not back_fill:
+                    return buffer
                 else:
+                    p_pos = 0
+                    pixels = numpy.ones(width*height*4, dtype=numpy.float32)
                     for y in range(0, height):
                         i = (width * y * num_channels)
                         
                         for x in range(0, width):
                             j = i + (num_channels * x)
                             if num_channels == 3:
-                                pixels.append(buffer[j])
-                                pixels.append(buffer[j+1])
-                                pixels.append(buffer[j+2])
-                                pixels.append(1.0)                        
+                                pixels[p_pos:p_pos+3] = buffer[j:j+3]
                             elif num_channels == 2:
-                                pixels.append(buffer[j])
-                                pixels.append(buffer[j+1])
-                                pixels.append(1.0)                        
-                                pixels.append(1.0)
+                                pixels[p_pos:p_pos+2] = buffer[j:j+2]
                             elif num_channels == 1:
-                                pixels.append(buffer[j])
-                                pixels.append(buffer[j])
-                                pixels.append(buffer[j])   
-                                pixels.append(1.0)  
-                    return pixels                             
+                                pixels[p_pos] = buffer[j]
+                                pixels[p_pos+1] = buffer[j]
+                                pixels[p_pos+2] = buffer[j]
+                            p_pos += 4                                
+                    return pixels
             else:
                 if render and render.use_border:
                     start_x = 0
@@ -1280,50 +1431,51 @@ class RmanRender(object):
 
                 
                     if render.border_min_y > 0.0:
-                        start_y = int(height * (render.border_min_y))-1
+                        start_y = round(height * render.border_min_y)-1
                     if render.border_max_y > 0.0:                        
-                        end_y = int(height * (render.border_max_y))-1 
+                        end_y = round(height * render.border_max_y)-1 
                     if render.border_min_x > 0.0:
-                        start_x = int(width * render.border_min_x)-1
+                        start_x = round(width * render.border_min_x)-1
                     if render.border_max_x < 1.0:
-                        end_x =  int(width * render.border_max_x)-2
+                        end_x = round(width * render.border_max_x)-2
 
                     # return the buffer as a list of lists
+                    if back_fill:
+                        pixels = numpy.ones( ((end_x-start_x)*(end_y-start_y), 4), dtype=numpy.float32 )
+                    else:
+                        pixels = numpy.zeros( ((end_x-start_x)*(end_y-start_y), num_channels) )
+                    p_pos = 0
                     for y in range(start_y, end_y):
                         i = (width * y * num_channels)
 
                         for x in range(start_x, end_x):
                             j = i + (num_channels * x)
-                            if not back_fill:
-                                pixels.append(buffer[j:j+num_channels])
-                                continue
-                            
-                            if num_channels == 4:
-                                pixels.append(buffer[j:j+4])
-                                continue
+                            if (num_channels==4) or not back_fill:
+                                # just slice
+                                pixels[p_pos] = buffer[j:j+num_channels]
+                            else:
+                                pixels[p_pos][0] = buffer[j]                             
+                                if num_channels == 3:
+                                    pixels[p_pos][1] = buffer[j+1]
+                                    pixels[p_pos][2] = buffer[j+2]
+                                elif num_channels == 2:
+                                    pixels[p_pos][1] = buffer[j+1]
+                                elif num_channels == 1:
+                                    pixels[p_pos][1] = buffer[j]
+                                    pixels[p_pos][2] = buffer[j]
 
-                            pixel = [1.0] * num_channels
-                            pixel[0] = buffer[j]                             
-                            if num_channels == 3:
-                                pixel[1] = buffer[j+1]
-                                pixel[2] = buffer[j+2]
-                            elif num_channels == 2:
-                                pixel[1] = buffer[j+1]
-                            elif num_channels == 1:
-                                pixel[1] = buffer[j]
-                                pixel[2] = buffer[j]
-
-                            pixels.append(pixel)            
+                            p_pos += 1
 
                     return pixels
                 else:
-                    buffer = numpy.reshape(buffer, (-1, num_channels))
-                    return buffer.tolist()
+                    buffer.shape = (-1, num_channels)
+                    return buffer
         except Exception as e:
             rfb_log().debug("Could not get buffer: %s" % str(e))
             return None                                     
 
-    def save_viewport_snapshot(self, frame=1):
+    @time_this
+    def save_viewport_snapshot(self):
         if not self.rman_is_viewport_rendering:
             return
 
@@ -1331,16 +1483,31 @@ class RmanRender(object):
         width = int(self.viewport_res_x * res_mult)
         height = int(self.viewport_res_y * res_mult)
 
-        pixels = self._get_buffer(width, height)
-        if not pixels:
-            rfb_log().error("Could not save snapshot.")
-            return
+        nm = 'rman_viewport_snapshot_<F4>_%d.exr' % len(bpy.data.images)
+        nm = string_utils.expand_string(nm)
+        if hasattr(ice, 'FromArray'):
+            buffer = self._get_buffer(width, height, as_flat=False, raw_buffer=True)  
+            if buffer is None:
+                rfb_log().error("Could not save snapshot.")
+                return                  
+            img = ice.FromArray(buffer)
+            img = img.Flip(False, True, False)
+            filepath = os.path.join(bpy.app.tempdir, nm)
+            img.Save(filepath, ice.constants.FMT_EXRFLOAT)
+            bpy.ops.image.open('EXEC_DEFAULT', filepath=filepath)
+            bpy.data.images[-1].pack()
+            os.remove(filepath)
+        else:
+            buffer = self._get_buffer(width, height)
+            if buffer is None:
+                rfb_log().error("Could not save snapshot.")
+                return
 
-        nm = 'rman_viewport_snapshot_<F4>_%d' % len(bpy.data.images)
-        nm = string_utils.expand_string(nm, frame=frame)
-        img = bpy.data.images.new(nm, width, height, float_buffer=True, alpha=True)                
-        img.pixels = pixels
-        img.update()
+            img = bpy.data.images.new(nm, width, height, float_buffer=True, alpha=True) 
+            if isinstance(buffer, numpy.ndarray):
+                buffer = buffer.tolist()               
+            img.pixels.foreach_set(buffer)
+            img.update()            
        
     def update_scene(self, context, depsgraph):
         if self.rman_interactive_running:

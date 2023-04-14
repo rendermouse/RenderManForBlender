@@ -95,7 +95,7 @@ class BarnLightFilterDrawHelper(object):
         self.invert = 0
         self.depth = 10.0
 
-    def update_input_params(self, obj):   
+    def update_input_params(self, obj, radius):   
 
         self.parents = get_parented_lights(obj)
         self.num_lights = len(self.parents)
@@ -111,7 +111,7 @@ class BarnLightFilterDrawHelper(object):
         self.useLightDirection = getattr(rm, "useLightDirection", 0)
         self.width = getattr(rm, "width", 1.0)
         self.height = getattr(rm, "height", 1.0)
-        self.radius = getattr(rm, "radius", 1.0)
+        self.radius = getattr(rm, "radius", radius)
         self.edge = getattr(rm, "edge", 0.0)
         self.scaleWidth = getattr(rm, "scaleWidth", 1.0)
         self.scaleHeight = getattr(rm, "scaleHeight", 1.0)

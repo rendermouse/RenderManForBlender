@@ -94,7 +94,7 @@
             "name": "quadric_cone_height",
             "label": "Height",
             "type": "float",
-            "editable": true,
+            "ipr_editable": true,
             "default": 1.0,
             "page": "",
             "help": "Height offset above XY plane",
@@ -109,7 +109,7 @@
             "name": "quadric_disk_height",
             "label": "Height",
             "type": "float",
-            "editable": true,
+            "ipr_editable": true,
             "default": 0.0,
             "page": "",
             "help": "Height offset above XY plane",
@@ -124,7 +124,7 @@
             "name": "quadric_radius",
             "label": "Radius",
             "type": "float",
-            "editable": true,
+            "ipr_editable": true,
             "default": 1.0,
             "page": "",
             "conditionalVisOps": {
@@ -138,7 +138,7 @@
             "name": "quadric_majorradius",
             "label": "Major Radius",
             "type": "float",
-            "editable": true,
+            "ipr_editable": true,
             "default": 2.0,
             "page": "",
             "conditionalVisOps": {
@@ -152,7 +152,7 @@
             "name": "quadric_majorradius",
             "label": "Major Radius",
             "type": "float",
-            "editable": true,
+            "ipr_editable": true,
             "default": 2.0,
             "page": "",
             "help": "Radius of Torus ring",
@@ -167,7 +167,7 @@
             "name": "quadric_minorradius",
             "label": "Minor Radius",
             "type": "float",
-            "editable": true,
+            "ipr_editable": true,
             "default": 0.5,
             "page": "",
             "help": "Radius of Torus cross-section circle",
@@ -182,7 +182,7 @@
             "name": "quadric_phimin",
             "label": "Minimum Cross-section",
             "type": "float",
-            "editable": true,
+            "ipr_editable": true,
             "default": 0.0,
             "page": "",
             "help": "Minimum angle of cross-section circle",
@@ -197,7 +197,7 @@
             "name": "quadric_phimax",
             "label": "Maximum Cross-section",
             "type": "float",
-            "editable": true,
+            "ipr_editable": true,
             "default": 360.0,
             "page": "",
             "help": "Maximum angle of cross-section circle",
@@ -212,7 +212,7 @@
             "name": "quadric_zmin",
             "label": "Z min",
             "type": "float",
-            "editable": true,
+            "ipr_editable": true,
             "default": -1.0,
             "page": "",
             "help": "Minimum height clipping of the primitive",
@@ -227,7 +227,7 @@
             "name": "quadric_zmax",
             "label": "Z max",
             "type": "float",
-            "editable": true,
+            "ipr_editable": true,
             "default": 1.0,
             "page": "",
             "help": "Maximum height clipping of the primitive",
@@ -242,7 +242,7 @@
             "name": "quadric_sweepangle",
             "label": "Sweep Angle",
             "type": "float",
-            "editable": true,
+            "ipr_editable": true,
             "default": 360.0,
             "page": "",
             "help": "Angle of clipping around the Z axis",
@@ -258,7 +258,7 @@
             "name": "runprogram_path",
             "label": "RunProgram Path",
             "type": "string",
-            "editable": true,
+            "ipr_editable": true,
             "default": "",
             "page": "",
             "widget": "fileinput",
@@ -269,7 +269,7 @@
             "name": "runprogram_args",
             "label": "RunProgram Arguments",
             "type": "string",
-            "editable": true,
+            "ipr_editable": true,
             "default": "",
             "page": "",
             "help": "Command line arguments to RunProgram"
@@ -280,7 +280,7 @@
             "name": "path_dso",
             "label": "DSO Path",
             "type": "string",
-            "editable": true,
+            "ipr_editable": true,
             "default": "",
             "page": "",
             "widget": "fileinput",
@@ -291,7 +291,7 @@
             "name": "path_dso_initial_data",
             "label": "DSO Initial Data",
             "type": "string",
-            "editable": true,
+            "ipr_editable": true,
             "default": "",
             "page": "",
             "help": "Parameters to send the DSO"
@@ -302,7 +302,7 @@
             "name": "path_archive",
             "label": "Archive Path",
             "type": "string",
-            "editable": true,
+            "ipr_editable": true,
             "default": "",
             "page": "",
             "widget": "fileinput",
@@ -323,7 +323,7 @@
             "name": "abc_filepath",
             "label": "File Path",
             "type": "string",
-            "editable": true,
+            "ipr_editable": true,
             "default": "",
             "page": "",
             "widget": "fileinput",
@@ -334,7 +334,7 @@
             "name": "abc_use_scene_frame",
             "label": "Use Scene Frame",
             "type": "int",
-            "editable": true,
+            "ipr_editable": true,
             "default": 0.0,
             "page": "",
             "widget": "checkbox",
@@ -345,7 +345,7 @@
             "name": "abc_frame",
             "label": "Frame",
             "type": "float",
-            "editable": true,
+            "ipr_editable": true,
             "default": 1.0,
             "page": "",
             "help": "Frame",
@@ -360,7 +360,7 @@
             "name": "abc_fps",
             "label": "FPS",
             "type": "float",
-            "editable": true,
+            "ipr_editable": true,
             "default": 24.0,
             "page": "",
             "help": "Frames per second"
@@ -370,7 +370,7 @@
             "name": "abc_velocityScale",
             "label": "Velocity Scale",
             "type": "float",
-            "editable": true,
+            "ipr_editable": true,
             "default": 1.0,
             "page": "",
             "help": "Scale the velocity primvar used to motion blur primitives with time-varying topology. Restart the renderer to see edits."
@@ -380,7 +380,7 @@
             "name": "primitive_point_width",
             "label": "Point Width",
             "type": "float",
-            "editable": true,
+            "ipr_editable": true,
             "default": 0.1,
             "page": "",            
             "help": "Point Width"                         
@@ -395,9 +395,10 @@
             "widget": "mapper",
             "options": "Inherit:-1|Yes:1|No:0",
             "default": -1,
-            "editable": true,
+            "ipr_editable": true,
             "inheritable": true,
             "inherit_true_value": -1,
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_matteObject', c)",            
             "page": "Shading",
             "help": "This object is rendered as a black hole"
         },
@@ -410,9 +411,10 @@
             "widget": "mapper",
             "options": "Inherit:-1|Yes:1|No:0",
             "default": -1,
-            "editable": true,
+            "ipr_editable": true,
             "inheritable": true,
             "inherit_true_value": -1,
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_holdout', c)",
             "page": "Shading",
             "help": "Useful in holdout workflow. These objects collect reflections, shadows, and transmission."
         },       
@@ -423,9 +425,10 @@
             "label": "Index of Refraction",
             "type": "float",
             "default": -1,
-            "editable": true,
+            "ipr_editable": true,
             "inheritable": true,
             "inherit_true_value": -1,
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_indexofrefraction', c)",              
             "page": "Shading",
             "help": "Override material IOR for nested dielectrics."
         },
@@ -435,8 +438,9 @@
             "riattr": "shade:minsamples",
             "label": "Min Samples",
             "type": "int",
-            "editable": true,
+            "ipr_editable": true,
             "default": 1,
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_minsamples', c)",            
             "page": "Shading",
             "help": "Min Pixel Samples.  For fine-tuning adaptive sampling."
         },          
@@ -446,8 +450,9 @@
             "riattr": "shade:relativepixelvariance",
             "label": "Relative Pixel Variance",
             "type": "float",
-            "editable": true,
+            "ipr_editable": true,
             "default": 1,
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_relativepixelvariance', c)",              
             "page": "Shading",
             "help": "PixelVariance multiplier for camera visible objects.  For fine-tuning adaptive sampling."
         },            
@@ -460,7 +465,8 @@
             "default": -1,
             "inheritable": true,
             "inherit_true_value": -1,
-            "editable": true,
+            "ipr_editable": true,
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_maxDiffuseDepth', c)",             
             "page": "Trace",
             "help": "Maximum diffuse light bounces."
         },
@@ -470,10 +476,11 @@
             "riattr": "trace:maxspeculardepth",
             "label": "Max Specular Depth",
             "type": "int",
-            "editable": true,
+            "ipr_editable": true,
             "default": -1,
             "inheritable": true,
             "inherit_true_value": -1,
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_maxSpecularDepth', c)",             
             "page": "Trace",
             "help": "Maximum specular light bounces"
         },
@@ -485,8 +492,9 @@
             "type": "string",
             "default": "",
             "page": "Trace",
-            "editable": true,
+            "ipr_editable": true,
             "widget": "propSearch",
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_reflectExcludeSubset', c)",             
             "options": "prop_parent:context.scene.renderman|prop_name:object_groups",
             "help": "Exclude object groups from reflections"
         },
@@ -498,8 +506,9 @@
             "type": "string",
             "default": "",
             "page": "Trace",
-            "editable": true,
+            "ipr_editable": true,
             "widget": "propSearch",
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_reflectSubset', c)",            
             "options": "prop_parent:context.scene.renderman|prop_name:object_groups",            
             "help": "Object groups visible to reflections"
         },
@@ -511,8 +520,9 @@
             "type": "string",
             "default": "",
             "page": "Trace",
-            "editable": true,
+            "ipr_editable": true,
             "widget": "propSearch",
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_shadowExcludeSubset', c)",              
             "options": "prop_parent:context.scene.renderman|prop_name:object_groups",            
             "help": "Exclude object groups from casting shadows"
         },
@@ -524,8 +534,9 @@
             "type": "string",
             "default": "",
             "page": "Trace",
-            "editable": true,
+            "ipr_editable": true,
             "widget": "propSearch",
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_shadowSubset', c)",              
             "options": "prop_parent:context.scene.renderman|prop_name:object_groups",            
             "help": "Object groups active in shadows"
         },
@@ -537,8 +548,9 @@
             "type": "string",
             "default": "",
             "page": "Trace",
-            "editable": true,
+            "ipr_editable": true,
             "widget": "propSearch",
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_transmitExcludeSubset', c)",              
             "options": "prop_parent:context.scene.renderman|prop_name:object_groups",            
             "help": "Exclude object groups from transmission/refractions"
         },
@@ -550,21 +562,47 @@
             "type": "string",
             "default": "",
             "page": "Trace",
-            "editable": true,
+            "ipr_editable": true,
             "widget": "propSearch",
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_transmitSubset', c)",              
             "options": "prop_parent:context.scene.renderman|prop_name:object_groups",            
             "help": "Object groups visible to transmission/refractions"
         },        
+        {
+            "panel": "",
+            "name": "rman_lighting_excludesubset_string",
+            "riattr": "lighting:excludesubset",
+            "label": "Lighting Exclude Subset",
+            "type": "string",
+            "default": "",
+            "page": "",
+            "ipr_editable": true,
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_lighting_excludesubset_string', c)",              
+            "help": "Lighting exclude subset"
+        },  
+        {
+            "panel": "",
+            "name": "rman_lightfilter_subset_string",
+            "riattr": "lightfilter:subset",
+            "label": "Light Filter Subset",
+            "type": "string",
+            "default": "",
+            "page": "",
+            "ipr_editable": true,
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_lightfilter_subset_string', c)",
+            "help": "Light filter subset"
+        },                  
         {
             "panel": "OBJECT_PT_renderman_object_raytracing",
             "name": "rman_intersectPriority",
             "riattr": "trace:intersectpriority",
             "label": "Intersection Priority",
             "type": "int",
-            "editable": true,
+            "ipr_editable": true,
             "default": 0,
             "min": 0,
             "max": 31,            
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_intersectPriority', c)",             
             "page": "Nested Dielectrics",
             "help": "Raytrace intersection priority for nested dielectrics"
         },
@@ -574,7 +612,7 @@
             "primvar": "trace:displacements",
             "label": "Trace Displacement",
             "type": "int",
-            "editable": true,
+            "ipr_editable": true,
             "default": 1,
             "widget": "checkBox",
             "page": ""
@@ -587,7 +625,7 @@
             "type": "int",
             "default": -1,
             "widget": "mapper",
-            "editable": true,
+            "ipr_editable": true,
             "inheritable": true,
             "inherit_true_value": -1,            
             "options": "Inherit:-1|Yes:1|No:0",
@@ -599,7 +637,7 @@
             "primvar": "trace:bias",
             "label": "Trace Bias",
             "type": "float",
-            "editable": true,
+            "ipr_editable": true,
             "default": -1,
             "inheritable": true,
             "inherit_true_value": -1,
@@ -618,7 +656,7 @@
             "type": "int",
             "default": -1,
             "widget": "mapper",
-            "editable": true,
+            "ipr_editable": true,
             "inheritable": true,
             "inherit_true_value": -1,      
             "page": "Bias",            
@@ -632,7 +670,7 @@
             "label": "Trace Bias",
             "type": "float",
             "default": -1,
-            "editable": true,
+            "ipr_editable": true,
             "inheritable": true,
             "inherit_true_value": -1,
             "page": "Bias",
@@ -649,8 +687,10 @@
             "primvar": "displacementbound:sphere",
             "label": "Displacement Bound",
             "type": "float",
-            "editable": true,
+            "ipr_editable": true,
+            "always_write": true,
             "default": 0.1,
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'rman_displacementBound', c)",
             "page": "Displacement"
         },
         {
@@ -660,10 +700,12 @@
             "label": "Coordinate System",
             "type": "string",
             "default": "object",
-            "editable": true,
+            "ipr_editable": true,
+            "always_write": true,            
             "widget": "popup",
             "options": "world|object",
             "page": "Displacement",
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'rman_displacementCoordSys', c)",            
             "help": "Coordinate system of the displacement bound.  For example, a scaled up ground plane may want the displacement bound in world space, while a character would typically specify the value in object space."
         },
         {
@@ -673,33 +715,47 @@
             "label": "MicroPolygon Length",
             "type": "float",
             "default": -1.0,
-            "editable": true,
+            "ipr_editable": true,
             "inheritable": true,
             "inherit_true_value": -1.0,
             "page": "Dicing",
             "help": "Micropolygon distance in raster space for 'instanceprojection' dicing. Values are expressed in pixel size.",
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'rman_micropolygonlength', c)",            
             "conditionalVisOps": {
-                "conditionalVisOp": "notEqualTo",
-                "conditionalVisPath": "bl_object_type",
-                "conditionalVisValue": "OPENVDB"
-            }            
+                "conditionalVis1Path": "bl_object_type",
+                "conditionalVis2Op": "notEqualTo",
+                "conditionalVis1Value": "OPENVDB",
+                "conditionalVisOp": "and",
+                "conditionalVis1Op": "notEqualTo",
+                "conditionalVisLeft": "conditionalVis1",
+                "conditionalVisRight": "conditionalVis2",
+                "conditionalVis2Path": "bl_object_type",
+                "conditionalVis2Value": "RI_VOLUME"
+            }        
         },
         {
             "panel": "OBJECT_PT_renderman_object_geometry_attributes",
             "name": "rman_micropolygonlength_volume",
+            "primvar": "dice:micropolygonlength",
             "label": "MicroPolygon Length",
             "type": "float",
             "default": 10.0,
-            "editable": true,
-            "inheritable": true,
-            "inherit_true_value": -1.0,
+            "ipr_editable": true,
+            "always_write": true,
             "page": "Dicing",
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'rman_micropolygonlength_volume', c)",            
             "help": "Micropolygon distance in raster space for 'instanceprojection' dicing. Values are expressed in pixel size.",
             "conditionalVisOps": {
-                "conditionalVisOp": "equalTo",
-                "conditionalVisPath": "bl_object_type",
-                "conditionalVisValue": "OPENVDB"
-            }            
+                "conditionalVis1Path": "bl_object_type",
+                "conditionalVis2Op": "equalTo",
+                "conditionalVis1Value": "OPENVDB",
+                "conditionalVisOp": "or",
+                "conditionalVis1Op": "equalTo",
+                "conditionalVisLeft": "conditionalVis1",
+                "conditionalVisRight": "conditionalVis2",
+                "conditionalVis2Path": "bl_object_type",
+                "conditionalVis2Value": "RI_VOLUME"
+            }
         },        
         {
             "panel": "OBJECT_PT_renderman_object_geometry_attributes",
@@ -707,10 +763,11 @@
             "name": "rman_diceStrategy",
             "primvar": "dice:strategy",
             "type": "string",
-            "editable": true,
+            "ipr_editable": true,
             "label": "Dicing Strategy",
             "default": "instanceprojection",
             "widget": "popup",
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'rman_diceStrategy', c)",                        
             "options": "instanceprojection|worlddistance|objectdistance",
             "help": "Dicing method of objects within the viewing frustum.<br>instanceprojection: Use object size in screen space.<br>worlddistance: Use object size in world space<br>objectdistance: Use object size in object space."
         },
@@ -721,7 +778,8 @@
             "primvar": "dice:minlength",
             "label": "Min Length",
             "type": "float",
-            "editable": true,            
+            "ipr_editable": true,      
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'rman_minlength', c)",                        
             "default": 1
         },
         {
@@ -733,7 +791,8 @@
             "type": "string",
             "default": "world",
             "widget": "popup",
-            "editable": true,
+            "ipr_editable": true,
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'rman_minlengthspace', c)",              
             "options": "world|object|camera"
         },
 
@@ -743,10 +802,11 @@
             "primvar": "dice:rasterorient",
             "label": "Raster-Oriented Dicing",
             "type": "int",
-            "editable": true,
+            "ipr_editable": true,
             "default": 1,
             "widget": "checkbox",
             "page": "Dicing",
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'rman_rasterorient', c)",            
             "help": "Changes micropolygon size based on the viewing angle of an object.<br>When rasterorient is on, surfaces are diced more coarsely at a glancing angle.<br>It may be useful to turn off for instances as their geometry is seen from different angles<br>or for objects where displacement details are lost.",
             "conditionalVisOps": {
                 "conditionalVisOp": "equalTo",
@@ -759,8 +819,9 @@
             "page": "Dicing",
             "name": "rman_diceDistanceLength",
             "primvar": "dice:worlddistancelength",
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'rman_diceDistanceLength', c)",            
             "type": "float",
-            "editable": true,
+            "ipr_editable": true,
             "label": "Dicing Distance Length",
             "default": -1.0,
             "min": -1,
@@ -778,7 +839,7 @@
             "name": "dice_referenceCameraType",
             "label": "Dice Camera",
             "type": "int",
-            "editable": true,
+            "ipr_editable": true,
             "default": 0,
             "widget": "mapper",
             "options": "Inherit from Globals:0|Reference Camera:1",
@@ -791,16 +852,133 @@
             "label": "Reference Camera",
             "primvar": "dice:referencecamera",
             "type": "string",
-            "editable": true,
+            "ipr_editable": true,
             "widget": "bl_scenegraphLocation",
             "options": "nodeType:bpy.types.Camera",
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'dice_referenceCamera', c)",            
             "default": "",
             "conditionalVisOps": {
                 "conditionalVisOp": "equalTo",
                 "conditionalVisPath": "dice_referenceCameraType",
                 "conditionalVisValue": 1
             }
-        },
+        },      
+        {
+            "panel": "OBJECT_PT_renderman_object_geometry_volume",
+            "page": "",
+            "name": "volume_temporalmethod",
+            "label": "Temporal Method",
+            "primvar": "volume:temporalmethod",
+            "type": "int",
+            "ipr_editable": true,
+            "default": 0,
+            "widget": "mapper",   
+            "options": "Eulerian:0|Reves:1",                     
+            "conditionalVisOps": {
+                "conditionalVis1Path": "bl_object_type",
+                "conditionalVis2Op": "equalTo",
+                "conditionalVis1Value": "OPENVDB",
+                "conditionalVisOp": "or",
+                "conditionalVis1Op": "equalTo",
+                "conditionalVisLeft": "conditionalVis1",
+                "conditionalVisRight": "conditionalVis2",
+                "conditionalVis2Path": "bl_object_type",
+                "conditionalVis2Value": "RI_VOLUME"
+            }, 
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'volume_temporalmethod', c)",            
+            "help": "Method of generating temporal data for volume rendering."
+        },  
+        {
+            "panel": "OBJECT_PT_renderman_object_geometry_volume",
+            "page": "",
+            "name": "volume_fps",
+            "label": "Velocity frames per second",
+            "primvar": "volume:fps",
+            "type": "float",
+            "ipr_editable": true,
+            "default": 1,                
+            "conditionalVisOps": {
+                "conditionalVis1Path": "bl_object_type",
+                "conditionalVis2Op": "equalTo",
+                "conditionalVis1Value": "OPENVDB",
+                "conditionalVisOp": "or",
+                "conditionalVis1Op": "equalTo",
+                "conditionalVisLeft": "conditionalVis1",
+                "conditionalVisRight": "conditionalVis2",
+                "conditionalVis2Path": "bl_object_type",
+                "conditionalVis2Value": "RI_VOLUME"
+            }, 
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'volume_fps', c)",
+            "help": "The frames per second for volumetric velocity data. The velocity data will be divided by this quantity to derive the velocity for the frame."
+        },         
+        {
+            "panel": "OBJECT_PT_renderman_object_geometry_volume",
+            "page": "",
+            "name": "volume_shutteroffset",
+            "label": "Shutter Offset",
+            "primvar": "volume:shutteroffset",
+            "type": "float",
+            "ipr_editable": true,
+            "default": 1,                
+            "conditionalVisOps": {
+                "conditionalVis1Path": "bl_object_type",
+                "conditionalVis2Op": "equalTo",
+                "conditionalVis1Value": "OPENVDB",
+                "conditionalVisOp": "or",
+                "conditionalVis1Op": "equalTo",
+                "conditionalVisLeft": "conditionalVis1",
+                "conditionalVisRight": "conditionalVis2",
+                "conditionalVis2Path": "bl_object_type",
+                "conditionalVis2Value": "RI_VOLUME"
+            }, 
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'volume_shutteroffset', c)",
+            "help": "The shutter offset used to interpret volumetric velocity. A value of 1 will use the current position of the object and the position of the object on the next frame as the time interval to use for motion blur. A value of -1 will use the position of the object on the previous frame and the current position of the object as the time. A value of 0 will generate an interval which begins halfway through the previous frame and ends halfway into the next frame."
+        },         
+        {
+            "panel": "OBJECT_PT_renderman_object_geometry_volume",
+            "page": "",
+            "name": "volume_velocityshuttercorrection",
+            "label": "Velocity Shutter Correction",
+            "primvar": "volume:velocityshuttercorrection",
+            "type": "int",
+            "ipr_editable": true,
+            "default": 0,                
+            "conditionalVisOps": {
+                "conditionalVis1Path": "bl_object_type",
+                "conditionalVis2Op": "equalTo",
+                "conditionalVis1Value": "OPENVDB",
+                "conditionalVisOp": "or",
+                "conditionalVis1Op": "equalTo",
+                "conditionalVisLeft": "conditionalVis1",
+                "conditionalVisRight": "conditionalVis2",
+                "conditionalVis2Path": "bl_object_type",
+                "conditionalVis2Value": "RI_VOLUME"
+            }, 
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'volume_velocityshuttercorrection', c)",            
+            "help": "The shutter offset used to interpret volumetric velocity. A value of 1 will use the current position of the object and the position of the object on the next frame as the time interval to use for motion blur. A value of -1 will use the position of the object on the previous frame and the current position of the object as the time. A value of 0 will generate an interval which begins halfway through the previous frame and ends halfway into the next frame."
+        },  
+        {
+            "panel": "OBJECT_PT_renderman_object_geometry_volume",
+            "page": "",
+            "name": "volume_global_aggregate",
+            "label": "Global Volume Aggregate",
+            "type": "int",
+            "default": 1,
+            "widget": "checkbox",                        
+            "ipr_editable": true,
+            "conditionalVisOps": {
+                "conditionalVis1Path": "bl_object_type",
+                "conditionalVis2Op": "equalTo",
+                "conditionalVis1Value": "OPENVDB",
+                "conditionalVisOp": "or",
+                "conditionalVis1Op": "equalTo",
+                "conditionalVisLeft": "conditionalVis1",
+                "conditionalVisRight": "conditionalVis2",
+                "conditionalVis2Path": "bl_object_type",
+                "conditionalVis2Value": "RI_VOLUME"
+            }, 
+            "help": "Include this volume in the global volume aggregate, if it's not part of an aggregate already. Note, for XPU, volumes have to be in an aggregate in order for them to render."
+        },                                                
         {
             "panel": "OBJECT_PT_renderman_object_render",
             "name": "rman_visibilityCamera",
@@ -809,10 +987,11 @@
             "type": "int",
             "default": -1,
             "widget": "mapper",
-            "editable": true,
+            "ipr_editable": true,
             "options": "Inherit:-1|Yes:1|No:0",
             "inheritable": true,
-            "inherit_true_value": -1,            
+            "inherit_true_value": -1,     
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_visibilityCamera', c)",                    
             "page": "Visibility",
             "help": "Indicates if object is visible to camera rays"
         },
@@ -824,10 +1003,11 @@
             "type": "int",
             "default": -1,
             "widget": "mapper",
-            "editable": true,
+            "ipr_editable": true,
             "options": "Inherit:-1|Yes:1|No:0",
             "inheritable": true,
-            "inherit_true_value": -1,            
+            "inherit_true_value": -1,
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_visibilityIndirect', c)",                        
             "page": "Visibility",
             "help": "Indicates if object is visible to indirect (reflection and specular refraction) rays"
         },
@@ -839,10 +1019,11 @@
             "type": "int",
             "default": -1,
             "widget": "mapper",
-            "editable": true,
+            "ipr_editable": true,
             "options": "Inherit:-1|Yes:1|No:0",
             "inheritable": true,
-            "inherit_true_value": -1,            
+            "inherit_true_value": -1,           
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'rman_visibilityTransmission', c)",             
             "page": "Visibility",
             "help": "Indicates if object is visible to shadow rays"
         },
@@ -851,13 +1032,14 @@
             "name": "user_MatteID0",
             "label": "Matte ID 0",
             "riattr": "user:MatteID0",
-            "editable": true,
+            "ipr_editable": true,
             "type": "color",
             "default": [
                 0,
                 0,
                 0
             ],
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'user_MatteID0', c)",
             "help": "Matte ID 0 Color, you also need to add the PxrMatteID node to your bxdf"
         },
         {
@@ -865,13 +1047,14 @@
             "name": "user_MatteID1",
             "label": "Matte ID 1",
             "riattr": "user:MatteID1",
-            "editable": true,
+            "ipr_editable": true,
             "type": "color",
             "default": [
                 0,
                 0,
                 0
             ],
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'user_MatteID1', c)",            
             "help": "Matte ID 1 Color, you also need to add the PxrMatteID node to your bxdf"
         },        
         {
@@ -879,13 +1062,14 @@
             "name": "user_MatteID2",
             "label": "Matte ID 2",
             "riattr": "user:MatteID2",
-            "editable": true,
+            "ipr_editable": true,
             "type": "color",
             "default": [
                 0,
                 0,
                 0
             ],
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'user_MatteID2', c)",            
             "help": "Matte ID 2 Color, you also need to add the PxrMatteID node to your bxdf"
         },
         {
@@ -893,13 +1077,14 @@
             "name": "user_MatteID3",
             "label": "Matte ID 3",
             "riattr": "user:MatteID3",
-            "editable": true,
+            "ipr_editable": true,
             "type": "color",
             "default": [
                 0,
                 0,
                 0
             ],
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'user_MatteID3', c)",            
             "help": "Matte ID 2 Color, you also need to add the PxrMatteID node to your bxdf"
         },
         {
@@ -907,13 +1092,14 @@
             "name": "user_MatteID4",
             "label": "Matte ID 4",
             "riattr": "user:MatteID4",
-            "editable": true,
+            "ipr_editable": true,
             "type": "color",
             "default": [
                 0,
                 0,
                 0
             ],
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'user_MatteID4', c)",            
             "help": "Matte ID 4 Color, you also need to add the PxrMatteID node to your bxdf"
         },
         {
@@ -921,13 +1107,14 @@
             "name": "user_MatteID5",
             "label": "Matte ID 5",
             "riattr": "user:MatteID5",
-            "editable": true,
+            "ipr_editable": true,
             "type": "color",
             "default": [
                 0,
                 0,
                 0
             ],
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'user_MatteID5', c)",            
             "help": "Matte ID 5 Color, you also need to add the PxrMatteID node to your bxdf"
         },
         {
@@ -935,13 +1122,14 @@
             "name": "user_MatteID6",
             "label": "Matte ID 6",
             "riattr": "user:MatteID6",
-            "editable": true,
+            "ipr_editable": true,
             "type": "color",
             "default": [
                 0,
                 0,
                 0
             ],
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'user_MatteID6', c)",            
             "help": "Matte ID 6 Color, you also need to add the PxrMatteID node to your bxdf"
         },
         {
@@ -949,13 +1137,14 @@
             "name": "user_MatteID7",
             "label": "Matte ID 7",
             "riattr": "user:MatteID7",
-            "editable": true,
+            "ipr_editable": true,
             "type": "color",
             "default": [
                 0,
                 0,
                 0
             ],
+            "update_function_name": "lambda s, c: update_riattr_func(s, 'user_MatteID7', c)",            
             "help": "Matte ID 7 Color, you also need to add the PxrMatteID node to your bxdf"
         },
         {
@@ -975,7 +1164,12 @@
             "type": "string",
             "default": "",
             "widget": "default",
-            "help": "Active udims for Integrator baking of texture atlases.  Lists and ranges of udims can be provided in the string, for example: '1001,1003,1005-1006'. The default is an empty string which means all udims get baked."     
+            "help": "Active udims for Integrator baking of texture atlases.  Lists and ranges of udims can be provided in the string, for example: '1001,1003,1005-1006'. The default is an empty string which means all udims get baked.",
+            "conditionalVisOps": {
+                "conditionalVisOp": "notEqualTo",
+                "conditionalVisPath": "rman_bake_mode",
+                "conditionalVisValue": "pattern"
+            }                  
         },
         {
             "panel": "OBJECT_PT_renderman_object_baking",
@@ -985,7 +1179,12 @@
             "type": "string",
             "default": "",
             "widget": "default",
-            "help": "Udim texure resolutions for Integrator baking of texture atlases.  Lists and ranges of udims can be provided in the string, for example: '1001 512 512  1002,1003 64 32  1005-1006 16 16'. If the string is empty (the default) then the Display Format resolution will be used."
+            "help": "Udim texure resolutions for Integrator baking of texture atlases.  Lists and ranges of udims can be provided in the string, for example: '1001 512 512  1002,1003 64 32  1005-1006 16 16'. If the string is empty (the default) then the Display Format resolution will be used.",
+            "conditionalVisOps": {
+                "conditionalVisOp": "notEqualTo",
+                "conditionalVisPath": "rman_bake_mode",
+                "conditionalVisValue": "pattern"
+            }             
         }
     ]
 }

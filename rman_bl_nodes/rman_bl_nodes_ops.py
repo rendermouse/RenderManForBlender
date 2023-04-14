@@ -5,6 +5,7 @@ from .. import rman_render
 from ..rfb_utils.prefs_utils import get_pref
 from ..rman_constants import RMAN_BL_NODE_DESCRIPTIONS
 from ..rfb_utils.shadergraph_utils import find_node, find_selected_pattern_node, is_socket_same_type, find_material_from_nodetree
+from ..rfb_utils.shadergraph_utils import set_solo_node
 import bpy
 import os
 
@@ -524,60 +525,17 @@ class NODE_OT_rman_node_set_solo(bpy.types.Operator):
     solo_node_name: StringProperty(default="")
     refresh_solo: BoolProperty(default=False)
 
-    def hide_all(self, nt, node):
-        if not get_pref('rman_solo_collapse_nodes'):
-            return
-        for n in nt.nodes:
-            hide = (n != node)
-            if hasattr(n, 'prev_hidden'):
-                setattr(n, 'prev_hidden', n.hide)
-            n.hide = hide
-            for input in n.inputs:
-                if not input.is_linked:
-                    if hasattr(input, 'prev_hidden'):
-                        setattr(input, 'prev_hidden', input.hide)
-                    input.hide = hide
-
-            for output in n.outputs:
-                if not output.is_linked:
-                    if hasattr(output, 'prev_hidden'):
-                        setattr(output, 'prev_hidden', output.hide)
-                    output.hide = hide                        
-
-    def unhide_all(self, nt):
-        if not get_pref('rman_solo_collapse_nodes'):
-            return        
-        for n in nt.nodes:
-            hide = getattr(n, 'prev_hidden', False)
-            n.hide = hide
-            for input in n.inputs:
-                if not input.is_linked:
-                    hide = getattr(input, 'prev_hidden', False)
-                    input.hide = hide
-
-            for output in n.outputs:
-                if not output.is_linked:
-                    hide = getattr(output, 'prev_hidden', False)
-                    output.hide = hide
-
     def invoke(self, context, event):
         nt = context.nodetree
         output_node = context.node
         selected_node = None
 
         if self.refresh_solo:
-            output_node.solo_nodetree = None
-            output_node.solo_node_name = ''
-            output_node.solo_node_output = ''
-            self.unhide_all(nt)
+            set_solo_node(output_node, nt, '', refresh_solo=True)
             return {'FINISHED'}           
 
         if self.solo_node_name:
-            output_node.solo_nodetree = nt
-            output_node.solo_node_name = self.solo_node_name
-            output_node.solo_node_output = ''
-            solo_node = nt.nodes[self.solo_node_name]
-            self.hide_all(nt, solo_node)
+            set_solo_node(output_node, nt, self.solo_node_name, refresh_solo=False)
             return {'FINISHED'}        
 
         selected_node = find_selected_pattern_node(nt)
@@ -585,11 +543,8 @@ class NODE_OT_rman_node_set_solo(bpy.types.Operator):
         if not selected_node:
             self.report({'ERROR'}, "Pattern node not selected")
             return {'FINISHED'}   
-
-        output_node.solo_nodetree = nt
-        output_node.solo_node_name = selected_node.name
-        output_node.solo_node_output = ''
-        self.hide_all(nt, nt.nodes[selected_node.name])
+            
+        set_solo_node(output_node, nt, selected_node.name, refresh_solo=False)   
 
         return {'FINISHED'}        
 

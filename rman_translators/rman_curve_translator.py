@@ -6,6 +6,7 @@ from ..rfb_utils import property_utils
 
 import bpy
 import math
+import numpy as np
 
 def get_bspline_curve(curve):
     P = []
@@ -13,22 +14,24 @@ def get_bspline_curve(curve):
     nvertices = []
     name = ''
     num_curves = len(curve.splines)
-    index = []
 
-    for i, spline in enumerate(curve.splines):
+    for spline in curve.splines:
 
-        width = []
-        for bp in spline.points:
-            P.append([bp.co[0], bp.co[1], bp.co[2]])
-            w = bp.radius * 0.01
-            if w < 0.01:
-                w = 0.01
-            width.extend( 3 * [w])  
+        npoints = len(spline.points)
+        pts = np.zeros(npoints*4, dtype=np.float32)
+        width = np.zeros(npoints, dtype=np.float32)
 
-        widths.append(width)
-        index.append(i)
-        nvertices.append(len(spline.points))
+        spline.points.foreach_get('co', pts)
+        spline.points.foreach_get('radius', width)
+        pts = np.reshape(pts, (npoints, 4))
+        width = np.where(width >= 1.0, width*0.01, 0.01)
+
+        P.extend(pts[0:, 0:3].tolist())
+        widths.append(width.tolist())
+        nvertices.append(npoints)
         name = spline.id_data.name
+
+    index = np.arange(num_curves).tolist()
     
     return (P, num_curves, nvertices, widths, index, name)
 
@@ -38,22 +41,24 @@ def get_curve(curve):
     nvertices = []
     name = ''
     num_curves = len(curve.splines)
-    index = []
 
-    for i, spline in enumerate(curve.splines):
+    for spline in curve.splines:
 
-        width = []
-        for bp in spline.points:
-            P.append([bp.co[0], bp.co[1], bp.co[2]])
-            w = bp.radius * 0.01
-            if w < 0.01:
-                w = 0.01
-            width.extend( 3 * [w])  
+        npoints = len(spline.points)
+        pts = np.zeros(npoints*4, dtype=np.float32)
+        width = np.zeros(npoints, dtype=np.float32)
 
+        spline.points.foreach_get('co', pts)
+        spline.points.foreach_get('radius', width)
+        pts = np.reshape(pts, (npoints, 4))
+        width = np.where(width >= 1.0, width*0.01, 0.01)
+
+        P.extend(pts[0:, 0:3].tolist())
         widths.append(width)
-        index.append(i)
-        nvertices.append(len(spline.points))
+        nvertices.append(npoints)
         name = spline.id_data.name
+
+    index = np.arange(num_curves).tolist()        
     
     return (P, num_curves, nvertices, widths, index, name)
 
@@ -68,7 +73,10 @@ def get_bezier_curve(curve):
             P.append(bp.handle_left)
             P.append(bp.co)
             P.append(bp.handle_right)
-            width.extend( 3 * [bp.radius * 0.01])
+            w = bp.radius * 0.01
+            if w < 0.01:
+                w = 0.01
+            width.extend( 3 * [w])
 
         if spline.use_cyclic_u:
             period = 'periodic'
@@ -108,7 +116,7 @@ class RmanCurveTranslator(RmanMeshTranslator):
     def export(self, ob, db_name):
     
         sg_node = self.rman_scene.sg_scene.CreateGroup(db_name)
-        is_mesh = self._is_mesh(ob)        
+        is_mesh = object_utils.curve_is_mesh(ob)
         rman_sg_curve = RmanSgCurve(self.rman_scene, sg_node, db_name)
         rman_sg_curve.is_mesh = is_mesh
 
@@ -118,35 +126,20 @@ class RmanCurveTranslator(RmanMeshTranslator):
 
         return rman_sg_curve
 
-    def _is_mesh(self, ob):
-        is_mesh = False
-        if len(ob.modifiers) > 0:
-            is_mesh = True            
-        elif len(ob.data.splines) < 1:
-            is_mesh = True
-        elif ob.data.dimensions == '2D' and ob.data.fill_mode != 'NONE':
-            is_mesh = True
-        else:
-            l = ob.data.extrude + ob.data.bevel_depth
-            if l > 0:
-                is_mesh = True                            
-
-        return is_mesh
-
     def export_deform_sample(self, rman_sg_curve, ob, time_sample):
         if rman_sg_curve.is_mesh:
             super().export_deform_sample(rman_sg_curve, ob, time_sample, sg_node=rman_sg_curve.sg_mesh_node)
 
-    def export_object_primvars(self, ob, rman_sg_node):
-        if rman_sg_node.is_mesh:
-            super().export_object_primvars(ob, rman_sg_node, sg_node=rman_sg_node.sg_mesh_node)
+    #def export_object_primvars(self, ob, rman_sg_node):
+    #    if rman_sg_node.is_mesh:
+    #        super().export_object_primvars(ob, rman_sg_node, sg_node=rman_sg_node.sg_mesh_node)
 
     def update(self, ob, rman_sg_curve):
         for c in [ rman_sg_curve.sg_node.GetChild(i) for i in range(0, rman_sg_curve.sg_node.GetNumChildren())]:
             rman_sg_curve.sg_node.RemoveChild(c)
             self.rman_scene.sg_scene.DeleteDagNode(c)         
 
-        rman_sg_curve.is_mesh = self._is_mesh(ob)
+        rman_sg_curve.is_mesh = object_utils.curve_is_mesh(ob)
 
         if rman_sg_curve.is_mesh:
             rman_sg_curve.sg_mesh_node = self.rman_scene.sg_scene.CreateMesh('%s-MESH' % rman_sg_curve.db_name)
@@ -162,6 +155,13 @@ class RmanCurveTranslator(RmanMeshTranslator):
         else:
             self.update_curve(ob, rman_sg_curve)
 
+    def update_primvars(self, ob, primvar):
+        rm_scene = self.rman_scene.bl_scene.renderman
+        rm = ob.renderman
+        property_utils.set_primvar_bl_props(primvar, rm, inherit_node=rm_scene)
+        rm = ob.data.renderman
+        property_utils.set_primvar_bl_props(primvar, rm, inherit_node=rm_scene)          
+
     def update_bspline_curve(self, ob, rman_sg_curve):
         P, num_curves, nvertices, widths, index, name = get_bspline_curve(ob.data)
         num_pts = len(P)
@@ -175,6 +175,9 @@ class RmanCurveTranslator(RmanMeshTranslator):
         if widths:
             primvar.SetFloatDetail(self.rman_scene.rman.Tokens.Rix.k_width, widths, "vertex")
         primvar.SetIntegerDetail("index", index, "uniform")
+        #self.update_primvars(ob, primvar)           
+        super().export_object_primvars(ob, primvar)
+
         curves_sg.SetPrimVars(primvar)     
 
         rman_sg_curve.sg_node.AddChild(curves_sg)                       
@@ -210,6 +213,9 @@ class RmanCurveTranslator(RmanMeshTranslator):
             primvar.SetIntegerDetail(self.rman_scene.rman.Tokens.Rix.k_Ri_nvertices, [num_pts], "uniform")
             if width:
                 primvar.SetFloatDetail(self.rman_scene.rman.Tokens.Rix.k_width, width, "vertex")
+
+            #self.update_primvars(ob, primvar)   
+            super().export_object_primvars(ob, primvar)               
             curves_sg.SetPrimVars(primvar)
 
             rman_sg_curve.sg_node.AddChild(curves_sg)        

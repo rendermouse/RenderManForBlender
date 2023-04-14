@@ -42,7 +42,7 @@
         {
             "panel": "RENDER_PT_layer_custom_aovs",            
             "name": "remap_a",
-            "label": "a",
+            "label": "Break Point",
             "type": "float",
             "default": 0.0,
             "page": "Remap Settings",
@@ -56,7 +56,7 @@
         {
             "panel": "RENDER_PT_layer_custom_aovs",            
             "name": "remap_b",
-            "label": "b",
+            "label": "Max Value",
             "type": "float",
             "default": 0.0,
             "page": "Remap Settings",
@@ -70,7 +70,7 @@
         {
             "panel": "RENDER_PT_layer_custom_aovs",            
             "name": "remap_c",
-            "label": "c",
+            "label": "Smoothness",
             "type": "float",
             "default": 0.0,
             "page": "Remap Settings",
@@ -86,11 +86,11 @@
             "name": "chan_pixelfilter",
             "label": "Pixel Filter",
             "type": "string",
-            "default": "box",
+            "default": "default",
             "page": "Pixel Filter",
-            "widget": "mapper",
-            "options": "Default:default|Box:box|Sinc:sinc|Gaussian:gaussian|Triangle:triangle|Catmull-Rom:catmull-rom",
-            "help": "",
+            "widget": "popup",
+            "options": "default|box|triangle|catmull-rom|sinc|gaussian|mitchell|separable-catmull-rom|blackman-harris|lanczos|bessel|disk|min|max|average|zmin|zmax|sum",
+            "help": "The name of the pixel filter to be used for the output display. In addition, five special filters may be used: min, max, average, zmin, and zmax. The first three filters have the same meaning as the depthfilter argument to Hider, i.e. instead of running a convolution filter across all samples, only a single value (the minimum, maximum, or average of all pixel samples) is returned and written into the final pixel value. The zmin and zmax filters operate like the min and max filters, except that the depth value of the pixel sample is used for comparison, and not the value implied by the mode itself. These filters are useful for arbitrary output variables where standard alpha compositing does not make sense, or where linear interpolation of values between disjoint pieces of geometry is nonsensical. Note that when these filters are used, opacity thresholding is also used on that output to determine which closest surface to sample.",
             "conditionalVisOps": {
                 "conditionalVisOp": "equalTo",
                 "conditionalVisPath": "show_advanced",
@@ -138,7 +138,7 @@
             "page": "Statistics",
             "widget": "mapper",
             "options": "None:none|Variance:variance|MSE:mse|Even:even|Odd:odd",
-            "help": "",
+            "help": "Default to empty. Indicates that this display channel should compute statistical measures on another display channel (specified via the source parameter). The statistics channel must have matching filter settings. The options available are: 'variance' to estimate the variance of the samples in each pixel, 'mse' which is the estimate of the variance divided by the actual number of samples per pixel, 'even' for an image created from half the total camera samples, and 'odd' for an image from the other half of the camera samples.",
             "conditionalVisOps": {
                 "conditionalVisOp": "equalTo",
                 "conditionalVisPath": "show_advanced",

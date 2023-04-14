@@ -94,10 +94,10 @@ class PRMAN_OT_RendermanBakeSelectedBrickmap(bpy.types.Operator):
         context.window_manager.fileselect_add(self)
         return{'RUNNING_MODAL'}         
 
-class PRMAN_OT_ExternalRendermanBake(bpy.types.Operator):
-    bl_idname = "renderman.external_bake"
-    bl_label = "External Baking"
-    bl_description = "Spool an external bake render."
+class PRMAN_OT_BatchRendermanBake(bpy.types.Operator):
+    bl_idname = "renderman.batch_bake_render"
+    bl_label = "Batch Baking"
+    bl_description = "Spool a batch bake render."
     bl_options = {'INTERNAL'}    
             
     def execute(self, context):
@@ -118,15 +118,15 @@ class PRMAN_OT_ExternalRendermanBake(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PRMAN_OT_ExternalRender(bpy.types.Operator):
+class PRMAN_OT_BatchRender(bpy.types.Operator):
 
     ''''''
-    bl_idname = "renderman.external_render"
-    bl_label = "External Render"
-    bl_description = "Launch a spooled external render."
+    bl_idname = "renderman.batch_render"
+    bl_label = "Batch Render"
+    bl_description = "Launch a spooled batch render."
     bl_options = {'INTERNAL'}    
 
-    def external_blender_batch(self, context):
+    def blender_batch_render(self, context):
         rm = context.scene.renderman
         if rm.queuing_system != 'none':
             from .. import rman_spool
@@ -162,7 +162,7 @@ class PRMAN_OT_ExternalRender(bpy.types.Operator):
         else:
             self.report({'ERROR'}, 'Queuing system set to none')       
 
-    def external_rib_render(self, context):
+    def rib_batch_render(self, context):
         scene = context.scene
         rm = scene.renderman
         if not rm.is_rman_interactive_running:
@@ -180,9 +180,9 @@ class PRMAN_OT_ExternalRender(bpy.types.Operator):
         rm = scene.renderman
         if not rm.is_rman_interactive_running:
             if scene.renderman.spool_style == 'rib':
-                self.external_rib_render(context)       
+                self.rib_batch_render(context)       
             else:
-                self.external_blender_batch(context)
+                self.blender_batch_render(context)
         else:
             self.report({"ERROR"}, "Viewport rendering is on.")              
         return {'FINISHED'}        
@@ -192,13 +192,30 @@ class PRMAN_OT_StartInteractive(bpy.types.Operator):
     ''''''
     bl_idname = "renderman.start_ipr"
     bl_label = "Start Interactive Rendering"
-    bl_description = "Start Interactive Rendering"
+    bl_description = "Start IPR and render to the viewport"
     bl_options = {'INTERNAL'}    
 
+    render_to_it: bpy.props.BoolProperty(default=False)
+
+    @classmethod
+    def description(cls, context, properties): 
+        if properties.render_to_it:
+            return "Start IPR and render to 'it'"
+        return cls.bl_description
+
     def invoke(self, context, event=None):
-        view = context.space_data
-        if view and view.shading.type != 'RENDERED':        
-            view.shading.type = 'RENDERED'
+        scene = context.scene
+        if self.render_to_it:
+            rr = RmanRender.get_rman_render()
+            rr.rman_scene.ipr_render_into = 'it'            
+            depsgraph = context.evaluated_depsgraph_get()
+            rr.start_interactive_render(context, depsgraph)
+        else:
+            view = context.space_data
+            if view and view.shading.type != 'RENDERED':        
+                rr = RmanRender.get_rman_render()
+                rr.rman_scene.ipr_render_into = 'blender'
+                view.shading.type = 'RENDERED'
 
         return {'FINISHED'}
 
@@ -211,7 +228,11 @@ class PRMAN_OT_StopInteractive(bpy.types.Operator):
     bl_options = {'INTERNAL'}    
 
     def invoke(self, context, event=None):
-        if context.space_data.type == 'VIEW_3D':
+        scene = context.scene
+        rr = RmanRender.get_rman_render()
+        if rr.is_ipr_to_it():            
+            rr.stop_render(stop_draw_thread=False)
+        elif context.space_data.type == 'VIEW_3D':
             context.space_data.shading.type = 'SOLID'
         else:
             for window in bpy.context.window_manager.windows:
@@ -303,8 +324,8 @@ classes = [
     PRMAN_OT_Renderman_Use_Renderman,
     PRMAN_OT_RendermanBake,
     PRMAN_OT_RendermanBakeSelectedBrickmap,
-    PRMAN_OT_ExternalRendermanBake,
-    PRMAN_OT_ExternalRender,
+    PRMAN_OT_BatchRendermanBake,
+    PRMAN_OT_BatchRender,
     PRMAN_OT_StartInteractive,
     PRMAN_OT_StopInteractive,
     PRMAN_OT_StopRender,

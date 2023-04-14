@@ -96,10 +96,7 @@ class RfBTxManager(object):
         return ext_list
 
     def host_token_resolver_func(self, outpath):
-        if self.rman_scene:
-            outpath = string_utils.expand_string(outpath, frame=self.rman_scene.bl_frame_current, asFilePath=True)
-        else:
-            outpath = string_utils.expand_string(outpath, asFilePath=True)
+        outpath = string_utils.expand_string(outpath, asFilePath=True)
         return outpath
 
     def done_callback(self, nodeID, txfile):
@@ -123,16 +120,10 @@ class RfBTxManager(object):
         '''
         if txfile.state in (txmanager.STATE_EXISTS, txmanager.STATE_IS_TEX):
             output_tex = txfile.get_output_texture()
-            if self.rman_scene:
-                output_tex = string_utils.expand_string(output_tex, frame=self.rman_scene.bl_frame_current, asFilePath=True)
-            else:
-                output_tex = string_utils.expand_string(output_tex, asFilePath=True)    
+            output_tex = string_utils.expand_string(output_tex, asFilePath=True)    
         elif txfile.state == txmanager.STATE_INPUT_MISSING:       
             output_tex = txfile.input_image
-            if self.rman_scene:
-                output_tex = string_utils.expand_string(output_tex, frame=self.rman_scene.bl_frame_current, asFilePath=True)
-            else:
-                output_tex = string_utils.expand_string(output_tex, asFilePath=True)                
+            output_tex = string_utils.expand_string(output_tex, asFilePath=True)                
         else:
             output_tex = self.txmanager.get_placeholder_tex()
 
@@ -229,10 +220,7 @@ class RfBTxManager(object):
         return False
 
     def does_file_exist(self, file_path):
-        if self.rman_scene:
-            outpath = string_utils.expand_string(file_path, frame=self.rman_scene.bl_frame_current, asFilePath=True)
-        else:
-            outpath = string_utils.expand_string(file_path, asFilePath=True)
+        outpath = string_utils.expand_string(file_path, asFilePath=True)
         if os.path.exists(outpath):
             return True
 
@@ -437,19 +425,17 @@ def txmanager_pre_save_cb(bl_scene):
         return    
     get_txmanager().txmanager.save_state()  
 
-@persistent
-def depsgraph_handler(bl_scene, depsgraph):
-    for update in depsgraph.updates:
-        id = update.id
-        # check new linked in materials
-        if id.library:
-            link_file_handler(id)
-            continue
-        # check if nodes were renamed
-        elif isinstance(id, bpy.types.Object):
-            check_node_rename(id)
-        elif isinstance(id, bpy.types.Material):
-            check_node_rename(id)
+def depsgraph_handler(depsgraph_update, depsgraph):
+    id = depsgraph_update.id
+    # check new linked in materials
+    if id.library:
+        link_file_handler(id)
+        return
+    # check if nodes were renamed
+    elif isinstance(id, bpy.types.Object):
+        check_node_rename(id)
+    elif isinstance(id, bpy.types.Material):
+        check_node_rename(id)
 
 def check_node_rename(id):    
     nodes_list = list()

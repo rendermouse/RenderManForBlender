@@ -1,6 +1,8 @@
 from . import shadergraph_utils
 from . import object_utils
 from . import prefs_utils
+from . import string_utils
+from ..rman_constants import RMAN_GLOBAL_VOL_AGGREGATE
 from ..rfb_logger import rfb_log
 import bpy
 import sys
@@ -44,6 +46,47 @@ def get_renderman_layer(context):
     rm_rl = layer.renderman 
 
     return rm_rl    
+
+def add_global_vol_aggregate():
+    '''
+    Checks to see if the global volume aggregate exists.
+    If it doesn't exists, we add it.
+    '''
+    bl_scene = bpy.context.scene
+    rm = bl_scene.renderman
+    if len(rm.vol_aggregates) > 0:
+        vol_agg = rm.vol_aggregates[0]
+        if vol_agg.name == RMAN_GLOBAL_VOL_AGGREGATE:
+            return
+    vol_agg = rm.vol_aggregates.add()
+    vol_agg.name = RMAN_GLOBAL_VOL_AGGREGATE
+    rm.vol_aggregates.move(len(rm.vol_aggregates)-1, 0)
+
+
+def should_use_bl_compositor(bl_scene):
+    '''
+    Check if we should use the Blender compositor
+
+    Args:
+        bl_scene (bpy.types.Scene) - the Blender scene
+
+    Returns:
+        (bool) - true if we should use the compositor; false if not
+    '''
+    from . import display_utils
+
+    rm = bl_scene.renderman
+    if not bpy.app.background:
+        return (rm.render_into == 'blender')
+
+    if not display_utils.using_rman_displays():
+        return True
+
+    if not rm.use_bl_compositor:
+        # explicitiy turned off
+        return False
+    
+    return bl_scene.use_nodes and bl_scene.render.use_compositing
 
 def any_areas_shading():           
     '''
@@ -429,6 +472,68 @@ def find_node_by_name(node_name, ob_name, library=''):
                     return (node, obj)
 
     return (None, None)
+
+def set_lightlinking_properties(ob, light_ob, illuminate, update_light=True):
+    light_props = shadergraph_utils.get_rman_light_properties_group(light_ob)
+    if light_props.renderman_light_role not in {'RMAN_LIGHTFILTER', 'RMAN_LIGHT'}:
+        return
+
+    if update_light:
+        light_ob.update_tag(refresh={'DATA'})
+    changed = False
+    if light_props.renderman_light_role == 'RMAN_LIGHT':
+        exclude_subset = []
+        if illuminate == 'OFF':
+            do_add = True
+            for j, subset in enumerate(ob.renderman.rman_lighting_excludesubset):
+                if subset.light_ob == light_ob:            
+                    do_add = False
+                exclude_subset.append('%s' % string_utils.sanitize_node_name(subset.light_ob.name_full))
+            if do_add:
+                subset = ob.renderman.rman_lighting_excludesubset.add()
+                subset.name = light_ob.name
+                subset.light_ob = light_ob
+                changed = True
+                exclude_subset.append('%s' % string_utils.sanitize_node_name(light_ob.name_full))
+        else:
+            idx = -1
+            for j, subset in enumerate(ob.renderman.rman_lighting_excludesubset):
+                if subset.light_ob == light_ob:                    
+                    changed = True
+                    idx = j
+                else:
+                    exclude_subset.append('%s' % string_utils.sanitize_node_name(subset.light_ob.name_full))
+            if changed:
+                ob.renderman.rman_lighting_excludesubset.remove(j)
+        ob.renderman.rman_lighting_excludesubset_string = ','.join(exclude_subset)                
+    else:
+        lightfilter_subset = []
+        if illuminate == 'OFF':
+            do_add = True
+            for j, subset in enumerate(ob.renderman.rman_lightfilter_subset):
+                if subset.light_ob == light_ob:
+                    do_add = False
+                lightfilter_subset.append('-%s' % string_utils.sanitize_node_name(subset.light_ob.name_full))    
+                         
+            if do_add:
+                subset = ob.renderman.rman_lightfilter_subset.add()
+                subset.name = light_ob.name
+                subset.light_ob = light_ob
+                changed = True                      
+                lightfilter_subset.append('-%s' % string_utils.sanitize_node_name(light_ob.name_full))
+        else:  
+            idx = -1
+            for j, subset in enumerate(ob.renderman.rman_lightfilter_subset):
+                if subset.light_ob == light_ob:
+                    changed = True 
+                    idx = j                   
+                else:  
+                    lightfilter_subset.append('-%s' % string_utils.sanitize_node_name(subset.light_ob.name_full))
+            if changed:
+                ob.renderman.rman_lightfilter_subset.remove(idx)
+        ob.renderman.rman_lightfilter_subset_string = ','.join(lightfilter_subset)
+
+    return changed
 
 def is_renderable(scene, ob):
     return (is_visible_layer(scene, ob) and not ob.hide_render) or \

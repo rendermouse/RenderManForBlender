@@ -35,6 +35,7 @@ def node_add_input(node, param_type, param_name, meta, param_label):
     socket = node.inputs.new(
         __RMAN_SOCKET_MAP__[param_type], param_name, identifier=param_label)
     socket.link_limit = 1
+    socket.rman_label = param_label
 
     if param_type in ['struct',  'vstruct', 'void']:
         socket.hide_value = True
@@ -118,3 +119,15 @@ def node_add_outputs(node):
             if rman_type == 'struct':
                 struct_name = meta.get('struct_name', 'Manifold')
                 socket.struct_name = struct_name
+
+            arraySize = meta['arraySize']
+            if arraySize > 0:
+                # this is an array
+                # add separate scokets for each element
+                socket.is_array = True
+                socket.array_size = arraySize
+                for i in range(0, arraySize):
+                    elem_nm = '%s[%d]' % (name, i)
+                    elem_socket = node.outputs.new(__RMAN_SOCKET_MAP__[rman_type], elem_nm)
+                    elem_socket.renderman_type = rman_type
+                    elem_socket.array_elem = i

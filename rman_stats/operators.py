@@ -1,8 +1,3 @@
-try:
-    from ..rman_ui import rfb_qt
-except:
-    raise
-
 import bpy
 import sys
 from ..rfb_logger import rfb_log
@@ -10,56 +5,78 @@ from .. import rman_render
 
 __STATS_WINDOW__ = None 
 
-class LiveStatsQtAppTimed(rfb_qt.RfbBaseQtAppTimed):
-    bl_idname = "wm.live_stats_qt_app_timed"
-    bl_label = "Live Stats"
+if not bpy.app.background:
+    from ..rman_ui import rfb_qt
 
-    def __init__(self):
-        super(LiveStatsQtAppTimed, self).__init__()
+    class LiveStatsQtAppTimed(rfb_qt.RfbBaseQtAppTimed):
+        bl_idname = "wm.live_stats_qt_app_timed"
+        bl_label = "Live Stats"
 
-    def execute(self, context):
-        self._window = RmanStatsWrapper()
-        return super(LiveStatsQtAppTimed, self).execute(context)
-    
-class RmanStatsWrapper(rfb_qt.RmanQtWrapper):
+        def __init__(self):
+            super(LiveStatsQtAppTimed, self).__init__()
 
-    def __init__(self):
-        super(RmanStatsWrapper, self).__init__()
-
-        # import here because we will crash Blender
-        # when we try to import it globally
-        import rman_utils.stats_config.ui as rui  
-
-        self.resize(512, 512)
-        self.setWindowTitle('RenderMan Live Stats')
+        def execute(self, context):
+            global __STATS_WINDOW__
+            __STATS_WINDOW__ = RmanStatsWrapper()
+            self._window = __STATS_WINDOW__
+            return super(LiveStatsQtAppTimed, self).execute(context)
         
-        rr = rman_render.RmanRender.get_rman_render()
-        mgr = rr.stats_mgr.mgr
-        self.ui = rui.StatsManagerUI(self, manager=mgr, show_connect=True, show_config=False)
-        self.setLayout(self.ui.topLayout)
-        self.show() # Show window        
+    class RmanStatsWrapper(rfb_qt.RmanQtWrapper):
 
-    def closeEvent(self, event):
-        event.accept()
+        def __init__(self):
+            super(RmanStatsWrapper, self).__init__()
 
-class PRMAN_OT_Open_Stats(bpy.types.Operator):
-    bl_idname = "renderman.rman_open_stats"
-    bl_label = "Live Stats"
+            # import here because we will crash Blender
+            # when we try to import it globally
+            import rman_utils.stats_config.ui as rui  
 
-    def execute(self, context):
+            self.resize(512, 512)
+            self.setWindowTitle('RenderMan Live Stats')
+            
+            rr = rman_render.RmanRender.get_rman_render()
+            mgr = rr.stats_mgr.mgr
+            self.ui = rui.StatsManagerUI(self, manager=mgr, show_connect=True, show_config=False)
+            self.setLayout(self.ui.topLayout)
+            self.show() # Show window   
 
-        global __STATS_WINDOW__
-        if sys.platform == "darwin":
-            rfb_qt.run_with_timer(__STATS_WINDOW__, RmanStatsWrapper)
-        else:
-            bpy.ops.wm.live_stats_qt_app_timed()
-         
-        return {'RUNNING_MODAL'}
+        def show(self):
+            if not self.ui.manager.clientConnected():
+                self.ui.attachCB()                    
+            else:
+                # This is a bit weird. If the stats manager is already
+                # connected, the UI doesn't seem to update the connection status when
+                # first showing the window.
+                # For now, just kick the UI's connectedTimer
+                self.ui.connectedTimer.start(1000)
+                self.ui.attachBtn.setText("Connecting...")
+            
+            super(RmanStatsWrapper, self).show()
 
-classes = [         
-    PRMAN_OT_Open_Stats,
-    LiveStatsQtAppTimed
-]           
+        def closeEvent(self, event):
+            event.accept()
+
+    class PRMAN_OT_Open_Stats(bpy.types.Operator):
+        bl_idname = "renderman.rman_open_stats"
+        bl_label = "Live Stats"
+
+        def execute(self, context):
+
+            global __STATS_WINDOW__
+            if __STATS_WINDOW__ and __STATS_WINDOW__.isVisible():
+                return {'FINISHED'}
+
+            if sys.platform == "darwin":
+                __STATS_WINDOW__ = rfb_qt.run_with_timer(__STATS_WINDOW__, RmanStatsWrapper)
+            else:
+                bpy.ops.wm.live_stats_qt_app_timed()
+            
+            return {'FINISHED'}
+
+classes = []           
+
+if not bpy.app.background:
+    classes.append(PRMAN_OT_Open_Stats)
+    classes.append(LiveStatsQtAppTimed)
 
 def register():
     from ..rfb_utils import register_utils

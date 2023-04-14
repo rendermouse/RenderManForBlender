@@ -1,7 +1,9 @@
 import bpy
-import numpy as np
 from .prefs_utils import get_pref
 from . import string_utils
+
+# These types don't create instances
+_RMAN_NO_INSTANCES_ = ['EMPTY', 'EMPTY_INSTANCER', 'LIGHTFILTER']
 
 def get_db_name(ob, rman_type='', psys=None):
     db_name = ''    
@@ -42,10 +44,11 @@ def get_group_db_name(ob_inst):
             ob = ob_inst.instance_object
             parent = ob_inst.parent
             psys = ob_inst.particle_system
+            persistent_id = "%d%d" % (ob_inst.persistent_id[1], ob_inst.persistent_id[0])            
             if psys:
-                group_db_name = "%s|%s|%s|%d|%d" % (parent.name_full, ob.name_full, psys.name, ob_inst.persistent_id[1], ob_inst.persistent_id[0])
+                group_db_name = "%s|%s|%s|%s" % (parent.name_full, ob.name_full, psys.name, persistent_id)
             else:
-                group_db_name = "%s|%s|%d|%d" % (parent.name_full, ob.name_full, ob_inst.persistent_id[1], ob_inst.persistent_id[0])
+                group_db_name = "%s|%s|%s" % (parent.name_full, ob.name_full, persistent_id)
         else:
             ob = ob_inst.object
             group_db_name = "%s" % (ob.name_full)
@@ -54,11 +57,22 @@ def get_group_db_name(ob_inst):
 
     return string_utils.sanitize_node_name(group_db_name)
 
+def is_light_filter(ob):
+    if ob is None:
+        return False
+    if ob.type != 'LIGHT':
+        return False    
+    rm = ob.data.renderman
+    return (rm.renderman_light_role == 'RMAN_LIGHTFILTER')
+
 def is_portal_light(ob):
     if ob.type != 'LIGHT':
         return False
     rm = ob.data.renderman
     return (rm.renderman_light_role == 'RMAN_LIGHT' and rm.get_light_node_name() == 'PxrPortalLight')
+
+def is_empty_instancer(ob):
+    return (_detect_primitive_(ob) == 'EMPTY_INSTANCER')
 
 def is_particle_instancer(psys, particle_settings=None):
     psys_settings = particle_settings
@@ -140,7 +154,51 @@ def is_transforming(ob, recurse=False):
             transforming = ob.parent.data.use_path
     return transforming
 
+def has_empty_parent(ob):
+    # check if the parent of ob is an Empty
+    if not ob:
+        return False
+    if not ob.parent:
+        return False
+    if _detect_primitive_(ob.parent) == 'EMPTY':
+        return True
+    return False
+
+def prototype_key(ob):
+    if isinstance(ob, bpy.types.DepsgraphObjectInstance):
+        if ob.is_instance:
+            if ob.object.data:
+                return '%s-DATA' % ob.object.data.name_full
+            else:
+                return '%s-OBJECT' % ob.object.name_full
+        if ob.object.data:
+            return '%s-DATA' % ob.object.data.name_full
+        return '%s-OBJECT' % ob.object.original.name_full
+    elif ob.data:
+        return '%s-DATA' % ob.original.data.original.name_full
+    return '%s-OBJECT' % ob.original.name_full
+
+def curve_is_mesh(ob):
+    '''
+    Check if we need to consider this curve a mesh
+    '''
+    is_mesh = False
+    if len(ob.modifiers) > 0:
+        is_mesh = True            
+    elif len(ob.data.splines) < 1:
+        is_mesh = True
+    elif ob.data.dimensions == '2D' and ob.data.fill_mode != 'NONE':
+        is_mesh = True
+    else:
+        l = ob.data.extrude + ob.data.bevel_depth
+        if l > 0:
+            is_mesh = True                            
+
+    return is_mesh    
+
 def _detect_primitive_(ob):
+    if ob is None:
+        return ''
 
     if isinstance(ob, bpy.types.ParticleSystem):
         return ob.settings.type
@@ -162,6 +220,8 @@ def _detect_primitive_(ob):
         elif ob.type == 'FONT':
             return 'MESH'                       
         elif ob.type in ['CURVE']:
+            if curve_is_mesh(ob):
+                return 'MESH'
             return 'CURVE'
         elif ob.type == 'SURFACE':
             if get_pref('rman_render_nurbs_as_mesh', True):
@@ -172,6 +232,8 @@ def _detect_primitive_(ob):
         elif ob.type == 'CAMERA':
             return 'CAMERA'
         elif ob.type == 'EMPTY':
+            if ob.is_instancer:
+                return 'EMPTY_INSTANCER'
             return 'EMPTY'
         elif ob.type == 'GPENCIL':
             return 'GPENCIL'
@@ -216,42 +278,3 @@ def _get_used_materials_(ob):
         return [mesh.materials[i] for i in mat_ids]
     else:
         return [ob.active_material]     
-
-def _get_mesh_points_(mesh):
-    nvertices = len(mesh.vertices)
-    P = np.zeros(nvertices*3, dtype=np.float32)
-    mesh.vertices.foreach_get('co', P)
-    P = np.reshape(P, (nvertices, 3))
-    return P.tolist()
-
-def _get_mesh_(mesh, get_normals=False):
-
-    P = _get_mesh_points_(mesh)
-    N = []    
-
-    npolygons = len(mesh.polygons)
-    fastnvertices = np.zeros(npolygons, dtype=np.int)
-    mesh.polygons.foreach_get('loop_total', fastnvertices)
-    nverts = fastnvertices.tolist()
-
-    loops = len(mesh.loops)
-    fastvertices = np.zeros(loops, dtype=np.int)
-    mesh.loops.foreach_get('vertex_index', fastvertices)
-    verts = fastvertices.tolist()
-
-    if get_normals:
-        fastsmooth = np.zeros(npolygons, dtype=np.int)
-        mesh.polygons.foreach_get('use_smooth', fastsmooth)
-        if mesh.use_auto_smooth or True in fastsmooth:
-            mesh.calc_normals_split()
-            fastnormals = np.zeros(loops*3, dtype=np.float32)
-            mesh.loops.foreach_get('normal', fastnormals)
-            fastnormals = np.reshape(fastnormals, (loops, 3))
-            N = fastnormals.tolist()            
-        else:            
-            fastnormals = np.zeros(npolygons*3, dtype=np.float32)
-            mesh.polygons.foreach_get('normal', fastnormals)
-            fastnormals = np.reshape(fastnormals, (npolygons, 3))
-            N = fastnormals.tolist()
-
-    return (nverts, verts, P, N)

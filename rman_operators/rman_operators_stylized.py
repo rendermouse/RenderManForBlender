@@ -86,11 +86,11 @@ class PRMAN_OT_Attach_Stylized_Pattern(bpy.types.Operator):
 
     def attach_pattern(self, context, ob):
         mat = object_utils.get_active_material(ob)
-        if not mat:
+        if mat is None:
             bpy.ops.object.rman_add_bxdf('EXEC_DEFAULT', bxdf_name='PxrSurface')
             mat = object_utils.get_active_material(ob)
 
-        if not mat:
+        if mat is None:
             self.report({'ERROR'}, 'Cannot find a material for: %s' % ob.name)
         
         nt = mat.node_tree
@@ -144,12 +144,12 @@ class PRMAN_OT_Attach_Stylized_Pattern(bpy.types.Operator):
                         val = param_settings['value']
                         setattr(pattern_node, param_name, val)
 
-                array_len = getattr(node, coll_idx_nm)            
-                sub_prop_nm = '%s[%d]' % (prop_name, array_len-1)     
+                idx = getattr(node, coll_idx_nm)            
+                sub_prop_nm = '%s[%d]' % (prop_name, idx)     
                 nt.links.new(pattern_node.outputs['resultAOV'], node.inputs[sub_prop_nm]) 
                 
                 # Add manifolds
-                self.add_manifolds(nt, pattern_node)                    
+                self.add_manifolds(nt, pattern_node)                   
 
             else:
                 if node.inputs[prop_name].is_linked:

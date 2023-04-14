@@ -5,6 +5,7 @@ from ..rfb_utils import prefs_utils
 from ..rfb_logger import rfb_log
 from .rman_ui_base import _RManPanelHeader
 from ..rman_render import RmanRender
+from ..rman_constants import RFB_HELP_URL
 import bpy
 
 class PRMAN_PT_Renderman_UI_Panel(bpy.types.Panel, _RManPanelHeader):
@@ -70,28 +71,14 @@ class PRMAN_PT_Renderman_UI_Panel(bpy.types.Panel, _RManPanelHeader):
 
             row = layout.row(align=True)
             rman_rerender_controls = rfb_icons.get_icon("rman_ipr_on")
-            row.operator('renderman.start_ipr', text="IPR",
+            op = row.operator('renderman.start_ipr', text="Start IPR to 'it'",
                             icon_value=rman_rerender_controls.icon_id)    
-
-            row.prop(context.scene, "rm_ipr", text="",
-                    icon=draw_utils.get_open_close_icon(context.scene.rm_ipr))
-
-            if context.scene.rm_ipr:
-                scene = context.scene
-                rd = scene.render
-
-                box = layout.box()
-                box.use_property_split = True
-                box.use_property_decorate = False
-                row = box.row(align=True)
-
-                # Display Driver
-                row.prop(rm, "render_ipr_into")
+            op.render_to_it = True                            
 
             row = layout.row(align=True)
             rman_batch = rfb_icons.get_icon("rman_batch")
 
-            row.operator("renderman.external_render",
+            row.operator("renderman.batch_render",
                         text="External Render", icon_value=rman_batch.icon_id)
 
             row.prop(context.scene, "rm_render_external", text="",
@@ -251,16 +238,18 @@ class PRMAN_PT_Renderman_UI_Panel(bpy.types.Panel, _RManPanelHeader):
         layout.label(text='Utilities:')
         box = layout.box()
         rman_addon_prefs = rfb_icons.get_icon('rman_loadplugin')
-        box.operator("renderman.open_addon_preferences", icon_value=rman_addon_prefs.icon_id)
+        op = box.operator("preferences.addon_show", text="Addon Preferences", icon_value=rman_addon_prefs.icon_id)
+        op.module = "RenderManForBlender"
         rman_pack_scene = rfb_icons.get_icon('rman_package_scene')
         box.operator("renderman.scene_package", icon_value=rman_pack_scene.icon_id)
+        box.operator("renderman.upgrade_scene", icon='FILE_REFRESH')
 
         layout.separator()
         # RenderMan Doc
         layout.label(text="Help:")
         rman_help = rfb_icons.get_icon("rman_help")
         layout.operator("wm.url_open", text="RenderMan Docs",
-                        icon_value=rman_help.icon_id).url = "https://rmanwiki.pixar.com/display/RFB24"
+                        icon_value=rman_help.icon_id).url = RFB_HELP_URL
         rman_info = rfb_icons.get_icon("rman_blender")
         layout.operator("renderman.about_renderman", icon_value=rman_info.icon_id)
 
@@ -277,7 +266,7 @@ class RENDER_PT_renderman_live_stats(bpy.types.Panel, _RManPanelHeader):
         scene = context.scene
         rm = scene.renderman         
         rr = RmanRender.get_rman_render()
-        if hasattr(bpy.types, bpy.ops.renderman.rman_open_stats.idname()):
+        if prefs_utils.using_qt():
             layout.separator()
             layout.operator("renderman.rman_open_stats")  
             if rr.stats_mgr.is_connected():

@@ -174,7 +174,7 @@ def _draw_ui_from_rman_config(config_name, panel, context, layout, parent):
             page_prop = ''
             page_open = False
             page_name = ''
-            editable = getattr(ndp, 'editable', False)
+            ipr_editable = getattr(ndp, 'ipr_editable', False)
             is_enabled = True
             if hasattr(ndp, 'page') and ndp.page != '':       
                 page_prop = ndp.page + "_uio"
@@ -268,7 +268,7 @@ def _draw_ui_from_rman_config(config_name, panel, context, layout, parent):
                 row.prop(parent, ndp.name, text=label)         
 
             if is_rman_interactive_running:
-                row.enabled = editable
+                row.enabled = ipr_editable
             elif is_rman_running:
                 row.enabled = False
             else:
@@ -379,7 +379,7 @@ def draw_prop(node, prop_name, layout, level=0, nt=None, context=None, sticky=Fa
         ramp_node = node_group.nodes[ramp_name]
         layout.enabled = (nt.library is None)
         layout.template_color_ramp(
-                ramp_node, 'color_ramp')  
+                ramp_node, 'color_ramp')               
         return       
     elif bl_prop_info.widget == 'floatramp':
         node_group = node.rman_fake_node_group_ptr 
@@ -392,7 +392,11 @@ def draw_prop(node, prop_name, layout, level=0, nt=None, context=None, sticky=Fa
         ramp_node = node_group.nodes[ramp_name]
         layout.enabled = (nt.library is None)
         layout.template_curve_mapping(
-                ramp_node, 'mapping')  
+                ramp_node, 'mapping') 
+        
+        interp_name = '%s_Interpolation' % prop_name
+        if hasattr(node, interp_name):
+            layout.prop(node, interp_name, text='Ramp Interpolation')
         return     
 
     elif bl_prop_info.widget == 'displaymetadata':
@@ -475,7 +479,7 @@ def panel_node_draw(layout, context, id_data, output_type, input_name):
 
     return True
 
-def draw_nodes_properties_ui(layout, context, nt, input_name='Bxdf',
+def draw_nodes_properties_ui(layout, context, nt, input_name='bxdf_in',
                              output_node_type="output"):
     output_node = next((n for n in nt.nodes
                         if hasattr(n, 'renderman_node_type') and n.renderman_node_type == output_node_type), None)
@@ -489,9 +493,9 @@ def draw_nodes_properties_ui(layout, context, nt, input_name='Bxdf',
     layout.context_pointer_set("node", output_node)
     layout.context_pointer_set("socket", socket)
 
-    if input_name not in ['Light', 'LightFilter']:
+    if input_name not in ['light_in', 'lightfilter_in']:
         split = layout.split(factor=0.35)
-        split.label(text=socket.name + ':')
+        split.label(text=socket.identifier + ':')
 
         split.context_pointer_set("socket", socket)
         split.context_pointer_set("node", output_node)

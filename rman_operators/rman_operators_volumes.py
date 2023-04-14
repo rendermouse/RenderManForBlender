@@ -86,6 +86,8 @@ class PRMAN_OT_add_to_vol_aggregate(bpy.types.Operator):
         scene = context.scene
         rm = scene.renderman
         vol_aggregates_index = rm.vol_aggregates_index
+        if vol_aggregates_index == 0:
+            return {'FINISHED'}
         ob = getattr(context, "selected_obj", None)
         if not ob:
             return {'FINISHED'}       
@@ -157,7 +159,7 @@ class PRMAN_OT_remove_from_vol_aggregate(bpy.types.Operator):
         for i, member in enumerate(vol_aggregate.members):
             if member.ob_pointer == ob:
                 vol_aggregate.members.remove(i)
-                ob.update_tag(refresh={'OBJECT'})
+                ob.update_tag(refresh={'DATA'})
                 break
 
         return {'FINISHED'}        

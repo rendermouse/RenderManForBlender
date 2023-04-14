@@ -159,14 +159,15 @@ class MATERIAL_PT_renderman_shader_surface(ShaderPanel, Panel):
                         col = split.column()                      
 
                 layout.separator()
-                if not rman_output_node.inputs['Bxdf'].is_linked:
+                input_name = 'bxdf_in'
+                if not rman_output_node.inputs[input_name].is_linked:
                     panel_node_draw(layout, context, mat,
                                     'RendermanOutputNode', 'Bxdf')  
                 elif not filter_parameters or filter_method == 'NONE':
                     panel_node_draw(layout, context, mat,
                                     'RendermanOutputNode', 'Bxdf')                      
                 elif filter_method == 'STICKY':
-                    bxdf_node = rman_output_node.inputs['Bxdf'].links[0].from_node
+                    bxdf_node = rman_output_node.inputs[input_name].links[0].from_node
                     nodes = gather_nodes(bxdf_node)
                     for node in nodes:
                         prop_names = getattr(node, 'prop_names', list())
@@ -175,7 +176,7 @@ class MATERIAL_PT_renderman_shader_surface(ShaderPanel, Panel):
                     expr = rman_output_node.bxdf_match_expression
                     if expr == '':
                         return
-                    bxdf_node = rman_output_node.inputs['Bxdf'].links[0].from_node
+                    bxdf_node = rman_output_node.inputs[input_name].links[0].from_node
                     nodes = gather_nodes(bxdf_node)
                     for node in nodes:
                         prop_names = getattr(node, 'prop_names', list())
@@ -271,14 +272,15 @@ class MATERIAL_PT_renderman_shader_light(ShaderPanel, Panel):
                     col = split.column()
                     col = split.column()                                
                 
-            if not rman_output_node.inputs['Light'].is_linked:
+            input_name = 'light_in'
+            if not rman_output_node.inputs[input_name].is_linked:
                 draw_nodes_properties_ui(
-                    layout, context, nt, input_name=self.shader_type)
+                    layout, context, nt, input_name=input_name)
             elif not filter_parameters or filter_method == 'NONE':
                 draw_nodes_properties_ui(
-                    layout, context, nt, input_name=self.shader_type)                 
+                    layout, context, nt, input_name=input_name)                 
             elif filter_method == 'STICKY':
-                light_node = rman_output_node.inputs['Light'].links[0].from_node
+                light_node = rman_output_node.inputs[input_name].links[0].from_node
                 nodes = gather_nodes(light_node)
                 for node in nodes:
                     prop_names = getattr(node, 'prop_names', list())
@@ -287,7 +289,7 @@ class MATERIAL_PT_renderman_shader_light(ShaderPanel, Panel):
                 expr = rman_output_node.light_match_expression
                 if expr == '':
                     return                
-                light_node = rman_output_node.inputs['Light'].links[0].from_node
+                light_node = rman_output_node.inputs[input_name].links[0].from_node
                 nodes = gather_nodes(light_node)
                 for node in nodes:
                     prop_names = getattr(node, 'prop_names', list())
@@ -295,7 +297,7 @@ class MATERIAL_PT_renderman_shader_light(ShaderPanel, Panel):
                                         prop_names, context, nt)
             else:
                 draw_nodes_properties_ui(
-                    layout, context, nt, input_name=self.shader_type)     
+                    layout, context, nt, input_name=input_name)     
                  
 class MATERIAL_PT_renderman_shader_displacement(ShaderPanel, Panel):
     bl_context = "material"
@@ -336,14 +338,15 @@ class MATERIAL_PT_renderman_shader_displacement(ShaderPanel, Panel):
                     col = split.column()
                     col = split.column()                                
                 
-            if not rman_output_node.inputs['Displacement'].is_linked:
+            input_name = 'displace_in'
+            if not rman_output_node.inputs[input_name].is_linked:
                 draw_nodes_properties_ui(
-                    layout, context, nt, input_name=self.shader_type)
+                    layout, context, nt, input_name=input_name)
             elif not filter_parameters or filter_method == 'NONE':
                 draw_nodes_properties_ui(
-                    layout, context, nt, input_name=self.shader_type)                 
+                    layout, context, nt, input_name=input_name)                 
             elif filter_method == 'STICKY':
-                disp_node = rman_output_node.inputs['Displacement'].links[0].from_node
+                disp_node = rman_output_node.inputs[input_name].links[0].from_node
                 nodes = gather_nodes(disp_node)
                 for node in nodes:
                     prop_names = getattr(node, 'prop_names', list())
@@ -352,7 +355,7 @@ class MATERIAL_PT_renderman_shader_displacement(ShaderPanel, Panel):
                 expr = rman_output_node.disp_match_expression
                 if expr == '':
                     return                
-                disp_node = rman_output_node.inputs['Displacement'].links[0].from_node
+                disp_node = rman_output_node.inputs[input_name].links[0].from_node
                 nodes = gather_nodes(disp_node)
                 for node in nodes:
                     prop_names = getattr(node, 'prop_names', list())
@@ -360,7 +363,7 @@ class MATERIAL_PT_renderman_shader_displacement(ShaderPanel, Panel):
                                         prop_names, context, nt)
             else:
                 draw_nodes_properties_ui(
-                    layout, context, nt, input_name=self.shader_type)                      
+                    layout, context, nt, input_name=input_name)                      
 
 class DATA_PT_renderman_light(ShaderPanel, Panel):
     bl_context = "data"
@@ -474,7 +477,7 @@ class DATA_PT_renderman_node_shader_light(ShaderNodePanel, Panel):
         if light.node_tree:
             nt = light.node_tree
             draw_nodes_properties_ui(
-                self.layout, context, nt, input_name='Light')          
+                self.layout, context, nt, input_name='light_in')          
 
 class DATA_PT_renderman_node_shader_lightfilter(ShaderNodePanel, Panel):
     bl_label = "Light Filter Parameters"
@@ -494,7 +497,7 @@ class DATA_PT_renderman_node_shader_lightfilter(ShaderNodePanel, Panel):
         if light.node_tree:
             nt = light.node_tree
             draw_nodes_properties_ui(
-                self.layout, context, nt, input_name='LightFilter')     
+                self.layout, context, nt, input_name='lightfilter_in')     
 
 class RENDERMAN_UL_LightFilters(CollectionPanel):
     def draw_item(self, layout, context, item):        
@@ -518,7 +521,7 @@ class RENDERMAN_UL_LightFilters(CollectionPanel):
 
                 nt = lightfilter.data.node_tree
                 draw_nodes_properties_ui(
-                    self.layout, context, nt, input_name='LightFilter')
+                    self.layout, context, nt, input_name='lightfilter_in')
         else:
             layout.label(text='No light filter linked')            
 
@@ -557,7 +560,7 @@ class RENDERMAN_UL_Porta_Lights(CollectionPanel):
             if portal.data.node_tree:
                 nt = portal.data.node_tree
                 draw_nodes_properties_ui(
-                    self.layout, context, nt, input_name='Light')
+                    self.layout, context, nt, input_name='lightfilter_in')
         else:
             layout.label(text='No portal light linked')            
 

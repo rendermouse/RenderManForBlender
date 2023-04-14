@@ -4,12 +4,41 @@ from ..rfb_utils import string_utils
 from ..rfb_utils import texture_utils
 from ..rfb_utils import filepath_utils
 from ..rfb_utils import object_utils
+from ..rfb_utils import upgrade_utils
+from .. import rman_constants
 from bpy.types import Operator
 from bpy.props import StringProperty, FloatProperty
 import os
 import zipfile
 import bpy
 import shutil
+
+class PRMAN_OT_Renderman_Upgrade_Scene(Operator):
+    """An operator to upgrade the scene to the current version of RenderMan."""
+
+    bl_idname = "renderman.upgrade_scene"
+    bl_label = "Upgrade Scene"
+    bl_description = "Upgrade your scene to the current version"
+    bl_options = {'INTERNAL'}
+  
+    @classmethod
+    def poll(cls, context):
+        if context.engine != "PRMAN_RENDER":
+            return False
+
+        scene = context.scene
+        version = scene.renderman.renderman_version
+        if version == '':
+            return True
+        
+        if version < rman_constants.RMAN_SUPPORTED_VERSION_STRING:
+            return True
+            
+        return False
+
+    def execute(self, context):
+        upgrade_utils.upgrade_scene(None)
+        return {'FINISHED'}
 
 class PRMAN_OT_Renderman_Package(Operator):
     """An operator to create a zip archive of the current scene."""
@@ -313,27 +342,10 @@ class PRMAN_OT_Renderman_Start_Debug_Server(bpy.types.Operator):
         
         return {'RUNNING_MODAL'}
 
-class PRMAN_OT_Renderman_Open_Addon_Preferences(bpy.types.Operator):
-    bl_idname = "renderman.open_addon_preferences"
-    bl_label = "Addon Preferences"
-    bl_description = "Open the RenderMan for Blender addon prferences"
-    bl_options = {'INTERNAL'}
-
-
-    @classmethod
-    def poll(cls, context):
-        return context.engine == "PRMAN_RENDER"
-
-    def execute(self, context):
-        context.preferences.active_section = 'ADDONS'
-        context.window_manager.addon_search = 'RenderMan For Blender'
-        bpy.ops.screen.userpref_show()
-        return {"FINISHED"}       
-
 classes = [
+   PRMAN_OT_Renderman_Upgrade_Scene,
    PRMAN_OT_Renderman_Package,
-   PRMAN_OT_Renderman_Start_Debug_Server,
-   PRMAN_OT_Renderman_Open_Addon_Preferences
+   PRMAN_OT_Renderman_Start_Debug_Server
 ]
 
 def register():
