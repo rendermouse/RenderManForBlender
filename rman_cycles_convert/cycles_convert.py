@@ -33,6 +33,7 @@ __CURRENT_MATERIAL__ = None
 
 def convert_cycles_node(nt, node, location=None):    
     node_type = node.bl_idname
+    node.hide = True
     if node.name in converted_nodes:
         return nt.nodes[converted_nodes[node.name]]
 
@@ -73,6 +74,8 @@ def convert_cycles_node(nt, node, location=None):
         node2 = node.inputs[
             1 + i].links[0].from_node if node.inputs[1 + i].is_linked else None
 
+        node1.hide = True
+        node2.hide = True
         if node.bl_idname == 'ShaderNodeAddShader':      
             node_name = __BL_NODES_MAP__.get('LamaAdd')  
             add = nt.nodes.new(node_name)
@@ -83,9 +86,9 @@ def convert_cycles_node(nt, node, location=None):
             rman_node1 = convert_cycles_bsdf(nt, add, node1, 0)
             rman_node2 = convert_cycles_bsdf(nt, add, node2, 1)
 
-            nt.links.new(rman_node1.outputs["Bxdf"],
+            nt.links.new(rman_node1.outputs["bxdf_out"],
                         add.inputs['material1'])        
-            nt.links.new(rman_node2.outputs["Bxdf"],
+            nt.links.new(rman_node2.outputs["bxdf_out"],
                         add.inputs['material2'])   
 
             setattr(add, "weight1", 0.5)    
@@ -106,9 +109,9 @@ def convert_cycles_node(nt, node, location=None):
             rman_node1 = convert_cycles_bsdf(nt, mixer, node1, 0)
             rman_node2 = convert_cycles_bsdf(nt, mixer, node2, 1)
 
-            nt.links.new(rman_node1.outputs["Bxdf"],
+            nt.links.new(rman_node1.outputs["bxdf_out"],
                         mixer.inputs['material1'])        
-            nt.links.new(rman_node2.outputs["Bxdf"],
+            nt.links.new(rman_node2.outputs["bxdf_out"],
                         mixer.inputs['material2'])          
 
             return mixer        
@@ -151,11 +154,95 @@ def set_color_space(nt, socket, rman_node, node, param_name, in_socket):
     if node.bl_label in ['PxrTexture'] and shadergraph_utils.is_socket_float_type(in_socket):
         setattr(node, 'filename_colorspace', 'data')    
 
+def convert_new_geometry_node(nt, socket, cycles_node, rman_node, param_name):
+    socket_nm = socket.links[0].from_socket.name
+    in_socket = rman_node.inputs[param_name]
+    if socket_nm == 'Backfacing':
+        node_name = __BL_NODES_MAP__.get('PxrShadedSide', None)
+        convert_node = nt.nodes.new(node_name)       
+        convert_node.invert = 1     
+        nt.links.new(convert_node.outputs['resultF'], in_socket)        
+    elif socket_nm == 'Incoming':
+        node_name = __BL_NODES_MAP__.get('PxrPrimvar', None)
+        convert_node = nt.nodes.new(node_name)            
+        convert_node.variable = 'Vn'
+        convert_node.type = 'vector'
+        nt.links.new(convert_node.outputs['resultP'], in_socket)
+    elif socket_nm == 'Normal':
+        # The Blender docs says this also includes bump mapping
+        # Have to think about how to wire the result of any PxrBumps in the network
+        # to here
+        node_name = __BL_NODES_MAP__.get('PxrPrimvar', None)
+        convert_node = nt.nodes.new(node_name)            
+        convert_node.variable = 'Nn'
+        convert_node.type = 'normal'
+        nt.links.new(convert_node.outputs['resultP'], in_socket)
+    elif socket_nm == 'Parametric':
+        # From the Blender docs:
+        #
+        # "Parametric coordinates of the shading point on the surface. 
+        # To area lights it outputs its UV coordinates in planar mapping and 
+        # in spherical coordinates to point lights."
+        #
+        #
+        node_name = __BL_NODES_MAP__.get('PxrPrimvar', None)
+        convert_node = nt.nodes.new(node_name)            
+        convert_node.variable = 'uvw'
+        convert_node.type = 'vector'
+        nt.links.new(convert_node.outputs['resultP'], in_socket)
+    elif socket_nm == 'Pointiness':
+        # From the Blender docs:
+        #
+        # "An approximation of the curvature of the mesh per vertex. Lighter 
+        # values indicate convex angles, darker values indicate concave angles. 
+        # It allows you to do effects like dirt maps and wear-off effects."      
+        node_name = __BL_NODES_MAP__.get('PxrPrimvar', None)
+        convert_node = nt.nodes.new(node_name)            
+        convert_node.variable = 'curvature'
+        convert_node.type = 'float'
+        nt.links.new(convert_node.outputs['resultF'], in_socket)
+    elif socket_nm == 'Position':
+        node_name = __BL_NODES_MAP__.get('PxrPrimvar', None)
+        convert_node = nt.nodes.new(node_name)            
+        convert_node.variable = 'P'
+        convert_node.type = 'point'
+        nt.links.new(convert_node.outputs['resultP'], in_socket)
+    elif socket_nm == 'Random Per Island':
+        # From the Blender docs:
+        #
+        # "A random value for each connected component (island) of the mesh. 
+        # It is useful to add variations to meshes composed of separated units like 
+        # tree leaves, wood planks, or curves of multiple splines."
+        #
+        # Not exactly sure how to convert this. For now, we'll just use PxrVary.
+        # PxrVary doesn't have a float output, so we'll just use resultR
+        node_name = __BL_NODES_MAP__.get('PxrVary', None)
+        convert_node = nt.nodes.new(node_name)            
+        nt.links.new(convert_node.outputs['resultR'], in_socket)
+    elif socket_nm == 'Tangent':
+        # Tangent at the surface.
+        node_name = __BL_NODES_MAP__.get('PxrPrimvar', None)
+        convert_node = nt.nodes.new(node_name)            
+        convert_node.variable = 'Tn'
+        convert_node.type = 'vector'
+        nt.links.new(convert_node.outputs['resultP'], in_socket)
+    elif socket_nm == 'True Normal':
+        # Geometry or flat normal of the surface.
+        node_name = __BL_NODES_MAP__.get('PxrPrimvar', None)
+        convert_node = nt.nodes.new(node_name)            
+        convert_node.variable = 'Ngn'
+        convert_node.type = 'normal'
+        nt.links.new(convert_node.outputs['resultP'], in_socket)
 
 def convert_linked_node(nt, socket, rman_node, param_name):
     location = rman_node.location - \
         (socket.node.location - socket.links[0].from_node.location)
-    node = convert_cycles_node(nt, socket.links[0].from_node, location)
+    from_node = socket.links[0].from_node
+    if from_node.bl_idname == 'ShaderNodeNewGeometry':
+        # this node needs special handling
+        return convert_new_geometry_node(nt, socket, from_node, rman_node, param_name)
+
+    node = convert_cycles_node(nt, from_node, location)
     if node:
         out_socket = None
 
@@ -367,6 +454,21 @@ def convert_math_node(nt, cycles_node, rman_node):
 
     return
 
+def convert_wireframe_node(nt, cycles_node, rman_node):
+
+    tmp = [rman_node.wireColor[0], rman_node.wireColor[1], rman_node.wireColor[2]]
+    rman_node.wireColor = [rman_node.backColor[0], rman_node.backColor[1], rman_node.backColor[2]]
+    rman_node.backColor = [tmp[0], tmp[1], tmp[2]]
+
+    input = cycles_node.inputs['Size']
+    if input.is_linked:
+        convert_linked_node(nt, input, rman_node, input.name)
+    else:
+        val = input.default_value
+        rman_node.wireWidth = val * 100.0
+
+    return    
+
 # this needs a special case to init the stuff
 
 
@@ -455,9 +557,9 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     diffuse_node.location[0] -= 1280.0
     nodes_list.append(diffuse_node)
     
-    nt.links.new(rman_node.outputs["out_baseColor"], diffuse_node.inputs["color"])
+    nt.links.new(rman_node.outputs["out_baseColor"], diffuse_node.inputs["diffuseColor"])
     nt.links.new(rman_node.outputs["out_roughness"], diffuse_node.inputs["roughness"])
-    nt.links.new(rman_node.outputs["out_normal"], diffuse_node.inputs["normal"])
+    nt.links.new(rman_node.outputs["out_normal"], diffuse_node.inputs["diffuseNormal"])
 
     # subsurface
     node_name = __BL_NODES_MAP__.get('LamaSSS', None)
@@ -467,8 +569,8 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     sss_node.location[1] -= 240.0 
     nodes_list.append(sss_node)    
     
-    nt.links.new(rman_node.outputs["out_sssColor"], sss_node.inputs["color"])
-    nt.links.new(rman_node.outputs["out_normal"], sss_node.inputs["normal"])
+    nt.links.new(rman_node.outputs["out_sssColor"], sss_node.inputs["sssColor"])
+    nt.links.new(rman_node.outputs["out_normal"], sss_node.inputs["sssNormal"])
     nt.links.new(rman_node.outputs["out_sssRadius"], sss_node.inputs["sssRadius"])
 
     # diff or sss mix
@@ -479,8 +581,8 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     diff_sss_mix_node.location[0] -= 1120.0      
     nodes_list.append(diff_sss_mix_node)        
 
-    nt.links.new(diffuse_node.outputs["Bxdf"], diff_sss_mix_node.inputs["material1"])
-    nt.links.new(sss_node.outputs["Bxdf"], diff_sss_mix_node.inputs["material2"])
+    nt.links.new(diffuse_node.outputs["bxdf_out"], diff_sss_mix_node.inputs["material1"])
+    nt.links.new(sss_node.outputs["bxdf_out"], diff_sss_mix_node.inputs["material2"])
     nt.links.new(rman_node.outputs["out_sssMix"], diff_sss_mix_node.inputs["mix"])    
 
     # sheen
@@ -491,8 +593,8 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     sheen_node.location[1] -= 240.0     
     nodes_list.append(sheen_node)
 
-    nt.links.new(rman_node.outputs["out_sheenColor"], sheen_node.inputs["color"])
-    nt.links.new(rman_node.outputs["out_normal"], sheen_node.inputs["normal"])
+    nt.links.new(rman_node.outputs["out_sheenColor"], sheen_node.inputs["sheenColor"])
+    nt.links.new(rman_node.outputs["out_normal"], sheen_node.inputs["sheenNormal"])
 
     # diff sheen add
     node_name = __BL_NODES_MAP__.get('LamaAdd', None)
@@ -502,8 +604,8 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     diff_sheen_add_node.location[0] -= 960.0  
     nodes_list.append(diff_sheen_add_node)       
 
-    nt.links.new(diff_sss_mix_node.outputs["Bxdf"], diff_sheen_add_node.inputs["material1"])
-    nt.links.new(sheen_node.outputs["Bxdf"], diff_sheen_add_node.inputs["material2"])
+    nt.links.new(diff_sss_mix_node.outputs["bxdf_out"], diff_sheen_add_node.inputs["material1"])
+    nt.links.new(sheen_node.outputs["bxdf_out"], diff_sheen_add_node.inputs["material2"])
     nt.links.new(rman_node.outputs["out_sheenWeight"], diff_sheen_add_node.inputs["weight2"])  
 
     # specular
@@ -517,7 +619,7 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
 
     nt.links.new(rman_node.outputs["out_specF0"], specular_node.inputs["reflectivity"])  
     nt.links.new(rman_node.outputs["out_roughness"], specular_node.inputs["roughness"])
-    nt.links.new(rman_node.outputs["out_normal"], specular_node.inputs["normal"])
+    nt.links.new(rman_node.outputs["out_normal"], specular_node.inputs["conductorNormal"])
     nt.links.new(rman_node.outputs["out_anisotropic"], specular_node.inputs["anisotropy"])
     nt.links.new(rman_node.outputs["out_anisotropicRotation"], specular_node.inputs["anisotropyRotation"])
 
@@ -529,8 +631,8 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     sheen_spec_add_node.location[0] -= 800.0    
     nodes_list.append(sheen_spec_add_node)       
 
-    nt.links.new(diff_sheen_add_node.outputs["Bxdf"], sheen_spec_add_node.inputs["material1"])
-    nt.links.new(specular_node.outputs["Bxdf"], sheen_spec_add_node.inputs["material2"])
+    nt.links.new(diff_sheen_add_node.outputs["bxdf_out"], sheen_spec_add_node.inputs["material1"])
+    nt.links.new(specular_node.outputs["bxdf_out"], sheen_spec_add_node.inputs["material2"])
     nt.links.new(rman_node.outputs["out_diffuseWeight"], sheen_spec_add_node.inputs["weight1"])  
     nt.links.new(rman_node.outputs["out_specularWeight"], sheen_spec_add_node.inputs["weight2"])  
 
@@ -546,7 +648,7 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
 
     nt.links.new(rman_node.outputs["out_baseColor"], transmission_node.inputs["transmissionTint"])
     nt.links.new(rman_node.outputs["out_roughness"], transmission_node.inputs["roughness"])
-    nt.links.new(rman_node.outputs["out_normal"], transmission_node.inputs["normal"])
+    nt.links.new(rman_node.outputs["out_normal"], transmission_node.inputs["dielectricNormal"])
 
     # spec transmission add
     node_name = __BL_NODES_MAP__.get('LamaAdd', None)
@@ -556,8 +658,8 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     spec_transmission_add_node.location[0] -= 640.0      
     nodes_list.append(spec_transmission_add_node)
 
-    nt.links.new(sheen_spec_add_node.outputs["Bxdf"], spec_transmission_add_node.inputs["material1"])
-    nt.links.new(transmission_node.outputs["Bxdf"], spec_transmission_add_node.inputs["material2"])
+    nt.links.new(sheen_spec_add_node.outputs["bxdf_out"], spec_transmission_add_node.inputs["material1"])
+    nt.links.new(transmission_node.outputs["bxdf_out"], spec_transmission_add_node.inputs["material2"])
     nt.links.new(rman_node.outputs["out_finalTransmission"], spec_transmission_add_node.inputs["weight2"])  
 
     # coat
@@ -570,7 +672,7 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     nodes_list.append(coat_node)
 
     nt.links.new(rman_node.outputs["out_clearcoatRoughness"], coat_node.inputs["roughness"])
-    nt.links.new(rman_node.outputs["out_clearcoatNormal"], coat_node.inputs["normal"])       
+    nt.links.new(rman_node.outputs["out_clearcoatNormal"], coat_node.inputs["dielectricNormal"])       
 
     # transmission coat add
     node_name = __BL_NODES_MAP__.get('LamaAdd', None)
@@ -580,8 +682,8 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     transmission_coat_add_node.location[0] -= 480.0       
     nodes_list.append(transmission_coat_add_node)
 
-    nt.links.new(spec_transmission_add_node.outputs["Bxdf"], transmission_coat_add_node.inputs["material1"])
-    nt.links.new(coat_node.outputs["Bxdf"], transmission_coat_add_node.inputs["material2"])
+    nt.links.new(spec_transmission_add_node.outputs["bxdf_out"], transmission_coat_add_node.inputs["material1"])
+    nt.links.new(coat_node.outputs["bxdf_out"], transmission_coat_add_node.inputs["material2"])
     nt.links.new(rman_node.outputs["out_clearcoat"], transmission_coat_add_node.inputs["weight2"])     
 
     # emission
@@ -592,11 +694,11 @@ def convert_principled_bsdf_to_lama(nt, node, final_mix_node):
     emission_node.location[1] -= 240.0       
     nodes_list.append(emission_node)
 
-    nt.links.new(rman_node.outputs["out_emissionColor"], emission_node.inputs["color"])   
+    nt.links.new(rman_node.outputs["out_emissionColor"], emission_node.inputs["emissionColor"])   
 
     # final mix node
-    nt.links.new(transmission_coat_add_node.outputs["Bxdf"], final_mix_node.inputs["material1"]) 
-    nt.links.new(emission_node.outputs["Bxdf"], final_mix_node.inputs["material2"])   
+    nt.links.new(transmission_coat_add_node.outputs["bxdf_out"], final_mix_node.inputs["material1"]) 
+    nt.links.new(emission_node.outputs["bxdf_out"], final_mix_node.inputs["material2"])   
     nt.links.new(rman_node.outputs["out_emissionMix"], final_mix_node.inputs["mix"])   
 
     # close ui_open connections
@@ -610,10 +712,10 @@ def convert_diffuse_bsdf(nt, node, rman_node):
 
     inputs = node.inputs    
     rman_node.name = 'diffuse_bsdf'
-    convert_cycles_input(nt, inputs['Color'], rman_node, "color")
+    convert_cycles_input(nt, inputs['Color'], rman_node, "diffuseColor")
     convert_cycles_input(nt, inputs['Roughness'],
                          rman_node, "roughness")
-    convert_cycles_input(nt, inputs['Normal'], rman_node, "normal")    
+    convert_cycles_input(nt, inputs['Normal'], rman_node, "diffuseNormal")    
 
 def convert_glossy_bsdf(nt, node, rman_node):
     inputs = node.inputs       
@@ -623,7 +725,7 @@ def convert_glossy_bsdf(nt, node, rman_node):
     convert_cycles_input(nt, inputs['Roughness'],
                          rman_node, "roughness")
     convert_cycles_input(
-        nt, inputs['Normal'], rman_node, "normal")                         
+        nt, inputs['Normal'], rman_node, "conductorNormal")                         
 
     if type(node).__class__ == 'ShaderNodeBsdfAnisotropic':
         convert_cycles_input(
@@ -639,7 +741,7 @@ def convert_glass_bsdf(nt, node, rman_node):
                          rman_node, "roughness")
     convert_cycles_input(nt, inputs['IOR'],
                          rman_node, "IOR")       
-    convert_cycles_input(nt, inputs['Normal'], rman_node, "normal")                                             
+    convert_cycles_input(nt, inputs['Normal'], rman_node, "dielectricNormal")                                             
 
 def convert_refraction_bsdf(nt, node, rman_node):
 
@@ -651,7 +753,7 @@ def convert_refraction_bsdf(nt, node, rman_node):
                          rman_node, "roughness")
     convert_cycles_input(nt, inputs['IOR'],
                          rman_node, "IOR")       
-    convert_cycles_input(nt, inputs['Normal'], rman_node, "normal")                                             
+    convert_cycles_input(nt, inputs['Normal'], rman_node, "dielectricNormal")                                             
 
 def convert_transparent_bsdf(nt, node, rman_node):
 
@@ -664,35 +766,35 @@ def convert_transparent_bsdf(nt, node, rman_node):
 def convert_translucent_bsdf(nt, node, rman_node):
     inputs = node.inputs    
     convert_cycles_input(nt, inputs['Color'], rman_node, "reflectionTint")   
-    convert_cycles_input(nt, inputs['Normal'], rman_node, "normal")                                             
+    convert_cycles_input(nt, inputs['Normal'], rman_node, "translucentNormal")                                             
 
 def convert_sss_bsdf(nt, node, rman_node):
 
     inputs = node.inputs    
     rman_node.name = 'sss_bsdf'
-    convert_cycles_input(nt, inputs['Color'], rman_node, "color")
+    convert_cycles_input(nt, inputs['Color'], rman_node, "sssColor")
     convert_cycles_input(nt, inputs['Radius'],
                          rman_node, "radius")
     convert_cycles_input(nt, inputs['Scale'],
                          rman_node, "scale")                         
     convert_cycles_input(nt, inputs['IOR'],
                          rman_node, "IOR")       
-    convert_cycles_input(nt, inputs['Normal'], rman_node, "normal")                                             
+    convert_cycles_input(nt, inputs['Normal'], rman_node, "sssNormal")                                             
 
 def convert_velvet_bsdf(nt, node, rman_node):
     inputs = node.inputs   
     rman_node.name = 'velvet_bsdf'
-    convert_cycles_input(nt, inputs['Color'], rman_node, "color")      
-    convert_cycles_input(nt, inputs['Normal'], rman_node, "normal")           
+    convert_cycles_input(nt, inputs['Color'], rman_node, "sheenColor")      
+    convert_cycles_input(nt, inputs['Normal'], rman_node, "sheenNormal")           
 
 def convert_emission_bsdf(nt, node, rman_node):
     inputs = node.inputs  
     rman_node.name = 'emission_bsdf'
-    convert_cycles_input(nt, inputs['Color'], rman_node, "color")  
+    convert_cycles_input(nt, inputs['Color'], rman_node, "emissionColor")  
     if not node.inputs['Color'].is_linked and not node.inputs['Strength']:
-        emission_color = getattr(rman_node, 'color')
+        emission_color = getattr(rman_node, 'emissionColor')
         emission_color = inputs['Strength'] * emission_color
-        setattr(rman_node, 'color', emission_color)       
+        setattr(rman_node, 'emissionColor', emission_color)       
 
 def convert_hair_bsdf(nt, node, rman_node):
     inputs = node.inputs   
@@ -774,5 +876,6 @@ _NODE_MAP_ = {
     'ShaderNodeMath': ('', convert_math_node),
     'ShaderNodeRGB': ('PxrHSL', convert_rgb_node),
     'ShaderNodeValue': ('PxrToFloat', convert_node_value),
-    'ShaderNodeAttribute': ('PxrPrimvar', convert_attribute_node)
+    'ShaderNodeAttribute': ('PxrPrimvar', convert_attribute_node),
+    'ShaderNodeWireframe': ('PxrWireframe', convert_wireframe_node)
 }

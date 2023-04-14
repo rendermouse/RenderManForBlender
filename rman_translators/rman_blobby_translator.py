@@ -93,5 +93,5 @@ class RmanBlobbyTranslator(RmanTranslator):
         rman_sg_blobby.sg_node.Define(count)
         primvar.SetIntegerArray(self.rman_scene.rman.Tokens.Rix.k_Ri_code, op, len(op))            
         primvar.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_floats, tform, len(tform))      
-        #primvar.SetFloat(self.rman_scene.rman.Tokens.Rix.k_displacementbound_sphere, rm.displacementbound)
+        super().export_object_primvars(ob, primvar)
         rman_sg_blobby.sg_node.SetPrimVars(primvar)        

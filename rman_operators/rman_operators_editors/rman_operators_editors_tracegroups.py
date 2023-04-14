@@ -1,12 +1,353 @@
 from bpy.props import (StringProperty, BoolProperty, EnumProperty)
 
 from ...rman_ui.rman_ui_base import CollectionPanel   
-from ...rfb_logger import rfb_log
 from ...rman_operators.rman_operators_collections import return_empty_list   
 from ...rman_config import __RFB_CONFIG_DICT__ as rfb_config
+from ...rfb_utils.prefs_utils import using_qt, show_wip_qt
 import bpy
 import re
+import sys
 
+__TRACE_GROUPS_WINDOW__ = None 
+
+if not bpy.app.background:
+    from ...rman_ui import rfb_qt as rfb_qt
+    from PySide2 import QtCore, QtWidgets, QtGui 
+
+    class TraceGroupsQtAppTimed(rfb_qt.RfbBaseQtAppTimed):
+        bl_idname = "wm.trace_groups_qt_app_timed"
+        bl_label =  "RenderMan Trace Sets Editor"
+
+        def __init__(self):
+            super(TraceGroupsQtAppTimed, self).__init__()
+
+        def execute(self, context):
+            self._window = TraceGroupsQtWrapper()
+            return super(TraceGroupsQtAppTimed, self).execute(context)
+
+    class StandardItem(QtGui.QStandardItem):
+        def __init__(self, txt=''):
+            super().__init__()
+            self.setEditable(False)
+            self.setText(txt)
+
+    class TraceGroupsQtWrapper(rfb_qt.RmanQtWrapper):
+        def __init__(self) -> None:
+            super(TraceGroupsQtWrapper, self).__init__()
+        
+            self.setWindowTitle('RenderMan Trace Groups')
+            self.resize(620, 475)
+            self.buttonBox = QtWidgets.QDialogButtonBox(self)
+            self.buttonBox.setGeometry(QtCore.QRect(260, 440, 341, 32))
+            self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
+            
+            # hide OK and cancel buttons
+            #self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
+            
+            self.buttonBox.setObjectName("buttonBox")
+            self.addButton = QtWidgets.QPushButton(self)
+            self.addButton.setGeometry(QtCore.QRect(280, 30, 31, 26))
+            self.addButton.setObjectName("addButton")
+            self.addButton.setText("+")
+            self.removeButton = QtWidgets.QPushButton(self)
+            self.removeButton.setGeometry(QtCore.QRect(280, 50, 31, 26))
+            self.removeButton.setObjectName("removeButton")
+            self.removeButton.setText("-")
+
+            self.traceGroupObjects = QtWidgets.QTreeView(self)
+            self.traceGroupObjects.setHeaderHidden(True)
+            self.treeModel = QtGui.QStandardItemModel(self)
+            self.rootNode = self.treeModel.invisibleRootItem()
+            self.traceGroupObjects.setModel(self.treeModel)
+
+            self.traceGroupObjects.setGeometry(QtCore.QRect(30, 250, 441, 192))
+            self.traceGroupObjects.setObjectName("traceGroupObjects")
+            self.traceGroupObjects.setSelectionMode(
+                QtWidgets.QAbstractItemView.MultiSelection
+            )            
+
+            self.traceGroups = QtWidgets.QListWidget(self)
+            self.traceGroups.setGeometry(QtCore.QRect(30, 30, 256, 192))
+            self.traceGroups.setObjectName("traceGroups")
+
+            self.label = QtWidgets.QLabel(self)
+            self.label.setGeometry(QtCore.QRect(40, 10, 91, 17))
+            self.label.setText("Trace Groups")
+
+            self.label_2 = QtWidgets.QLabel(self)
+            self.label_2.setGeometry(QtCore.QRect(40, 230, 200, 17))
+            self.label_2.setText("Objects")
+
+            self.refresh_btn = QtWidgets.QPushButton(self)
+            self.refresh_btn.setGeometry(QtCore.QRect(470, 250, 100, 26))
+            self.refresh_btn.setText("Refresh")
+            self.setToolTip("""Click this if the objects list is out of sync with the scene""" )
+
+            QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL("accepted()"), self.accept)
+            QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL("rejected()"), self.reject)
+            QtCore.QMetaObject.connectSlotsByName(self)
+
+            self.addButton.clicked.connect(self.add_group)
+            self.removeButton.clicked.connect(self.remove_group)
+            self.refresh_btn.clicked.connect(self.refresh_group_objects)
+
+            self.traceGroups.itemChanged.connect(self.trace_group_changed)
+            self.traceGroups.itemSelectionChanged.connect(self.trace_groups_index_changed)
+            self.traceGroupObjects.selectionModel().selectionChanged.connect(self.trace_group_objects_selection)
+
+            self.refresh_groups()
+            self.refresh_group_objects()
+            self.checkTraceGroups()
+
+            self.traceGroupObjects.expandAll()   
+
+            self.add_handlers()
+
+        def closeEvent(self, event):
+            self.remove_handlers()
+            super(TraceGroupsQtWrapper, self).closeEvent(event)
+
+        def add_handlers(self):       
+            if self.depsgraph_update_post not in bpy.app.handlers.depsgraph_update_post:
+                bpy.app.handlers.depsgraph_update_post.append(self.depsgraph_update_post)            
+
+        def remove_handlers(self):
+            if self.depsgraph_update_post in bpy.app.handlers.depsgraph_update_post:
+                bpy.app.handlers.depsgraph_update_post.remove(self.depsgraph_update_post)             
+
+        def depsgraph_update_post(self, bl_scene, depsgraph):
+            for dps_update in reversed(depsgraph.updates):
+                if isinstance(dps_update.id, bpy.types.Collection):
+                    #self.refresh_groups()
+                    self.traceGroups.setCurrentRow(-1)
+                    self.refresh_group_objects()             
+                #elif isinstance(dps_update.id, bpy.types.Scene): 
+                #    self.trace_groups_index_changed()
+
+        def checkTraceGroups(self):
+            if self.traceGroups.count() < 1:
+                self.traceGroupObjects.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
+                self.enable_trace_group_objects(self.rootNode, enable=False)
+                self.removeButton.setEnabled(False)
+            else:
+                self.traceGroupObjects.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
+                self.removeButton.setEnabled(True)
+                self.enable_trace_group_objects(self.rootNode, enable=True)        
+
+        def update(self):
+            idx = int(self.traceGroups.currentRow())
+            self.addButton.setEnabled(True)
+
+            self.checkTraceGroups()
+            super(TraceGroupsQtWrapper, self).update()
+
+        def refresh_groups(self):
+            context = bpy.context
+            scene = context.scene
+            rm = scene.renderman
+            self.traceGroups.clear()
+            for grp in rm.object_groups:
+                item = QtWidgets.QListWidgetItem(grp.name)
+                item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable)
+                self.traceGroups.addItem(item)
+
+            if self.traceGroups.count() > 0:
+                self.traceGroups.setCurrentRow(rm.object_groups_index)
+                
+        def add_group(self):
+            context = bpy.context
+            scene = context.scene
+            rm = scene.renderman    
+
+            grp = rm.object_groups.add()
+            grp.name = 'traceGroup_%d' % len(rm.object_groups)
+            rm.object_groups_index = len(rm.object_groups)-1
+            self.refresh_groups()
+
+        def remove_group(self):
+            context = bpy.context
+            scene = context.scene
+            rm = scene.renderman    
+
+            index = rm.object_groups_index
+            group = rm.object_groups[index]            
+            # get a list of all objects in this group
+            ob_list = [member.ob_pointer for member in group.members]
+            rm.object_groups.remove(index)
+            rm.object_groups_index -= 1
+
+            # now tell each object to update
+            for ob in ob_list:
+                ob.update_tag(refresh={'OBJECT'})
+
+            self.refresh_groups()       
+
+        def trace_group_changed(self, item):
+            idx = int(self.traceGroups.currentRow())
+
+            context = bpy.context
+            scene = context.scene
+            rm = scene.renderman
+            grp = rm.object_groups[idx]
+            grp.name = item.text()    
+            self.label_2.setText("Objects (%s)" % item.text())
+            for member in grp.members:
+                ob = member.ob_pointer
+                ob.update_tag(refresh={'OBJECT'})        
+
+        def find_item(self, standard_item, ob):
+            '''
+            if standard_item.text() == ob.name:
+                return standard_item
+            
+            for i in range(0, standard_item.rowCount()):
+                item = standard_item.child(i)
+                if item.text() == ob.name:
+                    return item
+                if item.hasChildren():
+                    return self.find_item(item, ob)
+            '''            
+            for i in range(0, standard_item.rowCount()):
+                item = standard_item.child(i)
+                if item.text() == ob.name:
+                    return item                
+            
+            return None
+
+        def enable_trace_group_objects(self, standard_item, enable=True):
+            standard_item.setEnabled(enable)
+            for i in range(0, standard_item.rowCount()):
+                item = standard_item.child(i)
+                item.setEnabled(enable)
+                if item.hasChildren():
+                    return self.enable_trace_group_objects(item, enable=enable)
+            
+        def refresh_group_objects(self):
+            idx = int(self.traceGroups.currentRow())
+            enabled = True
+            if idx == -1:
+                enabled = False
+                self.label_2.setText("Objects (no group selected)")
+            context = bpy.context
+            scene = context.scene
+            rm = scene.renderman
+            
+            self.treeModel.clear()
+            self.rootNode = self.treeModel.invisibleRootItem()
+
+            def add_children(root_item, ob):
+                for child in ob.children:
+                    if child.type in ['CAMERA', 'ARMATURE']:
+                        continue                
+                    item = self.find_item(root_item, child)
+                    if not item:
+                        item = StandardItem(txt=child.name)
+                    root_item.appendRow(item)
+                    if len(child.children) > 0:
+                        add_children(item, child)
+            
+            root_parents = [ob for ob in scene.objects if ob.parent is None]            
+            for ob in root_parents:
+                if ob.type in ('ARMATURE', 'CAMERA'):
+                    continue  
+                
+                item = self.find_item(self.rootNode, ob)
+                if not item:
+                    item = StandardItem(txt=ob.name)
+                self.rootNode.appendRow(item)
+                if len(ob.children) > 0:
+                    add_children(item, ob)
+
+            self.traceGroupObjects.expandAll()
+            if idx != -1:
+                self.trace_groups_index_changed()
+
+        def bl_select_objects(self, obs):
+            context = bpy.context
+            for ob in context.selected_objects:
+                ob.select_set(False)
+            for ob in obs:
+                ob.select_set(True)
+                context.view_layer.objects.active = ob                
+
+        def trace_groups_index_changed(self):
+            idx = int(self.traceGroups.currentRow())
+            current_item = self.traceGroups.currentItem()
+            self.checkTraceGroups()
+            if current_item:
+                self.label_2.setText("Objects (%s)" % current_item.text())
+            else:
+                return
+            context = bpy.context
+            scene = context.scene
+            rm = scene.renderman               
+            rm.object_groups_index = idx   
+
+            group_index = rm.object_groups_index
+            object_groups = rm.object_groups
+            object_group = object_groups[group_index]
+
+            selected_items =  QtCore.QItemSelection()
+            obs = []
+            for member in object_group.members:
+                ob = member.ob_pointer
+                if ob is None:
+                    continue
+                item = self.find_item(self.rootNode, ob)
+                if item:
+                    idx = self.treeModel.indexFromItem(item)
+                    selection_range = QtCore.QItemSelectionRange(idx)
+                    selected_items.append(selection_range)
+                    obs.append(ob)
+            self.traceGroupObjects.selectionModel().select(selected_items, QtCore.QItemSelectionModel.ClearAndSelect | QtCore.QItemSelectionModel.NoUpdate)
+            self.bl_select_objects(obs)
+                    
+        def trace_group_objects_selection(self, selected, deselected):
+            idx = int(self.traceGroups.currentRow())
+            current_item = self.traceGroups.currentItem()
+            if not current_item:
+                return
+
+            context = bpy.context
+            scene = context.scene
+            rm = scene.renderman  
+
+            group_index = rm.object_groups_index
+            object_groups = rm.object_groups
+            if group_index not in range(0, len(object_groups)):
+                return
+            object_group = object_groups[group_index]
+
+            for i in deselected.indexes():
+                item = self.traceGroupObjects.model().itemFromIndex(i)
+                ob = bpy.data.objects.get(item.text(), None)
+                if ob is None:
+                    continue
+                for i, member in enumerate(object_group.members):
+                    if ob == member.ob_pointer:
+                        object_group.members.remove(i)
+                        ob.update_tag(refresh={'OBJECT'}) 
+                        break                    
+
+            obs = []
+            for i in selected.indexes():
+                item = self.traceGroupObjects.model().itemFromIndex(i)
+                ob = bpy.data.objects.get(item.text(), None)
+                if ob is None:
+                    continue
+                do_add = True
+                for member in object_group.members:            
+                    if ob == member.ob_pointer:
+                        do_add = False
+                    obs.append(member.ob_pointer)                
+                if do_add:
+                    obs.append(ob)
+                    ob_in_group = object_group.members.add()
+                    ob_in_group.name = ob.name
+                    ob_in_group.ob_pointer = ob      
+                    ob.update_tag(refresh={'OBJECT'})                   
+            self.bl_select_objects(obs)
+                
 class RENDERMAN_UL_Object_Group_List(bpy.types.UIList):
 
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
@@ -160,6 +501,15 @@ class PRMAN_OT_Renderman_Open_Groups_Editor(CollectionPanel, bpy.types.Operator)
 
     def invoke(self, context, event):
 
+        if using_qt() and show_wip_qt():
+            global __TRACE_GROUPS_WINDOW__
+            if sys.platform == "darwin":
+                rfb_qt.run_with_timer(__TRACE_GROUPS_WINDOW__, TraceGroupsQtWrapper)   
+            else:
+                bpy.ops.wm.trace_groups_qt_app_timed()     
+
+            return {'FINISHED'}       
+
         wm = context.window_manager
         width = rfb_config['editor_preferences']['tracesets_editor']['width']
         self.event = event
@@ -168,8 +518,11 @@ class PRMAN_OT_Renderman_Open_Groups_Editor(CollectionPanel, bpy.types.Operator)
 
 classes = [    
     PRMAN_OT_Renderman_Open_Groups_Editor,
-    RENDERMAN_UL_Object_Group_List
+    RENDERMAN_UL_Object_Group_List,
 ]
+
+if not bpy.app.background:
+    classes.append(TraceGroupsQtAppTimed)
 
 def register():
     from ...rfb_utils import register_utils

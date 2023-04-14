@@ -1,9 +1,6 @@
 {
     "$schema": "./schemas/rfbSchema.json",
     "tractor_cfg": {
-        "engine": "tractor-engine",
-        "port": 80,
-        "user": ""
     },    
     "dirmaps": {
     },
@@ -81,7 +78,7 @@
             "diffuse_color": ["diffuseColor"]
         },
         "LamaDiffuse": {
-            "diffuse_color": ["color"]
+            "diffuse_color": ["diffuseColor"]
         }                   
     },
     "disabled_nodes": [

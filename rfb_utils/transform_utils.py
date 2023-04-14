@@ -1,5 +1,5 @@
 import rman
-from mathutils import Matrix
+from mathutils import Matrix,Vector
 
 def convert_matrix(m):
     v = [m[0][0], m[1][0], m[2][0], m[3][0],
@@ -20,6 +20,25 @@ def convert_matrix4x4(m):
                                 mtx[12],mtx[13],mtx[14],mtx[15])
 
     return rman_mtx
+
+def get_world_bounding_box(selected_obs):
+
+    min_vector = None
+    max_vector = None
+
+    for ob in selected_obs:
+        v = ob.matrix_world @ Vector(ob.bound_box[0])
+        if min_vector is None:
+            min_vector = v
+        elif v < min_vector:
+            min_vector = v
+        v = ob.matrix_world @ Vector(ob.bound_box[7])
+        if max_vector is None:
+            max_vector = v
+        elif v > max_vector:
+            max_vector = v        
+
+    return "%f %f %f %f %f %f" % (min_vector[0], max_vector[0], min_vector[1], max_vector[1], min_vector[2], max_vector[2])
 
 def convert_ob_bounds(ob_bb):
     return (ob_bb[0][0], ob_bb[7][0], ob_bb[0][1],

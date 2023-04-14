@@ -4,11 +4,9 @@ from ..rfb_utils import filepath_utils
 from ..rfb_utils import transform_utils
 from ..rfb_utils import string_utils
 from ..rfb_utils import scenegraph_utils
-from ..rfb_utils import texture_utils
-from ..rfb_utils.envconfig_utils import envconfig
+from ..rfb_utils import property_utils
 from ..rfb_logger import rfb_log
 import json
-import os
 class RmanOpenVDBTranslator(RmanTranslator):
 
     def __init__(self, rman_scene):
@@ -23,33 +21,20 @@ class RmanOpenVDBTranslator(RmanTranslator):
 
         return rman_sg_openvdb
 
-    def export_object_primvars(self, ob, rman_sg_node, sg_node=None):       
-        if not sg_node:
-            sg_node = rman_sg_node.sg_node
-
-        if not sg_node:
-            return
-
-        super().export_object_primvars(ob, rman_sg_node, sg_node=sg_node)  
-        prop_name = 'rman_micropolygonlength_volume'
-        rm = ob.renderman
-        rm_scene = self.rman_scene.bl_scene.renderman
-        meta = rm.prop_meta[prop_name]
-        val = getattr(rm, prop_name)
-        inherit_true_value = meta['inherit_true_value']
-        if float(val) == inherit_true_value:
-            if hasattr(rm_scene, 'rman_micropolygonlength'):
-                val = getattr(rm_scene, 'rman_micropolygonlength')
-
-        try:
-            primvars = sg_node.GetPrimVars()
-            primvars.SetFloat('dice:micropolygonlength', val)
-            sg_node.SetPrimVars(primvars)
-        except AttributeError:
-            rfb_log().debug("Cannot get RtPrimVar for this node")
-
     def export_deform_sample(self, rman_sg_openvdb, ob, time_sample):
         pass
+
+    def update_primvar(self, ob, rman_sg_openvdb, prop_name):
+        db = ob.data
+        primvars = rman_sg_openvdb.sg_node.GetPrimVars()
+        if prop_name in db.renderman.prop_meta:
+            rm = db.renderman
+            meta = rm.prop_meta[prop_name]
+            rm_scene = self.rman_scene.bl_scene.renderman
+            property_utils.set_primvar_bl_prop(primvars, prop_name, meta, rm, inherit_node=rm_scene)        
+        else:
+            super().update_object_primvar(ob, primvars, prop_name)
+        rman_sg_openvdb.sg_node.SetPrimVars(primvars)
 
     def update(self, ob, rman_sg_openvdb):
         db = ob.data
@@ -58,9 +43,9 @@ class RmanOpenVDBTranslator(RmanTranslator):
         primvar = rman_sg_openvdb.sg_node.GetPrimVars()
         primvar.Clear()
         bounds = transform_utils.convert_ob_bounds(ob.bound_box)
-        primvar.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_Bound, string_utils.convert_val(bounds), 6)              
         if db.filepath == '':
             primvar.SetString(self.rman_scene.rman.Tokens.Rix.k_Ri_type, "box")
+            primvar.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_Bound, string_utils.convert_val(bounds), 6)
             rman_sg_openvdb.sg_node.SetPrimVars(primvar)   
             return
 
@@ -69,24 +54,36 @@ class RmanOpenVDBTranslator(RmanTranslator):
             if not grids.load():
                 rfb_log().error("Could not load grids and metadata for volume: %s" % ob.name)
                 primvar.SetString(self.rman_scene.rman.Tokens.Rix.k_Ri_type, "box")
+                primvar.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_Bound, string_utils.convert_val(bounds), 6)
                 rman_sg_openvdb.sg_node.SetPrimVars(primvar)   
                 return
+
+        if len(grids) < 1:
+            rfb_log().error("Grids length=0: %s" % ob.name)
+            primvar.SetString(self.rman_scene.rman.Tokens.Rix.k_Ri_type, "box")
+            primvar.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_Bound, string_utils.convert_val(bounds), 6)
+            rman_sg_openvdb.sg_node.SetPrimVars(primvar)   
+            return    
 
         active_index = grids.active_index
         active_grid = grids[active_index]  
         if active_grid.data_type not in ['FLOAT', 'DOUBLE']:  
             rfb_log().error("Active grid is not of float type: %s" % ob.name)
             primvar.SetString(self.rman_scene.rman.Tokens.Rix.k_Ri_type, "box")
+            primvar.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_Bound, string_utils.convert_val(bounds), 6)
             rman_sg_openvdb.sg_node.SetPrimVars(primvar)   
             return                      
+        
+        primvar.SetFloatArray(self.rman_scene.rman.Tokens.Rix.k_Ri_Bound, [-1e30, 1e30, -1e30, 1e30, -1e30, 1e30], 6)
 
         
         openvdb_file = filepath_utils.get_real_path(db.filepath)
         if db.is_sequence:
             # if we have a sequence, get the current frame filepath from the grids
-            openvdb_file = filepath_utils.get_real_path(grids.frame_filepath)     
-
-        #openvdb_file = texture_utils.get_txmanager().get_output_vdb(ob)
+            openvdb_file = filepath_utils.get_real_path(grids.frame_filepath)  
+            rman_sg_openvdb.is_frame_sensitive = True
+        else:
+            rman_sg_openvdb.is_frame_sensitive = False
 
         openvdb_attrs = dict()
         openvdb_attrs['filterWidth'] = getattr(rm, 'openvdb_filterwidth')
@@ -117,4 +114,6 @@ class RmanOpenVDBTranslator(RmanTranslator):
         scenegraph_utils.export_vol_aggregate(self.rman_scene.bl_scene, primvar, ob)     
 
         primvar.SetInteger("volume:dsominmax", rm.volume_dsominmax)
+        primvar.SetInteger("volume:dsovelocity", rm.volume_dsovelocity)
+        super().export_object_primvars(ob, primvar)
         rman_sg_openvdb.sg_node.SetPrimVars(primvar)

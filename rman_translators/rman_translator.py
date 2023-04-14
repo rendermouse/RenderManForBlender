@@ -68,59 +68,58 @@ class RmanTranslator(object):
 
         v = transform_utils.convert_matrix(m)
 
-        sg_node.SetTransform( v )        
+        sg_node.SetTransform( v )       
 
-    def export_object_primvars(self, ob, rman_sg_node, sg_node=None):
-        if not sg_node:
-            sg_node = rman_sg_node.sg_node
+    def export_object_primvars(self, ob, primvars):
+        '''
+        This method should be called by subclasses of RmanTranslator
+        in their update() methods, if they are setting any primvars. This
+        sets things like displacement bound and micropolygon length.
 
-        if not sg_node:
-            return
+        Args:
+            ob (bpy.types.Object) - Blender Object
+            primvars (RtPrimVars) - primitive variables
+        '''
         rm = ob.renderman
         rm_scene = self.rman_scene.bl_scene.renderman
-        try:
-            primvars = sg_node.GetPrimVars()
-        except AttributeError:
-            rfb_log().debug("Cannot get RtPrimVar for this node")
-            return
+        property_utils.set_primvar_bl_props(primvars, rm, inherit_node=rm_scene)
 
-        # set any properties marked primvar in the config file
-        for prop_name, meta in rm.prop_meta.items():
-            if 'primvar' not in meta:
-                continue
+    def update_primvar(self, ob, rman_sg_node, prop_name):
+        pass        
 
-            val = getattr(rm, prop_name)
-            if not val:
-                continue
+    def update_object_primvar(self, ob, primvars, prop_name):
+        '''
+        This method should be called by subclasses of RmanTranslator
+        in their update_primvar() methods.
 
-            if 'inheritable' in meta:
-                if float(val) == meta['inherit_true_value']:
-                    if hasattr(rm_scene, prop_name):
-                        val = getattr(rm_scene, prop_name)
+        Args:
+            ob (bpy.types.Object) - Blender Object
+            primvars (RtPrimVars) - primitive variables
+            prop_name (str) - name of the Blender property that was updated
+        '''
+        rm = ob.renderman
+        rm_scene = self.rman_scene.bl_scene.renderman
+        meta = rm.prop_meta[prop_name]
+        property_utils.set_primvar_bl_prop(primvars, prop_name, meta, rm, inherit_node=rm_scene)        
 
-            ri_name = meta['primvar']
-            is_array = False
-            array_len = -1
-            if 'arraySize' in meta:
-                is_array = True
-                array_len = meta['arraySize']
-            param_type = meta['renderman_type']
-            property_utils.set_rix_param(primvars, param_type, ri_name, val, is_reference=False, is_array=is_array, array_len=array_len)                
-
-        sg_node.SetPrimVars(primvars)
-
-    def export_object_id(self, ob, rman_sg_node, ob_inst):
+    def export_instance_attributes(self, ob, rman_sg_node, ob_inst):
+        '''
+        Export attributes that should vary between each instance
+        '''
         if not rman_sg_node.sg_node:
             return        
         name = ob.name_full
+        is_instance = ob_inst.is_instance
+        if is_instance:
+            name = ob_inst.parent.name
         attrs = rman_sg_node.sg_node.GetAttributes()
         rman_type = object_utils._detect_primitive_(ob)
 
         # Add ID
         if name != "":            
-            persistent_id = ob_inst.persistent_id[0]
+            persistent_id = ob_inst.persistent_id[1]
             if persistent_id == 0:           
-                persistent_id = int(hashlib.sha1(ob.name_full.encode()).hexdigest(), 16) % 10**8
+                persistent_id = int(hashlib.sha1(name.encode()).hexdigest(), 16) % 10**8
             self.rman_scene.obj_hash[persistent_id] = name
             attrs.SetInteger(self.rman_scene.rman.Tokens.Rix.k_identifier_id, persistent_id)
 
@@ -132,19 +131,25 @@ class RmanTranslator(object):
                 ]:
                 id = int(hashlib.sha1(rman_sg_node.db_name.encode()).hexdigest(), 16) % 10**8
                 procprimid = float(id)
-                attrs.SetFloat('user:procprimid', procprimid)  
+                attrs.SetFloat('user:procprimid', procprimid) 
+
+        if is_instance:
+            attrs.SetFloat('user:blender_is_instance', 1)
+            attrs.SetFloatArray('user:blender_instance_uv', ob_inst.uv, 2)
+        else:
+            attrs.SetFloat('user:blender_is_instance', 0)
 
         rman_sg_node.sg_node.SetAttributes(attrs)     
 
     def export_light_linking_attributes(self, ob, attrs): 
         rm = ob.renderman
+        bl_scene = self.rman_scene.bl_scene
+        all_lightfilters = [string_utils.sanitize_node_name(l.name) for l in scene_utils.get_all_lightfilters(bl_scene)]
 
         if self.rman_scene.bl_scene.renderman.invert_light_linking:
             lighting_subset = []
             lightfilter_subset = []
-            bl_scene = self.rman_scene.bl_scene
             all_lights = [string_utils.sanitize_node_name(l.name) for l in scene_utils.get_all_lights(bl_scene, include_light_filters=False)]
-            all_lightfilters = [string_utils.sanitize_node_name(l.name) for l in scene_utils.get_all_lightfilters(bl_scene)]
             for ll in self.rman_scene.bl_scene.renderman.light_links:
                 light_ob = ll.light_ob                
                 light_props = shadergraph_utils.get_rman_light_properties_group(light_ob)
@@ -168,38 +173,13 @@ class RmanTranslator(object):
 
             if lighting_subset:
                 lighting_subset = lighting_subset + all_lights # include all other lights that are not linked
-                attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lighting_subset, ' '. join(lighting_subset) )
+                attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lighting_subset, ','. join(lighting_subset) )
 
             if lightfilter_subset:
                 lightfilter_subset = lightfilter_subset + all_lightfilters
-                attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lightfilter_subset, ' ' . join(lightfilter_subset))
+                attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lightfilter_subset, ',' . join(lightfilter_subset))
              
-        else:
-            exclude_subset = []
-            lightfilter_subset = []
-            for subset in rm.rman_lighting_excludesubset:
-                if subset.light_ob is None:
-                    continue
-                nm = string_utils.sanitize_node_name(subset.light_ob.name)
-                exclude_subset.append(nm)
-
-            for subset in rm.rman_lightfilter_subset:
-                if subset.light_ob is None:
-                    continue                
-                nm = string_utils.sanitize_node_name(subset.light_ob.name)
-                lightfilter_subset.append(nm)            
-
-            if exclude_subset:
-                attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lighting_excludesubset, ' '. join(exclude_subset) )
-            else:
-                attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lighting_excludesubset, '')
-
-            if lightfilter_subset:
-                attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lightfilter_subset, ' ' . join(lightfilter_subset))
-            else:
-                attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_lightfilter_subset, '')                    
-
-    def export_object_attributes(self, ob, rman_sg_node):
+    def export_object_attributes(self, ob, rman_sg_node, remove=True):
         if not rman_sg_node.sg_node:
             return          
 
@@ -209,38 +189,14 @@ class RmanTranslator(object):
 
         # set any properties marked riattr in the config file
         for prop_name, meta in rm.prop_meta.items():
-            if 'riattr' not in meta:
-                continue
-
-            ri_name = meta['riattr']            
-            val = getattr(rm, prop_name)
-            if 'inheritable' in meta:
-                cond = meta['inherit_true_value']
-                if isinstance(cond, str):
-                    node = rm
-                    if exec(cond):
-                        attrs.Remove(ri_name)
-                        continue
-                elif float(val) == cond:
-                    attrs.Remove(ri_name)
-                    continue
-
-            is_array = False
-            array_len = -1
-            if 'arraySize' in meta:
-                is_array = True
-                array_len = meta['arraySize']
-                if type(val) == str and val.startswith('['):
-                    val = eval(val)                
-            param_type = meta['renderman_type']
-            property_utils.set_rix_param(attrs, param_type, ri_name, val, is_reference=False, is_array=is_array, array_len=array_len)            
+            property_utils.set_riattr_bl_prop(attrs, prop_name, meta, rm, check_inherit=True, remove=remove)
 
         obj_groups_str = "World"
         obj_groups_str += "," + name
         lpe_groups_str = "*"
         for obj_group in self.rman_scene.bl_scene.renderman.object_groups:
             for member in obj_group.members:
-                if member.ob_pointer == ob:
+                if member.ob_pointer.original == ob.original:
                     obj_groups_str += ',' + obj_group.name
                     lpe_groups_str += ',' + obj_group.name
                     break
@@ -266,7 +222,6 @@ class RmanTranslator(object):
                     if tokens[1] != '':
                         filePath = tokens[0]
                 filePath = string_utils.expand_string(filePath,
-                                                frame=self.rman_scene.bl_frame_current,
                                                 asFilePath=True)                
                 attrs.SetString('user:bake_filename_attr', filePath)
 

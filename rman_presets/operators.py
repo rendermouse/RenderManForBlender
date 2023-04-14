@@ -678,16 +678,14 @@ class PRMAN_OT_remove_preset_category(bpy.types.Operator):
         current_category_path = hostPrefs.getSelectedCategory()
         if current_category_path == '':
             return False
-        rel_path = os.path.relpath(current_category_path, hostPrefs.getSelectedLibrary())  
-        if rel_path in ['EnvironmentMaps', 'Materials', 'LightRigs']:
+        if current_category_path in ['EnvironmentMaps', 'Materials', 'LightRigs']:
             return False
         return True    
 
     def execute(self, context):
         hostPrefs = rab.get_host_prefs()
         current_category_path = hostPrefs.getSelectedCategory()
-        rel_path = os.path.relpath(current_category_path, hostPrefs.getSelectedLibrary())  
-        ral.deleteCategory(hostPrefs.cfg, rel_path)
+        ral.deleteCategory(hostPrefs.cfg, current_category_path)
         self.op = getattr(context, 'op_ptr', None)
         if self.op:
             self.op.dummy_index = -1

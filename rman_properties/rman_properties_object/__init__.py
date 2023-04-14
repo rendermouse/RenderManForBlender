@@ -4,7 +4,6 @@ from bpy.props import PointerProperty, StringProperty, BoolProperty, \
 
 from ... import rman_config
 from ...rman_config import RmanBasePropertyGroup
-from ..rman_properties_misc import RendermanAnimSequenceSettings 
 from ..rman_properties_misc import RendermanLightPointer
 from ...rfb_utils import shadergraph_utils
 from ...rfb_utils import object_utils
@@ -43,11 +42,7 @@ class RendermanObjectSettings(RmanBasePropertyGroup, bpy.types.PropertyGroup):
 
     rman_config_name: StringProperty(name='rman_config_name',
                                     default='rman_properties_object')
-
-    archive_anim_settings: PointerProperty(
-        type=RendermanAnimSequenceSettings,
-        name="Animation Sequence Settings")    
-
+ 
     hide_primitive_type: BoolProperty(
         name="Hide Primitive Type",
         default=False
@@ -111,12 +106,20 @@ class RendermanObjectSettings(RmanBasePropertyGroup, bpy.types.PropertyGroup):
     user_attributes_index: IntProperty(min=-1, default=-1)
 
     def get_object_type(self):
-        if bpy.context.object:
-            return object_utils._detect_primitive_(bpy.context.object)
+        if self.id_data:
+            return object_utils._detect_primitive_(self.id_data)
         return ""        
 
     bl_object_type: StringProperty(
         get=get_object_type
+    )
+
+    def get_bake_mode(self):
+        scene = bpy.context.scene
+        return scene.renderman.rman_bake_mode
+
+    rman_bake_mode: StringProperty(
+        get=get_bake_mode
     )
 
 rman_config_classes = [

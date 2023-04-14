@@ -1,13 +1,12 @@
 from ..rfb_logger import rfb_log
 
-import re
 import os
-import sys
 import json
 import bpy
 import rman
 import threading
 import time
+import getpass
 
 from collections import OrderedDict
 import rman_utils.stats_config.core as stcore
@@ -19,6 +18,7 @@ __RFB_STATS_MANAGER__ = None
 
 __LIVE_METRICS__ = [
     ["/system.processMemory", "Memory"],
+    ["/rman/renderer@isRendering", None],
     ["/rman/renderer@progress", None],
     ['/rman@iterationComplete', None],
     ["/rman.timeToFirstRaytrace", "First Ray"],
@@ -110,6 +110,7 @@ class RfBStatsManager(object):
         self._prevTotalRays = 0
         self._progress = 0
         self._prevTotalRaysValid = True
+        self._isRendering = False
 
         for name,label in __LIVE_METRICS__:
             if name:
@@ -157,7 +158,8 @@ class RfBStatsManager(object):
         self._progress = 0
         self._prevTotalRaysValid = True      
         self.export_stat_label = ''
-        self.export_stat_progress = 0.0              
+        self.export_stat_progress = 0.0
+        self._isRendering = True              
 
     def create_stats_manager(self): 
         if self.mgr:
@@ -181,17 +183,20 @@ class RfBStatsManager(object):
                 self.rman_stats_session_config.LoadConfigFile(rman_stats_config_path, 'stats.ini')
                           
         # do this once at startup
-        self.web_socket_server_id = 'rfb_statsserver_'+str(os.getpid())
+        self.web_socket_server_id = 'rfb_statsserver_' + getpass.getuser() + '_' + str(os.getpid())
         self.rman_stats_session_config.SetServerId(self.web_socket_server_id)
 
         # initialize session config with prefs, then add session
         self.update_session_config()     
         self.rman_stats_session = rman.Stats.AddSession(self.rman_stats_session_config)  
 
-    def update_session_config(self):
+    def update_session_config(self, force_enabled=False):
 
         self.web_socket_enabled = prefs_utils.get_pref('rman_roz_liveStatsEnabled', default=False)
         self.web_socket_port = prefs_utils.get_pref('rman_roz_webSocketServer_Port', default=0)
+
+        if force_enabled:
+            self.web_socket_enabled = True
 
         config_dict = dict()
         config_dict["logLevel"] = int(prefs_utils.get_pref('rman_roz_logLevel', default='3'))
@@ -242,10 +247,15 @@ class RfBStatsManager(object):
                         self.mgr.enableMetric(name)
                 return       
         
-    def attach(self):
+    def attach(self, force=False):
 
         if not self.mgr:
             return 
+
+        if force:
+            # force the live stats to be enabled
+            self.update_session_config(force_enabled=True)
+
         if (self.mgr.clientConnected()):
             return
 
@@ -347,6 +357,9 @@ class RfBStatsManager(object):
                     self.render_live_stats["Total Rays"] = currentTotalRays
                     self._prevTotalRaysValid = True
                     self._prevTotalRays = currentTotalRays    
+                elif name == "/rman/renderer@isRendering":
+                    is_rendering = dat['payload']
+                    self._isRendering = is_rendering                    
                 elif name == "/rman@iterationComplete":
                     itr = dat['payload'][0]
                     self._iterations = itr  
@@ -437,17 +450,9 @@ class RfBStatsManager(object):
                 return                
 
 def register():
-    if prefs_utils.get_pref('rman_ui_framework') == 'QT':
-        try:
-            from . import operators
-            operators.register()
-        except:
-            pass
+    from . import operators
+    operators.register()
 
 def unregister():
-    if prefs_utils.get_pref('rman_ui_framework') == 'QT':
-        try:
-            from . import operators
-            operators.unregister()
-        except:
-            pass
+    from . import operators
+    operators.unregister()

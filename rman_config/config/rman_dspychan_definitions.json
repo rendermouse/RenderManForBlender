@@ -183,6 +183,13 @@
             "statistics": "variance",
             "group": "Denoiser"
         },
+        "albedo_mse": {
+            "description": "",
+            "channelType": "color",
+            "channelSource": "lpe:nothruput;noinfinitecheck;noclamp;unoccluded;overwrite;C<.S'passthru'>*((U2L)|O)",
+            "statistics": "mse",
+            "group": "Denoiser"
+        },        
         "diffuse": {            
             "description": "",
             "channelType": "color",
@@ -235,6 +242,13 @@
             "statistics": "variance",
             "group": "Denoiser"
         },
+        "normal_mse": {
+            "description": "",
+            "channelType": "normal",
+            "channelSource": "lpe:nothruput;noinfinitecheck;noclamp;unoccluded;overwrite;CU6L",
+            "statistics": "mse",
+            "group": "Denoiser"
+        },        
         "forward": {
             "description": "",
             "channelType": "vector",
@@ -723,7 +737,12 @@
             "channelType": "color",
             "channelSource": "NPRtoonDiffRamp",
             "group": "NPR"
-        }        
+        },
+        "NPRdistort": {
+            "channelType": "color",
+            "channelSource": "NPRdistort",
+            "group": "NPR"
+        }
     },
     "displays": {
         "Default": {
@@ -739,8 +758,10 @@
             "description": "Create a variance file appropriate for the denoiser.",
             "channels": [
                 "mse",
+                "sampleCount",
                 "albedo",
                 "albedo_var",
+                "albedo_mse",
                 "diffuse",
                 "diffuse_mse",
                 "specular",
@@ -749,6 +770,7 @@
                 "zfiltered_var",
                 "normal",
                 "normal_var",
+                "normal_mse",
                 "forward",
                 "backward"
             ]
@@ -802,7 +824,8 @@
                 "NPRalbedo",
                 "NPRtextureCoords",
                 "NPRPtriplanar",
-                "NPRNtriplanar"
+                "NPRNtriplanar",
+                "NPRdistort"
             ]
         }        
     }

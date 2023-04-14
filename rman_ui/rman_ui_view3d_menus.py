@@ -5,6 +5,7 @@ from ..rfb_utils.scene_utils import RMAN_VOL_TYPES
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import object_utils
 from ..rfb_utils.envconfig_utils import envconfig
+from ..rfb_utils.prefs_utils import using_qt, show_wip_qt
 from ..rfb_logger import rfb_log
 from ..rman_config import __RFB_CONFIG_DICT__ as rfb_config
 from bpy.types import Menu
@@ -268,6 +269,8 @@ class VIEW3D_MT_RM_LightLinking_Menu(bpy.types.Menu):
             return
         if light_props.renderman_light_role not in {'RMAN_LIGHTFILTER', 'RMAN_LIGHT'}:
             return
+        if using_qt() and show_wip_qt():
+            return
         selected_objects = context.selected_objects
         if selected_objects:
             layout.context_pointer_set('light_ob', active_light)
@@ -338,6 +341,8 @@ class VIEW3D_MT_RM_Volume_Aggregates_Menu(bpy.types.Menu):
         rman_vol_agg = rfb_icons.get_icon("rman_vol_aggregates")   
         layout.operator("scene.rman_open_vol_aggregates_editor", text="Volume Aggregates Editor", icon_value=rman_vol_agg.icon_id)
         layout.separator()
+        if using_qt() and show_wip_qt():
+            return        
         op = layout.operator("renderman.add_remove_volume_aggregates", text="Create New Group")
         op.context="scene.renderman"
         op.collection="vol_aggregates"
@@ -354,6 +359,8 @@ class VIEW3D_MT_RM_Volume_Aggregates_Menu(bpy.types.Menu):
             layout.separator()
             layout.label(text='Add Selected To: ')   
             for i, v in enumerate(vol_aggregates):
+                if i == 0:
+                    continue
                 op = layout.operator('renderman.add_to_vol_aggregate', text=v.name)
                 op.vol_aggregates_index = i
                 op.do_scene_selected = True
@@ -406,8 +413,12 @@ class VIEW3D_MT_RM_Add_Render_Menu(bpy.types.Menu):
 
         if not rm.is_rman_interactive_running:
             rman_rerender_controls = rfb_icons.get_icon("rman_ipr_on")
-            layout.operator('renderman.start_ipr', text="IPR",
+            op = layout.operator('renderman.start_ipr', text="IPR",
                             icon_value=rman_rerender_controls.icon_id)                
+            op.render_to_it = False
+            op = layout.operator('renderman.start_ipr', text="IPR to it",
+                            icon_value=rman_rerender_controls.icon_id)                
+            op.render_to_it = True            
             rman_render_icon = rfb_icons.get_icon("rman_render")
             layout.operator("render.render", text="Render",
                         icon_value=rman_render_icon.icon_id)        
@@ -468,6 +479,8 @@ class VIEW3D_MT_RM_Add_Selected_To_ObjectGroup_Menu(bpy.types.Menu):
         scene = context.scene
 
         op = layout.operator("scene.rman_open_groups_editor", text="Trace Sets Editor")
+        if using_qt() and show_wip_qt():
+            return
         selected_objects = []
         if context.selected_objects:
             for obj in context.selected_objects:
@@ -493,7 +506,7 @@ class VIEW3D_MT_RM_Add_Selected_To_ObjectGroup_Menu(bpy.types.Menu):
             for i, obj_grp in enumerate(obj_grps.keys()):
                 op = layout.operator('renderman.add_to_group', text=obj_grp)
                 op.do_scene_selected = True     
-                op.open_editor = True
+                op.open_editor = not using_qt()
                 op.group_index = i
 
 class VIEW3D_MT_RM_Add_Selected_To_LightMixer_Menu(bpy.types.Menu):
@@ -510,6 +523,8 @@ class VIEW3D_MT_RM_Add_Selected_To_LightMixer_Menu(bpy.types.Menu):
         scene = context.scene
         layout.operator('scene.rman_open_light_mixer_editor', text='Light Mixer Editor') 
         layout.separator()
+        if using_qt() and show_wip_qt():
+            return        
         selected_light_objects = []
         if context.selected_objects:
             for obj in context.selected_objects:

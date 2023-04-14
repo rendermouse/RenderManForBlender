@@ -6,7 +6,7 @@
             "name": "openvdb_filterwidth",
             "label": "Filter Width",
             "type": "float",
-            "editable": true,
+            "ipr_editable": true,
             "default": 0.0,
             "page": "",
             "help": "If set to 0, disables mipmapping. If greater than 0, values less than 1 bias towards finer levels of the mipmap and values larger than one bias towards coarser levels."
@@ -16,7 +16,7 @@
             "name": "openvdb_densitymult",
             "label": "Density Multiplier",
             "type": "float",
-            "editable": true,
+            "ipr_editable": true,
             "default": 1.0,
             "page": "",
             "help": "Scales the values in the density grid of the volume. This should be more efficient than scaling the density in the shader."
@@ -26,7 +26,7 @@
             "name": "openvdb_densityrolloff",
             "label": "Density Rolloff",
             "type": "float",
-            "editable": true,
+            "ipr_editable": true,
             "default": 0.0,
             "page": "",
             "help": "Values greater than 0 produce a logarithmic falloff in density values. Smaller rolloff values produce greater falloff."
@@ -36,12 +36,26 @@
             "name": "volume_dsominmax",
             "label": "DSO Min/Max",
             "type": "int",
-            "editable": true,
+            "ipr_editable": true,
             "default": 1,
             "widget": "checkbox",
-            "riattr": "volume:dsominmax",
+            "primvar": "volume:dsominmax",
             "page": "",
-            "help": "Currently only used for aggregate volumes, and only for volumes that use an ImplicitField DSO. If set to 1, the DSO may be able to use stored information from the file directly to compute the minimum and maximum values within the volume. This may allow the renderer to avoid shading the volume up front, greatly decreasing time to first pixel. This can only be enabled if the density signal from the volume is used directly, or if the density signal is modulated only by the DSO itself. Any shading modifications of the density signal requires setting this parameter to off."
+            "help": "Currently only used for aggregate volumes, and only for volumes that use an ImplicitField DSO. If set to 1, the DSO may be able to use stored information from the file directly to compute the minimum and maximum values within the volume. This may allow the renderer to avoid shading the volume up front, greatly decreasing time to first pixel. This can only be enabled if the density signal from the volume is used directly, or if the density signal is modulated only by the DSO itself. Any shading modifications of the density signal requires setting this parameter to off.",
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'volume_dsominmax', c)"
+        },
+        {
+            "panel": "VOLUME_PT_renderman_openvdb_attributes",
+            "name": "volume_dsovelocity",
+            "label": "DSO Velocity",
+            "type": "int",
+            "ipr_editable": true,
+            "default": 0,
+            "widget": "checkbox",
+            "primvar": "volume:dsovelocity",
+            "page": "",
+            "help": "Used only for aggregate volumes that use an ImplicitField DSO. If set to 1, the DSO can provide velocity bounds to the renderer directly via the BoxMotion call. This can allow the renderer to avoid upfront shading of the volume's velocity data when using Eulerian velocity, improving render time and time to first pixel greatly. This can only be enabled if the velocity signal from the DSO is used directly.",
+            "update_function_name": "lambda s, c: update_primvar_func(s, 'volume_dsovelocity', c)"
         }        
     ]
 }        

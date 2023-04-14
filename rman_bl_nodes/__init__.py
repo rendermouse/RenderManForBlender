@@ -17,6 +17,7 @@ from ..rman_properties import rman_properties_world
 from ..rman_properties import rman_properties_camera
 from ..rman_constants import RFB_ARRAYS_MAX_LEN
 from ..rman_constants import CYCLES_NODE_MAP
+from ..rman_constants import RMAN_FAKE_NODEGROUP
 from nodeitems_utils import NodeCategory, NodeItem
 from collections import OrderedDict
 from bpy.props import *
@@ -266,6 +267,10 @@ def class_generate_properties(node, parent_name, node_desc):
             output_prop_meta['vstruct'] = True
         if hasattr(node_desc_param, 'struct_name'):
             output_prop_meta['struct_name'] = node_desc_param.struct_name            
+        if node_desc_param.is_array():
+            output_prop_meta['arraySize'] = node_desc_param.size
+        else:
+            output_prop_meta['arraySize'] = -1
         output_prop_meta['name'] = node_desc_param.name
         output_meta[prop_name] = output_prop_meta
         output_meta[prop_name]['renderman_type'] = renderman_type       
@@ -326,29 +331,29 @@ def generate_node_type(node_desc, is_oso=False):
     def init(self, context):
         # add input/output sockets to nodes, based on type
         if self.renderman_node_type == 'bxdf':
-            self.outputs.new('RendermanNodeSocketBxdf', "Bxdf")
+            self.outputs.new('RendermanNodeSocketBxdf', "bxdf_out", identifier="Bxdf")
             node_add_inputs(self, name, self.prop_names)
             node_add_outputs(self)
         elif self.renderman_node_type == 'light':
             node_add_inputs(self, name, self.prop_names)
-            self.outputs.new('RendermanNodeSocketLight', "Light")
+            self.outputs.new('RendermanNodeSocketLight', "light_out", identifier="Light")
         elif self.renderman_node_type == 'lightfilter':
             node_add_inputs(self, name, self.prop_names)
-            self.outputs.new('RendermanNodeSocketLightFilter', "LightFilter")            
+            self.outputs.new('RendermanNodeSocketLightFilter', "lightfilter_out", identifier="LightFilter")            
         elif self.renderman_node_type == 'displace':
-            self.outputs.new('RendermanNodeSocketDisplacement', "Displacement")
+            self.outputs.new('RendermanNodeSocketDisplacement', "displace_out", identifier="Displacement")
             node_add_inputs(self, name, self.prop_names)
         elif self.renderman_node_type == 'displayfilter':
-            self.outputs.new('RendermanNodeSocketDisplayFilter', "DisplayFilter")
+            self.outputs.new('RendermanNodeSocketDisplayFilter', "displayfilter_out", identifier="DisplayFilter")
             node_add_inputs(self, name, self.prop_names)            
         elif self.renderman_node_type == 'samplefilter':
-            self.outputs.new('RendermanNodeSocketSampleFilter', "SampleFilter")
+            self.outputs.new('RendermanNodeSocketSampleFilter', "samplefilter_out", identifier="SampleFilter")
             node_add_inputs(self, name, self.prop_names)    
         elif self.renderman_node_type == 'integrator':
-            self.outputs.new('RendermanNodeSocketIntegrator', "Integrator")
+            self.outputs.new('RendermanNodeSocketIntegrator', "integrator_out", identifier="Integrator")
             node_add_inputs(self, name, self.prop_names)     
         elif self.renderman_node_type == 'projection':
-            self.outputs.new('RendermanNodeSocketProjection', "Projection")
+            self.outputs.new('RendermanNodeSocketProjection', "projection_out", identifier="Projection")
             node_add_inputs(self, name, self.prop_names)                                   
         elif name == "PxrOSL":
             self.outputs.clear()
@@ -363,7 +368,7 @@ def generate_node_type(node_desc, is_oso=False):
 
         if color_rman_ramps or float_rman_ramps:
             node_group = bpy.data.node_groups.new(
-                '.__RMAN_FAKE_NODEGROUP__', 'ShaderNodeTree') 
+                RMAN_FAKE_NODEGROUP, 'ShaderNodeTree') 
             node_group.use_fake_user = True             
             self.rman_fake_node_group_ptr = node_group    
             self.rman_fake_node_group = node_group.name    

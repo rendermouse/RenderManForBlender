@@ -1,7 +1,5 @@
 from . import string_utils
 from . import property_utils
-from . import shadergraph_utils
-from . import scene_utils
 from .. import rman_constants
 from .. import rman_config
 from collections import OrderedDict
@@ -9,29 +7,45 @@ from copy import deepcopy
 import bpy
 import os
 import getpass
+import re
 
 __BLENDER_TO_RMAN_DSPY__ = { 'TIFF': 'tiff', 'TARGA': 'targa', 'TARGA_RAW': 'targa', 'OPEN_EXR': 'openexr', 'PNG': 'png'}
+__RMAN_TO_BLENDER__ = { 'tiff': 'TIFF', 'targa': 'TARGA', 'openexr':'OPEN_EXR', 'png':'PNG'}
 
-def get_channel_name(aov, layer_name):
-    aov_name = aov.name.replace(' ', '')
-    aov_channel_name = aov.channel_name
-    if not aov.aov_name or not aov.channel_name:
-        return ''
-    elif aov.aov_name == "color rgba":
-        aov_channel_name = "Ci,a"
-    # Remaps any color lpe channel names to a denoise friendly one
-    elif aov_name in channel_name_map.keys():
-        aov_channel_name = '%s_%s_%s' % (
-            channel_name_map[aov_name], aov_name, layer_name)
+def get_beauty_filepath(bl_scene, use_blender_frame=False, expand_tokens=False, no_ext=False):
+    dspy_info = dict()
+    view_layer = bpy.context.view_layer
+    rm_rl = None
+    if view_layer.renderman.use_renderman:
+        rm_rl = view_layer.renderman      
+    rm = bl_scene.renderman
 
-    elif aov.aov_name == "color custom_lpe":
-        aov_channel_name = aov.name
+    string_utils.set_var('scene', bl_scene.name.replace(' ', '_'))
+    string_utils.set_var('layer', view_layer.name.replace(' ', '_'))    
 
-    else:
-        aov_channel_name = '%s_%s' % (
-            aov_name, layer_name)
+    filePath = rm.path_beauty_image_output
+    if use_blender_frame:
+        filePath = re.sub(r'<[f|F]\d*>', '####', filePath)
+    if no_ext:
+        filePath = filePath.replace('<ext>', '')
+    if rm_rl:
+        aov = rm_rl.custom_aovs[0]
+        display_driver = aov.displaydriver
+    else:        
+        file_format = bl_scene.render.image_settings.file_format
+        display_driver = __BLENDER_TO_RMAN_DSPY__.get(file_format, 'openexr')
 
-    return aov_channel_name
+    if expand_tokens:
+        filePath = string_utils.expand_string(filePath,
+                                            display=display_driver, 
+                                            asFilePath=True)
+    dspy_info['filePath'] = filePath
+    dspy_info['display_driver'] = display_driver
+    return dspy_info
+
+def using_rman_displays():
+    view_layer = bpy.context.view_layer
+    return view_layer.renderman.use_renderman
 
 def _default_dspy_params():
     d = {}
@@ -119,7 +133,6 @@ def _add_stylized_channels(dspys_dict, dspy_drv, rman_scene, expandTokens):
         if expandTokens:      
             filePath = string_utils.expand_string(filePath,
                                                 display=display_driver, 
-                                                frame=rman_scene.bl_frame_current,
                                                 asFilePath=True)            
 
         dspys_dict['displays'][dspy_name] = {
@@ -132,7 +145,7 @@ def _add_stylized_channels(dspys_dict, dspy_drv, rman_scene, expandTokens):
             'params': dspy_params,
             'dspyDriverParams': None}                    
 
-def _add_denoiser_channels(dspys_dict, dspy_params):
+def _add_denoiser_channels(dspys_dict, dspy_params, rman_scene):
     """
     Add the necessary dspy channels for denoiser. We assume
     the beauty display will be used as the variance file
@@ -156,9 +169,10 @@ def _add_denoiser_channels(dspys_dict, dspy_params):
 
         dspys_dict['displays']['beauty']['params']['displayChannels'].append(chan)            
 
-    filePath = dspys_dict['displays']['beauty']['filePath']
-    f,ext = os.path.splitext(filePath)
-    dspys_dict['displays']['beauty']['filePath'] = f + '_variance' + ext
+    if rman_scene.bl_scene.renderman.use_legacy_denoiser:
+        filePath = dspys_dict['displays']['beauty']['filePath']
+        f,ext = os.path.splitext(filePath)
+        dspys_dict['displays']['beauty']['filePath'] = f + '_variance' + ext
     dspys_dict['displays']['beauty']['is_variance'] = True
 
 def _set_blender_dspy_dict(layer, dspys_dict, dspy_drv, rman_scene, expandTokens, do_optix_denoise=False):   
@@ -197,7 +211,6 @@ def _set_blender_dspy_dict(layer, dspys_dict, dspy_drv, rman_scene, expandTokens
     if expandTokens:
         filePath = string_utils.expand_string(filePath,
                                             display=display_driver, 
-                                            frame=rman_scene.bl_frame_current,
                                             asFilePath=True)
     dspys_dict['displays']['beauty'] = {
         'driverNode': display_driver,
@@ -237,7 +250,6 @@ def _set_blender_dspy_dict(layer, dspys_dict, dspy_drv, rman_scene, expandTokens
             token_dict = {'aov': name}
             filePath = string_utils.expand_string(filePath, 
                                                 display=display_driver, 
-                                                frame=rman_scene.bl_frame_current,
                                                 token_dict=token_dict,
                                                 asFilePath=True)
         if doit:
@@ -326,8 +338,7 @@ def _add_chan_to_dpsychan_list(rm, rm_rl, dspys_dict, chan):
         d[u'remap_c'] = { 'type': u'float', 'value': chan.remap_c}
         d[u'exposure'] = { 'type': u'float2', 'value': [chan.exposure_gain, chan.exposure_gamma] }
 
-        if rm.hider_pixelFilterMode != 'importance':
-            # per channel filter does not work in importance mode
+        if chan.chan_pixelfilter != 'default':
             d[u'filter'] = {'type': u'string', 'value': chan.chan_pixelfilter}
             d[u'filterwidth'] = { 'type': u'float2', 'value': [chan.chan_pixelfilter_x, chan.chan_pixelfilter_y]}
 
@@ -390,7 +401,6 @@ def _set_rman_dspy_dict(rm_rl, dspys_dict, dspy_drv, rman_scene, expandTokens, d
                 token_dict = {'aov': aov.name}
                 filePath = string_utils.expand_string(filePath, 
                                                 display=display_driver, 
-                                                frame=rman_scene.bl_frame_current,
                                                 token_dict=token_dict,
                                                 asFilePath=True)     
 
@@ -407,7 +417,6 @@ def _set_rman_dspy_dict(rm_rl, dspys_dict, dspy_drv, rman_scene, expandTokens, d
                 if expandTokens:
                     filePath = string_utils.expand_string(filePath,
                                                     display=display_driver, 
-                                                    frame=rman_scene.bl_frame_current,
                                                     asFilePath=True)
             else:
                 filePath = rm.path_aov_image_output
@@ -415,7 +424,6 @@ def _set_rman_dspy_dict(rm_rl, dspys_dict, dspy_drv, rman_scene, expandTokens, d
                     token_dict = {'aov': aov.name}
                     filePath = string_utils.expand_string(filePath, 
                                                     display=display_driver, 
-                                                    frame=rman_scene.bl_frame_current,
                                                     token_dict=token_dict,
                                                     asFilePath=True)
 
@@ -465,7 +473,7 @@ def _set_rman_dspy_dict(rm_rl, dspys_dict, dspy_drv, rman_scene, expandTokens, d
                 'dspyDriverParams': param_list }
 
         if aov_denoise and display_driver == 'openexr' and not rman_scene.is_interactive:
-            _add_denoiser_channels(dspys_dict, dspy_params)
+            _add_denoiser_channels(dspys_dict, dspy_params, rman_scene)
 
         if aov.name == 'beauty' and rman_scene.is_interactive:
           
@@ -494,7 +502,7 @@ def _set_rman_dspy_dict(rm_rl, dspys_dict, dspy_drv, rman_scene, expandTokens, d
                 'params': dspy_params,
                 'dspyDriverParams': None}  
 
-def _set_rman_holdouts_dspy_dict(dspys_dict, dspy_drv, rman_scene, expandTokens):
+def _set_rman_holdouts_dspy_dict(dspys_dict, dspy_drv, rman_scene, expandTokens, include_holdouts=True):
 
     rm = rman_scene.bl_scene.renderman
     display_driver = dspy_drv
@@ -505,24 +513,28 @@ def _set_rman_holdouts_dspy_dict(dspys_dict, dspy_drv, rman_scene, expandTokens)
         if display_driver == 'openexr':
             param_list.SetInteger('asrgba', 1)
 
-    dspy_params = {}                        
-    dspy_params['displayChannels'] = []
-    d = _default_dspy_params()
-    occluded_src = "color lpe:holdouts;C[DS]+<L.>"
-    d[u'channelSource'] = {'type': u'string', 'value': occluded_src}
-    d[u'channelType'] = { 'type': u'string', 'value': 'color'}       
-    dspys_dict['channels']['occluded'] = d
-    dspy_params['displayChannels'].append('occluded')
+    if include_holdouts:
+        dspy_params = {}                        
+        dspy_params['displayChannels'] = []
+        d = _default_dspy_params()
+        occluded_src = "color lpe:holdouts;C[DS]+<L.>"
+        d[u'channelSource'] = {'type': u'string', 'value': occluded_src}
+        d[u'channelType'] = { 'type': u'string', 'value': 'color'}       
+        dspys_dict['channels']['occluded'] = d
+        dspy_params['displayChannels'].append('occluded')
 
-    dspys_dict['displays']['occluded'] = {
-        'driverNode': 'null',
-        'filePath': 'occluded',
-        'denoise': False,
-        'denoise_mode': 'singleframe',   
-        'camera': None,  
-        'bake_mode': None,                   
-        'params': dspy_params,
-        'dspyDriverParams': None}        
+        dspys_dict['displays']['occluded'] = {
+            'driverNode': 'null',
+            'filePath': 'occluded',
+            'denoise': False,
+            'denoise_mode': 'singleframe',   
+            'camera': None,  
+            'bake_mode': None,                   
+            'params': dspy_params,
+            'dspyDriverParams': None}      
+
+    if rm.do_holdout_matte != "AOV" and not include_holdouts:
+        return  
 
     dspy_params = {}                        
     dspy_params['displayChannels'] = []
@@ -541,7 +553,6 @@ def _set_rman_holdouts_dspy_dict(dspys_dict, dspy_drv, rman_scene, expandTokens)
         if expandTokens:      
             filePath = string_utils.expand_string(filePath,
                                                 display=display_driver, 
-                                                frame=rman_scene.bl_frame_current,
                                                 asFilePath=True)
 
         dspys_dict['displays']['holdoutMatte'] = {
@@ -562,9 +573,26 @@ def _set_rman_holdouts_dspy_dict(dspys_dict, dspy_drv, rman_scene, expandTokens)
             'camera': None,
             'bake_mode': None,                
             'params': dspy_params,
-            'dspyDriverParams': None}                    
+            'dspyDriverParams': None}           
 
-def get_dspy_dict(rman_scene, expandTokens=True):
+def any_dspys_denoise(view_layer):    
+    rm_rl = None     
+    if view_layer.renderman.use_renderman:
+        rm_rl = view_layer.renderman  
+    if rm_rl:     
+        for aov in rm_rl.custom_aovs:
+            if aov.denoise:
+                return True
+    return False
+
+def get_renderman_layer(view_layer=None):
+    if view_layer is None:
+        view_layer = bpy.context.view_layer
+    if view_layer.renderman.use_renderman:
+        return view_layer.renderman 
+    return None
+             
+def get_dspy_dict(rman_scene, expandTokens=True, include_holdouts=True):
     """
     Create a dictionary of display channels and displays. The layout:
 
@@ -621,7 +649,7 @@ def get_dspy_dict(rman_scene, expandTokens=True):
     do_optix_denoise = False
 
     if rman_scene.is_interactive:
-        display_driver = rm.render_ipr_into
+        display_driver = rman_scene.ipr_render_into
         do_optix_denoise = rm.blender_ipr_optix_denoiser
 
     elif (not rman_scene.external_render): 
@@ -642,12 +670,12 @@ def get_dspy_dict(rman_scene, expandTokens=True):
         _add_stylized_channels(dspys_dict, display_driver, rman_scene, expandTokens)           
 
     if rm.do_holdout_matte != "OFF":
-        _set_rman_holdouts_dspy_dict(dspys_dict, display_driver, rman_scene, expandTokens)  
+        _set_rman_holdouts_dspy_dict(dspys_dict, display_driver, rman_scene, expandTokens, include_holdouts=include_holdouts)  
 
     return dspys_dict
 
 
-def make_dspy_info(scene):
+def make_dspy_info(scene, is_interactive=False):
     """
     Create some render parameter from scene and pass it to image tool.
 
@@ -657,11 +685,14 @@ def make_dspy_info(scene):
 
     Arguments:
         scene (bpy.types.Scene) - Blender scene object
+        is_interactive (bool) - True if we are in IPR
 
     Returns:
         (str) - a string with the display notes to give to "it"
 
     """
+    from . import shadergraph_utils
+
     params = {}
     rm = scene.renderman
     world = scene.world
@@ -675,7 +706,10 @@ def make_dspy_info(scene):
 
     dspy_notes = "Render start:\t%s\r\r" % ts
     dspy_notes += "Integrator:\t%s\r\r" % integrator_nm
-    dspy_notes += "Samples:\t%d - %d\r" % (rm.hider_minSamples, rm.hider_maxSamples)
+    if is_interactive:
+        dspy_notes += "Samples:\t%d - %d\r" % (rm.ipr_hider_minSamples, rm.ipr_hider_maxSamples)
+    else:
+        dspy_notes += "Samples:\t%d - %d\r" % (rm.hider_minSamples, rm.hider_maxSamples)        
     dspy_notes += "Pixel Variance:\t%f\r\r" % rm.ri_pixelVariance
 
     # moved this in front of integrator check. Was called redundant in
@@ -709,11 +743,11 @@ def export_metadata(scene, params, camera_name=None):
         params (RtParamList) - param list to fill with meta data
         camera_name - Name of camera we want meta data from
     """
+    from . import shadergraph_utils
 
     rm = scene.renderman
     world = scene.world         
     output_dir = string_utils.expand_string(rm.path_rib_output, 
-                                            frame=scene.frame_current, 
                                             asFilePath=True)  
     output_dir = os.path.dirname(output_dir)
     statspath=os.path.join(output_dir, 'stats.%04d.xml' % scene.frame_current)

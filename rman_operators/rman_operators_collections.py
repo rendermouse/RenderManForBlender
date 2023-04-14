@@ -3,6 +3,7 @@ from ..rfb_utils import string_utils
 from ..rfb_logger import rfb_log
 from ..rfb_utils import shadergraph_utils
 from ..rfb_utils import scenegraph_utils
+from ..rfb_utils import object_utils
 from ..rfb_utils.rman_socket_utils import node_add_input
 
 import bpy
@@ -53,7 +54,7 @@ class COLLECTION_OT_add_remove(bpy.types.Operator):
         if self.properties.action == 'ADD':
             dflt_name = self.properties.defaultname          
             collection.add()
-            index += 1
+            index = len(collection)-1
             setattr(rm, coll_idx, index)
             if dflt_name != '':
                 for coll in collection:
@@ -107,7 +108,7 @@ class COLLECTION_OT_add_remove_dspymeta(bpy.types.Operator):
         if self.properties.action == 'ADD':
             dflt_name = self.properties.defaultname          
             collection.add()
-            index += 1
+            index = len(collection)-1
             setattr(rm, coll_idx, index)
             i = 0
             if dflt_name != '':
@@ -163,7 +164,7 @@ class COLLECTION_OT_add_remove_user_attributes(bpy.types.Operator):
         if self.properties.action == 'ADD':
             dflt_name = self.properties.defaultname          
             collection.add()
-            index += 1
+            index = len(collection)-1
             setattr(rm, coll_idx, index)
             i = 0
             if dflt_name != '':
@@ -227,9 +228,12 @@ class COLLECTION_OT_meshlight_lightfilter_add_remove(bpy.types.Operator):
                 if coll.name == dflt_name:
                     dflt_name = '%s_NEW' % dflt_name
             collection.add()
-            index += 1
+            index = len(collection)-1
             setattr(rm, coll_idx, index)
-            collection[-1].name = dflt_name
+            try:
+                collection[-1].name = dflt_name
+            except:
+                pass
 
         elif self.properties.action == 'REMOVE':
             collection.remove(index)
@@ -282,7 +286,7 @@ class COLLECTION_OT_object_groups_add_remove(bpy.types.Operator):
                 if coll.name == dflt_name:
                     dflt_name = '%s_NEW' % dflt_name
             collection.add()
-            index += 1
+            index = len(collection)-1
             setattr(rm, coll_idx, index)
             collection[-1].name = dflt_name
 
@@ -631,7 +635,8 @@ class PRMAN_OT_add_light_link(bpy.types.Operator):
             if op:
                 op.selected_light_name = '0'
 
-            light_ob.update_tag(refresh={'DATA'})
+            if not object_utils.is_light_filter(light_ob):
+                light_ob.update_tag(refresh={'DATA'})
             
     def add_scene_selected(self, context):
         scene = context.scene
@@ -666,7 +671,8 @@ class PRMAN_OT_add_light_link(bpy.types.Operator):
                 ll = scene.renderman.light_links.add()
                 ll.name = light_ob.name
                 ll.light_ob = light_ob.data   
-                light_ob.update_tag(refresh={'DATA'})  
+                if not object_utils.is_light_filter(light_ob):
+                    light_ob.update_tag(refresh={'DATA'})  
 
     def execute(self, context):
         if self.properties.do_scene_selected:
@@ -885,7 +891,7 @@ class PRMAN_OT_Add_Remove_Array_Element(bpy.types.Operator):
             connectable = False
         if self.action == 'ADD':
             elem = collection.add()
-            index += 1
+            index = len(collection)-1
             setattr(node, self.collection_index, index)
             elem.name = '%s[%d]' % (self.param_name, len(collection)-1)  
             elem.type = self.elem_type

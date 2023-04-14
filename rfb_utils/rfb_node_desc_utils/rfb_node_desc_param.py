@@ -11,7 +11,9 @@ from rman_utils.node_desc_param import (NodeDescParam,
 NodeDescParam.optional_attrs = NodeDescParam.optional_attrs + []
 NodeDescParamJSON.keywords = NodeDescParamJSON.keywords + ['panel', 'inheritable', 
                 'inherit_true_value', 'update_function_name', 'update_function', 
-                'readOnly', 'always_write']  
+                'set_function_name', 'set_function',
+                'get_function_name', 'get_function',
+                'readOnly', 'always_write', 'ipr_editable']  
 
 def blender_finalize(obj):
     """Post-process some parameters for Blender.
@@ -23,7 +25,7 @@ def blender_finalize(obj):
 
     if hasattr(obj, 'help'):
         obj.help = obj.help.replace('\\"', '"')
-        obj.help = obj.help.replace("'", "\\'")
+        #obj.help = obj.help.replace("'", "\\'")
         obj.help = obj.help.replace('<br>', '\n')
 
 class RfbNodeDescParamXML(NodeDescParamXML):

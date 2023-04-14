@@ -40,10 +40,7 @@ class RmanLightTranslator(RmanTranslator):
         super().__init__(rman_scene)
         self.bl_type = 'LIGHT'  
 
-    def export_object_primvars(self, ob, rman_sg_node):
-        pass
-
-    def export_object_attributes(self, ob, rman_sg_node):
+    def export_object_attributes(self, ob, rman_sg_node, remove=True):
         pass
 
     def export(self, ob, db_name):
@@ -71,7 +68,7 @@ class RmanLightTranslator(RmanTranslator):
         attrs.SetInteger("visibility:camera", int(primary_vis))
         attrs.SetInteger("visibility:transmission", 0)
         attrs.SetInteger("visibility:indirect", 0)
-        obj_groups_str = "World,%s" % rman_sg_light.db_name
+        obj_groups_str = "World,%s" % string_utils.sanitize_node_name(ob.name_full)
         attrs.SetString(self.rman_scene.rman.Tokens.Rix.k_grouping_membership, obj_groups_str)
 
         rman_sg_light.sg_node.SetAttributes(attrs)

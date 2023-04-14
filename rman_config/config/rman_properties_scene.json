@@ -63,7 +63,7 @@
             "type": "int",
             "default": 0,
             "widget": "checkbox",
-            "help": "Denoise with OptiX denoiser",
+            "help": "Denoise Blender render displays with OptiX denoiser",
             "update_function_name": "update_blender_optix_denoiser",
             "update_function": "def update_blender_optix_denoiser(self, context):\n    from ..rman_render import RmanRender\n    rr = RmanRender.get_rman_render()\n    rr.rman_scene_sync.update_displays(context)",
             "conditionalVisOps": {
@@ -79,7 +79,7 @@
             }             
         },         
         {
-            "panel": "RENDER_PT_renderman_render",
+            "panel": "",
             "page": "Display",
             "name": "render_ipr_into",
             "label": "Render IPR to",
@@ -90,14 +90,14 @@
             "help": "Controls where IPR renders will go to."
         },      
         {
-            "panel": "RENDER_PT_renderman_render",
+            "panel": "",
             "page": "Display",
             "name": "blender_ipr_optix_denoiser",
             "label": "Use Optix Denoiser",
             "type": "int",
             "default": 0,
             "widget": "checkbox",
-            "help": "Denoise IPR with OptiX denoiser",
+            "help": "Denoise viewport renders with OptiX denoiser",
             "update_function_name": "update_blender_ipr_optix_denoiser",
             "update_function": "def update_blender_ipr_optix_denoiser(self, context):\n    from ..rman_render import RmanRender\n    rr = RmanRender.get_rman_render()\n    rr.rman_scene_sync.update_displays(context)",
             "conditionalVisOps": {
@@ -144,8 +144,20 @@
             "widget": "mapper",
             "options": "Off:OFF|In Alpha:ALPHA|Separate AOV:AOV",    
             "help": "Render a holdout matte."
-
-        },          
+        },      
+        {
+            "panel": "RENDER_PT_renderman_render",
+            "page": "",
+            "name": "do_persistent_data",
+            "label": "Persistent Data",
+            "type": "int",
+            "default": 0,
+            "widget": "checkbox",
+            "help": "Keep render data around for faster animation renders, at the cost of increased memory usage. May not work in all cases.",
+            "ipr_editable": false,
+            "update_function_name": "update_do_persistent_data",
+            "update_function": "def update_do_persistent_data(self, context):\n    scene = context.scene\n    scene.render.use_persistent_data = self.do_persistent_data"            
+        },             
         {
             "panel": "RENDER_PT_renderman_sampling",
             "page": "IPR Sampling",
@@ -159,8 +171,8 @@
             "widget": false,
             "slidermin": 0,
             "slidermax": 4096,
-            "editable": true,
-            "update_function_name": "update_options_func",
+            "ipr_editable": true,
+            "update_function_name": "lambda s, c: update_options_func(s, 'ipr_hider_minSamples', c)",
             "help": "When set to zero this value is automatically computed as the square root of the max samples."
         },
         {
@@ -181,8 +193,8 @@
                 "Production": 1024,
                 "High Quality": 2048
             },
-            "editable": true,
-            "update_function_name": "update_options_func",            
+            "ipr_editable": true,
+            "update_function_name": "lambda s, c: update_options_func(s, 'ipr_hider_maxSamples', c)",            
             "help": "The maximum number of camera rays to be traced for each pixel.  When adaptive sampling is enabled (ie. Pixel Variance is greater than zero), fewer rays may be traced in smoother regions of the image."
         },                
         {
@@ -202,8 +214,8 @@
                 "Denoising": 0.05,
                 "High Quality": 0.01
             },
-            "editable": true,
-            "update_function_name": "update_options_func",               
+            "ipr_editable": true,
+            "update_function_name": "lambda s, c: update_options_func(s, 'ipr_ri_pixelVariance', c)",               
             "help": "This value is applied during IPR.  Adaptive sampling is done when Pixel Variance is greater than zero. Reducing this value increases the likelihood that more rays will be traced while increasing its value allows undersampling."
         },
         {
@@ -217,8 +229,8 @@
             "min": 0,
             "max": 6,
             "widget": false,
-            "editable": true,
-            "update_function_name": "update_options_func",
+            "ipr_editable": true,
+            "update_function_name": "lambda s, c: update_options_func(s, 'hider_decidither', c)",
             "help": "This value is only applied during IPR. The value determines how much refinement (in a dither pattern) will be applied to the image during interactive rendering. 0 means full refinement up to a value of 6 which is the least refinement per iteration."
         },        
         {
@@ -233,7 +245,7 @@
             "widget": "mapper",
             "options": "100%:1.0|50%:0.5|33%:0.33|25%:0.25|12.5%:0.125",
             "help": "This value is only applied during IPR. This scales down the resolution during viewport renders.",
-            "editable": true,
+            "ipr_editable": true,
             "update_function_name": "update_viewport_res_mult",
             "update_function": "def update_viewport_res_mult(self, context):\n    from ..rman_render import RmanRender\n    rr = RmanRender.get_rman_render()\n    rr.rman_scene_sync.update_viewport_res_mult(context)",
             "conditionalVisOps": {
@@ -545,7 +557,25 @@
             ],
             "widget": false,
             "help": "Intended exposure Bracket [min max] in post-production to help inform the adaptive sampling."
-        },                            
+        },
+        {
+            "panel": "RENDER_PT_renderman_sampling",
+            "name": "hider_sampleoffset",
+            "riopt": "hider:sampleoffset",
+            "label": "Sample Offset",
+            "type": "int",
+            "default": 0,
+            "help": "This allows several images to be rendered in parallel (with different sampleoffset values) and then combined. <br><br>With non-adaptive sampling:<br> Let's say you render four images with 256 samples each, with sampleoffsets 0, 256, 512, and 768. If you combine those four images, you'll get exactly the same image as if you had rendered a single image with 1024 samples.<br><br> With adaptive sampling:<br> Let's say you again render four images, each with 'maxsamples' 256, with sampleoffsets 0, 256, 512, and 768. Let's say that due to adaptive sampling, some given pixel only gets 64 pixel samples in each of the four images. Then the combined image has been rendered with sample numbers 0-63, 256-319, 512-575, and 768-831. Due to the stratification of the samples, this is not quite as good as if you had rendered a single image with 256 consecutive samples.  However, it is still better than rendering a single image with only 64 samples."
+        },       
+        {
+            "panel": "RENDER_PT_renderman_sampling",
+            "name": "hider_samplestride",
+            "riopt": "hider:samplestride",
+            "label": "Sample Stride",
+            "type": "int",
+            "default": 1,
+            "help": "This facilitates rendering several images in parallel (with the same samplestride but different sampleoffset) and then combine them incrementally during interactive rendering.  Default value is 1. <br><br>With non-adaptive sampling:<br>Let's say you render four images with 256 samples each, with samplestride 4 and sampleoffsets 0, 1, 2, and 3.  If you combine those four images, you'll get exactly the same image as if you had rendered a single image with 1024 samples, and during incremental/interactive rendering you'll get the benefit of best use of the stratified progressive sample sequences.  If you can 'assemble' images with samples 0-3, 4-7, 8-12, etc during interactive rendering, you've got the benefits of faster rendering without jumping to high samples early on.<br><br>With adaptive sampling:<br>Let's say you again render four images, each with 'maxsamples' 256, with samplestride 4 and sampleoffsets 0, 1, 2, and 3.  This time with adaptive sampling (PixelVariance > 0).  Since each of the four images is more noisy than the combined image, the adaptive sampling will use more samples before deciding that the image error is acceptable than if it had been rendered as a single image. So the PixelVariance setting may need to be adjusted."
+        },                                      
         {
             "panel": "RENDER_PT_renderman_sampling",
             "name": "hider_incremental",
@@ -558,13 +588,23 @@
         },
         {
             "panel": "RENDER_PT_renderman_sampling",
+            "name": "hider_jitter",
+            "riopt": "hider:jitter",
+            "label": "Jitter",
+            "type": "int",
+            "default": 1,
+            "widget": "checkbox",
+            "help": "This option toggles the jitter (variation) in camera samples. By default, this hider option is enabled (set to 1), meaning that camera samples will be placed randomly in a pixel location. When it is turned off, camera rays are placed in the center of the pixel. When turned off, surface edges will appear aliased and jagged."
+        },        
+        {
+            "panel": "RENDER_PT_renderman_sampling",
             "page": "Global Trace Settings",
             "name": "ri_maxSpecularDepth",
             "riattr": "trace:maxspeculardepth",
             "label": "Max Specular Depth",
             "type": "int",
-            "editable": true,
-            "update_function_name": "update_root_node_func",               
+            "ipr_editable": true,
+            "update_function_name": "lambda s, c: update_root_node_func(s, 'ri_maxSpecularDepth', c)",              
             "default": 4,
             "min": 0,
             "slidermax": 15
@@ -576,8 +616,8 @@
             "riattr": "trace:maxdiffusedepth",
             "label": "Max Diffuse Depth",
             "type": "int",
-            "editable": true,
-            "update_function_name": "update_root_node_func",               
+            "ipr_editable": true,
+            "update_function_name": "lambda s, c: update_root_node_func(s, 'ri_maxDiffuseDepth', c)",
             "default": 1,
             "min": 0,
             "slidermax": 15
@@ -798,6 +838,17 @@
         }, 
         {
             "panel": "RENDER_PT_renderman_advanced_settings",
+            "name": "hider_bluenoise",
+            "riopt": "hider:bluenoise",
+            "label": "Blue Noise Samples",
+            "type": "int",
+            "default": 1,
+            "widget": "checkbox",
+            "connectable": false,
+            "help": "Setting to control whether the samples should have a visually pleasing blue noise distribution or not.  Default is 1 (on). Set to 0 (off) if the samples in adjacent pixels need to be completely decorrelated."
+        },              
+        {
+            "panel": "RENDER_PT_renderman_advanced_settings",
             "name": "shade_roughnessmollification",
             "riopt": "shade:roughnessmollification",
             "label": "Specular Roughness Mollification",
@@ -816,6 +867,7 @@
             "type": "string",
             "default": "gaussian",
             "widget": "popup",
+            "help": "The filter for rendered pixels. The box, triangle, disk, gaussian, and blackman-harris are softening filters while catmull-rom, sinc, mitchell, separable-catmull-rom, lanczos and bessel are sharpening filters. Separable-catmull-rom is a good compromise.",
             "options": "box|triangle|catmull-rom|sinc|gaussian|mitchell|separable-catmull-rom|blackman-harris|lanczos|bessel|disk"
         },
         {
@@ -829,6 +881,7 @@
                 2,
                 2
             ],
+            "help": "The width of the pixel filter. Typically from 1 to 6.",
             "connectable": false
         },
         {
@@ -897,6 +950,7 @@
                 16
             ],
             "widget": "mapper",
+            "help": "Specify the size of the buckets. Larger buckets will require more memory to render. Conversely, smaller buckets are less efficient for shading, but will use less memory during rendering. If your scene is using a lot of memory, you may want to try setting this field down to 8 by 8 or even 4 by 4 buckets, but most likely you will not change this.",
             "options": "4x4:[4,4]|8x8:[8,8]|16x16:[16,16]|32x32:[32,32]|64x64:[64,64]",
             "connectable": false           
         },                 
@@ -908,6 +962,7 @@
             "type": "string",
             "default": "circle",
             "widget": "popup",
+            "help": "RenderMan subdivides the output image into small rectangular regions called buckets, and renders a single bucket at a time. This allows a small portion of the image to be in memory at any one time. Note that only some bucket orders are supported for checkpointing and recovery.",
             "options": "horizontal|vertical|zigzag-x|zigzag-y|spiral|spacefill|circle"
         },
         {
@@ -940,6 +995,17 @@
                 "conditionalVisValue": "spiral"
             }              
         },
+        {
+            "panel": "RENDER_PT_renderman_advanced_settings",
+            "name": "volume_aggregatespace",
+            "label": "Volume Aggregate Space",
+            "riopt": "volume:aggregatespace",
+            "type": "string",
+            "default": "world",
+            "widget": "popup",
+            "help": "Space in which to compute aggregate volume metadata. Valid spaces are 'world' and 'camera'. Generally the space should be chosen to minimize the range of motion of the volumes.",
+            "options": "world|camera"
+        },        
         {
             "panel": "RENDER_PT_renderman_advanced_settings",
             "page": "Open Shading Language",
@@ -1369,7 +1435,58 @@
             "widget": "mapper",
             "options": "LocalQueue:lq|Tractor:tractor|None:none",
             "help": "System to spool to. None will generate RIB files, but not spool a render."
-        },       
+        },      
+        {
+            "panel": "RENDER_PT_renderman_spooling_export_options",
+            "page": "",
+            "name": "bl_batch_frame_chunk",
+            "label": "Frame Chunking",
+            "type": "int",
+            "default": 1,
+            "min": 1,
+            "help": "Frame chunking. Determines how many frames each Blender batch task will render.",
+            "conditionalVisOps": {
+                "conditionalVisOp": "equalTo",
+                "conditionalVisPath": "spool_style",
+                "conditionalVisValue": "batch"
+            }        
+        },           
+        {
+            "panel": "RENDER_PT_renderman_spooling_export_options",
+            "page": "",
+            "name": "use_bl_compositor",
+            "label": "Use Blender Compositor",
+            "type": "int",
+            "default": 1,
+            "widget": "checkbox",
+            "help": "Only applies to Blender Batch. When enabled, all of the RenderMan Display settings are ignored, and one final image from the Blender compositor is written out. When using RIB, the Blender compositor cannot be used.",
+            "conditionalVisOps": {
+                "conditionalVisOp": "equalTo",
+                "conditionalVisPath": "spool_style",
+                "conditionalVisValue": "batch"
+            }                   
+        },     
+        {
+            "panel": "RENDER_PT_renderman_spooling_export_options",
+            "page": "",
+            "name": "use_bl_compositor_write_aovs",
+            "label": "Blender Batch AOVs",
+            "type": "int",
+            "default": 0,
+            "widget": "checkbox",
+            "help": "Only applies to Blender Batch. If on, and Use Blender Compositor is also turned on, all AOVs will be written out as OpenEXR files.",
+            "conditionalVisOps": {
+                "conditionalVis1Path": "spool_style",
+                "conditionalVis2Op": "equalTo",
+                "conditionalVis1Value": "batch",
+                "conditionalVisOp": "and",
+                "conditionalVis1Op": "equalTo",
+                "conditionalVisLeft": "conditionalVis1",
+                "conditionalVisRight": "conditionalVis2",
+                "conditionalVis2Path": "use_bl_compositor",
+                "conditionalVis2Value": "1"     
+            }      
+        },        
         {
             "panel": "RENDER_PT_renderman_spooling_export_options",
             "page": "",
@@ -1378,7 +1495,12 @@
             "type": "int",
             "default": 0,
             "widget": "checkbox",
-            "help": "Attempt to resume render from a previous checkpoint (if possible)."
+            "help": "Attempt to resume render from a previous checkpoint (if possible). This is only avaliable for RIB renders.",
+            "conditionalVisOps": {
+                "conditionalVisOp": "equalTo",
+                "conditionalVisPath": "spool_style",
+                "conditionalVisValue": "rib"
+            }               
         },                 
         {
             "panel": "RENDER_PT_renderman_spooling_export_options",
@@ -1412,28 +1534,126 @@
             "help": "Inserts a string of custom command arguments into the render process"                   
         },
         {
+            "panel": "",
+            "page": "Denoising",
+            "name": "use_legacy_denoiser",
+            "label": "Use Legacy Denoiser",
+            "type": "int",
+            "default": 0,
+            "widget": "checkbox",
+            "help": "Use the previous denoiser to denoise passes."
+        },      
+        {
             "panel": "RENDER_PT_renderman_spooling_export_options",
-            "page": "",
+            "page": "Denoising",
+            "name": "ai_denoiser_asymmetry",
+            "label": "Asymmetry",
+            "type": "float",
+            "default": 0.0,
+            "min": 0.0,
+            "max": 2.0,
+            "help": "Controls the asymmetry value, 0 is best quality, higher values encourage the denoiser to avoid overblurring, leading to weaker denoising.",
+            "conditionalVisOps": {
+                "conditionalVisOp": "notEqualTo",
+                "conditionalVisPath": "use_legacy_denoiser",
+                "conditionalVisValue": "1"
+            }               
+        },     
+        {
+            "panel": "RENDER_PT_renderman_spooling_export_options",
+            "page": "Denoising",
+            "name": "ai_denoiser_output_dir",
+            "label": "Output Directory",
+            "type": "string",
+            "widget": "dirinput",
+            "default": "",
+            "help": "The output directory for the denoised images. If not set, we put the images into a subfolder 'denoised' relative to the input images.",
+            "conditionalVisOps": {
+                "conditionalVisOp": "notEqualTo",
+                "conditionalVisPath": "use_legacy_denoiser",
+                "conditionalVisValue": "1"
+            }               
+        },        
+        {
+            "panel": "RENDER_PT_renderman_spooling_export_options",
+            "page": "Denoising",
+            "name": "ai_denoiser_mode",
+            "label": "Mode",
+            "type": "string",
+            "default": "singleframe",
+            "widget": "mapper",
+            "options": "Single Frame:singleframe|Cross Frame:crossframe",
+            "help": "Use single frame or cross frame. Cross frame requires at least 7 frames.",
+            "conditionalVisOps": {
+                "conditionalVisOp": "notEqualTo",
+                "conditionalVisPath": "use_legacy_denoiser",
+                "conditionalVisValue": "1"
+            }               
+        },              
+        {
+            "panel": "RENDER_PT_renderman_spooling_export_options",
+            "page": "Denoising",
+            "name": "ai_denoiser_flow",
+            "label": "Flow",
+            "type": "int",
+            "default": 1,
+            "widget": "checkbox",
+            "help": "Whether to compute optical flow.",
+            "conditionalVisOps": {
+                "conditionalVisOp": "notEqualTo",
+                "conditionalVisPath": "use_legacy_denoiser",
+                "conditionalVisValue": "1"
+            }               
+        },
+        {
+            "panel": "RENDER_PT_renderman_spooling_export_options",
+            "page": "Denoising",
+            "name": "ai_denoiser_verbose",
+            "label": "Verbose",
+            "type": "int",
+            "default": 0,
+            "widget": "checkbox",
+            "help": "Enable versbose output.",
+            "conditionalVisOps": {
+                "conditionalVisOp": "notEqualTo",
+                "conditionalVisPath": "use_legacy_denoiser",
+                "conditionalVisValue": "1"
+            }               
+        },              
+        {
+            "panel": "RENDER_PT_renderman_spooling_export_options",
+            "page": "Denoising",
             "name": "denoise_cmd",
             "label": "Custom Denoise Commands",
             "type": "string",
             "default": "",
-            "help": "Inserts a string of custom commands arguments into the denoising process, if selected"                   
+            "help": "Inserts a string of custom commands arguments into the denoising process (hyperion), if selected",
+            "conditionalVisOps": {
+                "conditionalVisOp": "notEqualTo",
+                "conditionalVisPath": "use_legacy_denoiser",
+                "conditionalVisValue": "0"
+            }            
         },                              
         {
             "panel": "RENDER_PT_renderman_spooling_export_options",
-            "page": "",
+            "page": "Denoising",
             "name": "denoise_gpu",
             "label": "Use GPU for denoising",
             "type": "int",
             "default": 0,
             "widget": "checkbox",
-            "help": "The denoiser will attempt to use the GPU (if available)",
+            "help": "The denoiser (hyperion) will attempt to use the GPU (if available)",
             "conditionalVisOps": {
-                "conditionalVisOp": "notEqualTo",
-                "conditionalVisPath": "current_platform",
-                "conditionalVisValue": "macOS"
-            }
+                "conditionalVis1Path": "use_legacy_denoiser",
+                "conditionalVis2Op": "notEqualTo",
+                "conditionalVis1Value": "1",
+                "conditionalVisOp": "and",
+                "conditionalVis1Op": "equalTo",
+                "conditionalVisLeft": "conditionalVis1",
+                "conditionalVisRight": "conditionalVis2",
+                "conditionalVis2Path": "current_platform",
+                "conditionalVis2Value": "macOS"     
+            }             
         }
     ]
 }

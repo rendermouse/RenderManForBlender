@@ -58,7 +58,7 @@ class RENDER_PT_renderman_render(PRManButtonsPanel, Panel):
         _draw_ui_from_rman_config('rman_properties_scene', 'RENDER_PT_renderman_render', context, layout, rm)  
 
 class RENDER_PT_renderman_spooling(PRManButtonsPanel, Panel):
-    bl_label = "External Rendering"
+    bl_label = "Batch Rendering"
     bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context):
@@ -75,11 +75,11 @@ class RENDER_PT_renderman_spooling(PRManButtonsPanel, Panel):
         col = layout.column()
         row = col.row(align=True)
         rman_batch = rfb_icons.get_icon("rman_batch")
-        row.operator("renderman.external_render",
-                     text="External Render", icon_value=rman_batch.icon_id)
+        row.operator("renderman.batch_render",
+                     text="Batch Render", icon_value=rman_batch.icon_id)
         rman_bake = rfb_icons.get_icon("rman_bake")                     
-        row.operator("renderman.external_bake",
-                     text="External Bake Render", icon_value=rman_bake.icon_id)
+        row.operator("renderman.batch_bake_render",
+                     text="Batch Bake Render", icon_value=rman_bake.icon_id)
 
         # do animation
         col.prop(rm, 'external_animation')
@@ -132,7 +132,7 @@ class RENDER_PT_renderman_world_integrators(PRManButtonsPanel, Panel):
         rm = world.renderman
         nt = world.node_tree
 
-        draw_nodes_properties_ui(layout, context, nt, input_name='Integrator', output_node_type='integrators_output')
+        draw_nodes_properties_ui(layout, context, nt, input_name='integrator_in', output_node_type='integrators_output')
 
 class RENDER_PT_renderman_world_display_filters(PRManButtonsPanel, Panel):
     bl_label = "Display Filters"
@@ -175,7 +175,7 @@ class RENDER_PT_renderman_world_display_filters(PRManButtonsPanel, Panel):
             op = col.operator("node.rman_remove_displayfilter_node_socket", text="", icon="REMOVE")
             op.index = i                      
             col = row.column()
-            col.label(text=socket.name)
+            col.label(text=socket.identifier)
 
             if socket.is_linked:
                 col = row.column()
@@ -248,7 +248,7 @@ class RENDER_PT_renderman_world_sample_filters(PRManButtonsPanel, Panel):
             op = col.operator("node.rman_remove_samplefilter_node_socket", text="", icon="REMOVE")
             op.index = i               
             col = row.column()
-            col.label(text=socket.name)       
+            col.label(text=socket.identifier)       
 
             if socket.is_linked:
                 col = row.column()
@@ -364,11 +364,11 @@ classes = [
     RENDER_PT_renderman_render,
     RENDER_PT_renderman_spooling,
     RENDER_PT_renderman_spooling_export_options,    
+    RENDER_PT_renderman_sampling,
     RENDER_PT_renderman_baking,
     RENDER_PT_renderman_world_integrators,
     RENDER_PT_renderman_world_display_filters,
     RENDER_PT_renderman_world_sample_filters,    
-    RENDER_PT_renderman_sampling,
     RENDER_PT_renderman_motion_blur,    
     RENDER_PT_renderman_advanced_settings,   
     RENDER_PT_renderman_custom_options

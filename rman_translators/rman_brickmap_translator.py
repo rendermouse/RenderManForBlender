@@ -24,6 +24,11 @@ class RmanBrickmapTranslator(RmanTranslator):
     def update(self, ob, rman_sg_brickmap):       
         primvar = rman_sg_brickmap.sg_node.GetPrimVars()
         rm = ob.renderman
+        if string_utils.check_frame_sensitive(rm.bkm_filepath):  
+            rman_sg_brickmap.is_frame_sensitive = True   
+        else:
+            rman_sg_brickmap.is_frame_sensitive = False                  
         bkm_filepath = string_utils.expand_string(rm.bkm_filepath)
         primvar.SetString("filename", bkm_filepath)
+        super().export_object_primvars(ob, primvar)
         rman_sg_brickmap.sg_node.SetPrimVars(primvar)        

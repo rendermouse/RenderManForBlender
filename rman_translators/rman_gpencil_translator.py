@@ -20,11 +20,6 @@ class RmanGPencilTranslator(RmanTranslator):
         super().__init__(rman_scene)
         self.bl_type = 'GPENCIL' 
 
-
-    def export_object_primvars(self, ob, rman_sg_node):
-        pass
-
-
     def export(self, ob, db_name):
         prim_type = object_utils._detect_primitive_(ob)
         
@@ -110,6 +105,7 @@ class RmanGPencilTranslator(RmanTranslator):
         primvar.SetIntegerDetail(self.rman_scene.rman.Tokens.Rix.k_Ri_vertices, verts, "facevarying")  
         if st:
             primvar.SetFloatArrayDetail("st", st, 2, "vertex")  
+        super().export_object_primvars(ob, primvar)            
         mesh_sg.SetPrimVars(primvar)
         if rman_sg_material:
             scenegraph_utils.set_material(mesh_sg, rman_sg_material.sg_fill_mat)
@@ -145,6 +141,7 @@ class RmanGPencilTranslator(RmanTranslator):
         primvar.SetPointDetail(self.rman_scene.rman.Tokens.Rix.k_P, points, "vertex")  
         primvar.SetFloatDetail(self.rman_scene.rman.Tokens.Rix.k_width, widths, "vertex")              
                     
+        super().export_object_primvars(ob, primvar)                    
         points_sg.SetPrimVars(primvar)
 
         # Attach material
@@ -199,6 +196,7 @@ class RmanGPencilTranslator(RmanTranslator):
 
         primvar.SetFloatDetail(self.rman_scene.rman.Tokens.Rix.k_width, widths, "vertex")
                     
+        super().export_object_primvars(ob, primvar)                    
         curves_sg.SetPrimVars(primvar)
 
         # Attach material

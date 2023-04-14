@@ -32,7 +32,6 @@ class PRMAN_OT_Renderman_open_scene_RIB(bpy.types.Operator):
             rm.rib_format = format_prev_val
 
             rib_output = string_utils.expand_string(rm.path_rib_output, 
-                                                    frame=scene.frame_current, 
                                                     asFilePath=True)   
 
             filepath_utils.view_file(rib_output)

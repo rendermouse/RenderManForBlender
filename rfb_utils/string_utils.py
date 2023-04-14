@@ -34,7 +34,7 @@ class SceneStringConverter(object):
         Kwargs:
         - display (str): The display being considered. This is necessary if your
         expression contains <aov> or <ext>
-        - frame (int): An optional frame number to expand <F>, <F4>, etc.
+        - frame (int, str): An optional frame number to expand <F>, <F4>, etc.
 
         Returns:
         - The expanded string
@@ -110,7 +110,7 @@ def expand_string(string, display=None, glob_sequence=False, frame=None, token_d
 
     Kwargs:
     - display (str): the name of a display driver to update <ext> tokens.
-    - frame (str): the frame to use for expanding
+    - frame (int, str): the frame to use for expanding. If a string, the string will be repeated by the paddning. Ex: '#' will turn to '####' for <f4>
     - token_dict (dict): dictionary of token/vals that also need to be set.
     - asFilePath (bool): treat the input string as a path. Will create directories if they don't exist
 
@@ -163,6 +163,10 @@ def get_var(nm):
     converter_validity_check()
     return __SCENE_STRING_CONVERTER__.get_token(nm)
 
+def update_frame_token(frame):
+    converter_validity_check()
+    __SCENE_STRING_CONVERTER__.expr.set_frame_context(frame)
+
 def get_tokenized_openvdb_file(frame_filepath, grids_frame):
     openvdb_file = filepath_utils.get_real_path(frame_filepath)
     f = os.path.basename(frame_filepath)
@@ -212,6 +216,17 @@ def update_blender_tokens_cb(bl_scene):
 
     __SCENE_STRING_CONVERTER__.update(bl_scene=scene)
 
+def check_frame_sensitive(s):
+    # check if the sting has any frame token
+    # ex: <f>, <f4>, <F4> etc.
+    # if it does, it means we need to issue a material
+    # update if the frame changes
+    pat = re.compile(r'<[f|F]\d*>')
+    m = pat.search(s)
+    if m:
+        return True
+    return False    
+
 def _format_time_(seconds):
     hours = seconds // (60 * 60)
     seconds %= (60 * 60)
@@ -222,28 +237,42 @@ def _format_time_(seconds):
 def convert_val(v, type_hint=None):
     import mathutils
 
+    converted_val = v
+
     # float, int
     if type_hint == 'color':
-        return list(v)[:3]
+        converted_val = list(v)[:3]
 
-    if type(v) in (mathutils.Vector, mathutils.Color) or\
+    elif type(v) in (mathutils.Vector, mathutils.Color) or\
             v.__class__.__name__ == 'bpy_prop_array'\
             or v.__class__.__name__ == 'Euler':
-        # BBM modified from if to elif
-        return list(v)
+        converted_val = list(v)
+
+    elif type(v) == str and v.startswith('['):
+        converted_val = eval(v)
+
+    elif type(v) == list:
+        converted_val = v
 
     # matrix
     elif type(v) == mathutils.Matrix:
-        return [v[0][0], v[1][0], v[2][0], v[3][0],
+        converted_val = [v[0][0], v[1][0], v[2][0], v[3][0],
                 v[0][1], v[1][1], v[2][1], v[3][1],
                 v[0][2], v[1][2], v[2][2], v[3][2],
                 v[0][3], v[1][3], v[2][3], v[3][3]]
     elif type_hint == 'int':
-        return int(v)
+        converted_val = int(v)
     elif type_hint == 'float':
-        return float(v)
-    else:
-        return v
+        converted_val = float(v)
+
+    if type_hint == 'string':
+        if isinstance(converted_val, list):
+            for i in range(len(converted_val)):
+                converted_val[i] = expand_string(converted_val[i], asFilePath=True)
+        else:
+            converted_val = expand_string(converted_val, asFilePath=True)
+    
+    return converted_val
 
 def getattr_recursive(ptr, attrstring):
     for attr in attrstring.split("."):

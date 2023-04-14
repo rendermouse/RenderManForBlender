@@ -6,6 +6,7 @@ import webbrowser
 import re
 from ..rfb_logger import rfb_log
 from .prefs_utils import get_pref
+from . import string_utils
 
 def view_file(file_path):
     
@@ -74,8 +75,14 @@ def get_token_blender_file_path(p):
             regex = r"^//"
             pout = re.sub(regex, '<blend_dir>/', p, 0, re.MULTILINE)
     else:
-        pout = p
-    
+        blend_dir = string_utils.get_var('blend_dir')
+        if blend_dir == '':
+            pout = p
+        elif blend_dir.endswith('/'):
+            pout = p.replace(blend_dir, '<blend_dir>')
+        else:    
+            pout = p.replace(blend_dir, '<blend_dir>/')
+
     return pout.replace('\\', '/')
  
 def filesystem_path(p):

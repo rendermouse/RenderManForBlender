@@ -11,10 +11,7 @@ class RmanLightFilterTranslator(RmanTranslator):
         super().__init__(rman_scene)
         self.bl_type = 'LIGHTFILTER'  
 
-    def export_object_primvars(self, ob, rman_sg_node):
-        pass
-
-    def export_object_attributes(self, ob, rman_sg_node):
+    def export_object_attributes(self, ob, rman_sg_node, remove=True):
         pass
 
     def export_light_filters(self, ob, rman_sg_node, rm):
@@ -33,7 +30,7 @@ class RmanLightFilterTranslator(RmanTranslator):
                 light_filter_sg = None
 
                 light_filter_db_name = object_utils.get_db_name(light_filter)                
-                rman_sg_lightfilter = self.rman_scene.rman_objects.get(light_filter.original)
+                rman_sg_lightfilter = self.rman_scene.rman_prototypes.get(light_filter.original.data.original)
                 if not rman_sg_lightfilter:
                     rman_sg_lightfilter = self.export(light_filter, light_filter_db_name)
                 elif not isinstance(rman_sg_lightfilter, RmanSgLightFilter):
@@ -43,7 +40,7 @@ class RmanLightFilterTranslator(RmanTranslator):
                         self.rman_scene.get_root_sg_node().RemoveChild(rman_sg_group.sg_node)
                     rman_sg_lightfilter.instances.clear() 
                     del rman_sg_lightfilter
-                    self.rman_scene.rman_objects.pop(light_filter.original)
+                    self.rman_scene.rman_prototypes.pop(light_filter.original.data.original)
                     rman_sg_lightfilter = self.export(light_filter, light_filter_db_name)
                 self.update(light_filter, rman_sg_lightfilter)
                 light_filters.append(rman_sg_lightfilter.sg_filter_node)
@@ -88,12 +85,14 @@ class RmanLightFilterTranslator(RmanTranslator):
         rman_sg_lightfilter = RmanSgLightFilter(self.rman_scene, sg_group, db_name)
         rman_sg_lightfilter.sg_filter_node = sg_filter_node
         rman_sg_lightfilter.coord_sys = db_name
+        rman_sg_lightfilter.rman_type = 'LIGHTFILTER'
 
         rman_group_translator = self.rman_scene.rman_translators['GROUP']
 
         rman_group_translator.update_transform(ob, rman_sg_lightfilter)
         self.rman_scene.get_root_sg_node().AddChild(rman_sg_lightfilter.sg_node)
-        self.rman_scene.rman_objects[ob.original] = rman_sg_lightfilter
+        proto_key = object_utils.prototype_key(ob)
+        self.rman_scene.rman_prototypes[proto_key] = rman_sg_lightfilter
         self.rman_scene.sg_scene.Root().AddCoordinateSystem(rman_sg_lightfilter.sg_node)
 
         return rman_sg_lightfilter 
@@ -105,7 +104,7 @@ class RmanLightFilterTranslator(RmanTranslator):
         rixparams.SetString("coordsys", rman_sg_lightfilter.coord_sys)
             
         # check if this light filter belongs to a light link
-        for ll in self.rman_scene.bl_scene.renderman.light_links:
-            if ll.light_ob == ob:
-                rixparams.SetString("linkingGroups", ob.name)
-                break
+        if ob.original.data.renderman.linkingGroups != "":
+            rixparams.SetString("linkingGroups", ob.original.data.renderman.linkingGroups)
+        else:
+            rixparams.Remove("linkingGroups")

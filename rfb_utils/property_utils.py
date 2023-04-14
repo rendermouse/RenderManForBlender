@@ -1,15 +1,9 @@
-from . import texture_utils
 from . import string_utils
-from . import shadergraph_utils
 from . import prefs_utils
-from ..rman_constants import RFB_ARRAYS_MAX_LEN, __RMAN_EMPTY_STRING__, __RESERVED_BLENDER_NAMES__, RFB_FLOAT3
+from ..rman_constants import __RMAN_EMPTY_STRING__, __RESERVED_BLENDER_NAMES__, RFB_FLOAT3
 from ..rfb_logger import rfb_log
-from collections import OrderedDict
 from bpy.props import *
 import bpy
-import os
-import shutil
-import re
 
 
 __GAINS_TO_ENABLE__ = {
@@ -54,6 +48,9 @@ __LOBES_ENABLE_PARAMS__ = [
 class BlPropInfo:
 
     def __init__(self, node, prop_name, prop_meta):
+
+        from . import shadergraph_utils
+
         self.prop_meta = prop_meta
         self.prop_name = prop_name
         self.prop = getattr(node, prop_name, None)
@@ -132,7 +129,7 @@ def get_property_default(node, prop_name):
             
     return dflt
 
-def set_rix_param(params, param_type, param_name, val, is_reference=False, is_array=False, array_len=-1, node=None):
+def set_rix_param(params, param_type, param_name, val, is_reference=False, is_array=False, array_len=-1, node=None, prop_name=''):
     """Sets a single parameter in an RtParamList
 
     Arguments:
@@ -145,6 +142,7 @@ def set_rix_param(params, param_type, param_name, val, is_reference=False, is_ar
         array_len (int) - length of array
         node (AnyType) - the Blender object that this param originally came from. This is necessary
                         so we can grab and compare val with the default value (see get_property_default)
+        prop_name (str) - name of the property that we look for the default value
     """
 
 
@@ -176,7 +174,11 @@ def set_rix_param(params, param_type, param_name, val, is_reference=False, is_ar
     else:
         # check if we need to emit this parameter.
         if node != None and not prefs_utils.get_pref('rman_emit_default_params', False):
-            dflt = get_property_default(node, param_name)
+            pname = param_name
+            if prop_name != '':
+                pname = prop_name
+            dflt = get_property_default(node, pname)
+            
 
             # FIXME/TODO: currently, the python version of RtParamList
             # doesn't allow us to retrieve existing values. For now, only do the
@@ -184,35 +186,18 @@ def set_rix_param(params, param_type, param_name, val, is_reference=False, is_ar
             # not setting the value during IPR, if the user happens to change
             # the param val back to default. 
             if dflt != None and not params.HasParam(param_name):
-                if isinstance(val, list):
-                    dflt = list(dflt)
-
-                if not is_array:
-                    if ((isinstance(val, str) or isinstance(dflt, str))):
-                        # these explicit conversions are necessary because of EnumProperties
-                        if param_type == 'string' and val == __RMAN_EMPTY_STRING__:
-                            val = ""
-                        elif param_type == 'int':
-                            val = int(val)
-                            dflt = int(dflt)
-                        elif param_type == 'float':
-                            val = float(val)
-                            dflt = float(dflt)
-                    elif param_type == 'int' and (isinstance(val, bool) or isinstance(dflt, bool)):
-                        # convert bools into ints
-                        val = int(val)
-                        dflt = int(dflt)
+                dflt = string_utils.convert_val(dflt, type_hint=param_type)
 
                 # Check if this param is marked always_write.
                 # We still have some plugins where the Args file and C++ don't agree
                 # on default behavior
                 always_write = False
                 prop_meta = getattr(node, 'prop_meta', dict())
-                if param_name in node.prop_meta:
-                    meta = prop_meta.get(param_name)
+                if pname in node.prop_meta:
+                    meta = prop_meta.get(pname)
                     always_write = meta.get('always_write', always_write)
                     if always_write:
-                        rfb_log().debug('Param: %s for Node: %s is marked always_write' % (param_name, node.name))
+                        rfb_log().debug('Param: %s for Node: %s is marked always_write' % (pname, node.name))
 
                 if not always_write and val == dflt:
                     return                  
@@ -242,9 +227,100 @@ def set_rix_param(params, param_type, param_name, val, is_reference=False, is_ar
             elif param_type == "vector":
                 params.SetVector(param_name, val)
             elif param_type == "normal":
-                params.SetNormal(param_name, val)               
+                params.SetNormal(param_name, val)    
+
+def set_primvar_bl_props(primvars, rm, inherit_node=None):
+    # set any properties marked primvar in the config file
+    for prop_name, meta in rm.prop_meta.items():
+        set_primvar_bl_prop(primvars, prop_name, meta, rm, inherit_node=inherit_node)
+
+def set_primvar_bl_prop(primvars, prop_name, meta, rm, inherit_node):
+    if 'primvar' not in meta:
+        return
+        
+    conditionalVisOps = meta.get('conditionalVisOps', None)
+    if conditionalVisOps:
+        # check conditionalVisOps to see if this primvar applies
+        # to this object
+        expr = conditionalVisOps.get('expr', None)
+        node = rm              
+        if expr and not eval(expr):
+            return
+
+    val = getattr(rm, prop_name)
+    if not val:
+        return
+
+    if 'inheritable' in meta:
+        if float(val) == meta['inherit_true_value']:
+            if inherit_node and hasattr(inherit_node, prop_name):
+                val = getattr(inherit_node, prop_name)
+
+    ri_name = meta['primvar']
+    is_array = False
+    array_len = -1
+    if 'arraySize' in meta:
+        is_array = True
+        array_len = meta['arraySize']
+    param_type = meta['renderman_type']
+    set_rix_param(primvars, param_type, ri_name, val, is_reference=False, is_array=is_array, array_len=array_len, node=rm, prop_name=prop_name)                
+
+def set_rioption_bl_prop(options, prop_name, meta, rm):     
+    if 'riopt' not in meta:
+        return
+    
+    val = getattr(rm, prop_name)
+    ri_name = meta['riopt']
+    is_array = False
+    array_len = -1
+    if 'arraySize' in meta:
+        is_array = True
+        array_len = meta['arraySize']
+    param_type = meta['renderman_type']
+    val = string_utils.convert_val(val, type_hint=param_type)
+    set_rix_param(options, param_type, ri_name, val, is_reference=False, is_array=is_array, array_len=array_len, node=rm, prop_name=prop_name)
+
+def set_riattr_bl_prop(attrs, prop_name, meta, rm, check_inherit=True, remove=True):
+    if 'riattr' not in meta:
+        return
+
+    conditionalVisOps = meta.get('conditionalVisOps', None)
+    if conditionalVisOps:
+        # check conditionalVisOps to see if this riattr applies
+        # to this object
+        expr = conditionalVisOps.get('expr', None)       
+        node = rm
+        if expr and not eval(expr):
+            return          
+
+    val = getattr(rm, prop_name)
+    ri_name = meta['riattr']
+    if check_inherit and 'inheritable' in meta:
+        cond = meta['inherit_true_value']
+        if isinstance(cond, str):
+            if exec(cond):
+                if remove:
+                    attrs.Remove(ri_name)
+                return
+        elif float(val) == cond:
+            if remove:
+                attrs.Remove(ri_name)
+            return
+
+    is_array = False
+    array_len = -1
+    if 'arraySize' in meta:
+        is_array = True
+        array_len = meta['arraySize']       
+    param_type = meta['renderman_type'] 
+    val = string_utils.convert_val(val, type_hint=param_type)                         
+    set_rix_param(attrs, param_type, ri_name, val, is_reference=False, is_array=is_array, array_len=array_len, node=rm, prop_name=prop_name)
+
 
 def build_output_param_str(rman_sg_node, mat_name, from_node, from_socket, convert_socket=False, param_type=''):
+
+    from . import shadergraph_utils
+
     nodes_to_blnodeinfo = getattr(rman_sg_node, 'nodes_to_blnodeinfo', dict())
     if from_node in nodes_to_blnodeinfo:
         bl_node_info = nodes_to_blnodeinfo[from_node]
@@ -267,6 +343,9 @@ def build_output_param_str(rman_sg_node, mat_name, from_node, from_socket, conve
         return "%s:%s" % (from_node_name, from_sock_name)
 
 def get_output_param_str(rman_sg_node, node, mat_name, socket, to_socket=None, param_type='', check_do_convert=True):
+
+    from . import shadergraph_utils
+
     # if this is a node group, hook it up to the input node inside!
     if node.bl_idname == 'ShaderNodeGroup':
         ng = node.node_tree
@@ -441,18 +520,6 @@ def vstruct_conditional(node, param):
         new_tokens.extend(['else', 'False'])
     return eval(" ".join(new_tokens))
 
-def set_frame_sensitive(rman_sg_node, prop):
-    # check if the prop value has any frame token
-    # ex: <f>, <f4>, <F4> etc.
-    # if it does, it means we need to issue a material
-    # update if the frame changes
-    pat = re.compile(r'<[f|F]\d*>')
-    m = pat.search(prop)
-    if m:
-        rman_sg_node.is_frame_sensitive = True        
-    else:
-        rman_sg_node.is_frame_sensitive = False  
-
 def set_dspymeta_params(node, prop_name, params):
     if node.plugin_name not in ['openexr', 'deepexr']:
         # for now, we only accept openexr an deepexr
@@ -510,9 +577,15 @@ def set_pxrosl_params(node, rman_sg_node, params, ob=None, mat_name=None):
             set_rix_param(params, param_type, param_name, val, is_reference=False)    
 
 def set_ramp_rixparams(node, prop_name, prop, param_type, params):
+    nt = node.rman_fake_node_group_ptr
+    ramp_name =  prop
+    if nt and ramp_name not in nt.nodes:
+        # this shouldn't happen, but sometimes can
+        # try to look at the bpy.data.node_groups version
+        nt = bpy.data.node_groups[node.rman_fake_node_group]    
+        if nt and ramp_name not in nt.nodes:
+            nt = None
     if param_type == 'colorramp':
-        nt = node.rman_fake_node_group_ptr
-        ramp_name =  prop
         if nt:
             color_ramp_node = nt.nodes[ramp_name]                            
             colors = []
@@ -560,9 +633,7 @@ def set_ramp_rixparams(node, prop_name, prop, param_type, params):
             interp = 'catmull-rom'
             params.SetString("%s_Interpolation" % prop_name, interp )                                 
 
-    elif param_type == 'floatramp':
-        nt = node.rman_fake_node_group_ptr
-        ramp_name =  prop
+    elif param_type == 'floatramp':  
         if nt:
             float_ramp_node = nt.nodes[ramp_name]                            
 
@@ -582,8 +653,8 @@ def set_ramp_rixparams(node, prop_name, prop, param_type, params):
             params.SetFloatArray('%s_Knots' % prop_name, knots, len(knots))
             params.SetFloatArray('%s_Floats' % prop_name, vals, len(vals))    
             
-            # Blender doesn't have an interpolation selection for float ramps. Default to catmull-rom
-            interp = 'catmull-rom'
+            interp_name = '%s_Interpolation' % prop_name
+            interp = getattr(node, interp_name, 'linear')
             params.SetString("%s_Interpolation" % prop_name, interp )         
         else:
             # this might be from a linked file
@@ -608,7 +679,8 @@ def set_ramp_rixparams(node, prop_name, prop, param_type, params):
             params.SetFloatArray('%s_Knots' % prop_name, knots, len(knots))
             params.SetFloatArray('%s_Floats' % prop_name, vals, len(vals))   
 
-            interp = 'catmull-rom'
+            interp_name = '%s_Interpolation' % prop_name
+            interp = getattr(node, interp_name, 'linear')
             params.SetString("%s_Interpolation" % prop_name, interp )          
 
 def set_array_rixparams(node, rman_sg_node, mat_name, bl_prop_info, prop_name, prop, params):   
@@ -618,12 +690,14 @@ def set_array_rixparams(node, rman_sg_node, mat_name, bl_prop_info, prop_name, p
     param_type = bl_prop_info.renderman_array_type
     param_name = bl_prop_info.renderman_name     
     collection = getattr(node, coll_nm)
-
-    for i in range(len(collection)):
+    any_connections = False
+    inputs = getattr(node, 'inputs', dict())
+    input_array_size = len(collection)    
+    for i in range(input_array_size):
         elem = collection[i]
         nm = '%s[%d]' % (prop_name, i)
-        if hasattr(node, 'inputs')  and nm in node.inputs and \
-            node.inputs[nm].is_linked:
+        if nm in node.inputs and inputs[nm].is_linked:
+            any_connections = True
             to_socket = node.inputs[nm]
             from_socket = to_socket.links[0].from_socket
             from_node = to_socket.links[0].from_node
@@ -631,15 +705,29 @@ def set_array_rixparams(node, rman_sg_node, mat_name, bl_prop_info, prop_name, p
             val = get_output_param_str(rman_sg_node,
                 from_node, mat_name, from_socket, to_socket, param_type)
             if val:
-                val_ref_array.append(val)
+                if getattr(from_socket, 'is_array', False):      
+                    # the socket from the incoming connection is an array
+                    # clear val_ref_array so far and resize it to this
+                    # socket's array size                    
+                    array_size = from_socket.array_size
+                    val_ref_array.clear()
+                    for i in range(array_size):        
+                        cnx_val = '%s[%d]' % (val, i)
+                        val_ref_array.append(cnx_val)
+                    break
+                val_ref_array.append(val)            
+            else:
+                val_ref_array.append("")            
         else:
             prop = getattr(elem, 'value_%s' % param_type)
             val = string_utils.convert_val(prop, type_hint=param_type)
             if param_type in RFB_FLOAT3:
                 val_array.extend(val)
             else:
-                val_array.append(val)  
-    if val_ref_array:
+                val_array.append(val)
+            val_ref_array.append("")
+
+    if any_connections:
         set_rix_param(params, param_type, param_name, val_ref_array, is_reference=True, is_array=True, array_len=len(val_ref_array))
     else:
         set_rix_param(params, param_type, param_name, val_array, is_reference=False, is_array=True, array_len=len(val_array))                               
@@ -650,6 +738,7 @@ def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group
         set_pxrosl_params(node, rman_sg_node, params, ob=ob, mat_name=mat_name)
         return params
 
+    is_frame_sensitive = False
     for prop_name, meta in node.prop_meta.items():
         bl_prop_info = BlPropInfo(node, prop_name, meta)
         param_widget = bl_prop_info.widget 
@@ -756,8 +845,10 @@ def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group
                 val = [0, 0, 0] if param_type == 'color' else 0
 
             elif param_type == 'string':
-                if rman_sg_node:
-                    set_frame_sensitive(rman_sg_node, prop)
+                from . import texture_utils
+
+                if not is_frame_sensitive:
+                    is_frame_sensitive = string_utils.check_frame_sensitive(prop)
 
                 val = string_utils.expand_string(prop)
                 options = meta['options']
@@ -778,7 +869,10 @@ def set_node_rixparams(node, rman_sg_node, params, ob=None, mat_name=None, group
                 array_len = int(bl_prop_info.arraySize)
 
             set_rix_param(params, param_type, param_name, val, is_reference=False, is_array=is_array, array_len=array_len, node=node)
-                    
+
+    if rman_sg_node:
+        rman_sg_node.is_frame_sensitive = (rman_sg_node.is_frame_sensitive or is_frame_sensitive)
+            
     return params      
 
 def property_group_to_rixparams(node, rman_sg_node, sg_node, ob=None, mat_name=None, group_node=None):
@@ -791,6 +885,8 @@ def portal_inherit_dome_params(portal_node, dome, dome_node, rixparams):
     Portal lights need to inherit some parameter values from the dome light
     it is parented to.
     '''   
+
+    from . import texture_utils
 
     inheritAttrs = {
         "float specular": 1.0,
