@@ -599,11 +599,7 @@ class RmanScene(object):
         # This is incredibly wasteful when these don't apply. We could try and detect this case and
         # create a shareable geometry.
 
-        obj = bpy.data.objects.get(db_ob.name, None)
-        if not obj and self.is_swatch_render:
-            obj = db_ob
-        elif obj.type != db_ob.type:
-            obj = db_ob
+        obj = db_ob
 
         if obj and obj.type not in ('ARMATURE', 'CAMERA'):
             ob = obj.evaluated_get(self.depsgraph)            
@@ -733,6 +729,8 @@ class RmanScene(object):
                 # Empty was not created. Export it.
                 parent = ob.parent
                 rman_empty_node = self.export_data_block(parent)
+                if not rman_empty_node:
+                    return
             rman_empty_node.sg_node.AddChild(rman_sg_node.sg_node)
         else:
             self.get_root_sg_node().AddChild(rman_sg_node.sg_node)          
@@ -1143,9 +1141,18 @@ class RmanScene(object):
             if primvar_t == '':
                 primvar_t = 't'
             invert_t = rm.rman_bake_illum_invertT
+            udim_stride = rm.rman_bake_illum_bakeudimstride
+            udim_offset = rm.rman_bake_illum_bakeudimoffset
+            bbox_min = rm.rman_bake_illum_bakebboxmin
+            bbox_max = rm.rman_bake_illum_bakebboxmax
+            
             options.SetString(self.rman.Tokens.Rix.k_hider_bakemode, bakemode)
             options.SetStringArray(self.rman.Tokens.Rix.k_hider_primvar, (primvar_s, primvar_t), 2) 
             options.SetInteger(self.rman.Tokens.Rix.k_hider_invert, invert_t)
+            options.SetInteger(self.rman.Tokens.Rix.k_hider_bakeudimstride, udim_stride)
+            options.SetInteger(self.rman.Tokens.Rix.k_hider_bakeudimoffset, udim_offset)
+            options.SetPoint(self.rman.Tokens.Rix.k_hider_bakebboxmin, bbox_min)
+            options.SetPoint(self.rman.Tokens.Rix.k_hider_bakebboxmax, bbox_max)
         else:
             pv = rm.ri_pixelVariance
 
@@ -1218,9 +1225,7 @@ class RmanScene(object):
                 if len(interval_tokens) > 0:
                     options.SetStringArray(self.rman.Tokens.Rix.k_checkpoint_interval, interval_tokens, len(interval_tokens) )
             if rm.checkpoint_exitat != '':
-                exitat_tokens = rm.checkpoint_exitat.split()
-                if len(exitat_tokens) > 0:
-                    options.SetStringArray(self.rman.Tokens.Rix.k_checkpoint_interval, exitat_tokens, len(exitat_tokens) )
+                options.SetString(self.rman.Tokens.Rix.k_checkpoint_exitat, rm.checkpoint_exitat)
 
             options.SetInteger(self.rman.Tokens.Rix.k_checkpoint_asfinal, int(rm.checkpoint_asfinal))
         
@@ -1383,7 +1388,7 @@ class RmanScene(object):
             if bl_df_node.bl_label in rman_constants.RMAN_STYLIZED_FILTERS and not rm.render_rman_stylized:
                 continue
 
-            df_name = bl_df_node.name
+            df_name = bl_df_node.name.replace('.', '_')
 
             rman_df_node = self.rman.SGManager.RixSGShader("DisplayFilter", bl_df_node.bl_label, df_name)
             rman_sg_node = RmanSgNode(self, rman_df_node, "")
@@ -1423,7 +1428,7 @@ class RmanScene(object):
         for bl_sf_node in shadergraph_utils.find_samplefilter_nodes(world):
             if not bl_sf_node.is_active:
                 continue
-            sf_name = bl_sf_node.name
+            sf_name = bl_sf_node.name.replace('.', '_')
 
             rman_sf_node = self.rman.SGManager.RixSGShader("SampleFilter", bl_sf_node.bl_label, sf_name)
             rman_sg_node = RmanSgNode(self, rman_sf_node, "")
@@ -1626,10 +1631,11 @@ class RmanScene(object):
                 cam_sg_node = self.rman_cameras.get(camera)
 
             if display_driver in ['deepexr', 'openexr']:
+                is_variance = dspy_params.get('is_variance', False)
                 if rm.use_metadata:
                     display_utils.export_metadata(self.bl_scene, display.params, camera_name=cam_sg_node.db_name)
-                if not dspy_params['denoise']:
-                    display.params.SetInteger("asrgba", 1)
+                if is_variance and dspy_params['denoise'] and display.params.HasParam("asrgba"):
+                    display.params.SetInteger("asrgba", 0)
 
             cam_dspys = cams_to_dspys.get(cam_sg_node, list())
             cam_dspys.append(display)

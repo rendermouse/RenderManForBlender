@@ -117,11 +117,14 @@ class RmanMaterialTranslator(RmanTranslator):
                 # bxdf
                 socket = out.inputs['Bxdf']
                 if socket.is_linked and len(socket.links) > 0:
-                    linked_node = get_root_node(socket.links[0].from_node, type='bxdf')
+                    from_node = socket.links[0].from_node
+                    linked_node = get_root_node(from_node, type='bxdf')
                     if linked_node:
                         bxdfList = []
-                        rman_sg_material.nodes_to_blnodeinfo.clear()
-                        for sub_node in shadergraph_utils.gather_nodes(linked_node):
+                        sub_nodes = []
+                        rman_sg_material.nodes_to_blnodeinfo.clear()                       
+                        sub_nodes.extend(shadergraph_utils.gather_nodes(from_node))
+                        for sub_node in sub_nodes:
                             shader_sg_nodes = self.shader_node_sg(material, sub_node, rman_sg_material, mat_name=handle)
                             for s in shader_sg_nodes:
                                 bxdfList.append(s) 
@@ -141,11 +144,14 @@ class RmanMaterialTranslator(RmanTranslator):
                 # light
                 socket = out.inputs['Light']
                 if socket.is_linked and len(socket.links) > 0:
-                    linked_node = get_root_node(socket.links[0].from_node, type='light')
+                    from_node = socket.links[0].from_node
+                    linked_node = get_root_node(from_node, type='light')
                     if linked_node:
                         lightNodesList = []
-                        rman_sg_material.nodes_to_blnodeinfo.clear()
-                        for sub_node in shadergraph_utils.gather_nodes(socket.links[0].from_node):
+                        sub_nodes = []
+                        rman_sg_material.nodes_to_blnodeinfo.clear()                
+                        sub_nodes.extend(shadergraph_utils.gather_nodes(from_node))                        
+                        for sub_node in sub_nodes:
                             shader_sg_nodes = self.shader_node_sg(material, sub_node, rman_sg_material, mat_name=handle)
                             for s in shader_sg_nodes:
                                 lightNodesList.append(s) 
@@ -160,11 +166,14 @@ class RmanMaterialTranslator(RmanTranslator):
                 # displacement
                 socket = out.inputs['Displacement']
                 if socket.is_linked and len(socket.links) > 0:
-                    linked_node = get_root_node(socket.links[0].from_node, type='displace')
+                    from_node = socket.links[0].from_node
+                    linked_node = get_root_node(from_node, type='displace')
                     if linked_node:                    
                         dispList = []
-                        rman_sg_material.nodes_to_blnodeinfo.clear()
-                        for sub_node in shadergraph_utils.gather_nodes(linked_node):
+                        sub_nodes = []
+                        rman_sg_material.nodes_to_blnodeinfo.clear()                  
+                        sub_nodes.extend(shadergraph_utils.gather_nodes(from_node))                             
+                        for sub_node in sub_nodes:
                             shader_sg_nodes = self.shader_node_sg(material, sub_node, rman_sg_material, mat_name=handle)
                             for s in shader_sg_nodes:
                                 dispList.append(s) 
@@ -296,7 +305,7 @@ class RmanMaterialTranslator(RmanTranslator):
             param_type = 'float'
             if input.is_linked:
                 link = input.links[0]
-                val = property_utils.get_output_param_str(
+                val = property_utils.get_output_param_str(rman_sg_material,
                     link.from_node, mat_name, link.from_socket, input)
 
                 property_utils.set_rix_param(params, param_type, param_name, val, is_reference=True)                

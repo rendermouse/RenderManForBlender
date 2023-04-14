@@ -292,7 +292,7 @@ class RmanSceneSync(object):
             return result
 
     def update_object_visibility(self, rman_sg_node, ob):                
-        ob_data = bpy.data.objects.get(ob.name, ob)
+        ob_data = ob
         rman_type = object_utils._detect_primitive_(ob_data)
         particle_systems = getattr(ob_data, 'particle_systems', list())
         has_particle_systems = len(particle_systems) > 0
@@ -366,6 +366,8 @@ class RmanSceneSync(object):
                 if rman_type not in ['MESH', 'POINTS']:    
                     continue
                 rman_sg_node = self.rman_scene.rman_objects.get(ob.original, None)
+                if rman_sg_node is None:
+                    continue
                 ob_eval = ob.evaluated_get(self.rman_scene.depsgraph)
                 rfb_log().debug("Update  particle systems for: %s" % ob.name)
 
@@ -713,10 +715,8 @@ class RmanSceneSync(object):
                 particle_systems = getattr(obj.id, 'particle_systems', list())
                 has_particle_systems = len(particle_systems) > 0
 
-                rman_type = object_utils._detect_primitive_(ob)
-                # grab the object from bpy.data, because the depsgraph doesn't seem
-                # to get the updated viewport hidden value                
-                ob_data = bpy.data.objects.get(ob.name, ob)
+                rman_type = object_utils._detect_primitive_(ob) 
+                ob_data = obj.id.evaluated_get(self.rman_scene.depsgraph)
                 rman_sg_node = self.rman_scene.rman_objects.get(obj.id.original, None)
                 
                 # NOTE: hide_get() and hide_viewport are two different things in Blender
@@ -775,7 +775,7 @@ class RmanSceneSync(object):
                     # update db_name
                     db_name = object_utils.get_db_name(ob, rman_type=rman_type)
                     rman_sg_node.db_name = db_name
-                    if self.update_object_visibility(rman_sg_node, ob):
+                    if self.update_object_visibility(rman_sg_node, ob_data):
                         continue
                 else:
                     continue        
@@ -1102,12 +1102,14 @@ class RmanSceneSync(object):
         if nodeID == '':
             return
         tokens = nodeID.split('|')
-        if len(tokens) < 2:
+        if len(tokens) < 3:
             return
 
         ob_name = tokens[0]
         node_name = tokens[1]
-        node, ob = scene_utils.find_node_by_name(node_name, ob_name)
+        prop_name = tokens[2]
+        library = tokens[3]
+        node, ob = scene_utils.find_node_by_name(node_name, ob_name, library=library)
         if ob == None:
             return
 

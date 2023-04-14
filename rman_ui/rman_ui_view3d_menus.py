@@ -253,7 +253,7 @@ class VIEW3D_MT_RM_LightLinking_Menu(bpy.types.Menu):
 
         active_light = context.active_object
         selected_objects = context.selected_objects
-        if active_light.type != 'LIGHT':
+        if active_light and active_light.type != 'LIGHT':
             pass
             '''
             if selected_objects:
@@ -264,6 +264,8 @@ class VIEW3D_MT_RM_LightLinking_Menu(bpy.types.Menu):
             '''
             return
         light_props = shadergraph_utils.get_rman_light_properties_group(active_light)
+        if light_props is None:
+            return
         if light_props.renderman_light_role not in {'RMAN_LIGHTFILTER', 'RMAN_LIGHT'}:
             return
         selected_objects = context.selected_objects
@@ -650,8 +652,9 @@ classes = [
 ]
 
 def register():
-    for cls in classes:
-        bpy.utils.register_class(cls)  
+    from ..rfb_utils import register_utils
+
+    register_utils.rman_register_classes(classes)  
 
     bpy.types.VIEW3D_MT_add.prepend(rman_add_object_menu)
     bpy.types.VIEW3D_MT_object_context_menu.prepend(rman_object_context_menu)
@@ -661,9 +664,6 @@ def unregister():
     bpy.types.VIEW3D_MT_add.remove(rman_add_object_menu)
     bpy.types.VIEW3D_MT_object_context_menu.remove(rman_object_context_menu)
 
-    for cls in classes:
-        try:
-            bpy.utils.unregister_class(cls)
-        except RuntimeError:
-            rfb_log().debug('Could not unregister class: %s' % str(cls))
-            pass
+    from ..rfb_utils import register_utils
+
+    register_utils.rman_unregister_classes(classes) 

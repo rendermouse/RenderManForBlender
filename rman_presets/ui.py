@@ -479,37 +479,27 @@ classes = [
 
 
 def register():
+    from ..rfb_utils import register_utils
 
-    for cls in classes:
-        bpy.utils.register_class(cls)
+    register_utils.rman_register_classes(classes)
 
     if get_pref('rman_ui_framework') != 'QT':
-        bpy.utils.register_class(PRMAN_OT_Renderman_Presets_Editor)
+        register_utils.rman_register_class(PRMAN_OT_Renderman_Presets_Editor)
     else:
         try: 
             from PySide2 import QtCore, QtWidgets
         except:
             # can't find PySide2, load old preset browser
-            bpy.utils.register_class(PRMAN_OT_Renderman_Presets_Editor)
+            register_utils.rman_register_class(PRMAN_OT_Renderman_Presets_Editor)
 
     bpy.types.VIEW3D_MT_add.prepend(rman_presets_object_menu) 
     bpy.types.VIEW3D_MT_object_context_menu.prepend(rman_presets_object_menu)  
           
 
 def unregister():
+    from ..rfb_utils import register_utils
 
     bpy.types.VIEW3D_MT_add.remove(rman_presets_object_menu)
     bpy.types.VIEW3D_MT_object_context_menu.remove(rman_presets_object_menu)
 
-    try:
-        bpy.utils.unregister_class(PRMAN_OT_Renderman_Presets_Editor)  
-    except RuntimeError:
-        rfb_log().debug('Could not unregister class: PRMAN_OT_Renderman_Presets_Editor')
-        pass            
-
-    for cls in classes:
-        try:
-            bpy.utils.unregister_class(cls)
-        except RuntimeError:
-            rfb_log().debug('Could not unregister class: %s' % str(cls))
-            pass   
+    register_utils.rman_unregister_class(PRMAN_OT_Renderman_Presets_Editor)  

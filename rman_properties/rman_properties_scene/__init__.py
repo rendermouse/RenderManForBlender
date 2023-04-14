@@ -39,6 +39,8 @@ class RendermanSceneSettings(RmanBasePropertyGroup, bpy.types.PropertyGroup):
             return
         light_links = rm.light_links[rm.light_links_index]
         light_ob = light_links.light_ob
+        if light_ob is None or light_ob.name not in scene.objects:
+            return
                 
         if context.view_layer.objects.active:
             context.view_layer.objects.active.select_set(False)
@@ -168,10 +170,11 @@ classes = [
 ]           
 
 def register():
+    from ...rfb_utils import register_utils  
 
     for cls in classes:
         cls._add_properties(cls, 'rman_properties_scene')
-        bpy.utils.register_class(cls)  
+        register_utils.rman_register_class(cls)  
 
     bpy.types.Scene.renderman = PointerProperty(
         type=RendermanSceneSettings, name="Renderman Scene Settings")   
@@ -180,9 +183,6 @@ def unregister():
 
     del bpy.types.Scene.renderman
 
-    for cls in classes:
-        try:
-            bpy.utils.unregister_class(cls)
-        except RuntimeError:
-            rfb_log().debug('Could not unregister class: %s' % str(cls))
-            pass
+    from ...rfb_utils import register_utils  
+
+    register_utils.rman_unregister_classes(classes)

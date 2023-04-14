@@ -32,6 +32,7 @@ from bpy.props import CollectionProperty, BoolProperty, StringProperty, FloatPro
 from bpy.props import IntProperty, PointerProperty, EnumProperty, FloatVectorProperty
 
 from .rfb_utils import envconfig_utils
+from .rfb_utils import register_utils
 from . import rfb_logger
 from . import rfb_icons
 
@@ -708,18 +709,8 @@ classes = [
 ]
 
 def register():
-    for cls in classes:
-        try:
-            bpy.utils.register_class(cls)
-        except ValueError as e:
-            rfb_logger.rfb_log().debug("Could not register class, %s, because: %s" % (str(cls), str(e)))
-            pass
-
-
+    register_utils.rman_register_classes(classes)
+    
 def unregister():
-    for cls in classes:
-        try:
-            bpy.utils.unregister_class(cls)
-        except RuntimeError:
-            rfb_log().debug('Could not unregister class: %s' % str(cls))
-            pass
+    register_utils.rman_unregister_classes(classes)
+

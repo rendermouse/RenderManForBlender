@@ -55,14 +55,11 @@ classes = [
 ]
 
 def register():
-    for cls in classes:
-        bpy.utils.register_class(cls)
+    from ..rfb_utils import register_utils
+
+    register_utils.rman_register_classes(classes) 
 
 def unregister():
+    from ..rfb_utils import register_utils
 
-    for cls in classes:
-        try:
-            bpy.utils.unregister_class(cls)
-        except RuntimeError:
-            rfb_log().debug('Could not unregister class: %s' % str(cls))
-            pass
+    register_utils.rman_unregister_classes(classes) 

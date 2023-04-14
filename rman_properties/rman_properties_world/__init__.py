@@ -16,14 +16,14 @@ classes = [
 ]           
 
 def register():
+    from ...rfb_utils import register_utils
 
-    for cls in classes:
-        bpy.utils.register_class(cls)  
+    register_utils.rman_register_classes(classes)
 
     bpy.types.World.renderman = PointerProperty(
         type=RendermanWorldSettings, name="Renderman World Settings")
 
 def unregister():
+    from ...rfb_utils import register_utils
 
-    for cls in classes:
-        bpy.utils.unregister_class(cls)
+    register_utils.rman_unregister_classes(classes)

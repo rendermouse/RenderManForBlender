@@ -15,8 +15,8 @@ import math
 import sys
 
 # copied from Blender's source code
-DEFAULT_SENSOR_WIDTH = 32.0
-DEFAULT_SENSOR_HEIGHT = 18.0
+DEFAULT_SENSOR_WIDTH = 36.0
+DEFAULT_SENSOR_HEIGHT = 24.0
 
 
 class RmanCameraTranslator(RmanTranslator):
@@ -306,11 +306,7 @@ class RmanCameraTranslator(RmanTranslator):
                 # 2.0 zoom value copied from cycles
                 zoom = 2.0
                 lens = self.rman_scene.context.space_data.lens
-                if cam:
-                    sensor = cam.sensor_height \
-                        if cam.sensor_fit == 'VERTICAL' else cam.sensor_width
-                else:
-                    sensor = DEFAULT_SENSOR_WIDTH
+                sensor = DEFAULT_SENSOR_WIDTH
 
                 ortho_scale = region_data.view_distance * sensor / lens
                 xaspect = xaspect * ortho_scale / (aspectratio * 2.0)
@@ -483,9 +479,7 @@ class RmanCameraTranslator(RmanTranslator):
             aspectratio = rman_sg_camera.bl_cam_props.aspectratio
             lens = rman_sg_camera.bl_cam_props.lens 
             if cam:
-                sensor = cam.sensor_height \
-                    if cam.sensor_fit == 'VERTICAL' else cam.sensor_width
-                     
+                sensor = DEFAULT_SENSOR_WIDTH                     
                 fov = 360.0 * math.atan((sensor * 0.5) / lens / aspectratio) / math.pi
             else:
                 # code from: 

@@ -966,6 +966,26 @@
             "type": "string",
             "default": "",
             "help": "Destination filename to bake illumination. Only applies when baking is set to Illumination or All, and filename pattern is set to Filename Attribute"
-        }                                                                     
+        },       
+        {
+            "panel": "OBJECT_PT_renderman_object_baking",
+            "name": "bake_activeudims",
+            "riattr": "bake:activeudims",
+            "label": "Active Udims",
+            "type": "string",
+            "default": "",
+            "widget": "default",
+            "help": "Active udims for Integrator baking of texture atlases.  Lists and ranges of udims can be provided in the string, for example: '1001,1003,1005-1006'. The default is an empty string which means all udims get baked."     
+        },
+        {
+            "panel": "OBJECT_PT_renderman_object_baking",
+            "name": "bake_udimresolutions",
+            "riattr": "bake:udimresolutions",
+            "label": "Udim Resolutions",
+            "type": "string",
+            "default": "",
+            "widget": "default",
+            "help": "Udim texure resolutions for Integrator baking of texture atlases.  Lists and ranges of udims can be provided in the string, for example: '1001 512 512  1002,1003 64 32  1005-1006 16 16'. If the string is empty (the default) then the Display Format resolution will be used."
+        }
     ]
 }

@@ -15,9 +15,11 @@ classes = [
 
 def register():
 
+    from ...rfb_utils import register_utils
+
     for cls in classes:
         cls._add_properties(cls, 'rman_properties_material')
-        bpy.utils.register_class(cls)  
+        register_utils.rman_register_class(cls)  
 
     bpy.types.Material.renderman = PointerProperty(
         type=RendermanMaterialSettings, name="Renderman Material Settings")
@@ -26,9 +28,5 @@ def unregister():
 
     del bpy.types.Material.renderman
 
-    for cls in classes:
-        try:
-            bpy.utils.unregister_class(cls)
-        except RuntimeError:
-            rfb_log().debug('Could not unregister class: %s' % str(cls))
-            pass
+    from ...rfb_utils import register_utils
+    register_utils.rman_unregister_classes(classes)

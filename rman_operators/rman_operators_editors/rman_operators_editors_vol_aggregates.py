@@ -75,6 +75,7 @@ class PRMAN_OT_Renderman_Open_Volume_Aggregates_Editor(CollectionPanel, bpy.type
     selected_obj_name: EnumProperty(name="", items=obj_list_items, update=updated_object_selected_name)       
 
     def execute(self, context):
+        self.check_aggregates(context)
         return{'FINISHED'}         
 
     def draw(self, context):
@@ -140,15 +141,32 @@ class PRMAN_OT_Renderman_Open_Volume_Aggregates_Editor(CollectionPanel, bpy.type
     def cancel(self, context):
         if self.event and self.event.type == 'LEFTMOUSE':
             bpy.ops.scene.rman_open_vol_aggregates_editor('INVOKE_DEFAULT')
+        else:
+            self.check_aggregates(context)
             
     def __init__(self):
-        self.event = None            
+        self.event = None      
+
+    def check_aggregates(self, context):
+        scene = context.scene
+        rm = scene.renderman
+        
+        for lg in rm.vol_aggregates:
+            delete_objs = []
+            for j in range(len(lg.members)-1, -1, -1):
+                member = lg.members[j]
+                if member.ob_pointer is None or member.ob_pointer.name not in scene.objects:
+                    delete_objs.insert(0, j)
+            for j in delete_objs:
+                lg.members.remove(j)
+                lg.members_index -= 1              
 
     def invoke(self, context, event):
 
         wm = context.window_manager
         width = rfb_config['editor_preferences']['vol_aggregates_editor']['width']
         self.event = event
+        self.check_aggregates(context)
         return wm.invoke_props_dialog(self, width=width) 
 
 classes = [    
@@ -157,14 +175,11 @@ classes = [
 ]
 
 def register():
-    for cls in classes:
-        bpy.utils.register_class(cls)
+    from ...rfb_utils import register_utils
+
+    register_utils.rman_register_classes(classes)
 
 def unregister():
+    from ...rfb_utils import register_utils
 
-    for cls in classes:
-        try:
-            bpy.utils.unregister_class(cls)
-        except RuntimeError:
-            rfb_log().debug('Could not unregister class: %s' % str(cls))
-            pass                           
+    register_utils.rman_unregister_classes(classes)                         

@@ -26,11 +26,13 @@ def get_nodeid(node):
     Returns None if the attribute doesn't exist."""
     try:
         tokens = node.split('|')
-        if len(tokens) < 2:
+        if len(tokens) < 3:
             return ""
         node_tree = tokens[0]
         node_name = tokens[1]
-        node, ob = scene_utils.find_node_by_name(node_name, node_tree)
+        prop_name = tokens[2]
+        library = tokens[3]
+        node, ob = scene_utils.find_node_by_name(node_name, node_tree, library=library)
         if node is None:
             return None
         txm_id = getattr(node, 'txm_id')
@@ -43,11 +45,13 @@ def set_nodeid(node, node_id):
     """Set a node's 'txm_id' attribute with node_id. If the attribute doesn't
     exist yet, it will be created."""
     tokens = node.split('|')
-    if len(tokens) < 2:
+    if len(tokens) < 3:
         return ""
     node_tree = tokens[0]
     node_name = tokens[1]
-    node, ob = scene_utils.find_node_by_name(node_name, node_tree) 
+    prop_name = tokens[2]
+    library = tokens[3]
+    node, ob = scene_utils.find_node_by_name(node_name, node_tree, library=library) 
     if node:
         try:
             setattr(node, 'txm_id', node_id)
@@ -183,7 +187,7 @@ class RfBTxManager(object):
 
     def add_texture(self, node, ob, param_name, file_path, node_type='PxrTexture', category='pattern'):
         node_name = generate_node_name(node, param_name, ob=ob)
-        plug_uuid = self.txmanager.get_plug_id(node_name, param_name)        
+        plug_uuid = self.txmanager.get_plug_id(node_name, param_name)  
 
         if file_path == "":
             txfile = self.txmanager.get_txfile_from_id(plug_uuid)
@@ -248,7 +252,7 @@ def get_txmanager():
         __RFB_TXMANAGER__ = RfBTxManager()
     return __RFB_TXMANAGER__    
 
-def update_texture(node, ob=None, check_exists=False):
+def update_texture(node, ob=None, check_exists=False, is_library=False):
     bl_idname = getattr(node, 'bl_idname', '')
     if bl_idname == "PxrOSLPatternNode":
         for input_name, input in node.inputs.items():
@@ -284,17 +288,29 @@ def update_texture(node, ob=None, check_exists=False):
             if get_txmanager().does_nodeid_exists(nodeID):
                 continue
 
+        fpath = bl_prop_info.prop
+        if is_library:
+            # if this is coming from a library, replace <blend_dir> with the full path
+            blend_file = filepath_utils.get_real_path(ob.library.filepath)
+            fpath = fpath.replace('<blend_dir>', os.path.dirname(blend_file))
+
         category = getattr(node, 'renderman_node_type', 'pattern') 
-        get_txmanager().add_texture(node, ob, prop_name, bl_prop_info.prop, node_type=node_type, category=category)        
+        get_txmanager().add_texture(node, ob, prop_name, fpath, node_type=node_type, category=category)        
 
 def generate_node_name(node, prop_name, ob=None, nm=None):
     node_name = ''
     if not nm:
         nm = shadergraph_utils.get_nodetree_name(node)
     if nm:        
-        node_name = '%s|%s|' %  (nm, node.name)
+        node_name = '%s|%s|%s|' %  (nm, node.name, prop_name)
     elif ob:
-        node_name = '%s|%s|' % (ob.name, node.name)
+        node_name = '%s|%s|%s|' % (ob.name, node.name, prop_name)
+
+    if node_name != '':
+        if ob and ob.library:
+            node_name = '%s%s|' % (node_name, ob.library.name)
+        else:
+            node_name = '%s|' % node_name
     
     if node_name == '':
         prop = ''
@@ -319,8 +335,11 @@ def get_textures(id, check_exists=False, mat=None):
         ob = mat
     nodes_list = list()
     shadergraph_utils.gather_all_textured_nodes(ob, nodes_list)
+    is_library = False
+    if hasattr(id, 'library') and id.library:
+        is_library = True
     for node in nodes_list:
-        update_texture(node, ob=ob, check_exists=check_exists)
+        update_texture(node, ob=ob, check_exists=check_exists, is_library=is_library)
 
 def get_blender_image_path(bl_image):
     if bl_image.packed_file:
@@ -472,7 +491,7 @@ def link_file_handler(id):
             ob = id.original
             shadergraph_utils.gather_all_textured_nodes(ob, nodes_list)
             for node in nodes_list:
-                update_texture(node, ob=ob, check_exists=True)           
+                update_texture(node, ob=ob, check_exists=True)
 
 def txmake_all(blocking=True):
     get_txmanager().txmake_all(blocking=blocking)        
