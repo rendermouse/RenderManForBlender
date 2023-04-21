@@ -33,29 +33,50 @@ def _is_multi_material_(ob, mesh):
     return False
 
 # requires facevertex interpolation
-def _get_mesh_uv_(mesh, name=""):
+def _get_mesh_uv_(mesh, name="", ob=None):
     uvs = []
+    data = "uv"
     if not name:
         uv_loop_layer = mesh.uv_layers.active
+        if ob and uv_loop_layer is None:
+            # when dealing geometry nodes, uv_layers are actually
+            # on the attributes property.
+            # Look up from original object what the active
+            # uv layer was
+            active = ob.original.data.uv_layers.active
+            if active:
+                uv_loop_layer = mesh.attributes.get(active.name)
+                data = "vector"        
     else:
-        # assuming uv loop layers and uv textures share identical indices
-        #idx = mesh.uv_textures.keys().index(name)
-        #uv_loop_layer = mesh.uv_layers[idx]
         uv_loop_layer = mesh.uv_layers.get(name, None)
+        if uv_loop_layer is None:
+            uv_loop_layer = mesh.attributes.get(name, None)
+            data = "vector"
 
     if uv_loop_layer is None:
         return None
 
     uv_count = len(uv_loop_layer.data)
     fastuvs = np.zeros(uv_count * 2)
-    uv_loop_layer.data.foreach_get("uv", fastuvs)   
+    uv_loop_layer.data.foreach_get(data, fastuvs)   
     uvs = fastuvs.tolist()
 
     return uvs
 
-def _get_mesh_vcol_(mesh, name=""):
-    vcol_layer = mesh.vertex_colors[name] if name != "" \
-        else mesh.vertex_colors.active
+def _get_mesh_vcol_(mesh, name="", ob=None):    
+    if not name:
+        vcol_layer = mesh.vertex_colors.active
+        if ob and not vcol_layer:
+            # same issue with uv's
+            # vertex colors for geometry nodes are on the attributes
+            # property
+            active = ob.original.data.vertex_colors.active
+            if active:
+                vcol_layer = mesh.attributes.get(active.name, None)        
+    else:
+        vcol_layer = mesh.vertex_colors[name]
+        if not vcol_layer:
+            vcol_layer = mesh.attributes.get(name, None)
 
     if vcol_layer is None:
         return None
@@ -188,7 +209,7 @@ def _get_primvars_(ob, rman_sg_mesh, geo, rixparams):
     facevarying_detail = rman_sg_mesh.nverts 
 
     if rm.export_default_uv:
-        uvs = _get_mesh_uv_(geo)
+        uvs = _get_mesh_uv_(geo, ob=ob)
         if uvs and len(uvs) > 0:
             detail = "facevarying" if (facevarying_detail*2) == len(uvs) else "vertex"
             rixparams.SetFloatArrayDetail("st", uvs, 2, detail)
@@ -196,7 +217,7 @@ def _get_primvars_(ob, rman_sg_mesh, geo, rixparams):
                 export_tangents(ob, geo, rixparams)    
 
     if rm.export_default_vcol:
-        vcols = _get_mesh_vcol_(geo)
+        vcols = _get_mesh_vcol_(geo, ob=ob)
         if vcols and len(vcols) > 0:
             detail = "facevarying" if facevarying_detail == len(vcols) else "vertex"
             rixparams.SetColorDetail("Cs", vcols, detail)
