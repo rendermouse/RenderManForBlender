@@ -84,7 +84,8 @@ __RESERVED_BLENDER_NAMES__ = {
     'dimensions' : 'rman_dimensions',
     'inputs': 'rman_inputs',
     'outputs': 'rman_outputs',
-    'resolution': 'rman_resolution'
+    'resolution': 'rman_resolution',
+    'name': 'rman_name'
 }
 
 CYCLES_NODE_MAP = {
