@@ -1,11 +1,18 @@
 import bpy
-import bgl
-import blf
 
 from .rfb_utils.prefs_utils import get_pref
 from .rfb_utils import string_utils
 from .rfb_utils import register_utils
 from .rfb_logger import rfb_log
+from .rman_constants import USE_GPU_MODULE
+
+if USE_GPU_MODULE:
+    bgl = None
+    blf = None
+    import gpu
+else:
+    import bgl
+    import blf
 
 class PRManRender(bpy.types.RenderEngine):
     bl_idname = 'PRMAN_RENDER'
@@ -199,6 +206,8 @@ class PRManRender(bpy.types.RenderEngine):
                 self._increment_version_tokens(external_render=False)
 
     def draw_viewport_message(self, context, msg):
+        if USE_GPU_MODULE:
+            return
         w = context.region.width     
 
         pos_x = w / 2 - 100
@@ -225,14 +234,20 @@ class PRManRender(bpy.types.RenderEngine):
         h = context.region.height                       
 
         # Bind shader that converts from scene linear to display space,
-        bgl.glEnable(bgl.GL_BLEND)
-        bgl.glBlendFunc(bgl.GL_ONE, bgl.GL_ONE_MINUS_SRC_ALPHA)
-        self.bind_display_space_shader(scene)
+        if USE_GPU_MODULE:
+            gpu.state.blend_set("ADDITIVE_PREMULT")
+            self.bind_display_space_shader(scene)
+            self.rman_render.draw_pixels(w, h)
+            self.unbind_display_space_shader()
+            gpu.state.blend_set("NONE")            
 
-        self.rman_render.draw_pixels(w, h)
-
-        self.unbind_display_space_shader()
-        bgl.glDisable(bgl.GL_BLEND)       
+        else:
+            bgl.glEnable(bgl.GL_BLEND)
+            bgl.glBlendFunc(bgl.GL_ONE, bgl.GL_ONE_MINUS_SRC_ALPHA)
+            self.bind_display_space_shader(scene)
+            self.rman_render.draw_pixels(w, h)
+            self.unbind_display_space_shader()
+            bgl.glDisable(bgl.GL_BLEND)       
 
 classes = [
     PRManRender,
