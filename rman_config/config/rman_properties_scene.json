@@ -1548,7 +1548,7 @@
             "help": "Use the previous denoiser to denoise passes."
         },      
         {
-            "panel": "RENDER_PT_renderman_spooling_export_options",
+            "panel": "",
             "page": "Denoising",
             "name": "ai_denoiser_asymmetry",
             "label": "Asymmetry",
