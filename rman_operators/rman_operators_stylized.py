@@ -117,8 +117,9 @@ class PRMAN_OT_Attach_Stylized_Pattern(bpy.types.Operator):
             return
 
         for nm in RMAN_UTILITY_PATTERN_NAMES:
-            if hasattr(node, nm):
-                prop_name = nm
+            if not hasattr(node, nm):
+                continue
+            prop_name = nm
 
             if shadergraph_utils.has_stylized_pattern_node(ob, node=node):
                 continue
