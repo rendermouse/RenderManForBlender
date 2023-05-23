@@ -1408,18 +1408,14 @@ class RmanRender(object):
                 rfb_log().debug("Could not get buffer. Incorrect number of channels: %d" % num_channels)
                 return None
 
-        #ArrayType = ctypes.c_float * (width * height * num_channels)
-        ND_POINTER_1 = numpy.ctypeslib.ndpointer(dtype=numpy.float32, 
+        # code reference: https://asiffer.github.io/posts/numpy/
+        RMAN_NUMPY_POINTER = numpy.ctypeslib.ndpointer(dtype=numpy.float32, 
                                       ndim=1,
                                       flags="C")
         f = dspy_plugin.GetFloatFramebuffer
-        #f.restype = ctypes.POINTER(ArrayType)
-        f.argtypes = [ctypes.c_size_t, ctypes.c_size_t, ND_POINTER_1]
-
-        
+        f.argtypes = [ctypes.c_size_t, ctypes.c_size_t, RMAN_NUMPY_POINTER]
 
         try:
-            #buffer = numpy.array(f(ctypes.c_size_t(image_num)).contents, dtype=numpy.float32)
             array_size = width * height * num_channels
             buffer = numpy.zeros(array_size, dtype=numpy.float32)
             f(ctypes.c_size_t(image_num), buffer.size, buffer)
