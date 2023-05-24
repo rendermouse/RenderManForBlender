@@ -1690,7 +1690,10 @@ def clear_gl_tex_cache(bl_scene=None):
     if _PRMAN_TEX_CACHE_:
         rfb_log().debug("Clearing _PRMAN_TEX_CACHE_.")
         for k, v in _PRMAN_TEX_CACHE_.items():
-            bgl.glDeleteTextures(1, v)
+            if USE_GPU_MODULE:
+                del v
+            else:
+                bgl.glDeleteTextures(1, v)
         _PRMAN_TEX_CACHE_.clear()    
 
 def register():
