@@ -39,6 +39,8 @@ def _get_mesh_uv_(mesh, name="", ob=None):
     if not name:
         uv_loop_layer = mesh.uv_layers.active
         if ob and uv_loop_layer is None:
+            if not hasattr(ob.original.data, 'uv_layers'):
+                return None            
             # when dealing geometry nodes, uv_layers are actually
             # on the attributes property.
             # Look up from original object what the active
@@ -67,6 +69,8 @@ def _get_mesh_vcol_(mesh, name="", ob=None):
     if not name:
         vcol_layer = mesh.vertex_colors.active
         if ob and not vcol_layer:
+            if not hasattr(ob.original.data, 'vertex_colors'):
+                return None
             # same issue with uv's
             # vertex colors for geometry nodes are on the attributes
             # property
