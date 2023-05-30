@@ -73,6 +73,7 @@ class BlPropInfo:
         self.renderman_array_type = prop_meta.get('renderman_array_type', '')
         self.type = prop_meta.get('type', '')
         self.page = prop_meta.get('page', '')
+        self.hide_input = prop_meta.get('hideInput', False)
 
         inputs = getattr(node, 'inputs', dict())
         self.has_input = (prop_name in inputs)
@@ -103,6 +104,8 @@ class BlPropInfo:
         if self.widget == 'null' and not self.vstructmember:
             # if widget is marked null, don't export parameter and rely on default
             # unless it has a vstructmember
+            return False
+        if self.hide_input:
             return False
         if self.param_type == 'page':
             return False
