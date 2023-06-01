@@ -4,7 +4,7 @@ import rman
 import ice
 import bpy
 import sys
-from .rman_constants import RFB_VIEWPORT_MAX_BUCKETS, RMAN_RENDERMAN_BLUE
+from .rman_constants import RFB_VIEWPORT_MAX_BUCKETS, RMAN_RENDERMAN_BLUE, USE_GPU_MODULE
 from .rman_scene import RmanScene
 from .rman_scene_sync import RmanSceneSync
 from. import rman_spool
@@ -20,6 +20,7 @@ import traceback
 # for viewport buckets
 import gpu
 from gpu_extras.batch import batch_for_shader
+from gpu_extras.presets import draw_texture_2d
 
 # utils
 from .rfb_utils.envconfig_utils import envconfig
@@ -269,6 +270,10 @@ def preload_dsos(rman_render):
     plugins = [
         'lib/libxpu.so',
         'lib/plugins/impl_openvdb.so',
+        'lib/plugins/d_blender.so',
+        'lib/plugins/PxrSurface.so',
+        'lib/plugins/PxrDisneyBsdf.so',
+        'lib/libstats.so',
     ]
 
     tree = envconfig().rmantree    
@@ -1314,8 +1319,22 @@ class RmanRender(object):
                  
         dspy_plugin = self.get_blender_dspy_plugin()
 
-        # (the driver will handle pixel scaling to the given viewport size)
-        dspy_plugin.DrawBufferToBlender(ctypes.c_int(width), ctypes.c_int(height))
+        if USE_GPU_MODULE:
+            res_mult = self.rman_scene.viewport_render_res_mult
+            width = int(self.viewport_res_x * res_mult)
+            height = int(self.viewport_res_y * res_mult)
+            buffer = self._get_buffer(width, height)
+            if buffer is None:
+                rfb_log().debug("Buffer is None")
+                return
+            pixels = gpu.types.Buffer('FLOAT', width * height * 4, buffer)
+
+            texture = gpu.types.GPUTexture((width, height), format='RGBA32F', data=pixels)
+            draw_texture_2d(texture, (0, 0), self.viewport_res_x, self.viewport_res_y)
+        else:
+            # (the driver will handle pixel scaling to the given viewport size)
+            dspy_plugin.DrawBufferToBlender(ctypes.c_int(width), ctypes.c_int(height))            
+
         if self.do_draw_buckets():
             # draw bucket indicator
             image_num = 0
@@ -1389,12 +1408,17 @@ class RmanRender(object):
                 rfb_log().debug("Could not get buffer. Incorrect number of channels: %d" % num_channels)
                 return None
 
-        ArrayType = ctypes.c_float * (width * height * num_channels)
+        # code reference: https://asiffer.github.io/posts/numpy/
+        RMAN_NUMPY_POINTER = numpy.ctypeslib.ndpointer(dtype=numpy.float32, 
+                                      ndim=1,
+                                      flags="C")
         f = dspy_plugin.GetFloatFramebuffer
-        f.restype = ctypes.POINTER(ArrayType)
+        f.argtypes = [ctypes.c_size_t, ctypes.c_size_t, RMAN_NUMPY_POINTER]
 
         try:
-            buffer = numpy.array(f(ctypes.c_size_t(image_num)).contents, dtype=numpy.float32)
+            array_size = width * height * num_channels
+            buffer = numpy.zeros(array_size, dtype=numpy.float32)
+            f(ctypes.c_size_t(image_num), buffer.size, buffer)
 
             if raw_buffer:
                 if not as_flat:

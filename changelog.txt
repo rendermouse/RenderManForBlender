@@ -1,3 +1,16 @@
+v25.1, June 1, 2023
+
+Changes:
+* Blender 3.1 to 3.5 are now officially supported.
+* Support for 2.83 has been dropped. The minimum version supported is 2.93.
+
+Bug Fixes:
+* Fixed an issue with UV maps not working correctly with geometry nodes instances
+* Fixed a bug that prevented PxrVariable from working in a shading network
+* Fixed bugs that prevented the use of color to float, or float to color connections from working
+* Fixed a bug where the PxrStylizedControl pattern node was not getting correctly added when using
+the Stylized Looks UI.
+
 v25.0 April 17, 2023
 
 New Features:

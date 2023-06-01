@@ -663,9 +663,9 @@
             "channelSource": "lpe:nothruput;noinfinitecheck;noclamp;unoccluded;overwrite;CU4L",
             "group": "User Lobes"
         },
-        "NPRallLines": {
+        "NPRlineOut": {
             "channelType": "color",
-            "channelSource": "NPRallLines",
+            "channelSource": "NPRlineOut",
             "group": "NPR"
         },
         "NPRcurvature": {
@@ -693,9 +693,9 @@
             "channelSource": "NPRlineCamdist",
             "group": "NPR"
         },
-        "NPRlineMask": {
+        "NPRmask": {
             "channelType": "color",
-            "channelSource": "NPRlineMask",
+            "channelSource": "NPRmask",
             "group": "NPR"
         },
         "NPRlineAlbedo": {
@@ -708,9 +708,9 @@
             "channelSource": "NPRlineWidth",
             "group": "NPR"
         },
-        "NPRallLinesAlpha": {
+        "NPRlineOutAlpha": {
             "channelType": "color",
-            "channelSource": "NPRallLinesAlpha",
+            "channelSource": "NPRlineOutAlpha",
             "group": "NPR"
         },
         "NPRtextureCoords": {
@@ -733,9 +733,14 @@
             "channelSource": "NPRalbedo",
             "group": "NPR"
         },
-        "NPRtoonDiffRamp": {
+        "NPRhatchOut": {
             "channelType": "color",
-            "channelSource": "NPRtoonDiffRamp",
+            "channelSource": "NPRhatchOut",
+            "group": "NPR"
+        },        
+        "NPRtoonOut": {
+            "channelType": "color",
+            "channelSource": "NPRtoonOut",
             "group": "NPR"
         },
         "NPRdistort": {
@@ -810,16 +815,17 @@
                 "Nn",
                 "sampleCount",
                 "directSpecular",
-                "NPRtoonDiffRamp",
-                "NPRallLines",
-                "NPRallLinesAlpha",
+                "NPRtoonOut",
+                "NPRhatchOut",
+                "NPRlineOut",
+                "NPRlineOutAlpha",
                 "NPRoutline",
                 "NPRlineNZ",
                 "NPRsections",
                 "NPRlineCamdist",
                 "NPRlineAlbedo",
                 "NPRlineWidth",
-                "NPRlineMask",
+                "NPRmask",
                 "NPRcurvature",
                 "NPRalbedo",
                 "NPRtextureCoords",

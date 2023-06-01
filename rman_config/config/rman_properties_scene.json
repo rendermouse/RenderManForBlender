@@ -1048,7 +1048,8 @@
             "riopt": "limits:texturememory",
             "label": "Texture",
             "type": "int",
-            "default": 4194304,
+            "default": 2097152,
+            "always_write": true,
             "min": 0,
             "widget": false,
             "help": "Texture cache size in kB"
@@ -1060,7 +1061,8 @@
             "riopt": "limits:geocachememory",
             "label": "Geometry",
             "type": "int",            
-            "default": 4194304,
+            "default": 2097152,
+            "always_write": true,
             "min": 0,            
             "widget": false,
             "help": "Geometry cache size in kB."
@@ -1072,7 +1074,8 @@
             "riopt": "limits:opacitycachememory",
             "label": "Opacity",
             "type": "int",
-            "default": 2097152,
+            "default": 1048576,
+            "always_write": true,
             "min": 0,            
             "widget": false,
             "help": "Opacity cache in kB"
@@ -1085,6 +1088,7 @@
             "label": "Ptex",
             "type": "int",
             "default": 32768,
+            "always_write": true,
             "min": "0",
             "widget": false,
             "help": "PTex cache size in kB"
@@ -1544,7 +1548,7 @@
             "help": "Use the previous denoiser to denoise passes."
         },      
         {
-            "panel": "RENDER_PT_renderman_spooling_export_options",
+            "panel": "",
             "page": "Denoising",
             "name": "ai_denoiser_asymmetry",
             "label": "Asymmetry",

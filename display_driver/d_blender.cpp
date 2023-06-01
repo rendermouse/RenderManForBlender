@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include "libndspy/Dspy.h"
 
+
 #ifdef OSX
 #include <GL/glew.h>
 #else
@@ -169,6 +170,16 @@ void CopyXpuBuffer(BlenderImage* blenderImage)
 
     float* linebuffer = new float[blenderImage->width * blenderImage->entrysize];
 
+    std::vector<bool> shouldNormalizeBySampleCount(blenderImage->noutputs);
+    for (size_t roi = 0; roi < blenderImage->noutputs; ++roi)
+    {
+        const display::RenderOutput& ro = blenderImage->renderOutputs[roi];
+
+        // Cache whether we should normalize data to avoid calling ShouldNormalizeBySampleCount for
+        // every single pixel
+        shouldNormalizeBySampleCount[roi] = ro.ShouldNormalizeBySampleCount();
+    }
+
     /* For each pixel ... */
     size_t pixel = 0;
     for (size_t y = 0; y < blenderImage->height; ++y)
@@ -176,10 +187,11 @@ void CopyXpuBuffer(BlenderImage* blenderImage)
         size_t outchannel = 0;
         for (size_t x = 0; x < blenderImage->width; ++x)
         {
-            /* Compute reciprical, which we'll use to divide each pixel intensity by */
-            float rcp = 1.f / weights[pixel];
+            /* Compute reciprocal, which we'll use to divide each pixel intensity by */
+            const float weight = (weights[pixel] != 0.0f) ? weights[pixel] : 1.0f;
+            const float rcp = 1.0f / weight;
 
-            /* Itterate through our render outputs */
+            /* Iterate through our render outputs */
             for (size_t roi = 0; roi < blenderImage->noutputs; ++roi)
             {
                 const display::RenderOutput& ro = blenderImage->renderOutputs[roi];
@@ -189,19 +201,12 @@ void CopyXpuBuffer(BlenderImage* blenderImage)
                 /* For each channel in the current render output */
                 for (size_t c = 0; c < ro.nelems; ++c)
                 {
-                    float res = 0.0;
-                    // NB - we don't want to average integer values. Instead,
-                    // we expect the renderer to have applied a rule such as
-                    // overwrite, max or min to preserve precision and avoid
-                    // nonesense values at pixels were multiple integer ids
-                    // are written by differing primitives
-                    if (blenderImage->type == display::RenderOutput::DataType::kDataTypeUInt)
+                    float res = floatData[pixel];
+                    if (shouldNormalizeBySampleCount[roi])
                     {
-                        res = floatData[pixel];
-                    }
-                    else
-                    {
-                        res = floatData[pixel] * rcp;
+                        // Only normalize suitable data, such as channels of float data format and
+                        // RenderOutputs that don't use the min, max, zmin, zmax accumulation rules.
+                        res *= rcp;
                     }
                     linebuffer[outchannel] = res;
 
@@ -287,20 +292,21 @@ int GetNumberOfChannels(size_t pos)
 
 // Return the float buffer for this display
 PRMANEXPORT
-float* GetFloatFramebuffer(size_t pos)
+void GetFloatFramebuffer(size_t pos, size_t pybuffersize, float* pybuffer)
 {
     if (s_blenderImages.empty() || pos >= s_blenderImages.size())
-        return nullptr;
+        return;
 
     BlenderImage* blenderImage = s_blenderImages[pos];
     
     if (blenderImage == nullptr)
-        return nullptr;
+        return;
 
     if (DenoiseBuffer(blenderImage)) {
-        return (float*) blenderImage->denoiseFrameBuffer;                  
+        memcpy(pybuffer, blenderImage->denoiseFrameBuffer, sizeof(float) * pybuffersize);
+        return;
     }
-    return (float*) blenderImage->framebuffer;                  
+    memcpy(pybuffer, blenderImage->framebuffer, sizeof(float) * pybuffersize);
 }
 
 // Return the active region that RenderMan is currently working on
@@ -382,7 +388,6 @@ void DrawBufferToBlender(int viewWidth, int viewHeight)
                                             1.0, 1.0,  0.0, 1.0};
 
     GLuint vertex_array;
-    std::array<GLint, 2> vertex_buffer;
 
     GLuint   texcoord_location;
     GLuint   position_location;
@@ -482,6 +487,10 @@ DspyImageOpen(
     PtDspyDevFormat* format,
     PtFlagStuff* flagstuff)
 {
+    PIXAR_ARGUSED(drivername);
+    PIXAR_ARGUSED(filename);
+    PIXAR_ARGUSED(flagstuff);
+
     char* cformat = (char*)"float32";
     DspyFindStringInParamList("format", &cformat, paramCount, parameters);
 
@@ -697,6 +706,12 @@ DspyImageActiveRegion(
     int ymin,
     int ymax_plus_one)
 {
+    PIXAR_ARGUSED(pvImage);
+    PIXAR_ARGUSED(xmin);
+    PIXAR_ARGUSED(xmax_plus_one);
+    PIXAR_ARGUSED(ymin);
+    PIXAR_ARGUSED(ymax_plus_one);
+
     return PkDspyErrorNone;
 }
 
@@ -726,6 +741,9 @@ BlenderDspyMetadata(
     PtDspyImageHandle pvImage,
     char* metadata)
 {
+    PIXAR_ARGUSED(pvImage);
+    PIXAR_ARGUSED(metadata);
+
     return PkDspyErrorNone;
 }
 
@@ -749,11 +767,16 @@ DisplayBlender::~DisplayBlender()
 }
 
 bool DisplayBlender::Rebind(const uint32_t width, const uint32_t height,
-                         const char* srfaddrhandle, const void* srfaddr,
-                         const size_t srfsizebytes, const size_t samplecountoffset,
+                         const char* srfaddrhandle, 
+                         const void* srfaddr,
+                         const size_t srfsizebytes, 
+                         const size_t samplecountoffset,
                          const size_t* offsets, const display::RenderOutput* outputs,
                          const size_t noutputs)
 {
+   PIXAR_ARGUSED(srfaddrhandle);
+   PIXAR_ARGUSED(srfsizebytes);
+
    size_t nchans = 0;
    size_t pixelsizebytes = 0;
    m_image->renderOutputs.clear();
@@ -847,15 +870,28 @@ void DisplayBlender::Close()
     tag_redraw_func = NULL;
 }
 
-void DisplayBlender::Notify(const uint32_t iteration, const uint32_t totaliterations,
-                         const NotifyFlags flags, const pxrcore::ParamList& /*metadata*/)
+void DisplayBlender::Notify(const uint32_t iteration, 
+                            const uint32_t totaliterations,
+                            const NotifyFlags flags, 
+                            const pxrcore::ParamList& metadata)
 {
+    PIXAR_ARGUSED(iteration);
+    PIXAR_ARGUSED(totaliterations);
+    PIXAR_ARGUSED(metadata);
+
     if (flags != k_notifyIteration && flags != k_notifyRender)
     {
         return;
     }
     CopyXpuBuffer(m_image);
     m_image->bufferUpdated = true;
+    if (tag_redraw_func)
+    {
+        if (!tag_redraw_func())
+        {
+            tag_redraw_func = NULL;
+        }
+    }    
 }
 
 static void closeBlenderImages()

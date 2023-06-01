@@ -265,6 +265,7 @@ def generate_property(node, sp, update_function=None, set_function=None, get_fun
         'inherit_true_value',
         'presets',
         'readOnly',
+        'hideInput',
         'struct_name',
         'always_write']:
         if hasattr(sp, nm):
