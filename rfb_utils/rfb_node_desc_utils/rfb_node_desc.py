@@ -16,7 +16,8 @@ from .conditional_visibility import build_condvis_expr
 from .rfb_node_desc_param import (
     RfbNodeDescParamXML,
     RfbNodeDescParamOSL,
-    RfbNodeDescParamJSON)
+    RfbNodeDescParamJSON,
+    blender_finalize)
 
 # globals
 LIGHTFILTER_CLASSIF = "classification:rendernode/RenderMan/lightfilter"
@@ -49,6 +50,7 @@ class RfbNodeDesc(NodeDesc):
         self._backward_compatibility()
         # free memory
         self.clear_parsed_data()
+        blender_finalize(self)
 
     def _set_ctlname(self):
         """remove any illegal character for a maya ui object."""

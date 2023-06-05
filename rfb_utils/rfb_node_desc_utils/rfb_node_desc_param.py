@@ -19,13 +19,12 @@ def blender_finalize(obj):
     """Post-process some parameters for Blender.
     """
 
-    if obj.type in ['int', 'matrix']:
+    if hasattr(obj, 'type') and obj.type in ['int', 'matrix']:
         # these are NEVER connectable
         obj.connectable = False
 
-    if hasattr(obj, 'help'):
+    if hasattr(obj, 'help') and obj.help is not None:
         obj.help = obj.help.replace('\\"', '"')
-        #obj.help = obj.help.replace("'", "\\'")
         obj.help = obj.help.replace('<br>', '\n')
 
 class RfbNodeDescParamXML(NodeDescParamXML):
