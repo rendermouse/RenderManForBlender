@@ -34,17 +34,17 @@ def get_mesh(mesh, get_normals=False):
     N = []    
 
     npolygons = len(mesh.polygons)
-    fastnvertices = np.zeros(npolygons, dtype=np.int)
+    fastnvertices = np.zeros(npolygons, dtype=np.int32)
     mesh.polygons.foreach_get('loop_total', fastnvertices)
     nverts = fastnvertices.tolist()
 
     loops = len(mesh.loops)
-    fastvertices = np.zeros(loops, dtype=np.int)
+    fastvertices = np.zeros(loops, dtype=np.int32)
     mesh.loops.foreach_get('vertex_index', fastvertices)
     verts = fastvertices.tolist()
 
     if get_normals:
-        fastsmooth = np.zeros(npolygons, dtype=np.int)
+        fastsmooth = np.zeros(npolygons, dtype=np.int32)
         mesh.polygons.foreach_get('use_smooth', fastsmooth)
         if mesh.use_auto_smooth or True in fastsmooth:
             mesh.calc_normals_split()
