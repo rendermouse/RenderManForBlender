@@ -70,6 +70,9 @@
                 1.0
             ]        
         },
+        "PxrDiffuse": {
+            "diffuse_color": ["diffuseColor"]
+        },
         "PxrMarschnerHair": {
             "diffuse_color": ["diffuseColor"],
             "specular_color": ["specularColorR"]
