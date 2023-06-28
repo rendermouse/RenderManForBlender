@@ -30,7 +30,7 @@ from .rfb_utils.envconfig_utils import envconfig
 bl_info = {
     "name": "RenderMan For Blender",
     "author": "Pixar",
-    "version": (25, 1, 0),
+    "version": (25, 2, 0),
     "blender": (2, 93, 0),
     "location": "Render Properties > Render Engine > RenderMan",
     "description": "RenderMan 25 integration",

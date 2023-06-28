@@ -1,3 +1,19 @@
+v25.2, June 29, 2023
+
+Changes:
+* Changing the diffuseColor parameter when using PxrDiffuse should now update
+the viewport color of the object, similar to PxrSurface.
+
+Bug fixes:
+* Fixed a bug where perspective view was incorrectly taking into account the render 
+camera's shift_x and shift_y properties.
+* Fixed issue where <br> was not getting correctly substititued in the tooltips
+* Fixed a bug where blender_batch would fail when using Blender 3.5
+* Fixed an issue with using numpy.int when using Blender 3.5.
+* Fixed a bug where node names with a ':' character in them would cause shading errors
+* Fixed a bug where updating the parameters of any stylized filters would not update correctly
+during IPR.
+
 v25.1, June 1, 2023
 
 Changes:
