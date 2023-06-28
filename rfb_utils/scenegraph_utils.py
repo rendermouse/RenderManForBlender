@@ -18,7 +18,17 @@ def set_material(sg_node, sg_material_node):
 def update_sg_integrator(context):
     from .. import rman_render
     rr = rman_render.RmanRender.get_rman_render()
-    rr.rman_scene_sync.update_integrator(context)            
+    rr.rman_scene_sync.update_integrator(context)           
+
+def update_sg_samplefilters(context):
+    from .. import rman_render
+    rr = rman_render.RmanRender.get_rman_render()
+    rr.rman_scene_sync.update_samplefilters(context)       
+
+def update_sg_displayfilters(context):
+    from .. import rman_render
+    rr = rman_render.RmanRender.get_rman_render()
+    rr.rman_scene_sync.update_displayfilters(context)    
 
 def update_sg_options(prop_name, context):
     from .. import rman_render

@@ -175,6 +175,10 @@ def class_generate_properties(node, parent_name, node_desc):
         update_function = None
         if node_desc.node_type == 'integrator':
             update_function = update_integrator_func
+        elif node_desc.node_type == 'samplefilter':
+            update_function = update_samplefilters_func
+        elif node_desc.node_type == 'displayfilter':
+            update_function = update_displayfilters_func            
         else:
             update_function = update_func_with_inputs if 'enable' in node_desc_param.name else update_func         
 

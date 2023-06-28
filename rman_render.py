@@ -1091,6 +1091,7 @@ class RmanRender(object):
             self.rman_is_live_rendering = True     
             render_cmd = "prman -live"   
             render_cmd = self._append_render_cmd(render_cmd)
+            self.rman_scene_sync.reset() # reset the rman_scene_sync instance
             self.sg_scene.Render(render_cmd)
             self.start_stats_thread()
 

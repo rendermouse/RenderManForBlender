@@ -59,6 +59,7 @@ class RmanSceneSync(object):
         self.check_all_instances = False # force checking all instances
 
         self.rman_updates = dict() # A dicitonary to hold RmanUpdate instances
+        self.selected_channel = None
 
     @property
     def sg_scene(self):
@@ -67,6 +68,13 @@ class RmanSceneSync(object):
     @sg_scene.setter
     def sg_scene(self, sg_scene):
         self.__sg_scene = sg_scene          
+
+    def reset(self):
+        self.num_instances_changed = False
+        self.frame_number_changed = False
+        self.check_all_instances = False 
+        self.rman_updates = dict()
+        self.selected_channel = None        
 
     def update_view(self, context, depsgraph):
         camera = depsgraph.scene.camera
@@ -978,6 +986,22 @@ class RmanSceneSync(object):
             self.rman_scene.export_integrator() 
             self.rman_scene.export_viewport_stats()
 
+    def update_samplefilters(self, context):
+        if not self.rman_render.rman_interactive_running:
+            return        
+        if context:
+            self.rman_scene.bl_scene = context.scene
+        with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
+            self.rman_scene.export_samplefilters(sel_chan_name=self.selected_channel)
+
+    def update_displayfilters(self, context):
+        if not self.rman_render.rman_interactive_running:
+            return        
+        if context:
+            self.rman_scene.bl_scene = context.scene
+        with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):          
+            self.rman_scene.export_displayfilters()     
+
     def update_viewport_integrator(self, context, integrator):
         if not self.rman_render.rman_interactive_running:
             return        
@@ -1115,6 +1139,7 @@ class RmanSceneSync(object):
     def update_viewport_chan(self, context, chan_name):
         if not self.rman_render.rman_interactive_running:
             return        
+        self.selected_channel = chan_name
         with self.rman_scene.rman.SGManager.ScopedEdit(self.rman_scene.sg_scene):
             self.rman_scene.export_samplefilters(sel_chan_name=chan_name)
 
