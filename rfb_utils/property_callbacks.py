@@ -209,6 +209,16 @@ def update_integrator_func(self, context):
     update_conditional_visops(node)
     scenegraph_utils.update_sg_integrator(context)           
 
+def update_samplefilters_func(self, context):
+    node = self.node if hasattr(self, 'node') else self
+    update_conditional_visops(node)
+    scenegraph_utils.update_sg_samplefilters(context)    
+
+def update_displayfilters_func(self, context):
+    node = self.node if hasattr(self, 'node') else self
+    update_conditional_visops(node)
+    scenegraph_utils.update_sg_displayfilters(context)        
+
 def update_options_func(self, s, context):
     scenegraph_utils.update_sg_options(s, context)
 

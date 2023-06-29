@@ -15,11 +15,12 @@ import ice
 import bpy
 import gpu
 
-if USE_GPU_MODULE:
-    bgl = None
-    from gpu_extras.batch import batch_for_shader
-else:    
-    import bgl
+if not bpy.app.background:
+    if USE_GPU_MODULE:
+        bgl = None
+        from gpu_extras.batch import batch_for_shader
+    else:    
+        import bgl
 
 _DRAW_HANDLER_ = None
 _FRUSTUM_DRAW_HELPER_ = None
@@ -457,7 +458,7 @@ __MTX_X_90__ = Matrix.Rotation(math.radians(90.0), 4, 'X')
 __MTX_Y_90__ = Matrix.Rotation(math.radians(90.0), 4, 'Y')
 
 
-if USE_GPU_MODULE:
+if USE_GPU_MODULE and not bpy.app.background:
     # Code reference: https://projects.blender.org/blender/blender/src/branch/main/doc/python_api/examples/gpu.7.py
 
     vert_out = gpu.types.GPUStageInterfaceInfo("image_interface")

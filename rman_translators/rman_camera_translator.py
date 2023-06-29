@@ -263,9 +263,11 @@ class RmanCameraTranslator(RmanTranslator):
                 # shift and offset            
                 shift_x = 0.0
                 shift_y = 0.0
-                if cam:
-                    shift_x = cam.shift_x
-                    shift_y = cam.shift_y
+                
+                # FIXME: for now, don't take camera shift into account
+                #if cam:
+                #    shift_x = cam.shift_x
+                #    shift_y = cam.shift_y
 
                 # FIXME? It seems like we don't need the view_camera_offset for some reason
                 # Need to do some more testing, but taking it into account seems to shift the image

@@ -154,7 +154,7 @@ class RmanHairCurvesTranslator(RmanTranslator):
                 hair_attr.array_len = -1
 
                 npoints = len(attr.data)
-                values = np.zeros(npoints, dtype=np.int)
+                values = np.zeros(npoints, dtype=np.int32)
                 attr.data.foreach_get('value', values)
                 hair_attr.values = values.tolist()                
             

@@ -132,7 +132,7 @@ def _get_mesh_vgroup_(ob, mesh, name=""):
     return weights
 
 def _get_material_ids(ob, geo):        
-    fast_material_ids = np.zeros(len(geo.polygons), dtype=np.int)
+    fast_material_ids = np.zeros(len(geo.polygons), dtype=np.int32)
     geo.polygons.foreach_get("material_index", fast_material_ids)
     material_ids = fast_material_ids.tolist()
     return material_ids
@@ -284,7 +284,7 @@ class RmanMeshTranslator(RmanTranslator):
         if (creases > 0.0).any():
             # we have edges where their crease is > 0.0
             # grab only those edges
-            crease_edges = np.zeros(edges_len*2, dtype=np.int)
+            crease_edges = np.zeros(edges_len*2, dtype=np.int32)
             mesh.edges.foreach_get('vertices', crease_edges)
             crease_edges = np.reshape(crease_edges, (edges_len, 2))
             crease_edges = crease_edges[creases > 0.0]
